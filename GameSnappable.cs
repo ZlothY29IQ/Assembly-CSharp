@@ -1,0 +1,197 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class GameSnappable : MonoBehaviour
+{
+	[Serializable]
+	public struct SnapJointOffset
+	{
+		public SnapJointType jointType;
+
+		public Vector3 positionOffset;
+
+		public Vector3 rotationOffset;
+	}
+
+	public GameEntity gameEntity;
+
+	public float snapRadius = 0.15f;
+
+	public SuperInfectionSnapPoint snappedToJoint;
+
+	public AbilitySound snapSound;
+
+	public AbilitySound unsnapSound;
+
+	public AbilityHaptic snapHaptic;
+
+	public SnapJointType snapLocationTypes;
+
+	public List<SnapJointOffset> snapOffsets;
+
+	private void Awake()
+	{
+	}
+
+	public void GetSnapOffset(SnapJointType jointType, out Vector3 positionOffset, out Quaternion rotationOffset)
+	{
+		foreach (SnapJointOffset snapOffset in snapOffsets)
+		{
+			if ((snapOffset.jointType & jointType) != 0)
+			{
+				positionOffset = snapOffset.positionOffset;
+				rotationOffset = Quaternion.Euler(snapOffset.rotationOffset);
+				return;
+			}
+		}
+		positionOffset = Vector3.zero;
+		rotationOffset = Quaternion.identity;
+	}
+
+	public SuperInfectionSnapPoint BestSnapPoint()
+	{
+		int heldByHandIndex = gameEntity.heldByHandIndex;
+		if (heldByHandIndex < 0)
+		{
+			return null;
+		}
+		SnapJointType snapJointType = (GamePlayerLocal.IsLeftHand(heldByHandIndex) ? SnapJointType.ArmL : SnapJointType.ArmR);
+		SnapJointType snapJointType2 = (GamePlayerLocal.IsLeftHand(heldByHandIndex) ? SnapJointType.ForearmL : SnapJointType.ForearmR);
+		List<SuperInfectionSnapPoint> snapPoints = GamePlayerLocal.instance.gamePlayer.snapPointManager.SnapPoints;
+		float num = float.MaxValue;
+		int num2 = -1;
+		for (int i = 0; i < snapPoints.Count; i++)
+		{
+			if (snapPoints[i].jointType != snapJointType && snapPoints[i].jointType != snapJointType2 && (snapPoints[i].jointType & snapLocationTypes) != 0 && !snapPoints[i].HasSnapped())
+			{
+				GetSnapOffset(snapPoints[i].jointType, out var positionOffset, out var rotationOffset);
+				float num3 = Vector3.Distance(snapPoints[i].transform.TransformPoint(rotationOffset * positionOffset), base.transform.position);
+				float num4 = snapRadius + snapPoints[i].snapPointRadius;
+				if (num3 < num && num3 < num4)
+				{
+					num2 = i;
+					num = num3;
+				}
+			}
+		}
+		if (num2 >= 0)
+		{
+			return snapPoints[num2];
+		}
+		if ((snapLocationTypes & SnapJointType.Holster) != 0)
+		{
+			IEnumerable<SuperInfectionSnapPoint> points = (GamePlayerLocal.instance.currGameEntityManager?.superInfectionManager).GetPoints(SnapJointType.Holster);
+			SuperInfectionSnapPoint superInfectionSnapPoint = null;
+			float num5 = snapRadius;
+			foreach (SuperInfectionSnapPoint item in points)
+			{
+				if (!item.HasSnapped())
+				{
+					GetSnapOffset(item.jointType, out var positionOffset2, out var rotationOffset2);
+					float num6 = Vector3.Distance(item.transform.TransformPoint(rotationOffset2 * positionOffset2), base.transform.position);
+					if (num6 < num5)
+					{
+						superInfectionSnapPoint = item;
+						num5 = num6;
+					}
+				}
+			}
+			if (superInfectionSnapPoint != null)
+			{
+				return superInfectionSnapPoint;
+			}
+		}
+		return null;
+	}
+
+	public GameEntityId BestSnapPointDock()
+	{
+		int heldByHandIndex = gameEntity.heldByHandIndex;
+		if (heldByHandIndex < 0)
+		{
+			return GameEntityId.Invalid;
+		}
+		SnapJointType snapJointType = (GamePlayerLocal.IsLeftHand(heldByHandIndex) ? SnapJointType.ArmL : SnapJointType.ArmR);
+		SnapJointType snapJointType2 = (GamePlayerLocal.IsLeftHand(heldByHandIndex) ? SnapJointType.ForearmL : SnapJointType.ForearmR);
+		List<SuperInfectionSnapPoint> snapPoints = GamePlayerLocal.instance.gamePlayer.snapPointManager.SnapPoints;
+		float num = float.MaxValue;
+		int num2 = -1;
+		for (int i = 0; i < snapPoints.Count; i++)
+		{
+			if (snapPoints[i].jointType != snapJointType && snapPoints[i].jointType != snapJointType2 && (snapPoints[i].jointType & snapLocationTypes) != 0 && snapPoints[i].HasSnapped())
+			{
+				GetSnapOffset(snapPoints[i].jointType, out var positionOffset, out var rotationOffset);
+				float num3 = Vector3.Distance(snapPoints[i].transform.TransformPoint(rotationOffset * positionOffset), base.transform.position);
+				float num4 = snapRadius + snapPoints[i].snapPointRadius;
+				if (num3 < num && num3 < num4)
+				{
+					num2 = i;
+					num = num3;
+				}
+			}
+		}
+		if (num2 < 0)
+		{
+			return GameEntityId.Invalid;
+		}
+		return snapPoints[num2].GetSnappedEntity().id;
+	}
+
+	public bool CanGrabWithHand(bool leftHand)
+	{
+		if (snappedToJoint == null)
+		{
+			return true;
+		}
+		SnapJointType jointType = snappedToJoint.jointType;
+		if (!leftHand || jointType == SnapJointType.ArmL || jointType == SnapJointType.ForearmL)
+		{
+			if (!leftHand && jointType != SnapJointType.ArmR)
+			{
+				return jointType != SnapJointType.ForearmR;
+			}
+			return false;
+		}
+		return true;
+	}
+
+	public void OnSnap()
+	{
+		snapSound.Play(null);
+		snapHaptic.PlayIfSnappedLocal(gameEntity);
+	}
+
+	public bool IsSnappedToLeftArm()
+	{
+		if (snappedToJoint == null)
+		{
+			return false;
+		}
+		SnapJointType jointType = snappedToJoint.jointType;
+		if (jointType != SnapJointType.ArmL)
+		{
+			return jointType == SnapJointType.ForearmL;
+		}
+		return true;
+	}
+
+	public bool IsSnappedToRightArm()
+	{
+		if (snappedToJoint == null)
+		{
+			return false;
+		}
+		SnapJointType jointType = snappedToJoint.jointType;
+		if (jointType != SnapJointType.ArmR)
+		{
+			return jointType == SnapJointType.ForearmR;
+		}
+		return true;
+	}
+
+	public void OnUnsnap()
+	{
+		unsnapSound.Play(null);
+	}
+}

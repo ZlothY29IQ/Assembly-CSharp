@@ -1,0 +1,185 @@
+using System.Collections.Generic;
+using System.Diagnostics;
+using UnityEngine;
+
+public class GorillaSlicerSimpleManager : MonoBehaviour
+{
+	public enum UpdateStep
+	{
+		FixedUpdate,
+		Update,
+		LateUpdate
+	}
+
+	public static GorillaSlicerSimpleManager instance;
+
+	public static bool hasInstance;
+
+	public List<IGorillaSliceableSimple> fixedUpdateSlice;
+
+	public List<IGorillaSliceableSimple> updateSlice;
+
+	public List<IGorillaSliceableSimple> lateUpdateSlice;
+
+	public long ticksPerFrame = 1000L;
+
+	public long ticksThisFrame;
+
+	public int updateIndex = -1;
+
+	public Stopwatch sW;
+
+	protected void Awake()
+	{
+		if (hasInstance && instance != this)
+		{
+			Object.Destroy(this);
+		}
+		else
+		{
+			SetInstance(this);
+		}
+	}
+
+	public static void CreateManager()
+	{
+		GorillaSlicerSimpleManager gorillaSlicerSimpleManager = new GameObject("GorillaSlicerSimpleManager").AddComponent<GorillaSlicerSimpleManager>();
+		gorillaSlicerSimpleManager.fixedUpdateSlice = new List<IGorillaSliceableSimple>();
+		gorillaSlicerSimpleManager.updateSlice = new List<IGorillaSliceableSimple>();
+		gorillaSlicerSimpleManager.lateUpdateSlice = new List<IGorillaSliceableSimple>();
+		gorillaSlicerSimpleManager.sW = new Stopwatch();
+		SetInstance(gorillaSlicerSimpleManager);
+	}
+
+	private static void SetInstance(GorillaSlicerSimpleManager manager)
+	{
+		instance = manager;
+		hasInstance = true;
+		if (Application.isPlaying)
+		{
+			Object.DontDestroyOnLoad(manager);
+		}
+	}
+
+	public static void RegisterSliceable(IGorillaSliceableSimple gSS, UpdateStep step)
+	{
+		if (!hasInstance)
+		{
+			CreateManager();
+		}
+		switch (step)
+		{
+		case UpdateStep.FixedUpdate:
+			if (!instance.fixedUpdateSlice.Contains(gSS))
+			{
+				instance.fixedUpdateSlice.Add(gSS);
+			}
+			break;
+		case UpdateStep.Update:
+			if (!instance.updateSlice.Contains(gSS))
+			{
+				instance.updateSlice.Add(gSS);
+			}
+			break;
+		case UpdateStep.LateUpdate:
+			if (!instance.lateUpdateSlice.Contains(gSS))
+			{
+				instance.lateUpdateSlice.Add(gSS);
+			}
+			break;
+		}
+	}
+
+	public static void UnregisterSliceable(IGorillaSliceableSimple gSS, UpdateStep step)
+	{
+		if (!hasInstance)
+		{
+			CreateManager();
+		}
+		switch (step)
+		{
+		case UpdateStep.FixedUpdate:
+			if (instance.fixedUpdateSlice.Contains(gSS))
+			{
+				instance.fixedUpdateSlice.Remove(gSS);
+			}
+			break;
+		case UpdateStep.Update:
+			if (instance.updateSlice.Contains(gSS))
+			{
+				instance.updateSlice.Remove(gSS);
+			}
+			break;
+		case UpdateStep.LateUpdate:
+			if (instance.lateUpdateSlice.Contains(gSS))
+			{
+				instance.lateUpdateSlice.Remove(gSS);
+			}
+			break;
+		}
+	}
+
+	public void FixedUpdate()
+	{
+		if (updateIndex < 0 || updateIndex >= fixedUpdateSlice.Count + updateSlice.Count + lateUpdateSlice.Count)
+		{
+			updateIndex = 0;
+		}
+		sW.Restart();
+		while (ticksThisFrame + sW.ElapsedTicks < ticksPerFrame && updateIndex < fixedUpdateSlice.Count)
+		{
+			IGorillaSliceableSimple gorillaSliceableSimple = fixedUpdateSlice[updateIndex];
+			if (0 <= updateIndex && updateIndex < fixedUpdateSlice.Count && !(gorillaSliceableSimple is MonoBehaviour { isActiveAndEnabled: false }))
+			{
+				gorillaSliceableSimple.SliceUpdate();
+			}
+			updateIndex++;
+		}
+		ticksThisFrame += sW.ElapsedTicks;
+		sW.Stop();
+	}
+
+	public void Update()
+	{
+		int count = fixedUpdateSlice.Count;
+		int count2 = updateSlice.Count;
+		int num = count + count2;
+		sW.Restart();
+		while (ticksThisFrame + sW.ElapsedTicks < ticksPerFrame && count <= updateIndex && updateIndex < num)
+		{
+			IGorillaSliceableSimple gorillaSliceableSimple = updateSlice[updateIndex - count];
+			if (0 <= updateIndex - count && updateIndex - count < updateSlice.Count && !(gorillaSliceableSimple is MonoBehaviour { isActiveAndEnabled: false }))
+			{
+				gorillaSliceableSimple.SliceUpdate();
+			}
+			updateIndex++;
+		}
+		ticksThisFrame += sW.ElapsedTicks;
+		sW.Stop();
+	}
+
+	public void LateUpdate()
+	{
+		int count = fixedUpdateSlice.Count;
+		int count2 = updateSlice.Count;
+		int count3 = lateUpdateSlice.Count;
+		int num = count + count2;
+		int num2 = num + count3;
+		sW.Restart();
+		while (ticksThisFrame + sW.ElapsedTicks < ticksPerFrame && num <= updateIndex && updateIndex < num2)
+		{
+			IGorillaSliceableSimple gorillaSliceableSimple = lateUpdateSlice[updateIndex - num];
+			if (0 <= updateIndex - num && updateIndex - num < lateUpdateSlice.Count && !(gorillaSliceableSimple is MonoBehaviour { isActiveAndEnabled: false }))
+			{
+				gorillaSliceableSimple.SliceUpdate();
+			}
+			updateIndex++;
+		}
+		sW.Stop();
+		if (updateIndex >= num2)
+		{
+			updateIndex = -1;
+		}
+		ticksThisFrame = 0L;
+	}
+}

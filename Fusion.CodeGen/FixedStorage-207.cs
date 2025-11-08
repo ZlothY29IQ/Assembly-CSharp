@@ -1,0 +1,1045 @@
+using System;
+using System.Runtime.InteropServices;
+
+namespace Fusion.CodeGen;
+
+[Serializable]
+[StructLayout(LayoutKind.Explicit)]
+[WeaverGenerated]
+[NetworkStructWeaved(207)]
+internal struct FixedStorage_0040207 : INetworkStruct
+{
+	[FieldOffset(0)]
+	[WeaverGenerated]
+	public unsafe fixed int Data[207];
+
+	[FieldOffset(4)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _1;
+
+	[FieldOffset(8)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _2;
+
+	[FieldOffset(12)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _3;
+
+	[FieldOffset(16)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _4;
+
+	[FieldOffset(20)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _5;
+
+	[FieldOffset(24)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _6;
+
+	[FieldOffset(28)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _7;
+
+	[FieldOffset(32)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _8;
+
+	[FieldOffset(36)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _9;
+
+	[FieldOffset(40)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _10;
+
+	[FieldOffset(44)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _11;
+
+	[FieldOffset(48)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _12;
+
+	[FieldOffset(52)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _13;
+
+	[FieldOffset(56)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _14;
+
+	[FieldOffset(60)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _15;
+
+	[FieldOffset(64)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _16;
+
+	[FieldOffset(68)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _17;
+
+	[FieldOffset(72)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _18;
+
+	[FieldOffset(76)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _19;
+
+	[FieldOffset(80)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _20;
+
+	[FieldOffset(84)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _21;
+
+	[FieldOffset(88)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _22;
+
+	[FieldOffset(92)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _23;
+
+	[FieldOffset(96)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _24;
+
+	[FieldOffset(100)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _25;
+
+	[FieldOffset(104)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _26;
+
+	[FieldOffset(108)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _27;
+
+	[FieldOffset(112)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _28;
+
+	[FieldOffset(116)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _29;
+
+	[FieldOffset(120)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _30;
+
+	[FieldOffset(124)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _31;
+
+	[FieldOffset(128)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _32;
+
+	[FieldOffset(132)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _33;
+
+	[FieldOffset(136)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _34;
+
+	[FieldOffset(140)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _35;
+
+	[FieldOffset(144)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _36;
+
+	[FieldOffset(148)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _37;
+
+	[FieldOffset(152)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _38;
+
+	[FieldOffset(156)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _39;
+
+	[FieldOffset(160)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _40;
+
+	[FieldOffset(164)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _41;
+
+	[FieldOffset(168)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _42;
+
+	[FieldOffset(172)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _43;
+
+	[FieldOffset(176)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _44;
+
+	[FieldOffset(180)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _45;
+
+	[FieldOffset(184)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _46;
+
+	[FieldOffset(188)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _47;
+
+	[FieldOffset(192)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _48;
+
+	[FieldOffset(196)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _49;
+
+	[FieldOffset(200)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _50;
+
+	[FieldOffset(204)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _51;
+
+	[FieldOffset(208)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _52;
+
+	[FieldOffset(212)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _53;
+
+	[FieldOffset(216)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _54;
+
+	[FieldOffset(220)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _55;
+
+	[FieldOffset(224)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _56;
+
+	[FieldOffset(228)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _57;
+
+	[FieldOffset(232)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _58;
+
+	[FieldOffset(236)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _59;
+
+	[FieldOffset(240)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _60;
+
+	[FieldOffset(244)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _61;
+
+	[FieldOffset(248)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _62;
+
+	[FieldOffset(252)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _63;
+
+	[FieldOffset(256)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _64;
+
+	[FieldOffset(260)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _65;
+
+	[FieldOffset(264)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _66;
+
+	[FieldOffset(268)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _67;
+
+	[FieldOffset(272)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _68;
+
+	[FieldOffset(276)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _69;
+
+	[FieldOffset(280)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _70;
+
+	[FieldOffset(284)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _71;
+
+	[FieldOffset(288)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _72;
+
+	[FieldOffset(292)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _73;
+
+	[FieldOffset(296)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _74;
+
+	[FieldOffset(300)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _75;
+
+	[FieldOffset(304)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _76;
+
+	[FieldOffset(308)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _77;
+
+	[FieldOffset(312)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _78;
+
+	[FieldOffset(316)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _79;
+
+	[FieldOffset(320)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _80;
+
+	[FieldOffset(324)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _81;
+
+	[FieldOffset(328)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _82;
+
+	[FieldOffset(332)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _83;
+
+	[FieldOffset(336)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _84;
+
+	[FieldOffset(340)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _85;
+
+	[FieldOffset(344)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _86;
+
+	[FieldOffset(348)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _87;
+
+	[FieldOffset(352)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _88;
+
+	[FieldOffset(356)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _89;
+
+	[FieldOffset(360)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _90;
+
+	[FieldOffset(364)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _91;
+
+	[FieldOffset(368)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _92;
+
+	[FieldOffset(372)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _93;
+
+	[FieldOffset(376)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _94;
+
+	[FieldOffset(380)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _95;
+
+	[FieldOffset(384)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _96;
+
+	[FieldOffset(388)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _97;
+
+	[FieldOffset(392)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _98;
+
+	[FieldOffset(396)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _99;
+
+	[FieldOffset(400)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _100;
+
+	[FieldOffset(404)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _101;
+
+	[FieldOffset(408)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _102;
+
+	[FieldOffset(412)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _103;
+
+	[FieldOffset(416)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _104;
+
+	[FieldOffset(420)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _105;
+
+	[FieldOffset(424)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _106;
+
+	[FieldOffset(428)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _107;
+
+	[FieldOffset(432)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _108;
+
+	[FieldOffset(436)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _109;
+
+	[FieldOffset(440)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _110;
+
+	[FieldOffset(444)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _111;
+
+	[FieldOffset(448)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _112;
+
+	[FieldOffset(452)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _113;
+
+	[FieldOffset(456)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _114;
+
+	[FieldOffset(460)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _115;
+
+	[FieldOffset(464)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _116;
+
+	[FieldOffset(468)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _117;
+
+	[FieldOffset(472)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _118;
+
+	[FieldOffset(476)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _119;
+
+	[FieldOffset(480)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _120;
+
+	[FieldOffset(484)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _121;
+
+	[FieldOffset(488)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _122;
+
+	[FieldOffset(492)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _123;
+
+	[FieldOffset(496)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _124;
+
+	[FieldOffset(500)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _125;
+
+	[FieldOffset(504)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _126;
+
+	[FieldOffset(508)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _127;
+
+	[FieldOffset(512)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _128;
+
+	[FieldOffset(516)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _129;
+
+	[FieldOffset(520)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _130;
+
+	[FieldOffset(524)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _131;
+
+	[FieldOffset(528)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _132;
+
+	[FieldOffset(532)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _133;
+
+	[FieldOffset(536)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _134;
+
+	[FieldOffset(540)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _135;
+
+	[FieldOffset(544)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _136;
+
+	[FieldOffset(548)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _137;
+
+	[FieldOffset(552)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _138;
+
+	[FieldOffset(556)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _139;
+
+	[FieldOffset(560)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _140;
+
+	[FieldOffset(564)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _141;
+
+	[FieldOffset(568)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _142;
+
+	[FieldOffset(572)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _143;
+
+	[FieldOffset(576)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _144;
+
+	[FieldOffset(580)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _145;
+
+	[FieldOffset(584)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _146;
+
+	[FieldOffset(588)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _147;
+
+	[FieldOffset(592)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _148;
+
+	[FieldOffset(596)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _149;
+
+	[FieldOffset(600)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _150;
+
+	[FieldOffset(604)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _151;
+
+	[FieldOffset(608)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _152;
+
+	[FieldOffset(612)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _153;
+
+	[FieldOffset(616)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _154;
+
+	[FieldOffset(620)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _155;
+
+	[FieldOffset(624)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _156;
+
+	[FieldOffset(628)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _157;
+
+	[FieldOffset(632)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _158;
+
+	[FieldOffset(636)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _159;
+
+	[FieldOffset(640)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _160;
+
+	[FieldOffset(644)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _161;
+
+	[FieldOffset(648)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _162;
+
+	[FieldOffset(652)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _163;
+
+	[FieldOffset(656)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _164;
+
+	[FieldOffset(660)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _165;
+
+	[FieldOffset(664)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _166;
+
+	[FieldOffset(668)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _167;
+
+	[FieldOffset(672)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _168;
+
+	[FieldOffset(676)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _169;
+
+	[FieldOffset(680)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _170;
+
+	[FieldOffset(684)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _171;
+
+	[FieldOffset(688)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _172;
+
+	[FieldOffset(692)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _173;
+
+	[FieldOffset(696)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _174;
+
+	[FieldOffset(700)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _175;
+
+	[FieldOffset(704)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _176;
+
+	[FieldOffset(708)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _177;
+
+	[FieldOffset(712)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _178;
+
+	[FieldOffset(716)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _179;
+
+	[FieldOffset(720)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _180;
+
+	[FieldOffset(724)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _181;
+
+	[FieldOffset(728)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _182;
+
+	[FieldOffset(732)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _183;
+
+	[FieldOffset(736)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _184;
+
+	[FieldOffset(740)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _185;
+
+	[FieldOffset(744)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _186;
+
+	[FieldOffset(748)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _187;
+
+	[FieldOffset(752)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _188;
+
+	[FieldOffset(756)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _189;
+
+	[FieldOffset(760)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _190;
+
+	[FieldOffset(764)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _191;
+
+	[FieldOffset(768)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _192;
+
+	[FieldOffset(772)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _193;
+
+	[FieldOffset(776)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _194;
+
+	[FieldOffset(780)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _195;
+
+	[FieldOffset(784)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _196;
+
+	[FieldOffset(788)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _197;
+
+	[FieldOffset(792)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _198;
+
+	[FieldOffset(796)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _199;
+
+	[FieldOffset(800)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _200;
+
+	[FieldOffset(804)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _201;
+
+	[FieldOffset(808)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _202;
+
+	[FieldOffset(812)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _203;
+
+	[FieldOffset(816)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _204;
+
+	[FieldOffset(820)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _205;
+
+	[FieldOffset(824)]
+	[NonSerialized]
+	[WeaverGenerated]
+	private int _206;
+}
