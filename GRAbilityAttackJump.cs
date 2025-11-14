@@ -14,8 +14,6 @@ public class GRAbilityAttackJump : GRAbilityBase
 
 	public float duration;
 
-	public float attackMoveSpeed;
-
 	public float jumpTime;
 
 	public float attackLandTime;

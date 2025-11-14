@@ -247,9 +247,9 @@ public class SIResource : MonoBehaviour
 		timeReleased = Time.time;
 	}
 
-	public virtual bool CanDeposit(SIPlayer depositingPlayer)
+	public virtual bool CanDeposit()
 	{
-		if (lastPlayerHeld.gamePlayer.IsLocal() && !localDeposited)
+		if (lastPlayerHeld != null && lastPlayerHeld.gamePlayer.IsLocal() && !localDeposited)
 		{
 			return SIPlayer.LocalPlayer.CanLimitedResourceBeDeposited(limitedDepositType);
 		}
@@ -299,9 +299,13 @@ public class SIResource : MonoBehaviour
 		{
 			return list;
 		}
-		for (int i = 0; i < costs.Length; i++)
+		foreach (IList<ResourceCost> list2 in costs)
 		{
-			foreach (ResourceCost item in costs[i])
+			if (list2 == null)
+			{
+				continue;
+			}
+			foreach (ResourceCost item in list2)
 			{
 				list.AddResourceCost(item);
 			}

@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class SIAutoPressButtonOnAwake : MonoBehaviour
 {
+	private SICombinedTerminal terminalParent;
+
 	private SITouchscreenButton button;
 
 	private float awakeTime;
@@ -13,6 +15,7 @@ public class SIAutoPressButtonOnAwake : MonoBehaviour
 	private void Awake()
 	{
 		button = GetComponent<SITouchscreenButton>();
+		terminalParent = button.GetComponentInParent<SICombinedTerminal>();
 	}
 
 	private void OnEnable()
@@ -28,7 +31,10 @@ public class SIAutoPressButtonOnAwake : MonoBehaviour
 	{
 		if (!buttonPressed && !(Time.time < awakeTime + delay))
 		{
-			button.PressButton();
+			if (terminalParent.activePlayer.ActorNr == SIPlayer.LocalPlayer.ActorNr)
+			{
+				button.PressButton();
+			}
 			buttonPressed = true;
 		}
 	}

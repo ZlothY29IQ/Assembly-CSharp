@@ -1,3 +1,4 @@
+using System;
 using GorillaExtensions;
 using UnityEngine;
 
@@ -85,6 +86,8 @@ public class HandEffectsTrigger : MonoBehaviour, IHandEffectsTrigger
 
 	bool IHandEffectsTrigger.RightHand => rightHand;
 
+	public Action<IHandEffectsTrigger.Mode> OnTrigger { get; set; }
+
 	public IHandEffectsTrigger.Mode EffectMode { get; }
 
 	public Transform Transform => base.transform;
@@ -155,6 +158,28 @@ public class HandEffectsTrigger : MonoBehaviour, IHandEffectsTrigger
 		if (rig.isOfflineVRRig)
 		{
 			PlayerGameEvents.TriggerHandEffect(effectType.ToString());
+		}
+		if (OnTrigger != null || (other != null && other.OnTrigger != null))
+		{
+			switch (effectType)
+			{
+			case TagEffectsLibrary.EffectType.FIST_BUMP:
+				OnTrigger?.Invoke(IHandEffectsTrigger.Mode.FistBump);
+				other?.OnTrigger?.Invoke(IHandEffectsTrigger.Mode.FistBump);
+				break;
+			case TagEffectsLibrary.EffectType.HIGH_FIVE:
+				OnTrigger?.Invoke(IHandEffectsTrigger.Mode.HighFive);
+				other?.OnTrigger?.Invoke(IHandEffectsTrigger.Mode.HighFive);
+				break;
+			case TagEffectsLibrary.EffectType.FIRST_PERSON:
+				OnTrigger?.Invoke(IHandEffectsTrigger.Mode.Tag1P);
+				other?.OnTrigger?.Invoke(IHandEffectsTrigger.Mode.Tag1P);
+				break;
+			case TagEffectsLibrary.EffectType.THIRD_PERSON:
+				OnTrigger?.Invoke(IHandEffectsTrigger.Mode.Tag3P);
+				other?.OnTrigger?.Invoke(IHandEffectsTrigger.Mode.Tag3P);
+				break;
+			}
 		}
 		HandEffectsOverrideCosmetic handEffectsOverrideCosmetic = null;
 		HandEffectsOverrideCosmetic handEffectsOverrideCosmetic2 = null;

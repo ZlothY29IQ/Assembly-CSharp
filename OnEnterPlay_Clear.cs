@@ -10,10 +10,13 @@ public class OnEnterPlay_Clear : OnEnterPlay_Attribute
 		if (!field.IsStatic)
 		{
 			Debug.LogError($"Can't Clear non-static field {field.DeclaringType}.{field.Name}");
+			return;
 		}
-		else
+		MethodInfo method = field.FieldType.GetMethod("Clear");
+		object value = field.GetValue(null);
+		if (value != null)
 		{
-			field.FieldType.GetMethod("Clear").Invoke(field.GetValue(null), new object[0]);
+			method.Invoke(value, new object[0]);
 		}
 	}
 }

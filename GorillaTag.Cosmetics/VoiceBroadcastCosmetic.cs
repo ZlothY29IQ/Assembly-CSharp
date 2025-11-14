@@ -132,11 +132,21 @@ public class VoiceBroadcastCosmetic : MonoBehaviour, IGorillaSliceableSimple
 				{
 					simpleAnimation.Play();
 				}
+				if (!isSpeaking)
+				{
+					onStartSpeaking?.Invoke();
+					isSpeaking = true;
+				}
 			}
 		}
 		else
 		{
 			speakingTime = 0f;
+			if (isSpeaking)
+			{
+				onStopSpeaking?.Invoke();
+				isSpeaking = false;
+			}
 		}
 	}
 

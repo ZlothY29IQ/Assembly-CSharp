@@ -162,16 +162,16 @@ public class GrowingSnowballThrowable : SnowballThrowable
 		{
 			if (changeSizeEvent == null)
 			{
-				_ = "SnowballThrowable" + (isLeftHanded ? "ChangeSizeEventLeft" : "ChangeSizeEventRight") + targetRig.netView.ViewID;
-				int eventId = StaticHash.Compute("SnowballThrowable", isLeftHanded ? "ChangeSizeEventLeft" : "ChangeSizeEventRight", targetRig.netView.ViewID.ToString());
+				_ = "SnowballThrowable" + base.gameObject.name + (isLeftHanded ? "ChangeSizeEventLeft" : "ChangeSizeEventRight") + targetRig.netView.ViewID;
+				int eventId = StaticHash.Compute("SnowballThrowable", base.gameObject.name, isLeftHanded ? "ChangeSizeEventLeft" : "ChangeSizeEventRight", targetRig.netView.ViewID.ToString());
 				changeSizeEvent = new PhotonEvent(eventId);
 				changeSizeEvent.reliable = true;
 				changeSizeEvent += new Action<int, int, object[], PhotonMessageInfoWrapped>(ChangeSizeEventReceiver);
 			}
 			if (snowballThrowEvent == null)
 			{
-				_ = "SnowballThrowable" + (isLeftHanded ? "SnowballThrowEventLeft" : "SnowballThrowEventRight") + targetRig.netView.ViewID;
-				int eventId2 = StaticHash.Compute("SnowballThrowable", isLeftHanded ? "SnowballThrowEventLeft" : "SnowballThrowEventRight", targetRig.netView.ViewID.ToString());
+				_ = "SnowballThrowable" + base.gameObject.name + (isLeftHanded ? "SnowballThrowEventLeft" : "SnowballThrowEventRight") + targetRig.netView.ViewID;
+				int eventId2 = StaticHash.Compute("SnowballThrowable", base.gameObject.name, isLeftHanded ? "SnowballThrowEventLeft" : "SnowballThrowEventRight", targetRig.netView.ViewID.ToString());
 				snowballThrowEvent = new PhotonEvent(eventId2);
 				snowballThrowEvent.reliable = true;
 				snowballThrowEvent += new Action<int, int, object[], PhotonMessageInfoWrapped>(SnowballThrowEventReceiver);

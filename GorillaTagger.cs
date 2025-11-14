@@ -125,7 +125,7 @@ public class GorillaTagger : MonoBehaviour, IGuidedRefReceiverMono, IGuidedRefMo
 
 	private Vector3 lastHeadPositionForTag;
 
-	private StiltTagData[] stiltTagData = new StiltTagData[4];
+	private StiltTagData[] stiltTagData = new StiltTagData[12];
 
 	public Transform rightHandTransform;
 
@@ -361,7 +361,11 @@ public class GorillaTagger : MonoBehaviour, IGuidedRefReceiverMono, IGuidedRefMo
 		RecoverMissingRefs();
 		MirrorCameraCullingMask = new Watchable<int>(BaseMirrorCameraCullingMask);
 		stiltTagData[0].isLeftHand = true;
+		stiltTagData[4].isLeftHand = true;
+		stiltTagData[5].isLeftHand = true;
 		stiltTagData[2].isLeftHand = true;
+		stiltTagData[6].isLeftHand = true;
+		stiltTagData[7].isLeftHand = true;
 		if (_instance != null && _instance != this)
 		{
 			UnityEngine.Object.Destroy(base.gameObject);
@@ -604,7 +608,7 @@ public class GorillaTagger : MonoBehaviour, IGuidedRefReceiverMono, IGuidedRefMo
 			TryTaggingAllHitsOverlap(isLeftHand: false, maxTagDistance);
 			nonAllocHits = Physics.OverlapCapsuleNonAlloc(position3, position2, num5, colliderOverlaps, gorillaTagColliderLayerMask, QueryTriggerInteraction.Collide);
 			TryTaggingAllHitsOverlap(isLeftHand: false, maxTagDistance);
-			for (int i = 0; i < 4; i++)
+			for (int i = 0; i < 12; i++)
 			{
 				StiltTagData stiltTagData = this.stiltTagData[i];
 				if (stiltTagData.hasLastPosition && stiltTagData.hasCurrentPosition && (stiltTagData.canTag || stiltTagData.canStun))
@@ -641,7 +645,7 @@ public class GorillaTagger : MonoBehaviour, IGuidedRefReceiverMono, IGuidedRefMo
 		_ = GTPlayer.Instance;
 		ProcessHandTapping(true, StiltID.None, ref lastLeftTap, ref lastLeftUpTap, ref leftHandWasTouching, in leftHandSlideSource);
 		ProcessHandTapping(false, StiltID.None, ref lastRightTap, ref lastRightUpTap, ref rightHandWasTouching, in rightHandSlideSource);
-		for (int j = 0; j < 4; j++)
+		for (int j = 0; j < 12; j++)
 		{
 			StiltTagData stiltTagData2 = this.stiltTagData[j];
 			if (stiltTagData2.hasLastPosition && stiltTagData2.hasCurrentPosition)
@@ -657,7 +661,7 @@ public class GorillaTagger : MonoBehaviour, IGuidedRefReceiverMono, IGuidedRefMo
 		lastRightHandPositionForTag = position2;
 		lastBodyPositionForTag = position4;
 		lastHeadPositionForTag = position3;
-		for (int k = 0; k < 4; k++)
+		for (int k = 0; k < 12; k++)
 		{
 			StiltTagData stiltTagData3 = this.stiltTagData[k];
 			if (stiltTagData3.hasLastPosition || stiltTagData3.hasCurrentPosition)

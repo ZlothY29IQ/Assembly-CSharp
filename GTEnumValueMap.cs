@@ -17,14 +17,14 @@ public class GTEnumValueMap<T> : ISerializationCallbackReceiver
 		public T value;
 	}
 
+	private Dictionary<long, T> _enumValue_to_unityObject = new Dictionary<long, T>();
+
 	[Tooltip("The GUID to the Enum script asset which is what is serialized in editor (not used at runtime). This is exposed and editable as a precaution but shouldn't be necessary to have to use.")]
 	[SerializeField]
 	private string m_enumScriptGuid;
 
 	[SerializeField]
 	private List<EnumValueToUnityObject> m_enumValueAndUnityObjectPairs = new List<EnumValueToUnityObject>();
-
-	private Dictionary<long, T> _enumValue_to_unityObject = new Dictionary<long, T>();
 
 	public IEnumerable<T> Values => _enumValue_to_unityObject.Values;
 

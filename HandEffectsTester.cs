@@ -1,3 +1,4 @@
+using System;
 using GorillaExtensions;
 using TagEffects;
 using UnityEngine;
@@ -49,6 +50,8 @@ public class HandEffectsTester : MonoBehaviour, IHandEffectsTrigger
 			return false;
 		}
 	}
+
+	public Action<IHandEffectsTrigger.Mode> OnTrigger { get; set; }
 
 	public bool RightHand { get; }
 

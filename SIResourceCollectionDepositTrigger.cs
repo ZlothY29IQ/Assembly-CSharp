@@ -14,7 +14,7 @@ public class SIResourceCollectionDepositTrigger : MonoBehaviour
 	private void OnTriggerEnter(Collider other)
 	{
 		SIResource componentInParent = other.GetComponentInParent<SIResource>();
-		if (!(componentInParent == null) && componentInParent.CanDeposit(componentInParent.lastPlayerHeld))
+		if (!(componentInParent == null) && componentInParent.CanDeposit())
 		{
 			resourceDeposit.ResourceDeposited(componentInParent);
 		}

@@ -152,9 +152,12 @@ public class PickupableCosmetic : PickupableVariant
 		}
 	}
 
-	protected internal override void Pickup()
+	protected internal override void Pickup(bool isAutoPickup = false)
 	{
-		OnPickupShared?.Invoke();
+		if (!isAutoPickup)
+		{
+			OnPickupShared?.Invoke();
+		}
 		rb.linearVelocity = Vector3.zero;
 		rb.isKinematic = true;
 		if (holdableParent != null)
@@ -239,7 +242,12 @@ public class PickupableCosmetic : PickupableVariant
 		}
 		if (autoPickupAfterSeconds > 0f && placedOnFloor && Time.time - placedOnFloorTime > autoPickupAfterSeconds)
 		{
-			Pickup();
+			Pickup(isAutoPickup: true);
+			ThrowablePickupableCosmetic throwablePickupableCosmetic = transferrableParent as ThrowablePickupableCosmetic;
+			if ((bool)throwablePickupableCosmetic)
+			{
+				throwablePickupableCosmetic.OnReturnToDockPositionShared?.Invoke();
+			}
 		}
 		if (autoPickupDistance > 0f && transferrableParent != null && (transferrableParent.ownerRig.transform.position - base.transform.position).IsLongerThan(autoPickupDistance))
 		{

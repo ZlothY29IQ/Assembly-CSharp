@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using GorillaTagScripts.GhostReactor;
 using UnityEngine;
 
 [Serializable]
@@ -135,6 +136,12 @@ public class GRAbilityDie : GRAbilityBase
 		if (gRPlayer != null)
 		{
 			gRPlayer.IncrementSynchronizedSessionStat(GRPlayer.SynchronizedSessionStat.Kills, 1f);
+		}
+		GREnemyType? enemyType = gameEntity.GetEnemyType();
+		if (enemyType.HasValue)
+		{
+			GREnemyType valueOrDefault = enemyType.GetValueOrDefault();
+			GhostReactor.instance.shiftManager.shiftStats.IncrementEnemyKills(valueOrDefault);
 		}
 		if (gameEntity.IsAuthority())
 		{

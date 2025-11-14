@@ -51,6 +51,8 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 
 	public Color notActive;
 
+	public Transform uiCenter;
+
 	[Header("Popup Shared")]
 	public GameObject popupScreen;
 
@@ -209,7 +211,7 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 	{
 		helpScreenIndex = Mathf.Clamp((int)stream.ReceiveNext(), 0, helpPopupScreens.Length - 1);
 		_currentNode = (int)stream.ReceiveNext();
-		if (CurrentNode == null)
+		if (CurrentNode == null && CurrentPage != null && CurrentPage.AllNodes.Count > 0 && CurrentPage.AllNodes[0].Value != null)
 		{
 			_currentNode = (int)CurrentPage.AllNodes[0].Value.upgradeType;
 		}
@@ -236,7 +238,15 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 	public void ZoneDataSerializeRead(BinaryReader reader)
 	{
 		helpScreenIndex = Mathf.Clamp(reader.ReadInt32(), 0, helpPopupScreens.Length - 1);
-		_currentNode = Mathf.Clamp(reader.ReadInt32(), 0, CurrentPage.AllNodes.Count - 1);
+		int value = reader.ReadInt32();
+		if (CurrentPage != null && CurrentPage.AllNodes != null)
+		{
+			_currentNode = Mathf.Clamp(value, 0, CurrentPage.AllNodes.Count - 1);
+		}
+		else
+		{
+			_currentNode = 0;
+		}
 		GadgetDispenserTerminalState gadgetDispenserTerminalState = (GadgetDispenserTerminalState)reader.ReadInt32();
 		GadgetDispenserTerminalState gadgetDispenserTerminalState2 = (GadgetDispenserTerminalState)reader.ReadInt32();
 		if (ActivePlayer == null || !ActivePlayer.gameObject.activeInHierarchy || !Enum.IsDefined(typeof(GadgetDispenserTerminalState), gadgetDispenserTerminalState) || !Enum.IsDefined(typeof(GadgetDispenserTerminalState), gadgetDispenserTerminalState2))
@@ -350,10 +360,17 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 
 	public void TouchscreenButtonPressed(SITouchscreenButton.SITouchscreenButtonType buttonType, int data, int actorNr)
 	{
+		if (actorNr == SIPlayer.LocalPlayer.ActorNr && (ActivePlayer == null || ActivePlayer != SIPlayer.LocalPlayer))
+		{
+			parentTerminal.PlayWrongPlayerBuzz(uiCenter);
+		}
+		else
+		{
+			touchSoundBankPlayer.Play();
+		}
 		if (!IsAuthority)
 		{
 			parentTerminal.TouchscreenButtonPressed(buttonType, data, actorNr, SICombinedTerminal.TerminalSubFunction.GadgetDispenser);
-			touchSoundBankPlayer.Play();
 		}
 		else
 		{
@@ -462,7 +479,6 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 				if (num >= player.totalGadgetLimit)
 				{
 					GameEntityManager.RequestDestroyItem(gameEntityFromNetId.id);
-					player.activePlayerGadgets.RemoveAt(num2);
 					break;
 				}
 			}

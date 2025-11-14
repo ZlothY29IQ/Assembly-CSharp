@@ -96,7 +96,7 @@ public class LocalisationManager : MonoBehaviour
 		{
 			for (int j = 0; j < _localisationFonts[i].locales.Count; j++)
 			{
-				if (!_localisationFontDict.ContainsKey(_localisationFonts[i].locales[j].Identifier.Code) && !(_localisationFonts[i].fontAsset == null))
+				if (!(_localisationFonts[i].locales[j] == null) && !_localisationFontDict.ContainsKey(_localisationFonts[i].locales[j].Identifier.Code) && !(_localisationFonts[i].fontAsset == null))
 				{
 					_ = _localisationFonts[i].fontAsset == null;
 					_localisationFontDict.Add(_localisationFonts[i].locales[j].Identifier.Code, _localisationFonts[i]);

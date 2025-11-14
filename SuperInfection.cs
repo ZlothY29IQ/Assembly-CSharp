@@ -388,7 +388,6 @@ public class SuperInfection : MonoBehaviour, IGorillaSliceableSimple
 			else if (activeGadgets[num].transform.position.y < resourceResetHeight)
 			{
 				siManager.gameEntityManager.RequestDestroyItem(activeGadgets[num].gameEntity.id);
-				activeGadgets.RemoveAt(num);
 			}
 		}
 	}

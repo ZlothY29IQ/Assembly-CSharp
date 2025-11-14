@@ -403,7 +403,7 @@ internal class PlayerCosmeticsSystem : MonoBehaviour, ITickSystemPre
 			rig.myBodyDockPositions.RefreshTransferrableItems();
 			return;
 		}
-		rig.LocalUpdateCosmeticsWithTryon(rig.cosmeticSet, rig.tryOnSet);
+		rig.LocalUpdateCosmeticsWithTryon(rig.cosmeticSet, rig.tryOnSet, playfx: false);
 		rig.myBodyDockPositions.RefreshTransferrableItems();
 	}
 

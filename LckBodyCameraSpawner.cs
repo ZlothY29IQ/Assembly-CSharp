@@ -116,6 +116,11 @@ public class LckBodyCameraSpawner : MonoBehaviourTick
 				break;
 			case CameraState.CameraOnNeck:
 				cameraPosition = CameraPosition.CameraDefault;
+				if ((bool)_tabletSpawnInstance.Controller.GtColliderTriggerProcessorsGroup.GetCurrentTriggerProcessor())
+				{
+					_tabletSpawnInstance.Controller.GtColliderTriggerProcessorsGroup.GetCurrentTriggerProcessor().ResetToDefaultAndTriggerButton();
+					_tabletSpawnInstance.Controller.GtColliderTriggerProcessorsGroup.ClearAllTriggers();
+				}
 				_tabletSpawnInstance.uiVisible = false;
 				_tabletSpawnInstance.cameraActive = true;
 				ResetCameraModel();
@@ -331,9 +336,10 @@ public class LckBodyCameraSpawner : MonoBehaviourTick
 		_tabletSpawnInstance.Dispose();
 	}
 
+	[ContextMenu("Put tablet on neck")]
 	public void ManuallySetCameraOnNeck()
 	{
-		if (cameraState != CameraState.CameraOnNeck && _tabletSpawnInstance.isSpawned)
+		if (cameraState != CameraState.CameraOnNeck && cameraState != 0 && _tabletSpawnInstance.isSpawned)
 		{
 			cameraState = CameraState.CameraOnNeck;
 			_tabletSpawnInstance.SetParent(_cameraModelTransform);

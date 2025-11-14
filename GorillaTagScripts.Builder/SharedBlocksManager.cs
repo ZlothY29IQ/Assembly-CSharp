@@ -541,6 +541,7 @@ public class SharedBlocksManager : MonoBehaviour
 		request.downloadHandler = new DownloadHandlerBuffer();
 		request.SetRequestHeader("Content-Type", "application/json");
 		yield return request.SendWebRequest();
+		bool flag;
 		if (request.result == UnityWebRequest.Result.Success)
 		{
 			string mapId = data.mapId;
@@ -568,28 +569,48 @@ public class SharedBlocksManager : MonoBehaviour
 		else
 		{
 			GTDev.LogError($"PostVote Error: {request.responseCode} -- raw response: " + request.downloadHandler.text);
-			long responseCode = request.responseCode;
-			if (responseCode > 500 && responseCode < 600)
+			if (request.result == UnityWebRequest.Result.ProtocolError)
 			{
-				retry = true;
+				long responseCode = request.responseCode;
+				if (responseCode >= 500)
+				{
+					if (responseCode < 600)
+					{
+						goto IL_0202;
+					}
+				}
+				else if (responseCode == 408 || responseCode == 429)
+				{
+					goto IL_0202;
+				}
+				flag = false;
+				goto IL_020a;
 			}
-			else if (request.result == UnityWebRequest.Result.ConnectionError)
-			{
-				retry = true;
-			}
-			else
-			{
-				voteInProgress = false;
-				callback?.Invoke(arg1: false, "REQUEST ERROR");
-			}
+			retry = true;
 		}
+		goto IL_0235;
+		IL_0202:
+		flag = true;
+		goto IL_020a;
+		IL_020a:
+		if (flag)
+		{
+			retry = true;
+		}
+		else
+		{
+			voteInProgress = false;
+			callback?.Invoke(arg1: false, "REQUEST ERROR");
+		}
+		goto IL_0235;
+		IL_0235:
 		if (retry)
 		{
 			if (voteRetryCount < maxRetriesOnFail)
 			{
-				int num = (int)Mathf.Pow(2f, voteRetryCount + 1);
+				float seconds = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, voteRetryCount + 1));
 				voteRetryCount++;
-				yield return new WaitForSeconds(num);
+				yield return new WaitForSeconds(seconds);
 				voteInProgress = false;
 				RequestVote(data.mapId, data.vote == 1, callback);
 			}
@@ -673,6 +694,7 @@ public class SharedBlocksManager : MonoBehaviour
 		request.downloadHandler = new DownloadHandlerBuffer();
 		request.SetRequestHeader("Content-Type", "application/json");
 		yield return request.SendWebRequest();
+		bool flag;
 		if (request.result == UnityWebRequest.Result.Success)
 		{
 			GTDev.Log("PostPublishMapRequest Success: raw response: " + request.downloadHandler.text);
@@ -690,27 +712,34 @@ public class SharedBlocksManager : MonoBehaviour
 		}
 		else
 		{
-			long responseCode = request.responseCode;
-			if (responseCode > 500 && responseCode < 600)
+			if (request.result == UnityWebRequest.Result.ProtocolError)
 			{
-				retry = true;
+				long responseCode = request.responseCode;
+				if (responseCode >= 500)
+				{
+					if (responseCode < 600)
+					{
+						goto IL_01db;
+					}
+				}
+				else if (responseCode == 408 || responseCode == 429)
+				{
+					goto IL_01db;
+				}
+				flag = false;
+				goto IL_01e3;
 			}
-			else if (request.result == UnityWebRequest.Result.ConnectionError)
-			{
-				retry = true;
-			}
-			else
-			{
-				callback?.Invoke(success: false, data.userdataMetadataKey, string.Empty, request.responseCode);
-			}
+			retry = true;
 		}
+		goto IL_021d;
+		IL_021d:
 		if (retry)
 		{
 			if (postPublishMapRetryCount < maxRetriesOnFail)
 			{
-				int num = (int)Mathf.Pow(2f, postPublishMapRetryCount + 1);
+				float seconds = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, postPublishMapRetryCount + 1));
 				postPublishMapRetryCount++;
-				yield return new WaitForSeconds(num);
+				yield return new WaitForSeconds(seconds);
 				publishRequestInProgress = false;
 				RequestPublishMap(data.userdataMetadataKey);
 			}
@@ -720,6 +749,20 @@ public class SharedBlocksManager : MonoBehaviour
 				callback?.Invoke(success: false, data.userdataMetadataKey, string.Empty, request.responseCode);
 			}
 		}
+		yield break;
+		IL_01db:
+		flag = true;
+		goto IL_01e3;
+		IL_01e3:
+		if (flag)
+		{
+			retry = true;
+		}
+		else
+		{
+			callback?.Invoke(success: false, data.userdataMetadataKey, string.Empty, request.responseCode);
+		}
+		goto IL_021d;
 	}
 
 	public void RequestMapDataFromID(string mapID, BlocksMapRequestCallback callback)
@@ -759,6 +802,7 @@ public class SharedBlocksManager : MonoBehaviour
 		request.downloadHandler = new DownloadHandlerBuffer();
 		request.SetRequestHeader("Content-Type", "application/json");
 		yield return request.SendWebRequest();
+		bool flag;
 		if (request.result == UnityWebRequest.Result.Success)
 		{
 			string text = request.downloadHandler.text;
@@ -766,27 +810,37 @@ public class SharedBlocksManager : MonoBehaviour
 		}
 		else
 		{
-			long responseCode = request.responseCode;
-			if (responseCode > 500 && responseCode < 600)
+			if (request.result == UnityWebRequest.Result.ProtocolError)
 			{
-				retry = true;
+				long responseCode = request.responseCode;
+				if (responseCode >= 500)
+				{
+					if (responseCode < 600)
+					{
+						goto IL_0149;
+					}
+				}
+				else if (responseCode == 408 || responseCode == 429)
+				{
+					goto IL_0149;
+				}
+				flag = false;
+				goto IL_0151;
 			}
-			else if (request.result == UnityWebRequest.Result.ConnectionError)
-			{
-				retry = true;
-			}
-			else
-			{
-				GetMapDataFromIDComplete(data.mapId, null, callback);
-			}
+			retry = true;
 		}
+		goto IL_0176;
+		IL_0149:
+		flag = true;
+		goto IL_0151;
+		IL_0176:
 		if (retry)
 		{
 			if (getMapDataFromIDRetryCount < maxRetriesOnFail)
 			{
-				int num = (int)Mathf.Pow(2f, getMapDataFromIDRetryCount + 1);
+				float seconds = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, getMapDataFromIDRetryCount + 1));
 				getMapDataFromIDRetryCount++;
-				yield return new WaitForSeconds(num);
+				yield return new WaitForSeconds(seconds);
 				getMapDataFromIDInProgress = false;
 				RequestMapDataFromID(data.mapId, callback);
 			}
@@ -796,6 +850,17 @@ public class SharedBlocksManager : MonoBehaviour
 				GetMapDataFromIDComplete(data.mapId, null, callback);
 			}
 		}
+		yield break;
+		IL_0151:
+		if (flag)
+		{
+			retry = true;
+		}
+		else
+		{
+			GetMapDataFromIDComplete(data.mapId, null, callback);
+		}
+		goto IL_0176;
 	}
 
 	private void GetMapDataFromIDComplete(string mapID, [CanBeNull] string response, BlocksMapRequestCallback callback)
@@ -851,6 +916,7 @@ public class SharedBlocksManager : MonoBehaviour
 		request.downloadHandler = new DownloadHandlerBuffer();
 		request.SetRequestHeader("Content-Type", "application/json");
 		yield return request.SendWebRequest();
+		bool flag;
 		if (request.result == UnityWebRequest.Result.Success)
 		{
 			try
@@ -865,27 +931,34 @@ public class SharedBlocksManager : MonoBehaviour
 		}
 		else
 		{
-			long responseCode = request.responseCode;
-			if (responseCode > 500 && responseCode < 600)
+			if (request.result == UnityWebRequest.Result.ProtocolError)
 			{
-				retry = true;
+				long responseCode = request.responseCode;
+				if (responseCode >= 500)
+				{
+					if (responseCode < 600)
+					{
+						goto IL_0160;
+					}
+				}
+				else if (responseCode == 408 || responseCode == 429)
+				{
+					goto IL_0160;
+				}
+				flag = false;
+				goto IL_0168;
 			}
-			else if (request.result == UnityWebRequest.Result.ConnectionError)
-			{
-				retry = true;
-			}
-			else
-			{
-				callback?.Invoke(null);
-			}
+			retry = true;
 		}
+		goto IL_0187;
+		IL_0187:
 		if (retry)
 		{
 			if (getTopMapsRetryCount < maxRetriesOnFail)
 			{
-				int num = (int)Mathf.Pow(2f, getTopMapsRetryCount + 1);
+				float seconds = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, getTopMapsRetryCount + 1));
 				getTopMapsRetryCount++;
-				yield return new WaitForSeconds(num);
+				yield return new WaitForSeconds(seconds);
 				getTopMapsInProgress = false;
 				RequestGetTopMaps(data.page, data.pageSize, data.sort);
 			}
@@ -895,6 +968,20 @@ public class SharedBlocksManager : MonoBehaviour
 				callback?.Invoke(null);
 			}
 		}
+		yield break;
+		IL_0160:
+		flag = true;
+		goto IL_0168;
+		IL_0168:
+		if (flag)
+		{
+			retry = true;
+		}
+		else
+		{
+			callback?.Invoke(null);
+		}
+		goto IL_0187;
 	}
 
 	private void GetTopMapsComplete([CanBeNull] List<SharedBlocksMapMetaData> maps)
@@ -971,33 +1058,44 @@ public class SharedBlocksManager : MonoBehaviour
 		request.downloadHandler = new DownloadHandlerBuffer();
 		request.SetRequestHeader("Content-Type", "application/json");
 		yield return request.SendWebRequest();
+		bool flag;
 		if (request.result == UnityWebRequest.Result.Success)
 		{
 			callback?.Invoke(obj: true);
 		}
 		else
 		{
-			long responseCode = request.responseCode;
-			if (responseCode > 500 && responseCode < 600)
+			if (request.result == UnityWebRequest.Result.ProtocolError)
 			{
-				retry = true;
+				long responseCode = request.responseCode;
+				if (responseCode >= 500)
+				{
+					if (responseCode < 600)
+					{
+						goto IL_012d;
+					}
+				}
+				else if (responseCode == 408 || responseCode == 429)
+				{
+					goto IL_012d;
+				}
+				flag = false;
+				goto IL_0135;
 			}
-			else if (request.result == UnityWebRequest.Result.ConnectionError)
-			{
-				retry = true;
-			}
-			else
-			{
-				callback?.Invoke(obj: false);
-			}
+			retry = true;
 		}
+		goto IL_0154;
+		IL_012d:
+		flag = true;
+		goto IL_0135;
+		IL_0154:
 		if (retry)
 		{
 			if (updateMapActiveRetryCount < maxRetriesOnFail)
 			{
-				int num = (int)Mathf.Pow(2f, updateMapActiveRetryCount + 1);
+				float seconds = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, updateMapActiveRetryCount + 1));
 				updateMapActiveRetryCount++;
-				yield return new WaitForSeconds(num);
+				yield return new WaitForSeconds(seconds);
 				updateMapActiveInProgress = false;
 				RequestUpdateMapActive(data.userdataMetadataKey, data.setActive);
 			}
@@ -1007,6 +1105,17 @@ public class SharedBlocksManager : MonoBehaviour
 				callback?.Invoke(obj: false);
 			}
 		}
+		yield break;
+		IL_0135:
+		if (flag)
+		{
+			retry = true;
+		}
+		else
+		{
+			callback?.Invoke(obj: false);
+		}
+		goto IL_0154;
 	}
 
 	private void OnUpdatedMapActiveComplete(bool success)
@@ -1055,7 +1164,7 @@ public class SharedBlocksManager : MonoBehaviour
 		GTDev.LogWarning("SharedBlocksManager OnGetConfigurationFail " + error.Error);
 		if (error.Error == PlayFabErrorCode.ConnectionError && fetchTableConfigRetryCount < maxRetriesOnFail)
 		{
-			int waitTime = (int)Mathf.Pow(2f, fetchTableConfigRetryCount + 1);
+			float waitTime = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, fetchTableConfigRetryCount + 1));
 			fetchTableConfigRetryCount++;
 			StartCoroutine(RetryAfterWaitTime(waitTime, FetchConfigurationFromTitleData));
 		}
@@ -1067,7 +1176,7 @@ public class SharedBlocksManager : MonoBehaviour
 		}
 	}
 
-	private IEnumerator RetryAfterWaitTime(int waitTime, Action function)
+	private IEnumerator RetryAfterWaitTime(float waitTime, Action function)
 	{
 		yield return new WaitForSeconds(waitTime);
 		function?.Invoke();
@@ -1122,7 +1231,7 @@ public class SharedBlocksManager : MonoBehaviour
 		GTDev.LogWarning("SharedBlocksManager FetchTitleDataBuildFail " + error.Error);
 		if (error.Error == PlayFabErrorCode.ConnectionError && fetchTitleDataRetryCount < maxRetriesOnFail)
 		{
-			int waitTime = (int)Mathf.Pow(2f, fetchTitleDataRetryCount + 1);
+			float waitTime = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, fetchTitleDataRetryCount + 1));
 			fetchTitleDataRetryCount++;
 			StartCoroutine(RetryAfterWaitTime(waitTime, FetchTitleDataBuild));
 		}
@@ -1262,7 +1371,7 @@ public class SharedBlocksManager : MonoBehaviour
 		GTDev.LogWarning("SharedBlocksManager OnFetchBuildsFromPlayfabFail " + (error?.ErrorMessage ?? "Null"));
 		if (error != null && error.Error == PlayFabErrorCode.ConnectionError && fetchPlayfabBuildsRetryCount < maxRetriesOnFail)
 		{
-			int waitTime = (int)Mathf.Pow(2f, fetchPlayfabBuildsRetryCount + 1);
+			float waitTime = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, fetchPlayfabBuildsRetryCount + 1));
 			fetchPlayfabBuildsRetryCount++;
 			StartCoroutine(RetryAfterWaitTime(waitTime, FetchBuildFromPlayfab));
 		}

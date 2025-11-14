@@ -387,19 +387,19 @@ public class GameAgentManager : NetworkComponent, ITickSystemTick
 		}
 	}
 
-	public void RequestJump(GameAgent agent, Vector3 start, Vector3 end)
+	public void RequestJump(GameAgent agent, Vector3 start, Vector3 end, float heightScale, float speedScale)
 	{
 		if (IsAuthority() && !(agent == null))
 		{
-			agent.OnJumpRequested(start, end);
-			SendRPC("ApplyJumpRPC", RpcTarget.Others, entityManager.GetNetIdFromEntityId(agent.entity.id), start, end);
+			agent.OnJumpRequested(start, end, heightScale, speedScale);
+			SendRPC("ApplyJumpRPC", RpcTarget.Others, entityManager.GetNetIdFromEntityId(agent.entity.id), start, end, heightScale, speedScale);
 		}
 	}
 
 	[PunRPC]
-	public void ApplyJumpRPC(int agentNetId, Vector3 start, Vector3 end, PhotonMessageInfo info)
+	public void ApplyJumpRPC(int agentNetId, Vector3 start, Vector3 end, float heightScale, float speedScale, PhotonMessageInfo info)
 	{
-		if (!IsValidClientRPC(info.Sender, agentNetId) || m_RpcSpamChecks.IsSpamming(RPC.ApplyTarget) || !start.IsValid(10000f) || !end.IsValid(10000f) || !entityManager.IsPositionInZone(start) || !entityManager.IsPositionInZone(end) || !entityManager.IsEntityNearPosition(agentNetId, start) || (end - start).sqrMagnitude > 625f)
+		if (!IsValidClientRPC(info.Sender, agentNetId) || m_RpcSpamChecks.IsSpamming(RPC.ApplyTarget) || !start.IsValid(10000f) || !end.IsValid(10000f) || !entityManager.IsPositionInZone(start) || !entityManager.IsPositionInZone(end) || !entityManager.IsEntityNearPosition(agentNetId, start) || heightScale > 5f || speedScale > 5f || (end - start).sqrMagnitude > 625f)
 		{
 			return;
 		}
@@ -409,7 +409,7 @@ public class GameAgentManager : NetworkComponent, ITickSystemTick
 			GameAgent component = gameEntity.GetComponent<GameAgent>();
 			if (!(component == null))
 			{
-				component.OnJumpRequested(start, end);
+				component.OnJumpRequested(start, end, heightScale, speedScale);
 			}
 		}
 	}

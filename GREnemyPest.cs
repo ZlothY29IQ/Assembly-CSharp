@@ -28,6 +28,7 @@ public class GREnemyPest : MonoBehaviour, IGameEntityComponent, IGameEntitySeria
 	{
 		Destroyed,
 		Bones,
+		Shell,
 		Count
 	}
 
@@ -69,9 +70,9 @@ public class GREnemyPest : MonoBehaviour, IGameEntityComponent, IGameEntitySeria
 
 	public GRAbilityJump abilityJump;
 
-	public List<Renderer> bones;
+	public List<GameObject> bonesStateVisibleObjects;
 
-	public List<Renderer> always;
+	public List<GameObject> alwaysVisibleObjects;
 
 	public Transform coreMarker;
 
@@ -186,6 +187,14 @@ public class GREnemyPest : MonoBehaviour, IGameEntityComponent, IGameEntitySeria
 		SetHP(attributes.CalculateFinalValueForAttribute(GRAttributeType.HPMax));
 		agent.navAgent.autoTraverseOffMeshLink = false;
 		agent.onJumpRequested += OnAgentJumpRequested;
+		if (attributes.CalculateFinalValueForAttribute(GRAttributeType.ArmorMax) > 0)
+		{
+			SetBodyState(BodyState.Shell, force: true);
+		}
+		else
+		{
+			SetBodyState(BodyState.Bones, force: true);
+		}
 	}
 
 	public void OnEntityDestroy()
@@ -201,9 +210,9 @@ public class GREnemyPest : MonoBehaviour, IGameEntityComponent, IGameEntitySeria
 		agent.onBehaviorStateChanged -= OnNetworkBehaviorStateChange;
 	}
 
-	private void OnAgentJumpRequested(Vector3 start, Vector3 end)
+	private void OnAgentJumpRequested(Vector3 start, Vector3 end, float heightScale, float speedScale)
 	{
-		abilityJump.SetupJump(start, end);
+		abilityJump.SetupJump(start, end, heightScale, speedScale);
 		SetBehavior(Behavior.Jump);
 	}
 
@@ -517,16 +526,20 @@ public class GREnemyPest : MonoBehaviour, IGameEntityComponent, IGameEntitySeria
 	public void OnGameEntitySerialize(BinaryWriter writer)
 	{
 		byte value = (byte)currBehavior;
+		byte value2 = (byte)currBodyState;
 		writer.Write(value);
 		writer.Write(hp);
+		writer.Write(value2);
 	}
 
 	public void OnGameEntityDeserialize(BinaryReader reader)
 	{
 		Behavior newBehavior = (Behavior)reader.ReadByte();
 		int hP = reader.ReadInt32();
+		BodyState newBodyState = (BodyState)reader.ReadByte();
 		SetHP(hP);
 		SetBehavior(newBehavior, force: true);
+		SetBodyState(newBodyState, force: true);
 	}
 
 	public bool IsHitValid(GameHitData hit)
@@ -557,25 +570,64 @@ public class GREnemyPest : MonoBehaviour, IGameEntityComponent, IGameEntitySeria
 
 	public void OnHitByClub(GameHitData hit)
 	{
-		if (currBehavior != Behavior.Destroyed)
+		if (currBodyState == BodyState.Bones)
 		{
-			hp -= hit.hitAmount;
-			if (hp <= 0)
+			if (currBehavior != Behavior.Destroyed)
 			{
-				abilityDie.SetInstigatingPlayerIndex(entity.GetLastHeldByPlayerForEntityID(hit.hitByEntityId));
-				SetBehavior(Behavior.Destroyed);
+				hp -= hit.hitAmount;
+				if (hp <= 0)
+				{
+					abilityDie.SetInstigatingPlayerIndex(entity.GetLastHeldByPlayerForEntityID(hit.hitByEntityId));
+					SetBehavior(Behavior.Destroyed);
+				}
+				else
+				{
+					abilityStagger.SetStaggerVelocity(hit.hitImpulse);
+					TrySetBehavior(Behavior.Stagger);
+				}
 			}
-			else
-			{
-				abilityStagger.SetStaggerVelocity(hit.hitImpulse);
-				TrySetBehavior(Behavior.Stagger);
-			}
+		}
+		else if (currBodyState == BodyState.Shell && armor != null)
+		{
+			armor.PlayBlockFx(hit.hitEntityPosition);
 		}
 	}
 
 	public void OnHitByFlash(GRTool tool, GameHitData hit)
 	{
 		abilityFlashed.SetStaggerVelocity(hit.hitImpulse);
+		if (currBodyState == BodyState.Shell)
+		{
+			hp -= hit.hitAmount;
+			if (armor != null)
+			{
+				armor.SetHp(hp);
+			}
+			if (hp <= 0)
+			{
+				if (armor != null)
+				{
+					armor.PlayDestroyFx(armor.transform.position);
+				}
+				SetBodyState(BodyState.Bones);
+				if (tool.gameEntity.IsHeldByLocalPlayer())
+				{
+					PlayerGameEvents.MiscEvent("GRArmorBreak_" + base.name);
+				}
+				if (tool.HasUpgradeInstalled(GRToolProgressionManager.ToolParts.FlashDamage3))
+				{
+					armor.FragmentArmor();
+				}
+			}
+			else
+			{
+				if (armor != null)
+				{
+					armor.PlayHitFx(armor.transform.position);
+				}
+				RefreshBody();
+			}
+		}
 		GRToolFlash component = tool.GetComponent<GRToolFlash>();
 		if (component != null)
 		{
@@ -643,17 +695,56 @@ public class GREnemyPest : MonoBehaviour, IGameEntityComponent, IGameEntitySeria
 		}
 	}
 
-	public static void Hide(List<Renderer> renderers, bool hide)
+	private void RefreshBody()
 	{
-		if (renderers == null)
+		switch (currBodyState)
 		{
-			return;
+		case BodyState.Destroyed:
+			armor.SetHp(0);
+			break;
+		case BodyState.Bones:
+			armor.SetHp(0);
+			GREnemy.HideObjects(bonesStateVisibleObjects, hide: false);
+			GREnemy.HideObjects(alwaysVisibleObjects, hide: false);
+			break;
+		case BodyState.Shell:
+			armor.SetHp(hp);
+			GREnemy.HideObjects(bonesStateVisibleObjects, hide: true);
+			GREnemy.HideObjects(alwaysVisibleObjects, hide: false);
+			break;
 		}
-		for (int i = 0; i < renderers.Count; i++)
+	}
+
+	public void SetBodyState(BodyState newBodyState, bool force = false)
+	{
+		if (currBodyState != newBodyState || force)
 		{
-			if (renderers[i] != null)
+			switch (currBodyState)
 			{
-				renderers[i].enabled = !hide;
+			case BodyState.Bones:
+				hp = attributes.CalculateFinalValueForAttribute(GRAttributeType.HPMax);
+				break;
+			case BodyState.Shell:
+				hp = attributes.CalculateFinalValueForAttribute(GRAttributeType.ArmorMax);
+				break;
+			}
+			currBodyState = newBodyState;
+			switch (currBodyState)
+			{
+			case BodyState.Destroyed:
+				GhostReactorManager.Get(entity).ReportEnemyDeath();
+				break;
+			case BodyState.Bones:
+				hp = attributes.CalculateFinalValueForAttribute(GRAttributeType.HPMax);
+				break;
+			case BodyState.Shell:
+				hp = attributes.CalculateFinalValueForAttribute(GRAttributeType.ArmorMax);
+				break;
+			}
+			RefreshBody();
+			if (entity.IsAuthority())
+			{
+				agent.RequestStateChange((byte)newBodyState);
 			}
 		}
 	}

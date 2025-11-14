@@ -23,10 +23,19 @@ public class SITechTreeUIPage : MonoBehaviour
 		id = treePage.pageId;
 		int count = treePage.Roots.Count;
 		Vector3 vector = new Vector3(0f, nodeContainer.rect.min.y + 20f, 0f);
-		float num = nodeContainer.rect.width / (float)count;
+		if (count < 2)
+		{
+			float num = treePage.Roots[0].GetSubtreeWidth() * 50 + 100;
+			if (num > nodeContainer.rect.width)
+			{
+				float num2 = (nodeContainer.rect.width - num) / 2f;
+				vector.x += num2;
+			}
+		}
+		float num3 = nodeContainer.rect.width / (float)count;
 		for (int i = 0; i < count; i++)
 		{
-			float x = ((count < 2) ? 0f : (-22f + (0f - num) * (float)(count - 1) / 2f + num * (float)i));
+			float x = ((count < 2) ? 0f : (-22f + (0f - num3) * (float)(count - 1) / 2f + num3 * (float)i));
 			AddNodes(null, treePage.Roots[i], vector + new Vector3(x, 0f, 0f));
 		}
 		foreach (SITechTreeUINode pageNode in _pageNodes)
@@ -37,14 +46,14 @@ public class SITechTreeUIPage : MonoBehaviour
 		}
 		void AddNodes(GraphNode<SITechTreeNode> parent, GraphNode<SITechTreeNode> node, Vector3 position)
 		{
-			float num2 = ((parent == null) ? 40 : 25);
-			int num3 = ((parent == null) ? 10 : 5);
-			int num4 = 0;
+			float num4 = ((parent == null) ? 40 : 25);
+			int num5 = ((parent == null) ? 10 : 5);
+			List<float> subtreeWidths = new List<float>();
+			float num6 = 50f;
 			foreach (GraphNode<SITechTreeNode> child in node.Children)
 			{
-				num4 += child.GetSubtreeWidth() - 1;
+				subtreeWidths.Add(num6 * (float)child.GetSubtreeWidth());
 			}
-			float num5 = 50 + num4 * 25;
 			SITechTreeUINode sITechTreeUINode = GetOrInstantiateUINode(node.Value.upgradeType);
 			if (parent != null)
 			{
@@ -55,12 +64,12 @@ public class SITechTreeUIPage : MonoBehaviour
 			{
 				if (sITechTreeUINode.Parents.Count > 1)
 				{
-					float num6 = 0f;
+					float num7 = 0f;
 					foreach (SITechTreeUINode parent in sITechTreeUINode.Parents)
 					{
-						num6 += parent.transform.localPosition.x;
+						num7 += parent.transform.localPosition.x;
 					}
-					position.x = num6 / (float)sITechTreeUINode.Parents.Count;
+					position.x = num7 / (float)sITechTreeUINode.Parents.Count;
 				}
 				position.y = Mathf.Max(sITechTreeUINode.transform.localPosition.y, position.y);
 			}
@@ -70,18 +79,37 @@ public class SITechTreeUIPage : MonoBehaviour
 				_pageNodes.Add(sITechTreeUINode);
 			}
 			sITechTreeUINode.transform.localPosition = position;
-			int count2 = node.Children.Count;
-			for (int j = 0; j < count2; j++)
+			int childCount = node.Children.Count;
+			float num8 = 0f;
+			if (childCount > 1)
 			{
-				float y = num2 + (float)((j + 1) % 2 * num3);
-				GraphNode<SITechTreeNode> node2 = node.Children[j];
-				Vector3 position2 = position + new Vector3((0f - num5) * (float)(count2 - 1) / 2f + num5 * (float)j, y, 0f);
+				int index2 = 0;
+				for (int j = 0; j < childCount; j++)
+				{
+					float num9 = subtreeWidths[index2];
+					float num10 = ((j == 0 || j == childCount - 1) ? (num9 / 2f) : num9);
+					num8 -= num10 / 2f;
+				}
+			}
+			for (int k = 0; k < childCount; k++)
+			{
+				float y = num4 + (float)((k + 1) % 2 * num5);
+				GraphNode<SITechTreeNode> node2 = node.Children[k];
+				Vector3 position2 = position + new Vector3(num8, y, 0f);
 				AddNodes(node, node2, position2);
+				num8 += GetSpacing(k);
 			}
 			sITechTreeUINode.imageFlattener.overrideParentTransform = imageTarget;
 			sITechTreeUINode.textFlattener.overrideParentTransform = textTarget;
 			sITechTreeUINode.imageFlattener.enabled = true;
 			sITechTreeUINode.textFlattener.enabled = true;
+			float GetSpacing(int index)
+			{
+				int num11 = index + 1;
+				float num12 = ((index >= 0 && index < childCount) ? subtreeWidths[index] : 0f);
+				float num13 = ((num11 >= 0 && num11 < childCount) ? subtreeWidths[num11] : 0f);
+				return (num12 + num13) / 2f;
+			}
 		}
 		void AddUpgradeLines(SITechTreeUINode uiNode)
 		{

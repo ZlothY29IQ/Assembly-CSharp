@@ -2934,7 +2934,7 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		screenText.Text = result2;
 		screenText.Text += text;
 		LocalisationManager.TryGetKeyForCurrentLocale("STARTUP_PLAYERS_ONLINE", out result2, "{playersOnline} PLAYERS ONLINE\n\n");
-		screenText.Text += result2.Replace("{playersOnline}", NetworkSystem.Instance.GlobalPlayerCount().ToString());
+		screenText.Text += result2.Replace("{playersOnline}", HowManyMonke.ThisMany.ToString());
 		LocalisationManager.TryGetKeyForCurrentLocale("STARTUP_USERS_BANNED", out result2, "{usersBanned} USERS BANNED YESTERDAY\n\n");
 		screenText.Text += result2.Replace("{usersBanned}", usersBanned.ToString());
 		LocalisationManager.TryGetKeyForCurrentLocale("STARTUP_PRESS_KEY", out result2, "PRESS ANY KEY TO BEGIN");
@@ -3028,7 +3028,7 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 			text = "\n\nPLAYERS ONLINE:";
 			LocalisationManager.TryGetKeyForCurrentLocale("PLAYERS_ONLINE", out result, text);
 			screenText.Text += result.TrailingSpace();
-			screenText.Text += NetworkSystem.Instance.GlobalPlayerCount();
+			screenText.Text += HowManyMonke.ThisMany;
 		}
 		if (num)
 		{
@@ -3099,7 +3099,7 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 	{
 		string defaultResult = "NOT AVAILABLE IN RANKED PLAY";
 		LocalisationManager.TryGetKeyForCurrentLocale("LIMITED_ONLINE_FUNC", out var result, defaultResult);
-		screenText.Text += result;
+		screenText.Text = result;
 	}
 
 	private void UpdateGameModeText()
@@ -3128,13 +3128,13 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 	private void CheckAutoBanListForRoomName(string nameToCheck)
 	{
 		SwitchToLoadingState();
-		AutoBanPlayfabFunction(nameToCheck, forRoom: true, OnRoomNameChecked);
+		CheckForBadRoomName(nameToCheck);
 	}
 
 	private void CheckAutoBanListForPlayerName(string nameToCheck)
 	{
 		SwitchToLoadingState();
-		AutoBanPlayfabFunction(nameToCheck, forRoom: false, OnPlayerNameChecked);
+		CheckForBadPlayerName(nameToCheck);
 	}
 
 	private void CheckAutoBanListForTroopName(string nameToCheck)
@@ -3142,17 +3142,38 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		if (IsValidTroopName(troopToJoin))
 		{
 			SwitchToLoadingState();
-			AutoBanPlayfabFunction(nameToCheck, forRoom: false, OnTroopNameChecked);
+			CheckForBadTroopName(nameToCheck);
 		}
 	}
 
-	private void AutoBanPlayfabFunction(string nameToCheck, bool forRoom, Action<ExecuteFunctionResult> resultCallback)
+	private void CheckForBadRoomName(string nameToCheck)
 	{
 		GorillaServer.Instance.CheckForBadName(new CheckForBadNameRequest
 		{
 			name = nameToCheck,
-			forRoom = forRoom
-		}, resultCallback, OnErrorNameCheck);
+			forRoom = true,
+			forTroop = false
+		}, OnRoomNameChecked, OnErrorNameCheck);
+	}
+
+	private void CheckForBadPlayerName(string nameToCheck)
+	{
+		GorillaServer.Instance.CheckForBadName(new CheckForBadNameRequest
+		{
+			name = nameToCheck,
+			forRoom = false,
+			forTroop = false
+		}, OnPlayerNameChecked, OnErrorNameCheck);
+	}
+
+	private void CheckForBadTroopName(string nameToCheck)
+	{
+		GorillaServer.Instance.CheckForBadName(new CheckForBadNameRequest
+		{
+			name = nameToCheck,
+			forRoom = false,
+			forTroop = true
+		}, OnTroopNameChecked, OnErrorNameCheck);
 	}
 
 	private void OnRoomNameChecked(ExecuteFunctionResult result)

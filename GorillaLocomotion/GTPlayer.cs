@@ -453,7 +453,7 @@ public class GTPlayer : MonoBehaviour
 	[SerializeField]
 	private HandState rightHand;
 
-	private HandState[] stiltStates = new HandState[4];
+	private HandState[] stiltStates = new HandState[12];
 
 	private bool anyHandIsColliding;
 
@@ -950,6 +950,14 @@ public class GTPlayer : MonoBehaviour
 
 	private bool didHoverLastFrame;
 
+	private bool hasLeftHandTentacleMove;
+
+	private bool hasRightHandTentacleMove;
+
+	private Vector3 leftHandTentacleMove;
+
+	private Vector3 rightHandTentacleMove;
+
 	private HandHoldState activeHandHold;
 
 	private HandHoldState secondaryHandHold;
@@ -1222,20 +1230,19 @@ public class GTPlayer : MonoBehaviour
 		}
 	}
 
-	public void EnableStilt(StiltID stiltID, Vector3 currentTipWorldPos, float maxArmLength, bool canTag, bool canStun, float customBoostFactor = 0f, GorillaVelocityTracker velocityTracker = null)
+	public void EnableStilt(StiltID stiltID, bool isLeftHand, Vector3 currentTipWorldPos, float maxArmLength, bool canTag, bool canStun, float customBoostFactor = 0f, GorillaVelocityTracker velocityTracker = null)
 	{
-		bool flag = stiltID == StiltID.Held_Left || stiltID == StiltID.Snapped_Left;
 		HandState[] array = stiltStates;
 		HandState handState = new HandState
 		{
 			isActive = true
 		};
-		HandState obj = (flag ? leftHand : rightHand);
+		HandState obj = (isLeftHand ? leftHand : rightHand);
 		handState.controllerTransform = obj.controllerTransform;
 		GorillaVelocityTracker velocityTracker2;
 		if (!(velocityTracker != null))
 		{
-			HandState obj2 = (flag ? leftHand : rightHand);
+			HandState obj2 = (isLeftHand ? leftHand : rightHand);
 			velocityTracker2 = obj2.velocityTracker;
 		}
 		else
@@ -1249,7 +1256,7 @@ public class GTPlayer : MonoBehaviour
 		handState.customBoostFactor = customBoostFactor;
 		handState.hasCustomBoost = customBoostFactor > 0f;
 		array[(int)stiltID] = handState;
-		stiltStates[(int)stiltID].Init(this, flag, maxArmLength);
+		stiltStates[(int)stiltID].Init(this, isLeftHand, maxArmLength);
 		UpdateStiltOffset(stiltID, currentTipWorldPos);
 	}
 
@@ -2115,7 +2122,7 @@ public class GTPlayer : MonoBehaviour
 		anyHandIsSticking = false;
 		leftHand.FirstIteration(ref totalMove, ref divisor, paddleBoostFactor);
 		rightHand.FirstIteration(ref totalMove, ref divisor, paddleBoostFactor);
-		for (int i = 0; i < 4; i++)
+		for (int i = 0; i < 12; i++)
 		{
 			if (stiltStates[i].isActive)
 			{
@@ -2163,12 +2170,13 @@ public class GTPlayer : MonoBehaviour
 		lastHeadPosition = headCollider.transform.position;
 		areBothTouching = (!leftHand.isColliding && !leftHand.wasColliding) || (!rightHand.isColliding && !rightHand.wasColliding);
 		HandleHandLink();
+		HandleTentacleMovement();
 		anyHandIsColliding = false;
 		anyHandIsSliding = false;
 		anyHandIsSticking = false;
 		leftHand.FinalizeHandPosition();
 		rightHand.FinalizeHandPosition();
-		for (int j = 0; j < 4; j++)
+		for (int j = 0; j < 12; j++)
 		{
 			if (stiltStates[j].isActive)
 			{
@@ -2250,7 +2258,7 @@ public class GTPlayer : MonoBehaviour
 			}
 			for (int k = 0; k < stiltStates.Length; k++)
 			{
-				if (stiltStates[k].isSliding)
+				if (stiltStates[k].isActive && stiltStates[k].isSliding)
 				{
 					if (!stiltStates[k].isLeftHand)
 					{
@@ -2477,7 +2485,7 @@ public class GTPlayer : MonoBehaviour
 		}
 		leftHand.OnEndOfFrame();
 		rightHand.OnEndOfFrame();
-		for (int m = 0; m < 4; m++)
+		for (int m = 0; m < 12; m++)
 		{
 			if (stiltStates[m].isActive)
 			{
@@ -2760,6 +2768,49 @@ public class GTPlayer : MonoBehaviour
 				currentSwing.lastGrabTime = Time.time;
 			}
 		}
+	}
+
+	public void RequestTentacleMove(bool isLeftHand, Vector3 move)
+	{
+		if (isLeftHand)
+		{
+			hasLeftHandTentacleMove = true;
+			leftHandTentacleMove = move;
+		}
+		else
+		{
+			hasRightHandTentacleMove = true;
+			rightHandTentacleMove = move;
+		}
+	}
+
+	public void HandleTentacleMovement()
+	{
+		Vector3 vector;
+		if (hasLeftHandTentacleMove)
+		{
+			if (hasRightHandTentacleMove)
+			{
+				vector = (leftHandTentacleMove + rightHandTentacleMove) * 0.5f;
+				hasRightHandTentacleMove = (hasLeftHandTentacleMove = false);
+			}
+			else
+			{
+				vector = leftHandTentacleMove;
+				hasLeftHandTentacleMove = false;
+			}
+		}
+		else
+		{
+			if (!hasRightHandTentacleMove)
+			{
+				return;
+			}
+			vector = rightHandTentacleMove;
+			hasRightHandTentacleMove = false;
+		}
+		playerRigidBody.transform.position += vector;
+		playerRigidBody.linearVelocity = Vector3.zero;
 	}
 
 	public HandLinkAuthorityStatus GetSelfHandLinkAuthority()
@@ -3448,6 +3499,11 @@ public class GTPlayer : MonoBehaviour
 	public void SetVelocity(Vector3 velocity)
 	{
 		playerRigidBody.linearVelocity = velocity;
+	}
+
+	internal void RigidbodyMovePosition(Vector3 pos)
+	{
+		playerRigidBody.MovePosition(pos);
 	}
 
 	public void TempFreezeHand(bool isLeft, float freezeDuration)

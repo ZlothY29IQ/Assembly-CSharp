@@ -69,6 +69,8 @@ public class SIResourceCollection : MonoBehaviour, ITouchScreenStation
 
 	public GameObject popupScreen;
 
+	public Transform uiCenter;
+
 	[Header("Purchasing Pages")]
 	public TextMeshProUGUI shinyRockInfo;
 
@@ -371,6 +373,14 @@ public class SIResourceCollection : MonoBehaviour, ITouchScreenStation
 
 	public void TouchscreenButtonPressed(SITouchscreenButton.SITouchscreenButtonType buttonType, int data, int actorNr)
 	{
+		if (actorNr == SIPlayer.LocalPlayer.ActorNr && (ActivePlayer == null || ActivePlayer != SIPlayer.LocalPlayer))
+		{
+			parentTerminal.PlayWrongPlayerBuzz(uiCenter);
+		}
+		else
+		{
+			soundBankPlayer.Play();
+		}
 		if (actorNr == SIPlayer.LocalPlayer.ActorNr && ActivePlayer == SIPlayer.LocalPlayer && currentState == ResourceCollectorTerminalState.PurchaseStart && buttonType == SITouchscreenButton.SITouchscreenButtonType.Confirm)
 		{
 			bool flag = ProgressionManager.Instance.GetShinyRocksTotal() >= 500;
@@ -397,7 +407,6 @@ public class SIResourceCollection : MonoBehaviour, ITouchScreenStation
 		if (!IsAuthority)
 		{
 			parentTerminal.TouchscreenButtonPressed(buttonType, data, actorNr, SICombinedTerminal.TerminalSubFunction.ResourceCollection);
-			soundBankPlayer.Play();
 		}
 		else
 		{

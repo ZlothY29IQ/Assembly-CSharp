@@ -17,6 +17,8 @@ public class SinglePool
 
 	private GameObject gameObject;
 
+	private int amountAllocatedToPool;
+
 	private void PrivAllocPooledObjects()
 	{
 		int count = inactivePool.Count;
@@ -26,6 +28,7 @@ public class SinglePool
 			gameObject.name = objectToPool.name + "(PoolIndex=" + i + ")";
 			gameObject.SetActive(value: false);
 			inactivePool.Push(gameObject);
+			amountAllocatedToPool++;
 			int instanceID = gameObject.GetInstanceID();
 			pooledObjects.Add(instanceID);
 		}

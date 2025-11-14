@@ -32,7 +32,7 @@ public class GorillaDevButton : GorillaPressableButton
 		}
 	}
 
-	public void OnEnable()
+	public new void OnEnable()
 	{
 		UpdateColor();
 	}

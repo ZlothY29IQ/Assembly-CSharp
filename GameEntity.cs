@@ -237,7 +237,9 @@ public class GameEntity : MonoBehaviour
 		Debug.Log($"Migrating {base.gameObject} into {newManager}");
 		manager.RemoveGameEntity(this);
 		manager = newManager;
-		return id = newManager.AddGameEntity(this);
+		GameEntityId result = (id = newManager.AddGameEntity(this));
+		manager.InitItemLocal(this, createData);
+		return result;
 	}
 
 	public void MigrateHeldBy(int actorNumber)

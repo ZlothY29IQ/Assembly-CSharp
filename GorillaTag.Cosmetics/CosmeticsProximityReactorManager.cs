@@ -74,14 +74,16 @@ public class CosmeticsProximityReactorManager : MonoBehaviour, IGorillaSliceable
 		{
 			cosmetics.Add(cosmetic);
 		}
-		foreach (string type in cosmetic.GetTypes())
+		IReadOnlyList<string> types = cosmetic.GetTypes();
+		for (int i = 0; i < types.Count; i++)
 		{
-			if (!string.IsNullOrEmpty(type))
+			string text = types[i];
+			if (!string.IsNullOrEmpty(text))
 			{
-				if (!byType.TryGetValue(type, out var value))
+				if (!byType.TryGetValue(text, out var value))
 				{
 					value = new List<CosmeticsProximityReactor>();
-					byType[type] = value;
+					byType[text] = value;
 				}
 				if (!value.Contains(cosmetic))
 				{
@@ -145,28 +147,30 @@ public class CosmeticsProximityReactorManager : MonoBehaviour, IGorillaSliceable
 		}
 		if (gorillaBodyPart.Count > 0)
 		{
-			foreach (CosmeticsProximityReactor cosmetic in cosmetics)
+			for (int j = 0; j < cosmetics.Count; j++)
 			{
-				if (cosmetic == null)
+				CosmeticsProximityReactor cosmeticsProximityReactor = cosmetics[j];
+				if (cosmeticsProximityReactor == null)
 				{
 					continue;
 				}
-				if (!cosmetic.AcceptsAnySource())
+				if (!cosmeticsProximityReactor.AcceptsAnySource())
 				{
-					cosmetic.OnSourceAboveAll();
+					cosmeticsProximityReactor.OnSourceAboveAll();
 					continue;
 				}
 				bool flag = false;
 				Vector3 contact = default(Vector3);
-				foreach (CosmeticsProximityReactor item in gorillaBodyPart)
+				for (int k = 0; k < gorillaBodyPart.Count; k++)
 				{
-					if (!(item == null) && cosmetic.AcceptsThisSource(item.gorillaBodyParts))
+					CosmeticsProximityReactor cosmeticsProximityReactor2 = gorillaBodyPart[k];
+					if (!(cosmeticsProximityReactor2 == null) && cosmeticsProximityReactor.AcceptsThisSource(cosmeticsProximityReactor2.gorillaBodyParts))
 					{
 						bool any;
-						float sourceThresholdFor = cosmetic.GetSourceThresholdFor(item, out any);
-						if (any && AreCollidersWithinThreshold(item, cosmetic, sourceThresholdFor, out var contactPoint))
+						float sourceThresholdFor = cosmeticsProximityReactor.GetSourceThresholdFor(cosmeticsProximityReactor2, out any);
+						if (any && AreCollidersWithinThreshold(cosmeticsProximityReactor2, cosmeticsProximityReactor, sourceThresholdFor, out var contactPoint))
 						{
-							cosmetic.OnSourceBelow(contactPoint, item.gorillaBodyParts);
+							cosmeticsProximityReactor.OnSourceBelow(contactPoint, cosmeticsProximityReactor2.gorillaBodyParts, cosmeticsProximityReactor2.GetComponentInParent<VRRig>());
 							contact = contactPoint;
 							flag = true;
 						}
@@ -174,11 +178,11 @@ public class CosmeticsProximityReactorManager : MonoBehaviour, IGorillaSliceable
 				}
 				if (flag)
 				{
-					cosmetic.WhileSourceBelow(contact, CosmeticsProximityReactor.GorillaBodyPart.HandLeft | CosmeticsProximityReactor.GorillaBodyPart.HandRight | CosmeticsProximityReactor.GorillaBodyPart.Mouth);
+					cosmeticsProximityReactor.WhileSourceBelow(contact, CosmeticsProximityReactor.GorillaBodyPart.HandLeft | CosmeticsProximityReactor.GorillaBodyPart.HandRight | CosmeticsProximityReactor.GorillaBodyPart.Mouth, (gorillaBodyPart[0] != null) ? gorillaBodyPart[0].GetComponentInParent<VRRig>() : null);
 				}
 				else
 				{
-					cosmetic.OnSourceAboveAll();
+					cosmeticsProximityReactor.OnSourceAboveAll();
 				}
 			}
 		}
@@ -186,9 +190,10 @@ public class CosmeticsProximityReactorManager : MonoBehaviour, IGorillaSliceable
 		{
 			RebuildTypeKeysCache();
 		}
-		foreach (string item2 in typeKeysCache)
+		for (int l = 0; l < typeKeysCache.Count; l++)
 		{
-			if (byType.TryGetValue(item2, out var value2) && value2 != null && value2.Count > 0)
+			string key2 = typeKeysCache[l];
+			if (byType.TryGetValue(key2, out var value2) && value2 != null && value2.Count > 0)
 			{
 				BreakTheBoundForGroup(value2);
 			}
@@ -249,18 +254,19 @@ public class CosmeticsProximityReactorManager : MonoBehaviour, IGorillaSliceable
 
 	private void BreakTheBoundForGroup(List<CosmeticsProximityReactor> group)
 	{
-		foreach (CosmeticsProximityReactor item in group)
+		for (int i = 0; i < group.Count; i++)
 		{
-			if (!(item == null) && item.HasAnyCosmeticMatch() && (!matchedFrame.TryGetValue(item, out var value) || value != Time.frameCount))
+			CosmeticsProximityReactor cosmeticsProximityReactor = group[i];
+			if (!(cosmeticsProximityReactor == null) && cosmeticsProximityReactor.HasAnyCosmeticMatch() && (!matchedFrame.TryGetValue(cosmeticsProximityReactor, out var value) || value != Time.frameCount))
 			{
-				if (TryFindAnyCosmeticPartner(item, out var partner, out var contact))
+				if (TryFindAnyCosmeticPartner(cosmeticsProximityReactor, out var partner, out var contact))
 				{
-					item.WhileCosmeticBelowWith(partner, contact);
-					partner.WhileCosmeticBelowWith(item, contact);
+					cosmeticsProximityReactor.WhileCosmeticBelowWith(partner, contact);
+					partner.WhileCosmeticBelowWith(cosmeticsProximityReactor, contact);
 				}
 				else
 				{
-					item.OnCosmeticAboveAll();
+					cosmeticsProximityReactor.OnCosmeticAboveAll();
 				}
 			}
 		}
@@ -270,28 +276,31 @@ public class CosmeticsProximityReactorManager : MonoBehaviour, IGorillaSliceable
 	{
 		partner = null;
 		contact = default(Vector3);
-		foreach (string type in a.GetTypes())
+		IReadOnlyList<string> types = a.GetTypes();
+		for (int i = 0; i < types.Count; i++)
 		{
-			if (string.IsNullOrEmpty(type) || !byType.TryGetValue(type, out var value) || value == null)
+			string text = types[i];
+			if (string.IsNullOrEmpty(text) || !byType.TryGetValue(text, out var value) || value == null)
 			{
 				continue;
 			}
-			foreach (CosmeticsProximityReactor item in value)
+			for (int j = 0; j < value.Count; j++)
 			{
-				if (item == null || item == a || ShouldSkipSameIdPair(a, item))
+				CosmeticsProximityReactor cosmeticsProximityReactor = value[j];
+				if (cosmeticsProximityReactor == null || cosmeticsProximityReactor == a || ShouldSkipSameIdPair(a, cosmeticsProximityReactor))
 				{
 					continue;
 				}
 				bool any;
-				float cosmeticPairThresholdWith = a.GetCosmeticPairThresholdWith(item, out any);
+				float cosmeticPairThresholdWith = a.GetCosmeticPairThresholdWith(cosmeticsProximityReactor, out any);
 				bool any2;
-				float cosmeticPairThresholdWith2 = item.GetCosmeticPairThresholdWith(a, out any2);
+				float cosmeticPairThresholdWith2 = cosmeticsProximityReactor.GetCosmeticPairThresholdWith(a, out any2);
 				if (any && any2)
 				{
 					float threshold = Mathf.Min(cosmeticPairThresholdWith, cosmeticPairThresholdWith2);
-					if (AreCollidersWithinThreshold(a, item, threshold, out var contactPoint))
+					if (AreCollidersWithinThreshold(a, cosmeticsProximityReactor, threshold, out var contactPoint))
 					{
-						partner = item;
+						partner = cosmeticsProximityReactor;
 						contact = contactPoint;
 						return true;
 					}

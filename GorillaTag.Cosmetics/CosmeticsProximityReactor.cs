@@ -30,6 +30,13 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 		GorillaBodyToCosmetic
 	}
 
+	public enum TargetType
+	{
+		Owner,
+		Others,
+		All
+	}
+
 	[Serializable]
 	public class InteractionSetting
 	{
@@ -48,6 +55,9 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 		[Tooltip("Minimum time (in seconds) between consecutive triggers for this interaction block.\nPrevents rapid re-triggering when objects remain within proximity.")]
 		[SerializeField]
 		private float cooldownTime = 0.5f;
+
+		[Tooltip("Who is allowed to trigger this block (if gorilla body part is selected).\n• Owner: only this cosmetic's own rig/body can trigger this.\n• Others: only other players' rigs/bodies can trigger this.\n• All: anyone can trigger.\n\nNote: everyone will still be able to see the result when it triggers.")]
+		public TargetType targetType = TargetType.All;
 
 		public UnityEvent<Vector3> onBelowLocal;
 
@@ -158,6 +168,20 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 				isMatched = false;
 			}
 		}
+
+		public bool AllowsRig(VRRig myRig, VRRig otherRig)
+		{
+			if (myRig == null || otherRig == null)
+			{
+				return true;
+			}
+			return targetType switch
+			{
+				TargetType.Owner => (object)myRig == otherRig, 
+				TargetType.Others => (object)myRig != otherRig, 
+				_ => true, 
+			};
+		}
 	}
 
 	[Tooltip("Is this object a Cosmetic or a gorilla body part like hand? (gorilla body slot is reserved for Gorilla Player Networked)")]
@@ -216,7 +240,6 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 	private void Start()
 	{
 		IsMatched = false;
-		MyRig = GetComponentInParent<VRRig>();
 		if (CosmeticsProximityReactorManager.Instance != null)
 		{
 			CosmeticsProximityReactorManager.Instance.Register(this);
@@ -225,6 +248,10 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 
 	private void OnEnable()
 	{
+		if (MyRig == null)
+		{
+			MyRig = GetComponentInParent<VRRig>();
+		}
 		if (CosmeticsProximityReactorManager.Instance != null)
 		{
 			CosmeticsProximityReactorManager.Instance.Register(this);
@@ -300,13 +327,13 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 		float num = float.MaxValue;
 		foreach (InteractionSetting block in blocks)
 		{
-			if (block.mode != 0)
+			if (block.mode != 0 || !block.AllowsRig(MyRig, other.MyRig))
 			{
 				continue;
 			}
 			foreach (InteractionSetting block2 in other.blocks)
 			{
-				if (block2.mode == InteractionMode.CosmeticToCosmetic && block.SharesKeyWith(block2))
+				if (block2.mode == InteractionMode.CosmeticToCosmetic && block2.AllowsRig(other.MyRig, MyRig) && block.SharesKeyWith(block2))
 				{
 					any = true;
 					float num2 = Mathf.Min(block.proximityThreshold, block2.proximityThreshold);
@@ -327,7 +354,7 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 		GorillaBodyPart kind = gorillaBody.gorillaBodyParts;
 		foreach (InteractionSetting block in blocks)
 		{
-			if (block.mode == InteractionMode.GorillaBodyToCosmetic && block.AcceptsGorillaBodyPart(kind))
+			if (block.mode == InteractionMode.GorillaBodyToCosmetic && block.AcceptsGorillaBodyPart(kind) && block.AllowsRig(MyRig, gorillaBody.MyRig))
 			{
 				any = true;
 				if (block.proximityThreshold < num)
@@ -345,14 +372,14 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 		bool flag = false;
 		foreach (InteractionSetting block in blocks)
 		{
-			if (block.mode != 0)
+			if (block.mode != 0 || !block.AllowsRig(MyRig, other.MyRig))
 			{
 				continue;
 			}
 			bool flag2 = false;
 			foreach (InteractionSetting block2 in other.blocks)
 			{
-				if (block2.mode == InteractionMode.CosmeticToCosmetic && block.SharesKeyWith(block2))
+				if (block2.mode == InteractionMode.CosmeticToCosmetic && block2.AllowsRig(other.MyRig, MyRig) && block.SharesKeyWith(block2))
 				{
 					flag2 = true;
 					break;
@@ -378,14 +405,14 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 	{
 		foreach (InteractionSetting block in blocks)
 		{
-			if (block.mode != 0 || !block.isMatched)
+			if (block.mode != 0 || !block.isMatched || !block.AllowsRig(MyRig, other.MyRig))
 			{
 				continue;
 			}
 			bool flag = false;
 			foreach (InteractionSetting block2 in other.blocks)
 			{
-				if (block2.mode == InteractionMode.CosmeticToCosmetic && block.SharesKeyWith(block2))
+				if (block2.mode == InteractionMode.CosmeticToCosmetic && block2.AllowsRig(other.MyRig, MyRig) && block.SharesKeyWith(block2))
 				{
 					flag = true;
 					break;
@@ -410,13 +437,13 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 		RefreshAggregateMatched();
 	}
 
-	public void OnSourceBelow(Vector3 contact, GorillaBodyPart kind)
+	public void OnSourceBelow(Vector3 contact, GorillaBodyPart kind, VRRig sourceRig)
 	{
 		float time = Time.time;
 		bool flag = false;
 		foreach (InteractionSetting block in blocks)
 		{
-			if (block.mode == InteractionMode.GorillaBodyToCosmetic && block.AcceptsGorillaBodyPart(kind))
+			if (block.mode == InteractionMode.GorillaBodyToCosmetic && block.AcceptsGorillaBodyPart(kind) && block.AllowsRig(MyRig, sourceRig))
 			{
 				block.FireBelow(MyRig, contact, time);
 				if (block.wasBelow)
@@ -432,11 +459,11 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 		}
 	}
 
-	public void WhileSourceBelow(Vector3 contact, GorillaBodyPart kind)
+	public void WhileSourceBelow(Vector3 contact, GorillaBodyPart kind, VRRig sourceRig)
 	{
 		foreach (InteractionSetting block in blocks)
 		{
-			if (block.mode == InteractionMode.GorillaBodyToCosmetic && block.AcceptsGorillaBodyPart(kind) && block.isMatched)
+			if (block.mode == InteractionMode.GorillaBodyToCosmetic && block.AcceptsGorillaBodyPart(kind) && block.isMatched && block.AllowsRig(MyRig, sourceRig))
 			{
 				block.FireWhile(MyRig, contact);
 			}

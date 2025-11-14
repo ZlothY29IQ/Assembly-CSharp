@@ -84,13 +84,11 @@ public class GRShuttle : MonoBehaviour, IGorillaSliceableSimple
 
 	public void OnEnable()
 	{
-		Debug.LogFormat("Shuttle Slice Register {0}", shuttleId);
 		GorillaSlicerSimpleManager.RegisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
 	}
 
 	public void OnDisable()
 	{
-		Debug.LogFormat("Shuttle Slice Unregister {0}", shuttleId);
 		GorillaSlicerSimpleManager.UnregisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
 	}
 

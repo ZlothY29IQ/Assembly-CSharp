@@ -75,6 +75,10 @@ public class GREnemySummoner : MonoBehaviour, IGameEntityComponent, IGameEntityS
 
 	public List<Renderer> always;
 
+	public List<GameObject> bonesStateVisibleObjects;
+
+	public List<GameObject> alwaysVisibleObjects;
+
 	public Transform coreMarker;
 
 	public GRCollectible corePrefab;
@@ -148,7 +152,7 @@ public class GREnemySummoner : MonoBehaviour, IGameEntityComponent, IGameEntityS
 		navAgent.updateRotation = false;
 		behaviorStartTime = -1.0;
 		agent.onBehaviorStateChanged += OnNetworkBehaviorStateChange;
-		senseNearby.Setup(base.transform);
+		senseNearby.Setup(headTransform);
 	}
 
 	public void OnEntityInit()
@@ -206,9 +210,9 @@ public class GREnemySummoner : MonoBehaviour, IGameEntityComponent, IGameEntityS
 		agent.onBehaviorStateChanged -= OnNetworkBehaviorStateChange;
 	}
 
-	private void OnAgentJumpRequested(Vector3 start, Vector3 end)
+	private void OnAgentJumpRequested(Vector3 start, Vector3 end, float heightScale, float speedScale)
 	{
-		abilityJump.SetupJump(start, end);
+		abilityJump.SetupJump(start, end, heightScale, speedScale);
 		SetBehavior(Behavior.Jump);
 	}
 
@@ -389,6 +393,10 @@ public class GREnemySummoner : MonoBehaviour, IGameEntityComponent, IGameEntityS
 	public bool CanSummon()
 	{
 		if (GhostReactorManager.AggroDisabled)
+		{
+			return false;
+		}
+		if (currBehavior == Behavior.Summon && abilitySummon.IsDone())
 		{
 			return false;
 		}
@@ -701,39 +709,26 @@ public class GREnemySummoner : MonoBehaviour, IGameEntityComponent, IGameEntityS
 		}
 	}
 
-	public static void Hide(List<Renderer> renderers, bool hide)
-	{
-		if (renderers == null)
-		{
-			return;
-		}
-		for (int i = 0; i < renderers.Count; i++)
-		{
-			if (renderers[i] != null)
-			{
-				renderers[i].enabled = !hide;
-			}
-		}
-	}
-
 	private void RefreshBody()
 	{
 		switch (currBodyState)
 		{
 		case BodyState.Destroyed:
 			armor.SetHp(0);
-			Hide(bones, hide: false);
-			Hide(always, hide: false);
 			break;
 		case BodyState.Bones:
 			armor.SetHp(0);
-			Hide(bones, hide: false);
-			Hide(always, hide: false);
+			GREnemy.HideRenderers(bones, hide: false);
+			GREnemy.HideRenderers(always, hide: false);
+			GREnemy.HideObjects(bonesStateVisibleObjects, hide: false);
+			GREnemy.HideObjects(alwaysVisibleObjects, hide: false);
 			break;
 		case BodyState.Shell:
 			armor.SetHp(hp);
-			Hide(bones, hide: true);
-			Hide(always, hide: false);
+			GREnemy.HideRenderers(bones, hide: true);
+			GREnemy.HideRenderers(always, hide: false);
+			GREnemy.HideObjects(bonesStateVisibleObjects, hide: true);
+			GREnemy.HideObjects(alwaysVisibleObjects, hide: false);
 			break;
 		}
 	}

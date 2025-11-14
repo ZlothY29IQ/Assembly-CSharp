@@ -85,6 +85,8 @@ public class SITechTreeStation : MonoBehaviour, ITouchScreenStation
 
 	public Image background;
 
+	public Transform uiCenter;
+
 	[Header("Popup Shared")]
 	public GameObject popupScreen;
 
@@ -256,8 +258,13 @@ public class SITechTreeStation : MonoBehaviour, ITouchScreenStation
 		spriteByType.Add(SIResource.ResourceType.FloppyMetal, floppyMetalSprite);
 		techTreeIconById.Add(SITechTreePageId.Thruster, thrustersIcon);
 		techTreeIconById.Add(SITechTreePageId.Stilt, longArmsIcon);
+		techTreeIconById.Add(SITechTreePageId.Grenades, floppyMetalSprite);
 		techTreeIconById.Add(SITechTreePageId.Dash, dashYoYoIcon);
 		techTreeIconById.Add(SITechTreePageId.Platform, platformsIcon);
+		techTreeIconById.Add(SITechTreePageId.TapTeleport, floppyMetalSprite);
+		techTreeIconById.Add(SITechTreePageId.Tentacle, floppyMetalSprite);
+		techTreeIconById.Add(SITechTreePageId.AirGrab, floppyMetalSprite);
+		techTreeIconById.Add(SITechTreePageId.SlipMitt, floppyMetalSprite);
 		for (int i = 0; i < techTreeSO.TreePages.Count; i++)
 		{
 			SITechTreePage sITechTreePage = techTreeSO.TreePages[i];
@@ -380,6 +387,7 @@ public class SITechTreeStation : MonoBehaviour, ITouchScreenStation
 			screenDescriptionText.text = "TECH TREE PAGES";
 			break;
 		case TechTreeStationTerminalState.TechTreePage:
+		{
 			playerNameText.text = ActivePlayerName;
 			UpdateNodeData(ActivePlayer);
 			screenDescriptionText.text = techTreeSO.GetTreePage((SITechTreePageId)parentTerminal.ActivePage)?.nickName;
@@ -391,8 +399,10 @@ public class SITechTreeStation : MonoBehaviour, ITouchScreenStation
 			{
 				techTreePage.gameObject.SetActive(techTreePage.id == (SITechTreePageId)parentTerminal.ActivePage);
 			}
-			techTreeIcon.sprite = techTreeIconById[(SITechTreePageId)parentTerminal.ActivePage];
+			techTreeIconById.TryGetValue((SITechTreePageId)parentTerminal.ActivePage, out var value);
+			techTreeIcon.sprite = value;
 			break;
+		}
 		case TechTreeStationTerminalState.TechTreeNodePopup:
 			switch (nodePopupState)
 			{
@@ -517,6 +527,14 @@ public class SITechTreeStation : MonoBehaviour, ITouchScreenStation
 
 	public void TouchscreenButtonPressed(SITouchscreenButton.SITouchscreenButtonType buttonType, int data, int actorNr)
 	{
+		if (actorNr == SIPlayer.LocalPlayer.ActorNr && (ActivePlayer == null || ActivePlayer != SIPlayer.LocalPlayer))
+		{
+			parentTerminal.PlayWrongPlayerBuzz(uiCenter);
+		}
+		else
+		{
+			soundBankPlayer.Play();
+		}
 		if (actorNr == SIPlayer.LocalPlayer.ActorNr && ActivePlayer == SIPlayer.LocalPlayer && currentState == TechTreeStationTerminalState.TechTreeNodePopup && nodePopupState == NodePopupState.Description && buttonType == SITouchscreenButton.SITouchscreenButtonType.Research && !SIPlayer.LocalPlayer.NodeResearched(CurrentNode.upgradeType) && SIPlayer.LocalPlayer.NodeParentsUnlocked(CurrentNode.upgradeType))
 		{
 			SIProgression.Instance.TryUnlock(CurrentNode.upgradeType);
@@ -524,7 +542,6 @@ public class SITechTreeStation : MonoBehaviour, ITouchScreenStation
 		if (!IsAuthority)
 		{
 			parentTerminal.TouchscreenButtonPressed(buttonType, data, actorNr, SICombinedTerminal.TerminalSubFunction.TechTree);
-			soundBankPlayer.Play();
 		}
 		else
 		{

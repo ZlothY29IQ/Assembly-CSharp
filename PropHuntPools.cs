@@ -49,7 +49,7 @@ public static class PropHuntPools
 	[OnEnterPlay_SetNull]
 	private static AllCosmeticsArraySO _allCosmeticsArraySO;
 
-	private static readonly string[] _g_ph_titleDataSeparators = new string[3] { "\"", " ", "\\n" };
+	private static readonly string[] _g_ph_titleDataSeparators = new string[3] { "\"", " ", "\n" };
 
 	[OnEnterPlay_SetNull]
 	private static string[] _allPropCosmeticIds;

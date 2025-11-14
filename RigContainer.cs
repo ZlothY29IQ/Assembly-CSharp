@@ -28,7 +28,10 @@ public class RigContainer : MonoBehaviour
 	private List<LoudSpeakerNetwork> loudSpeakerNetworks;
 
 	[SerializeField]
-	private LCKSocialCameraFollower m_lckCoconutCamera;
+	private LCKSocialCameraFollower m_lckCococamFollower;
+
+	[SerializeField]
+	private LCKSocialCameraFollower m_lckTablet;
 
 	private PhotonVoiceView voiceView;
 
@@ -75,7 +78,9 @@ public class RigContainer : MonoBehaviour
 
 	public List<LoudSpeakerNetwork> LoudSpeakerNetworks => loudSpeakerNetworks;
 
-	public LCKSocialCameraFollower LCKCoconutCamera => m_lckCoconutCamera;
+	public LCKSocialCameraFollower LckCococamFollower => m_lckCococamFollower;
+
+	public LCKSocialCameraFollower LCKTabletFollower => m_lckTablet;
 
 	public PhotonVoiceView Voice
 	{

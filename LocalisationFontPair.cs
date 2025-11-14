@@ -24,7 +24,7 @@ public struct LocalisationFontPair
 		_ = locales.Count;
 		for (int i = 0; i < locales.Count; i++)
 		{
-			if (locales[i].Identifier.Code == locale.Identifier.Code)
+			if (!(locales[i] == null) && locales[i].Identifier.Code == locale.Identifier.Code)
 			{
 				return true;
 			}

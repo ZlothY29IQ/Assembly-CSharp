@@ -3,14 +3,16 @@ using System.Collections.Generic;
 using GorillaExtensions;
 using Liv.Lck.GorillaTag;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class LCKSocialCameraFollower : MonoBehaviour, ITickSystemTick
 {
 	[SerializeField]
 	private Transform _scaleTransform;
 
+	[FormerlySerializedAs("_coconutCamera")]
 	[SerializeField]
-	private CoconutCamera _coconutCamera;
+	private GameObject _cameraVisualsRoot;
 
 	[SerializeField]
 	private List<GameObject> _visualObjects;
@@ -22,9 +24,15 @@ public class LCKSocialCameraFollower : MonoBehaviour, ITickSystemTick
 
 	private LckSocialCamera m_networkController;
 
+	private IGtCameraVisuals m_gtCameraVisuals;
+
+	private Vector3 _initialScale = Vector3.one;
+
+	private bool isParentedToRig;
+
 	public Transform ScaleTransform => _scaleTransform;
 
-	public CoconutCamera CoconutCamera => _coconutCamera;
+	public GameObject CameraVisualsRoot => _cameraVisualsRoot;
 
 	public List<GameObject> VisualObjects => _visualObjects;
 
@@ -32,6 +40,8 @@ public class LCKSocialCameraFollower : MonoBehaviour, ITickSystemTick
 
 	private void Awake()
 	{
+		_initialScale = base.transform.localScale;
+		m_gtCameraVisuals = _cameraVisualsRoot.GetComponent<IGtCameraVisuals>();
 		if (m_rigContainer.Rig.isOfflineVRRig)
 		{
 			base.gameObject.SetActive(value: false);
@@ -43,14 +53,33 @@ public class LCKSocialCameraFollower : MonoBehaviour, ITickSystemTick
 
 	private void Start()
 	{
+		if (!isParentedToRig)
+		{
+			base.transform.parent = null;
+		}
+	}
+
+	public void SetParentToRig()
+	{
+		isParentedToRig = true;
+		base.transform.parent = m_rigContainer.transform;
+		base.transform.localPosition = new Vector3(0f, -0.2f, 0.132f);
+		base.transform.localRotation = Quaternion.identity;
+		base.transform.localScale = _initialScale * 0.3f;
+	}
+
+	public void SetParentNull()
+	{
+		isParentedToRig = false;
 		base.transform.parent = null;
+		base.transform.localScale = _initialScale;
 	}
 
 	private void PostRigEnable(RigContainer _)
 	{
 		base.gameObject.SetActive(value: true);
-		_coconutCamera.SetVisualsActive(active: false);
-		_coconutCamera.SetRecordingState(isRecording: false);
+		m_gtCameraVisuals.SetNetworkedVisualsActive(active: false);
+		m_gtCameraVisuals.SetRecordingState(isRecording: false);
 	}
 
 	private void PreRigDisable(RigContainer _)
@@ -81,7 +110,10 @@ public class LCKSocialCameraFollower : MonoBehaviour, ITickSystemTick
 
 	void ITickSystemTick.Tick()
 	{
-		base.transform.position = m_transformToFollow.position;
-		base.transform.root.rotation = m_transformToFollow.rotation;
+		if (!isParentedToRig)
+		{
+			base.transform.position = m_transformToFollow.position;
+			base.transform.root.rotation = m_transformToFollow.rotation;
+		}
 	}
 }

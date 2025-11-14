@@ -180,23 +180,14 @@ public class GamePlayerLocal : MonoBehaviour
 
 	public void MigrateToEntityManager(GameEntityManager newEntityManager)
 	{
-		if (currGameEntityManager == newEntityManager)
+		if (!(currGameEntityManager == newEntityManager))
 		{
-			return;
-		}
-		if (newEntityManager.IsAuthority())
-		{
-			gamePlayer.MigrateToEntityManager(newEntityManager);
-			if (currGameEntityManager != null && currGameEntityManager != newEntityManager && !currGameEntityManager.IsAuthority())
+			if (newEntityManager.IsAuthority())
 			{
-				currGameEntityManager.photonView.RPC("PlayerLeftZoneRPC", currGameEntityManager.GetAuthorityPlayer());
+				gamePlayer.MigrateToEntityManager(newEntityManager);
 			}
+			currGameEntityManager = newEntityManager;
 		}
-		else if (currGameEntityManager != null && !currGameEntityManager.IsAuthority())
-		{
-			currGameEntityManager.photonView.RPC("PlayerLeftZoneRPC", currGameEntityManager.GetAuthorityPlayer());
-		}
-		currGameEntityManager = newEntityManager;
 	}
 
 	public void SetGrabbed(GameEntityId gameBallId, int handIndex)

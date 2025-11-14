@@ -1597,12 +1597,12 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 
 	public static bool IsLocalPlayerInBuilderZone()
 	{
-		ZoneEntity zoneEntity = GorillaTagger.Instance?.offlineVRRig?.zoneEntity;
-		if (zoneEntity == null)
+		ZoneEntityBSP zoneEntityBSP = GorillaTagger.Instance?.offlineVRRig?.zoneEntity;
+		if (zoneEntityBSP == null)
 		{
 			return false;
 		}
-		if (!TryGetBuilderTableForZone(zoneEntity.currentZone, out var table))
+		if (!TryGetBuilderTableForZone(zoneEntityBSP.currentZone, out var table))
 		{
 			return false;
 		}

@@ -1,6 +1,5 @@
 using System;
 using GorillaLocomotion;
-using GorillaLocomotion.Climbing;
 using UnityEngine;
 
 public class SIGadgetStilt : SIGadget
@@ -18,6 +17,19 @@ public class SIGadgetStilt : SIGadget
 	public GameObject midpoint;
 
 	public Transform stiltEnd;
+
+	private bool hasEndB;
+
+	public Transform stiltEndB;
+
+	private bool hasEndC;
+
+	public Transform stiltEndC;
+
+	public Transform motorTransform;
+
+	[SerializeField]
+	private AudioSource motorAudio;
 
 	[SerializeField]
 	private SIUpgradeType[] restrictedUpgrades;
@@ -50,10 +62,7 @@ public class SIGadgetStilt : SIGadget
 	private float retractSpeedUpgraded;
 
 	[SerializeField]
-	private float boostSpeedFactor;
-
-	[SerializeField]
-	private GorillaVelocityTracker tipVelocityTracker;
+	private float rotateSpeedFactor;
 
 	[SerializeField]
 	private SoundBankPlayer retractSoundBank;
@@ -66,6 +75,9 @@ public class SIGadgetStilt : SIGadget
 
 	[SerializeField]
 	private Material tagActivatedMat;
+
+	[SerializeField]
+	private GameObject[] tagActivatedObjects;
 
 	[SerializeField]
 	private MeshRenderer matDest;
@@ -85,15 +97,25 @@ public class SIGadgetStilt : SIGadget
 
 	private float retractSpeed;
 
+	private float currentMotorAngle;
+
 	private float adjustmentSendRate = 0.25f;
 
 	private float lastSentLength;
 
 	private float nextAdjustmentSendTime = -1f;
 
+	private bool IsSpinning;
+
 	private StiltID currentStiltID = StiltID.None;
 
+	private StiltID currentStiltIDB = StiltID.None;
+
+	private StiltID currentStiltIDC = StiltID.None;
+
 	private SnapJointType wasSnappedByLocalJoint;
+
+	private const long IsSpinningBit = 1L;
 
 	private int attachedPlayerActorNr = int.MinValue;
 
@@ -105,6 +127,8 @@ public class SIGadgetStilt : SIGadget
 
 	public bool TriggerToExtend { get; private set; }
 
+	public bool hasMotor { get; private set; }
+
 	public bool StickToAdjustLength { get; private set; }
 
 	public bool CanTag { get; private set; }
@@ -113,8 +137,10 @@ public class SIGadgetStilt : SIGadget
 
 	private void Awake()
 	{
-		tipVelocityTracker.enabled = false;
 		tipDefaultOffset = tip.transform.localPosition;
+		hasMotor = motorTransform != null;
+		hasEndB = stiltEndB != null;
+		hasEndC = stiltEndC != null;
 		GameEntity obj = gameEntity;
 		obj.OnGrabbed = (Action)Delegate.Combine(obj.OnGrabbed, new Action(OnGrabbed));
 		GameEntity obj2 = gameEntity;
@@ -132,7 +158,16 @@ public class SIGadgetStilt : SIGadget
 		{
 			GTPlayer.Instance.DisableStilt(currentStiltID);
 			currentStiltID = StiltID.None;
-			tipVelocityTracker.enabled = false;
+		}
+		if (currentStiltIDB != StiltID.None)
+		{
+			GTPlayer.Instance.DisableStilt(currentStiltIDB);
+			currentStiltIDB = StiltID.None;
+		}
+		if (currentStiltIDC != StiltID.None)
+		{
+			GTPlayer.Instance.DisableStilt(currentStiltIDC);
+			currentStiltIDC = StiltID.None;
 		}
 	}
 
@@ -143,13 +178,36 @@ public class SIGadgetStilt : SIGadget
 		if (IsEquippedLocal())
 		{
 			activatedLocally = true;
-			currentStiltID = ((gameEntity.heldByHandIndex != 0) ? StiltID.Held_Right : StiltID.Held_Left);
-			if (boostSpeedFactor > 0f)
+			if (gameEntity.heldByHandIndex == 0)
 			{
-				tipVelocityTracker.enabled = true;
-				tipVelocityTracker.SetRelativeTo(VRRig.LocalRig.transform);
+				currentStiltID = StiltID.Held_Left;
+				GTPlayer.Instance.EnableStilt(currentStiltID, isLeftHand: true, stiltEnd.position, maxArmLength, CanTag, CanStun);
+				if (hasEndB)
+				{
+					currentStiltIDB = StiltID.Held_Left2;
+					GTPlayer.Instance.EnableStilt(currentStiltIDB, isLeftHand: true, stiltEndB.position, maxArmLength, CanTag, CanStun);
+				}
+				if (hasEndC)
+				{
+					currentStiltIDC = StiltID.Held_Left3;
+					GTPlayer.Instance.EnableStilt(currentStiltIDC, isLeftHand: true, stiltEndC.position, maxArmLength, CanTag, CanStun);
+				}
 			}
-			GTPlayer.Instance.EnableStilt(currentStiltID, stiltEnd.position, maxArmLength, CanTag, CanStun, boostSpeedFactor, tipVelocityTracker);
+			else
+			{
+				currentStiltID = StiltID.Held_Right;
+				GTPlayer.Instance.EnableStilt(currentStiltID, isLeftHand: false, stiltEnd.position, maxArmLength, CanTag, CanStun);
+				if (hasEndB)
+				{
+					currentStiltIDB = StiltID.Held_Right2;
+					GTPlayer.Instance.EnableStilt(currentStiltIDB, isLeftHand: false, stiltEndB.position, maxArmLength, CanTag, CanStun);
+				}
+				if (hasEndC)
+				{
+					currentStiltIDC = StiltID.Held_Right3;
+					GTPlayer.Instance.EnableStilt(currentStiltIDC, isLeftHand: false, stiltEndC.position, maxArmLength, CanTag, CanStun);
+				}
+			}
 		}
 		else
 		{
@@ -165,7 +223,7 @@ public class SIGadgetStilt : SIGadget
 		if (gameEntity.WasLastHeldByLocalPlayer() && TriggerToExtend && !Mathf.Approximately(targetLength, retractedLength))
 		{
 			targetLength = retractedLength;
-			gameEntity.RequestState(gameEntity.id, (long)(targetLength * 1000f));
+			gameEntity.RequestState(gameEntity.id, PackStateForNetwork());
 		}
 	}
 
@@ -179,22 +237,32 @@ public class SIGadgetStilt : SIGadget
 			if (wasSnappedByLocalJoint == SnapJointType.ArmL)
 			{
 				currentStiltID = StiltID.Snapped_Left;
-				if (boostSpeedFactor > 0f)
+				GTPlayer.Instance.EnableStilt(currentStiltID, isLeftHand: true, stiltEnd.position, maxArmLength, CanTag, CanStun);
+				if (hasEndB)
 				{
-					tipVelocityTracker.enabled = true;
-					tipVelocityTracker.SetRelativeTo(VRRig.LocalRig.transform);
+					currentStiltIDB = StiltID.Snapped_Left2;
+					GTPlayer.Instance.EnableStilt(currentStiltIDB, isLeftHand: true, stiltEndB.position, maxArmLength, CanTag, CanStun);
 				}
-				GTPlayer.Instance.EnableStilt(currentStiltID, stiltEnd.position, maxArmLength, CanTag, CanStun, boostSpeedFactor, tipVelocityTracker);
+				if (hasEndC)
+				{
+					currentStiltIDC = StiltID.Snapped_Left3;
+					GTPlayer.Instance.EnableStilt(currentStiltIDC, isLeftHand: true, stiltEndC.position, maxArmLength, CanTag, CanStun);
+				}
 			}
 			else if (wasSnappedByLocalJoint == SnapJointType.ArmR)
 			{
 				currentStiltID = StiltID.Snapped_Right;
-				if (boostSpeedFactor > 0f)
+				GTPlayer.Instance.EnableStilt(currentStiltID, isLeftHand: false, stiltEnd.position, maxArmLength, CanTag, CanStun);
+				if (hasEndB)
 				{
-					tipVelocityTracker.enabled = true;
-					tipVelocityTracker.SetRelativeTo(VRRig.LocalRig.transform);
+					currentStiltIDB = StiltID.Snapped_Right2;
+					GTPlayer.Instance.EnableStilt(currentStiltIDB, isLeftHand: false, stiltEndB.position, maxArmLength, CanTag, CanStun);
 				}
-				GTPlayer.Instance.EnableStilt(currentStiltID, stiltEnd.position, maxArmLength, CanTag, CanStun, boostSpeedFactor, tipVelocityTracker);
+				if (hasEndC)
+				{
+					currentStiltIDC = StiltID.Snapped_Right3;
+					GTPlayer.Instance.EnableStilt(currentStiltIDC, isLeftHand: false, stiltEndC.position, maxArmLength, CanTag, CanStun);
+				}
 			}
 		}
 		else
@@ -232,11 +300,19 @@ public class SIGadgetStilt : SIGadget
 
 	protected override void OnUpdateAuthority(float dt)
 	{
+		bool isSpinning = IsSpinning;
+		bool flag = false;
 		if (currentStiltID != StiltID.None)
 		{
 			bool num = !TriggerToExtend || CheckInput();
-			bool flag = false;
+			IsSpinning = hasMotor && CheckInput();
+			bool flag2 = false;
 			float oldLength = targetLength;
+			if (IsSpinning)
+			{
+				SpinMotor(dt);
+				flag = true;
+			}
 			if (num)
 			{
 				if (StickToAdjustLength)
@@ -255,28 +331,82 @@ public class SIGadgetStilt : SIGadget
 				{
 					nextAdjustmentSendTime = Time.time + adjustmentSendRate;
 					lastSentLength = targetLength;
-					flag = true;
+					flag2 = true;
 				}
 			}
 			else if (!Mathf.Approximately(targetLength, retractedLength))
 			{
 				targetLength = retractedLength;
 				lastSentLength = targetLength;
-				flag = true;
+				flag2 = true;
 			}
-			if (flag)
+			if (flag2 || IsSpinning != isSpinning)
 			{
 				CheckPlaySounds(oldLength, targetLength);
-				gameEntity.RequestState(gameEntity.id, (long)(targetLength * 1000f));
+				gameEntity.RequestState(gameEntity.id, PackStateForNetwork());
 			}
 		}
-		UpdateLength();
+		if (hasMotor && !flag && motorAudio.isPlaying)
+		{
+			motorAudio.Stop();
+		}
+		isSpinning = IsSpinning;
+		UpdateEndPoints(IsSpinning);
+	}
+
+	private long PackStateForNetwork()
+	{
+		long num = 0L;
+		if (IsSpinning)
+		{
+			num |= 1;
+		}
+		else if (hasMotor)
+		{
+			long num2 = Mathf.RoundToInt(currentMotorAngle);
+			num |= num2 << 1;
+		}
+		long num3 = Mathf.Clamp(Mathf.RoundToInt(targetLength * 1000f), 0, 3000);
+		return num | (num3 << 10);
+	}
+
+	private void UnpackStateFromNetwork(long state)
+	{
+		IsSpinning = (state & 1) != 0;
+		if (hasMotor && !IsSpinning)
+		{
+			currentMotorAngle = (state >> 1) & 0x1FF;
+			motorTransform.localRotation = Quaternion.AngleAxis(currentMotorAngle, Vector3.right);
+		}
+		int num = (int)((state >> 10) & 0xFFF);
+		targetLength = Mathf.Clamp((float)num * 0.001f, retractedLength, maxLength);
+	}
+
+	private void SpinMotor(float dt)
+	{
+		currentMotorAngle = (currentMotorAngle + rotateSpeedFactor * dt) % 360f;
+		motorTransform.localRotation = Quaternion.AngleAxis(currentMotorAngle, Vector3.right);
+		if (!motorAudio.isPlaying)
+		{
+			motorAudio.Play();
+		}
 	}
 
 	protected override void OnUpdateRemote(float dt)
 	{
 		base.OnUpdateRemote(dt);
-		UpdateLength();
+		if (hasMotor)
+		{
+			if (IsSpinning && (gameEntity.heldByActorNumber >= 0 || gameEntity.snappedByActorNumber >= 0))
+			{
+				SpinMotor(dt);
+			}
+			else if (motorAudio.isPlaying)
+			{
+				motorAudio.Stop();
+			}
+		}
+		UpdateEndPoints(force: false);
 	}
 
 	private bool CheckInput()
@@ -317,9 +447,9 @@ public class SIGadgetStilt : SIGadget
 		ApplyCurrentLength();
 	}
 
-	private void UpdateLength()
+	private void UpdateEndPoints(bool force)
 	{
-		if (!Mathf.Approximately(currentLength, targetLength))
+		if (force || !Mathf.Approximately(currentLength, targetLength))
 		{
 			float num = ((targetLength > currentLength) ? extendSpeed : retractSpeed);
 			currentLength = Mathf.MoveTowards(currentLength, targetLength, num * Time.deltaTime);
@@ -327,6 +457,14 @@ public class SIGadgetStilt : SIGadget
 			if (currentStiltID != StiltID.None)
 			{
 				GTPlayer.Instance.UpdateStiltOffset(currentStiltID, stiltEnd.position);
+			}
+			if (currentStiltIDB != StiltID.None)
+			{
+				GTPlayer.Instance.UpdateStiltOffset(currentStiltIDB, stiltEndB.position);
+			}
+			if (currentStiltIDC != StiltID.None)
+			{
+				GTPlayer.Instance.UpdateStiltOffset(currentStiltIDC, stiltEndC.position);
 			}
 		}
 	}
@@ -341,10 +479,10 @@ public class SIGadgetStilt : SIGadget
 
 	private void OnEntityStateChanged(long oldState, long newState)
 	{
-		float oldLength = targetLength;
-		targetLength = Mathf.Clamp((float)newState * 0.001f, retractedLength, maxLength);
 		if (!IsEquippedLocal())
 		{
+			float oldLength = targetLength;
+			UnpackStateFromNetwork(newState);
 			CheckPlaySounds(oldLength, targetLength);
 		}
 	}
@@ -431,6 +569,11 @@ public class SIGadgetStilt : SIGadget
 			{
 				skinnedMatDest.sharedMaterial = defaultMat;
 			}
+		}
+		GameObject[] array = tagActivatedObjects;
+		for (int i = 0; i < array.Length; i++)
+		{
+			array[i].SetActive(isTagged);
 		}
 	}
 }

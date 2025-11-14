@@ -25,20 +25,22 @@ public class GRAbilityJump : GRAbilityBase
 
 	public float jumpSpeed = 3f;
 
+	public AbilitySound soundJump;
+
 	public override void Setup(GameAgent agent, Animation anim, AudioSource audioSource, Transform root, Transform head, GRSenseLineOfSight lineOfSight)
 	{
 		base.Setup(agent, anim, audioSource, root, head, lineOfSight);
 		isActive = false;
 	}
 
-	public void SetupJump(Vector3 start, Vector3 end)
+	public void SetupJump(Vector3 start, Vector3 end, float heightScale = 1f, float speedScale = 1f)
 	{
 		elapsedTime = 0f;
 		startPos = start;
 		endPos = end;
 		float magnitude = (endPos - startPos).magnitude;
-		controlPoint = (startPos + endPos) / 2f + new Vector3(0f, magnitude, 0f);
-		jumpTime = magnitude / jumpSpeed;
+		controlPoint = (startPos + endPos) / 2f + new Vector3(0f, magnitude * heightScale, 0f);
+		jumpTime = magnitude / (jumpSpeed * speedScale);
 	}
 
 	public void SetupJumpFromLinkData(OffMeshLinkData linkData)
@@ -59,14 +61,18 @@ public class GRAbilityJump : GRAbilityBase
 		elapsedTime = 0f;
 		isActive = true;
 		PlayAnim(animationData.animName, 0.05f, animationData.speed);
+		agent.navAgent.isStopped = true;
 		agent.SetDisableNetworkSync(disable: true);
 		agent.pauseEntityThink = true;
+		soundJump.Play(audioSource);
 	}
 
 	public override void Stop()
 	{
 		base.Stop();
+		agent.navAgent.Warp(endPos);
 		agent.navAgent.CompleteOffMeshLink();
+		agent.navAgent.isStopped = false;
 		isActive = false;
 		agent.SetDisableNetworkSync(disable: false);
 		agent.pauseEntityThink = false;

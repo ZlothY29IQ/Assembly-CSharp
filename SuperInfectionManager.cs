@@ -76,9 +76,7 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 	private void Awake()
 	{
 		GameEntityManager obj = gameEntityManager;
-		obj.OnEntityAdded = (Action<GameEntity>)Delegate.Combine(obj.OnEntityAdded, new Action<GameEntity>(OnEntityAdded));
-		GameEntityManager obj2 = gameEntityManager;
-		obj2.OnEntityRemoved = (Action<GameEntity>)Delegate.Combine(obj2.OnEntityRemoved, new Action<GameEntity>(OnEntityRemoved));
+		obj.OnEntityRemoved = (Action<GameEntity>)Delegate.Combine(obj.OnEntityRemoved, new Action<GameEntity>(OnEntityRemoved));
 	}
 
 	public void OnEnableZoneSuperInfection(SuperInfection zone)
@@ -227,9 +225,9 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 
 	public bool IsZoneReady()
 	{
-		if (NetworkSystem.Instance.InRoom && IsInSuperInfectionMode())
+		if (NetworkSystem.Instance.InRoom && IsInSuperInfectionMode() && zoneSuperInfection.IsNotNull())
 		{
-			return zoneSuperInfection.IsNotNull();
+			return VRRig.LocalRig.zoneEntity.currentZone == gameEntityManager.zone;
 		}
 		return false;
 	}
@@ -254,18 +252,22 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 
 	public void OnCreateGameEntity(GameEntity entity)
 	{
-		SIPlayer sIPlayer = SIPlayer.Get((int)(entity.createData & 0xFFFFFFFFu));
-		if (sIPlayer != null)
-		{
-			sIPlayer.activePlayerGadgets.Add(entity.GetNetId());
-		}
 		SIGadget component = entity.GetComponent<SIGadget>();
 		if (component != null)
 		{
+			SIPlayer sIPlayer = SIPlayer.Get((int)(entity.createData & 0xFFFFFFFFu));
+			if (sIPlayer != null && !sIPlayer.activePlayerGadgets.Contains(entity.GetNetId()))
+			{
+				sIPlayer.activePlayerGadgets.Add(entity.GetNetId());
+			}
 			SIUpgradeSet upgrades = new SIUpgradeSet((int)(entity.createData >> 32));
 			upgrades = component.FilterUpgradeNodes(upgrades);
 			component.ApplyUpgradeNodes(upgrades);
 			component.RefreshUpgradeVisuals(upgrades);
+			if (zoneSuperInfection != null)
+			{
+				zoneSuperInfection.AddGadget(component);
+			}
 		}
 		SuperInfectionSnapPoint[] componentsInChildren = entity.GetComponentsInChildren<SuperInfectionSnapPoint>(includeInactive: true);
 		foreach (SuperInfectionSnapPoint snapPoint in componentsInChildren)
@@ -671,20 +673,31 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 		return techTreeSO.SpawnableEntities;
 	}
 
-	private void OnEntityAdded(GameEntity entity)
-	{
-		if (zoneSuperInfection != null && entity.TryGetComponent<SIGadget>(out var component))
-		{
-			zoneSuperInfection.AddGadget(component);
-		}
-	}
-
 	private void OnEntityRemoved(GameEntity entity)
 	{
-		if (zoneSuperInfection != null && entity.TryGetComponent<SIGadget>(out var component))
+		entity.TryGetComponent<SIGadget>(out var component);
+		if (zoneSuperInfection != null && component != null)
 		{
 			zoneSuperInfection.RemoveGadget(component);
 		}
+		if (!(component == null))
+		{
+			SIPlayer sIPlayer = SIPlayer.Get((int)(entity.createData & 0xFFFFFFFFu));
+			if (sIPlayer != null && sIPlayer.activePlayerGadgets.Contains(entity.GetNetId()))
+			{
+				Debug.Log($"GadgetDebug: removing gadget grom list {sIPlayer.gameObject.name} {entity.GetNetId()}");
+				sIPlayer.activePlayerGadgets.Remove(entity.GetNetId());
+			}
+		}
+	}
+
+	public long ProcessMigratedGameEntityCreateData(GameEntity entity, long createData)
+	{
+		if (entity.GetComponent<SIGadget>() == null)
+		{
+			return createData;
+		}
+		return (createData >> 32 << 32) | SIPlayer.LocalPlayer.ActorNr;
 	}
 
 	public bool ValidateMigratedGameEntity(int netId, int entityTypeId, Vector3 position, Quaternion rotation, long createData, int actorNr)
@@ -703,6 +716,11 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 		{
 			return false;
 		}
+		SIPlayer sIPlayer2 = SIPlayer.Get((int)(createData & 0xFFFFFFFFu));
+		if (sIPlayer != sIPlayer2)
+		{
+			return false;
+		}
 		int num = 0;
 		for (int i = 0; i < sIPlayer.activePlayerGadgets.Count; i++)
 		{
@@ -711,7 +729,7 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 				num++;
 			}
 		}
-		if (num >= sIPlayer.totalGadgetLimit)
+		if (num > sIPlayer.totalGadgetLimit)
 		{
 			return false;
 		}
@@ -740,5 +758,21 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 			return false;
 		}
 		return true;
+	}
+
+	public void ClearPlayerGadgets(SIPlayer siPlayer)
+	{
+		for (int num = siPlayer.activePlayerGadgets.Count - 1; num >= 0; num--)
+		{
+			if (num < siPlayer.activePlayerGadgets.Count && siPlayer.activePlayerGadgets[num] >= 0)
+			{
+				GameEntity gameEntityFromNetId = gameEntityManager.GetGameEntityFromNetId(siPlayer.activePlayerGadgets[num]);
+				if (!(gameEntityFromNetId == null) && !(gameEntityFromNetId.id == GameEntityId.Invalid))
+				{
+					gameEntityManager.RequestDestroyItem(gameEntityFromNetId.id);
+				}
+			}
+		}
+		siPlayer.activePlayerGadgets.Clear();
 	}
 }

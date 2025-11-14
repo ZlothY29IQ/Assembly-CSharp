@@ -52,6 +52,7 @@ public class ThermalManager : MonoBehaviour, IGorillaSliceableSimple
 				num2 += thermalSourceVolume.celsius * num4;
 			}
 			thermalReceiver.celsius = Mathf.Lerp(thermalReceiver.celsius, num2, num * thermalReceiver.conductivity);
+			thermalReceiver.continuousProperties?.ApplyAll(thermalReceiver.celsius);
 			if (!thermalReceiver.wasAboveThreshold && thermalReceiver.celsius > thermalReceiver.temperatureThreshold)
 			{
 				thermalReceiver.wasAboveThreshold = true;

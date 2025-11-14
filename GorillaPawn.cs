@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 
+[Obsolete]
 public class GorillaPawn : MonoBehaviour
 {
 	[SerializeField]
@@ -20,7 +21,7 @@ public class GorillaPawn : MonoBehaviour
 	private VRRig _rig;
 
 	[SerializeField]
-	private ZoneEntity _zoneEntity;
+	private ZoneEntityBSP _zoneEntity;
 
 	[Space]
 	[SerializeField]
@@ -52,7 +53,7 @@ public class GorillaPawn : MonoBehaviour
 
 	public VRRig rig => _rig;
 
-	public ZoneEntity zoneEntity => _zoneEntity;
+	public ZoneEntityBSP zoneEntity => _zoneEntity;
 
 	public new Transform transform => _transform;
 
@@ -84,16 +85,6 @@ public class GorillaPawn : MonoBehaviour
 			return;
 		}
 		_zoneEntity = _rig.zoneEntity;
-		if ((bool)_zoneEntity)
-		{
-			if (_bodyXform == null)
-			{
-				_bodyXform = new XformNode();
-			}
-			_bodyXform.localPosition = _zoneEntity.collider.center;
-			_bodyXform.radius = _zoneEntity.collider.radius;
-			_bodyXform.parent = _transform;
-		}
 		bool flag = force || _handLeft.AsNull() == null;
 		bool flag2 = force || _handRight.AsNull() == null;
 		bool flag3 = force || _head.AsNull() == null;

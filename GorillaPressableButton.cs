@@ -64,13 +64,13 @@ public class GorillaPressableButton : MonoBehaviour, IClickable
 	{
 	}
 
-	private void OnEnable()
+	protected virtual void OnEnable()
 	{
 		LocalisationManager.RegisterOnLanguageChanged(RefreshText);
 		RefreshText();
 	}
 
-	private void OnDisable()
+	protected virtual void OnDisable()
 	{
 		LocalisationManager.UnregisterOnLanguageChanged(RefreshText);
 	}

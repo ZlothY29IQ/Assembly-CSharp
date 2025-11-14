@@ -81,25 +81,51 @@ public class GhostReactorShiftDepthDisplay
 			int num = 0;
 			if (shiftManager.coresRequiredToDelveDeeper > 0)
 			{
-				cachedStringBuilder.Append($"Deposit {shiftManager.coresRequiredToDelveDeeper} Cores\n");
+				int num2 = Math.Min(shiftManager.shiftStats.GetShiftStat(GRShiftStatType.CoresCollected), shiftManager.coresRequiredToDelveDeeper);
+				StringBuilder stringBuilder = new StringBuilder();
+				stringBuilder.Append($"Deposit {shiftManager.coresRequiredToDelveDeeper} Cores ");
+				stringBuilder.Append($"({num2}/{shiftManager.coresRequiredToDelveDeeper})");
+				stringBuilder.Append("\n");
+				cachedStringBuilder.Append(stringBuilder);
 				num++;
 			}
 			if (shiftManager.sentientCoresRequiredToDelveDeeper > 0)
 			{
-				cachedStringBuilder.Append($"Collect {shiftManager.sentientCoresRequiredToDelveDeeper} Seeds\n");
+				int num3 = Math.Min(shiftManager.shiftStats.GetShiftStat(GRShiftStatType.SentientCoresCollected), shiftManager.sentientCoresRequiredToDelveDeeper);
+				StringBuilder stringBuilder2 = new StringBuilder();
+				stringBuilder2.Append($"Collect {shiftManager.sentientCoresRequiredToDelveDeeper} Seeds ");
+				stringBuilder2.Append($"({num3}/{shiftManager.sentientCoresRequiredToDelveDeeper})");
+				stringBuilder2.Append("\n");
+				cachedStringBuilder.Append(stringBuilder2);
 				num++;
+			}
+			foreach (GREnemyCount item in shiftManager.killsRequiredToDelveDeeper)
+			{
+				if (item.Count > 0)
+				{
+					int num4 = Math.Min(shiftManager.shiftStats.EnemyKills[item.EnemyType], item.Count);
+					StringBuilder stringBuilder3 = new StringBuilder();
+					stringBuilder3.Append($"Kill {item.Count} {item.EnemyType}s ");
+					stringBuilder3.Append($"({num4}/{item.Count})");
+					stringBuilder3.Append("\n");
+					cachedStringBuilder.Append(stringBuilder3);
+				}
 			}
 			if (shiftManager.maxPlayerDeaths >= 0)
 			{
-				cachedStringBuilder.Append($"Limit Incidents to {shiftManager.maxPlayerDeaths}");
+				StringBuilder stringBuilder4 = new StringBuilder();
+				stringBuilder4.Append($"Limit Incidents to {shiftManager.maxPlayerDeaths} ");
+				stringBuilder4.Append($"({shiftManager.shiftStats.GetShiftStat(GRShiftStatType.PlayerDeaths)} so far)");
+				stringBuilder4.Append("\n");
+				cachedStringBuilder.Append(stringBuilder4);
 				num++;
 			}
 			jumbotronRequirements.text = cachedStringBuilder.ToString();
-			int num2 = reactor.GetCurrLevelGenConfig().coresRequired * 5;
+			int num5 = reactor.GetCurrLevelGenConfig().coresRequired * 5;
 			int rewardXP = GetRewardXP();
 			cachedStringBuilder.Clear();
 			cachedStringBuilder.Append("<color=grey>Rewards:</color>\n");
-			cachedStringBuilder.Append($"+⑭{num2}\n");
+			cachedStringBuilder.Append($"+⑭{num5}\n");
 			cachedStringBuilder.Append($"+{rewardXP} XP\n");
 			jumbotronRewards.text = cachedStringBuilder.ToString();
 			break;
@@ -134,7 +160,16 @@ public class GhostReactorShiftDepthDisplay
 		bool flag = shiftStats.GetShiftStat(GRShiftStatType.CoresCollected) >= shiftManager.coresRequiredToDelveDeeper;
 		bool flag2 = shiftStats.GetShiftStat(GRShiftStatType.SentientCoresCollected) >= shiftManager.sentientCoresRequiredToDelveDeeper;
 		bool flag3 = shiftManager.maxPlayerDeaths < 0 || shiftStats.GetShiftStat(GRShiftStatType.PlayerDeaths) <= shiftManager.maxPlayerDeaths;
-		if (shiftManager.ShiftActive && flag && flag2 && flag3)
+		bool flag4 = true;
+		foreach (GREnemyCount item in shiftManager.killsRequiredToDelveDeeper)
+		{
+			if (shiftStats.EnemyKills.GetValueOrDefault(item.EnemyType) < item.Count)
+			{
+				flag4 = false;
+				break;
+			}
+		}
+		if (shiftManager.ShiftActive && flag && flag2 && flag3 && flag4)
 		{
 			shiftManager.authorizedToDelveDeeper = true;
 		}

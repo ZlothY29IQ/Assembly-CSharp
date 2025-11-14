@@ -7,4 +7,6 @@ public static class BuildConfig
 	public const bool BETA = false;
 
 	public const bool GT_CREATOR_BUILD = false;
+
+	public const bool GT_COSMETICS__ONLY_NEW = false;
 }

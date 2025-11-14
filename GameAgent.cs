@@ -9,7 +9,7 @@ public class GameAgent : MonoBehaviour, IGameEntityComponent
 
 	public delegate void NavigationLinkReachedEvent(OffMeshLinkData linkData);
 
-	public delegate void JumpRequestedEvent(Vector3 start, Vector3 end);
+	public delegate void JumpRequestedEvent(Vector3 start, Vector3 end, float heightScale, float speedScale);
 
 	public delegate void NavigationFailedEvent(NavMeshPathStatus status, Vector3 destination, float remainingDistance);
 
@@ -109,11 +109,11 @@ public class GameAgent : MonoBehaviour, IGameEntityComponent
 			{
 				if ((navAgent.transform.position - navAgent.currentOffMeshLinkData.startPos).sqrMagnitude < (navAgent.transform.position - navAgent.currentOffMeshLinkData.endPos).sqrMagnitude)
 				{
-					GetGameAgentManager().RequestJump(this, navAgent.currentOffMeshLinkData.startPos, navAgent.currentOffMeshLinkData.endPos);
+					GetGameAgentManager().RequestJump(this, navAgent.transform.position, navAgent.currentOffMeshLinkData.endPos, 1f, 1f);
 				}
 				else
 				{
-					GetGameAgentManager().RequestJump(this, navAgent.currentOffMeshLinkData.endPos, navAgent.currentOffMeshLinkData.startPos);
+					GetGameAgentManager().RequestJump(this, navAgent.transform.position, navAgent.currentOffMeshLinkData.startPos, 1f, 1f);
 				}
 			}
 			this.onReachedNavigationLink?.Invoke(navAgent.currentOffMeshLinkData);
@@ -126,9 +126,9 @@ public class GameAgent : MonoBehaviour, IGameEntityComponent
 		}
 	}
 
-	public void OnJumpRequested(Vector3 start, Vector3 end)
+	public void OnJumpRequested(Vector3 start, Vector3 end, float heightScale, float speedScale)
 	{
-		this.onJumpRequested?.Invoke(start, end);
+		this.onJumpRequested?.Invoke(start, end, heightScale, speedScale);
 	}
 
 	public bool IsOnNavMesh()

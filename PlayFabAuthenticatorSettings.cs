@@ -18,6 +18,8 @@ public class PlayFabAuthenticatorSettings
 
 	public static string MmrApiBaseUrl;
 
+	public static string ModerationApiBaseUrl;
+
 	public static string ProgressionApiBaseUrl;
 
 	public static string TitleDataApiBaseUrl;
@@ -40,6 +42,7 @@ public class PlayFabAuthenticatorSettings
 		IapApiBaseUrl = playFabAuthenticatorSettingsScriptableObject.IapApiBaseUrl;
 		KidApiBaseUrl = playFabAuthenticatorSettingsScriptableObject.KidApiBaseUrl;
 		MmrApiBaseUrl = playFabAuthenticatorSettingsScriptableObject.MmrApiBaseUrl;
+		ModerationApiBaseUrl = playFabAuthenticatorSettingsScriptableObject.ModerationApiBaseUrl;
 		ProgressionApiBaseUrl = playFabAuthenticatorSettingsScriptableObject.ProgressionApiBaseUrl;
 		TitleDataApiBaseUrl = playFabAuthenticatorSettingsScriptableObject.TitleDataApiBaseUrl;
 		VotingApiBaseUrl = playFabAuthenticatorSettingsScriptableObject.VotingApiBaseUrl;

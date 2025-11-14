@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace TagEffects;
@@ -20,6 +21,8 @@ public class TagEffectTester : MonoBehaviour, IHandEffectsTrigger
 	public bool FingersUp { get; }
 
 	public Vector3 Velocity { get; }
+
+	public Action<IHandEffectsTrigger.Mode> OnTrigger { get; set; }
 
 	public bool RightHand { get; }
 

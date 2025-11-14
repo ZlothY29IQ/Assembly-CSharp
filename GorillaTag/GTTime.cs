@@ -12,6 +12,8 @@ public static class GTTime
 
 	private const string preErr = "[GTTime]  ERROR!!!  ";
 
+	private static bool _isInitialized;
+
 	public static TimeZoneInfo timeZoneInfoLA { get; private set; }
 
 	public static bool usingServerTime { get; private set; }
@@ -24,6 +26,10 @@ public static class GTTime
 	[RuntimeInitializeOnLoadMethod]
 	private static void _Init()
 	{
+		if (_isInitialized)
+		{
+			return;
+		}
 		try
 		{
 			timeZoneInfoLA = TimeZoneInfo.FindSystemTimeZoneById("America/Los_Angeles");
@@ -36,9 +42,37 @@ public static class GTTime
 			}
 			catch
 			{
-				Debug.LogError("[GTTime]  ERROR!!!  Constructor: Could not get United States Pacific Time Zone (Los Angeles) so UTC will be used instead.");
-				timeZoneInfoLA = TimeZoneInfo.Utc;
+				if (_TryCreateCustomPST(out var out_tz))
+				{
+					timeZoneInfoLA = out_tz;
+					Debug.Log("[GTTime]  _Init: Could not get US Pacific Time Zone, so using manual created Pacific time zone instead.");
+				}
+				else
+				{
+					Debug.LogError("[GTTime]  ERROR!!!  _Init: Could not get US Pacific Time Zone and manual Pacific time zone creation failed. Using UTC instead.");
+					timeZoneInfoLA = TimeZoneInfo.Utc;
+				}
 			}
+		}
+		finally
+		{
+			_isInitialized = true;
+		}
+	}
+
+	private static bool _TryCreateCustomPST(out TimeZoneInfo out_tz)
+	{
+		TimeZoneInfo.AdjustmentRule[] adjustmentRules = new TimeZoneInfo.AdjustmentRule[1] { TimeZoneInfo.AdjustmentRule.CreateAdjustmentRule(new DateTime(2007, 1, 1), DateTime.MaxValue.Date, TimeSpan.FromHours(1.0), TimeZoneInfo.TransitionTime.CreateFloatingDateRule(new DateTime(1, 1, 1, 2, 0, 0), 3, 2, DayOfWeek.Sunday), TimeZoneInfo.TransitionTime.CreateFloatingDateRule(new DateTime(1, 1, 1, 2, 0, 0), 11, 1, DayOfWeek.Sunday)) };
+		try
+		{
+			out_tz = TimeZoneInfo.CreateCustomTimeZone("Custom/America_Los_Angeles", TimeSpan.FromHours(-8.0), "(UTC-08:00) Pacific Time (US & Canada)", "Pacific Standard Time", "Pacific Daylight Time", adjustmentRules, disableDaylightSavingTime: false);
+			return true;
+		}
+		catch (Exception ex)
+		{
+			Debug.LogError("[GTTime]  ERROR!!!  _TryCreateCustomPST: Encountered exception: " + ex.Message);
+			out_tz = null;
+			return false;
 		}
 	}
 

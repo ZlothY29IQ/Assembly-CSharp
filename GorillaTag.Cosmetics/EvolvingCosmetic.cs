@@ -200,6 +200,7 @@ public class EvolvingCosmetic : MonoBehaviour, ITickSystemTick
 			TickSystem<object>.RemoveTickCallback(this);
 			NetworkSystem.Instance.OnPlayerJoined -= new Action<NetPlayer>(SendElapsedTime);
 			networkEvents.Activate -= new Action<int, int, object[], PhotonMessageInfoWrapped>(ReceiveElapsedTime);
+			FirstStage();
 		}
 		callLimiter?.Reset();
 	}
@@ -272,7 +273,7 @@ public class EvolvingCosmetic : MonoBehaviour, ITickSystemTick
 
 	public void Tick()
 	{
-		totalElapsedTime = Mathf.Clamp(totalElapsedTime + activeStage.DeltaTime(Time.deltaTime), 0f, totalDuration * 1.01f);
+		totalElapsedTime = Mathf.Clamp(totalElapsedTime + Mathf.Max(activeStage.DeltaTime(Time.deltaTime), 0f), 0f, totalDuration * 1.01f);
 		HandleStages();
 	}
 

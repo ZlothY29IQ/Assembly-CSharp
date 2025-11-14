@@ -14,6 +14,8 @@ public class GhostReactorLevelGenConfig : ScriptableObject
 
 	public int maxPlayerDeaths = -1;
 
+	public List<GREnemyCount> minEnemyKills = new List<GREnemyCount>();
+
 	[ColorUsage(true, true)]
 	public Color ambientLight = Color.black;
 
@@ -49,6 +51,13 @@ public class GhostReactorLevelGenConfig : ScriptableObject
 			value2.minHubs = 0;
 			value2.maxHubs = 0;
 			treeLevels[treeLevels.Count - 1] = value2;
+		}
+		foreach (GREnemyCount minEnemyKill in minEnemyKills)
+		{
+			if (minEnemyKill.Count < 0)
+			{
+				Debug.LogError("Ghost Reactor Level Gen Setup Error: cannot have negative required enemy kills");
+			}
 		}
 	}
 }

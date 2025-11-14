@@ -58,7 +58,7 @@ public class FingerFlexEvent2 : MonoBehaviour, ITickSystemTick
 		[Tooltip("When this is checked, all players in the room will fire the event. Otherwise, only the local player will fire it. You should usually leave this on, unless you're using it for something local like controller haptics.")]
 		public bool networked = true;
 
-		[Range(0.01f, 1f)]
+		[Range(0.01f, 0.75f)]
 		public float flexThreshold = 0.75f;
 
 		[Range(0.01f, 1f)]

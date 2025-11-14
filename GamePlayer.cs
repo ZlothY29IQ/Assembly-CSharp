@@ -57,6 +57,8 @@ public class GamePlayer : MonoBehaviour
 
 	public Action OnPlayerInitialized;
 
+	public Action OnPlayerLeftZone;
+
 	private bool grabbingDisabled;
 
 	private const bool _k_MATTO__USE_STATIC_CACHE = false;
@@ -210,7 +212,6 @@ public class GamePlayer : MonoBehaviour
 		if (NetworkSystem.Instance.SessionIsPrivate)
 		{
 			DidJoinWithItems = false;
-			AdditionalDataInitialized = false;
 		}
 	}
 

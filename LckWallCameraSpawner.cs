@@ -195,6 +195,11 @@ public class LckWallCameraSpawner : MonoBehaviour
 			Debug.LogError("Lck, unable to spawn camera, body spawner is null!");
 			return;
 		}
+		if (_bodySpawner.tabletSpawnInstance != null && _bodySpawner.tabletSpawnInstance.Controller != null && _bodySpawner.tabletSpawnInstance.Controller.GtColliderTriggerProcessorsGroup != null && (bool)_bodySpawner.tabletSpawnInstance.Controller.GtColliderTriggerProcessorsGroup.GetCurrentTriggerProcessor())
+		{
+			_bodySpawner.tabletSpawnInstance.Controller.GtColliderTriggerProcessorsGroup.GetCurrentTriggerProcessor().ResetToDefaultAndTriggerButton();
+			_bodySpawner.tabletSpawnInstance.Controller.GtColliderTriggerProcessorsGroup.ClearAllTriggers();
+		}
 		cameraVisible = false;
 		_cameraHandleGrabbable.ForceRelease();
 		_bodySpawner.SpawnCamera(lastGorillaGrabber, lastGorillaGrabber.transform);

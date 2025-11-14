@@ -749,7 +749,7 @@ public class GhostReactorManager : NetworkComponent, IGameEntityZoneComponent
 				string text = Guid.NewGuid().ToString();
 				photonView.RPC("ApplyShiftStartRPC", RpcTarget.All, time, num, text, isFirstShift);
 				shiftManager.RequestState(GhostReactorShiftManager.State.ShiftActive);
-				ProgressionManager.Instance.StartOfShift(text, shiftManager.shiftRewardCoresForMothership, reactor.vrRigs.Count);
+				ProgressionManager.Instance.StartOfShift(text, shiftManager.shiftRewardCoresForMothership, reactor.vrRigs.Count, reactor.GetDepthLevel());
 			}
 		}
 	}
@@ -1795,20 +1795,25 @@ public class GhostReactorManager : NetworkComponent, IGameEntityZoneComponent
 		dropZone.PlayEffect();
 	}
 
-	public void RequestRecycleScanItem(GRTool.GRToolType toolType)
+	public void RequestRecycleScanItem(GameEntityId gameEntityId)
 	{
 		if (IsAuthority())
 		{
-			SendRPC("ApplRecycleScanItemRPC", RpcTarget.All, toolType);
+			int netIdFromEntityId = gameEntityManager.GetNetIdFromEntityId(gameEntityId);
+			if (netIdFromEntityId != -1)
+			{
+				SendRPC("ApplyRecycleScanItemRPC", RpcTarget.All, netIdFromEntityId);
+			}
 		}
 	}
 
 	[PunRPC]
-	public void ApplRecycleScanItemRPC(GRTool.GRToolType toolType, PhotonMessageInfo info)
+	public void ApplyRecycleScanItemRPC(int netId, PhotonMessageInfo info)
 	{
 		if (IsZoneActive() && IsValidClientRPC(info.Sender) && !m_RpcSpamChecks.IsSpamming(RPC.ApplRecycleScanItem))
 		{
-			reactor.recycler.ScanItem(toolType);
+			GameEntityId entityIdFromNetId = gameEntityManager.GetEntityIdFromNetId(netId);
+			reactor.recycler.ScanItem(entityIdFromNetId);
 		}
 	}
 
@@ -2109,6 +2114,11 @@ public class GhostReactorManager : NetworkComponent, IGameEntityZoneComponent
 		}
 		reader.ReadBoolean();
 		reactor.VRRigRefresh();
+	}
+
+	public long ProcessMigratedGameEntityCreateData(GameEntity entity, long createData)
+	{
+		return createData;
 	}
 
 	public bool ValidateMigratedGameEntity(int netId, int entityTypeId, Vector3 position, Quaternion rotation, long createData, int actorNr)

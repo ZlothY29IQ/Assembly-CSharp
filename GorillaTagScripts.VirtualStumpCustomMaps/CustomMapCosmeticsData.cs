@@ -21,7 +21,6 @@ public class CustomMapCosmeticsData : ScriptableObject
 
 	public string titleDataKey = "CustomMapCosmeticData";
 
-	[OnEnterPlay_Set(false)]
 	private bool initializedFromTitleData;
 
 	public void OnEnable()

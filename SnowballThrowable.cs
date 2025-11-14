@@ -88,7 +88,7 @@ public class SnowballThrowable : HoldableObject
 		{
 			if (localModel != null)
 			{
-				localModel.OnTriggerEntered = (UnityAction<bool>)Delegate.Combine(localModel.OnTriggerEntered, new UnityAction<bool>(HandleOnGorillaHeadTriggerEntered));
+				localModel.OnDestroyRandomProjectile = (UnityAction<bool>)Delegate.Combine(localModel.OnDestroyRandomProjectile, new UnityAction<bool>(HandleOnDestroyRandomProjectile));
 			}
 		}
 	}
@@ -425,7 +425,7 @@ public class SnowballThrowable : HoldableObject
 		}
 	}
 
-	private void HandleOnGorillaHeadTriggerEntered(bool enable)
+	private void HandleOnDestroyRandomProjectile(bool enable)
 	{
 		SetSnowballActiveLocal(enable);
 	}

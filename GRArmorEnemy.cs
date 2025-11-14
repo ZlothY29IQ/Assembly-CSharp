@@ -1,10 +1,26 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class GRArmorEnemy : MonoBehaviour
 {
+	[Serializable]
+	public struct GREnemyArmorLevel
+	{
+		public int healthThreshold;
+
+		public Material mainRendererMaterial;
+
+		public List<GameObject> visibleObjects;
+
+		public List<GameObject> hiddenObjects;
+	}
+
 	[SerializeField]
 	private List<Renderer> renderers;
+
+	[SerializeField]
+	private List<GameObject> visibleObjects;
 
 	[SerializeField]
 	private AudioSource audioSource;
@@ -37,10 +53,10 @@ public class GRArmorEnemy : MonoBehaviour
 	private float destroySoundVolume;
 
 	[SerializeField]
-	private List<Material> armorStateMaterials;
+	public List<GREnemyArmorLevel> armorStateData;
 
 	[SerializeField]
-	private int[] armorStateThresholds;
+	public Renderer materialSwapRenderer;
 
 	private GameEntity entity;
 
@@ -69,58 +85,60 @@ public class GRArmorEnemy : MonoBehaviour
 	private void RefreshArmor()
 	{
 		bool flag = hp > 0;
-		Hide(renderers, !flag);
-		if (!flag || armorStateMaterials.Count <= 0 || armorStateMaterials.Count != armorStateThresholds.Length)
+		GREnemy.HideRenderers(renderers, !flag);
+		GREnemy.HideObjects(visibleObjects, !flag);
+		if (armorStateData.Count <= 0)
 		{
 			return;
 		}
-		Material material = armorStateMaterials[0];
-		for (int i = 0; i < armorStateMaterials.Count && hp <= armorStateThresholds[i]; i++)
+		int num = -1;
+		Material mainRendererMaterial = armorStateData[0].mainRendererMaterial;
+		for (int i = 0; i < armorStateData.Count; i++)
 		{
-			material = armorStateMaterials[i];
-			if (hp == armorStateThresholds[i])
+			num = i;
+			mainRendererMaterial = armorStateData[i].mainRendererMaterial;
+			if (hp >= armorStateData[i].healthThreshold)
 			{
 				break;
 			}
 		}
-		if (material != renderers[0].material)
+		if (flag && materialSwapRenderer != null && mainRendererMaterial != materialSwapRenderer.material)
 		{
-			renderers[0].material = material;
+			materialSwapRenderer.material = mainRendererMaterial;
 			SetArmorColor(GetArmorColor());
 		}
+		if (num == -1)
+		{
+			return;
+		}
+		GREnemy.HideObjects(armorStateData[num].visibleObjects, !flag);
+		for (int j = 0; j < armorStateData[num].hiddenObjects.Count; j++)
+		{
+			GameObject gameObject = armorStateData[num].hiddenObjects[j];
+			if (gameObject.activeInHierarchy)
+			{
+				PlayDestroyFx(gameObject.transform.position);
+			}
+		}
+		GREnemy.HideObjects(armorStateData[num].hiddenObjects, hide: true);
 	}
 
 	public void SetArmorColor(Color newColor)
 	{
 		if (renderers != null && renderers.Count > 0)
 		{
-			renderers[0].material.SetColor("_BaseColor", newColor);
+			materialSwapRenderer.material.SetColor("_BaseColor", newColor);
 		}
 	}
 
 	public Color GetArmorColor()
 	{
 		Color result = Color.white;
-		if (renderers.Count > 0)
+		if (materialSwapRenderer != null)
 		{
-			result = renderers[0].material.GetColor("_BaseColor");
+			result = materialSwapRenderer.material.GetColor("_BaseColor");
 		}
 		return result;
-	}
-
-	public static void Hide(List<Renderer> renderers, bool hide)
-	{
-		if (renderers == null)
-		{
-			return;
-		}
-		for (int i = 0; i < renderers.Count; i++)
-		{
-			if (renderers[i] != null)
-			{
-				renderers[i].enabled = !hide;
-			}
-		}
 	}
 
 	public void PlayHitFx(Vector3 position)

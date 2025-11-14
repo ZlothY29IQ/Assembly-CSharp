@@ -176,6 +176,8 @@ public class GhostReactorShiftManager : MonoBehaviourTick
 
 	public int sentientCoresRequiredToDelveDeeper;
 
+	public List<GREnemyCount> killsRequiredToDelveDeeper;
+
 	public int maxPlayerDeaths;
 
 	public int shiftRewardCredits;
@@ -1019,7 +1021,8 @@ public class GhostReactorShiftManager : MonoBehaviourTick
 		int num = reactor.GetDepthLevel() + 1;
 		int num2 = num / 4 + 1 + ((num % 5 == 4) ? 2 : 0);
 		shiftRewardCoresForMothership = currLevelGenConfig.coresRequired + num2;
-		coresRequiredToDelveDeeper = (int)(reactor.difficultyScalingForCurrentFloor * (float)currLevelGenConfig.coresRequired) + num2;
+		coresRequiredToDelveDeeper = ((currLevelGenConfig.coresRequired > 0) ? ((int)(reactor.difficultyScalingForCurrentFloor * (float)currLevelGenConfig.coresRequired) + num2) : 0);
+		killsRequiredToDelveDeeper = currLevelGenConfig.minEnemyKills;
 		shiftRewardCredits = currLevelGenConfig.coresRequired * 5;
 		sentientCoresRequiredToDelveDeeper = (int)(reactor.difficultyScalingForCurrentFloor * (float)currLevelGenConfig.sentientCoresRequired);
 		shiftDurationMinutes = currLevelGenConfig.shiftDuration / 60;

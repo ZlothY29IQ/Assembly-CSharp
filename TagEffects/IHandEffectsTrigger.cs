@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace TagEffects;
@@ -24,6 +25,8 @@ public interface IHandEffectsTrigger
 	bool FingersUp { get; }
 
 	Vector3 Velocity { get; }
+
+	Action<Mode> OnTrigger { get; set; }
 
 	bool RightHand { get; }
 

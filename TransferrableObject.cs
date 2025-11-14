@@ -7,6 +7,7 @@ using Photon.Pun;
 using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.Serialization;
 using UnityEngine.XR;
 
 public class TransferrableObject : HoldableObject, ISelfValidator, IRequestableOwnershipGuardCallbacks, IPreDisable, ISpawnable, IBuildValidation
@@ -296,11 +297,24 @@ public class TransferrableObject : HoldableObject, ISelfValidator, IRequestableO
 	[SerializeField]
 	protected UnityEvent<int> OnItemStateIntChanged;
 
+	[FormerlySerializedAs("OnUndocked")]
 	[SerializeField]
-	private UnityEvent OnUndocked;
+	private UnityEvent OnHeldLocal;
 
 	[SerializeField]
-	private UnityEvent OnDocked;
+	private UnityEvent OnHeldShared;
+
+	[FormerlySerializedAs("OnDocked")]
+	[SerializeField]
+	private UnityEvent OnDockedLocal;
+
+	[FormerlySerializedAs("OnDockedLocal")]
+	[SerializeField]
+	private UnityEvent OnDockedShared;
+
+	private bool wasHeldLocal;
+
+	private bool wasHeldShared;
 
 	[Tooltip("(Optional) name broadcast by PlayerGameEvents")]
 	public string interactEventName;
@@ -1338,6 +1352,16 @@ public class TransferrableObject : HoldableObject, ISelfValidator, IRequestableO
 		{
 			UpdateFollowXform();
 		}
+		if (InHand() && !wasHeldShared)
+		{
+			OnHeldShared?.Invoke();
+			wasHeldShared = true;
+		}
+		else if (!InHand() && !Dropped() && wasHeldShared)
+		{
+			OnDockedShared?.Invoke();
+			wasHeldShared = false;
+		}
 		if (!isRigidbodySet || rigidbodyInstance.isKinematic == ShouldBeKinematic())
 		{
 			return;
@@ -1624,6 +1648,16 @@ public class TransferrableObject : HoldableObject, ISelfValidator, IRequestableO
 			}
 		}
 		HandleLocalInput();
+		if (InHand() && !wasHeldLocal)
+		{
+			OnHeldLocal?.Invoke();
+			wasHeldLocal = true;
+		}
+		else if (!InHand() && !Dropped() && wasHeldLocal)
+		{
+			OnDockedLocal?.Invoke();
+			wasHeldLocal = false;
+		}
 	}
 
 	protected void LateUpdateReplicatedSceneObject()
@@ -1785,7 +1819,6 @@ public class TransferrableObject : HoldableObject, ISelfValidator, IRequestableO
 			}
 			EquipmentInteractor.instance.UpdateHandEquipment(this, forLeftHand: true);
 			GorillaTagger.Instance.StartVibration(forLeftController: true, GorillaTagger.Instance.tapHapticStrength / 8f, GorillaTagger.Instance.tapHapticDuration * 0.5f);
-			OnUndocked?.Invoke();
 		}
 		else if (grabbingHand == EquipmentInteractor.instance.rightHand && currentState != PositionState.OnRightArm)
 		{
@@ -1806,7 +1839,6 @@ public class TransferrableObject : HoldableObject, ISelfValidator, IRequestableO
 			}
 			EquipmentInteractor.instance.UpdateHandEquipment(this, forLeftHand: false);
 			GorillaTagger.Instance.StartVibration(forLeftController: false, GorillaTagger.Instance.tapHapticStrength / 8f, GorillaTagger.Instance.tapHapticDuration * 0.5f);
-			OnUndocked?.Invoke();
 		}
 		if ((bool)rigidbodyInstance && !rigidbodyInstance.isKinematic && ShouldBeKinematic())
 		{
@@ -1904,7 +1936,6 @@ public class TransferrableObject : HoldableObject, ISelfValidator, IRequestableO
 		{
 			_ = allowWorldSharableInstance;
 		}
-		OnDocked?.Invoke();
 		DropItemCleanup();
 		EquipmentInteractor.instance.ForceDropEquipment(this);
 		PlayerGameEvents.DroppedObject(interactEventName);

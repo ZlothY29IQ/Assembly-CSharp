@@ -145,9 +145,24 @@ public class GRAbilityKeepDistance : GRAbilityBase
 			{
 				Vector3 vector2 = rotations[i] * normalized;
 				float num = 2f;
-				if ((!NavMesh.Raycast(position2, position2 + vector2 * num, out var hit2, walkableArea) || !(hit2.distance < minBackupSpaceRequired)) && NavMesh.SamplePosition(hit2.position, out var hit3, 1f, walkableArea))
+				Vector3 vector3 = position2 + vector2 * num;
+				if (NavMesh.Raycast(position2, vector3, out var hit2, walkableArea))
 				{
-					return hit3.position;
+					if (hit2.distance < minBackupSpaceRequired)
+					{
+						continue;
+					}
+					vector3 = hit2.position;
+				}
+				if (NavMesh.SamplePosition(vector3, out var hit3, 1f, walkableArea))
+				{
+					Vector3 position3 = hit3.position;
+					Vector3 vector4 = position3 - target.position;
+					vector4.y = 0f;
+					if (vector4.sqrMagnitude > vector.sqrMagnitude)
+					{
+						return position3;
+					}
 				}
 			}
 		}

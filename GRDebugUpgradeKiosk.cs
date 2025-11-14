@@ -61,6 +61,21 @@ public class GRDebugUpgradeKiosk : MonoBehaviour
 		OnButtonSpawnEntity("GhostReactorToolDirectionalShield", toolSpawnNode);
 	}
 
+	public void OnButtonSpawnStatusWatch()
+	{
+		OnButtonSpawnEntity("GhostReactorToolStatusWatch", toolSpawnNode);
+	}
+
+	public void OnButtonSpawnDockWrist()
+	{
+		OnButtonSpawnEntity("GhostReactorToolDockWrist", toolSpawnNode);
+	}
+
+	public void OnButtonSpawnSmallBackpack()
+	{
+		OnButtonSpawnEntity("GhostReactorToolSmallBackpack", toolSpawnNode);
+	}
+
 	public void OnButtonKillAllEnemies()
 	{
 		KillAllEnemies();

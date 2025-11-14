@@ -20,7 +20,9 @@ public class GRTool : MonoBehaviour, IGameEntitySerialize, IGameEntityComponent,
 		DockWrist,
 		EnergyEfficiency,
 		DropPod,
-		HockeyStick
+		HockeyStick,
+		StatusWatch,
+		RattyBackpack
 	}
 
 	[Serializable]

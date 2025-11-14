@@ -27,6 +27,14 @@ public class ContinuousPropertyArray
 
 	private float inverseMaximum;
 
+	[Tooltip("Determines how quickly the internal value lerps towards the input value. A low number will take a long time to match but will be more resistant to fluctuations, visa versa for a high value. A good starting point is 5 to 10.")]
+	[SerializeField]
+	private float responsiveness = 5f;
+
+	[Tooltip("If true (default behavior), the input value will be used directly. Disable this if you need better control over how smoothly the properties get applied.")]
+	[SerializeField]
+	private bool instant = true;
+
 	[SerializeField]
 	private ContinuousProperty[] list;
 
@@ -35,6 +43,10 @@ public class ContinuousPropertyArray
 	private MaterialPropertyBlock mpb;
 
 	private bool initialized;
+
+	private float value;
+
+	private float lastApplyTime;
 
 	public int Count => list.Length;
 
@@ -46,6 +58,8 @@ public class ContinuousPropertyArray
 		}
 		initialized = true;
 		inverseMaximum = 1f / maxExpectedValue;
+		value = 0f;
+		lastApplyTime = Time.time - Time.deltaTime;
 		for (int i = 0; i < list.Length; i++)
 		{
 			list[i].Init();
@@ -80,32 +94,34 @@ public class ContinuousPropertyArray
 		}
 	}
 
-	public void ApplyAll(bool leftHand, float value)
+	public void ApplyAll(bool leftHand, float f)
 	{
-		ApplyAll(value);
+		ApplyAll(f);
 	}
 
 	public void ApplyAll(float f)
 	{
-		f *= inverseMaximum;
 		if (list.Length == 0)
 		{
 			return;
 		}
 		InitIfNeeded();
-		int num = int.MaxValue;
+		float num = Time.time - lastApplyTime;
+		value = (instant ? (f * inverseMaximum) : Mathf.Lerp(value, f * inverseMaximum, 1f - Mathf.Exp((0f - responsiveness) * num)));
+		lastApplyTime = Time.time;
+		int num2 = int.MaxValue;
 		if (uniqueShaderPropertyIndices.Count > 0)
 		{
-			num = 0;
+			num2 = 0;
 			((Renderer)list[0].Target).GetPropertyBlock(mpb, list[0].IntValue);
 		}
 		for (int i = 0; i < list.Length; i++)
 		{
-			list[i].Apply(f, mpb);
-			if (num < uniqueShaderPropertyIndices.Count && i >= uniqueShaderPropertyIndices[num] - 1)
+			list[i].Apply(value, num, mpb);
+			if (num2 < uniqueShaderPropertyIndices.Count && i >= uniqueShaderPropertyIndices[num2] - 1)
 			{
 				((Renderer)list[i].Target).SetPropertyBlock(mpb, list[0].IntValue);
-				if (++num < uniqueShaderPropertyIndices.Count)
+				if (++num2 < uniqueShaderPropertyIndices.Count)
 				{
 					((Renderer)list[i + 1].Target).GetPropertyBlock(mpb, list[i + 1].IntValue);
 				}

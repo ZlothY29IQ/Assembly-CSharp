@@ -6,5 +6,10 @@ public enum SITechTreePageId
 	Dash,
 	Platform,
 	TapTeleport,
+	Tentacle,
+	AirGrab,
+	SlashDash,
+	SlipMitt,
+	Blaster,
 	Count
 }

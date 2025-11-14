@@ -27,13 +27,22 @@ public class ThrowablePickupableCosmetic : TransferrableObject
 	[FormerlySerializedAs("OnGrabFromDockPosition")]
 	public UnityEvent OnGrabLocal;
 
-	public UnityEvent OnGrabShared;
-
 	private RubberDuckEvents _events;
+
+	private TransferrableObject transferrableObject;
+
+	private bool isLocal;
+
+	private NetPlayer owner;
 
 	private CallLimiter callLimiterRelease = new CallLimiter(10, 2f);
 
 	private CallLimiter callLimiterReturn = new CallLimiter(10, 2f);
+
+	private new void Awake()
+	{
+		transferrableObject = GetComponent<TransferrableObject>();
+	}
 
 	internal override void OnEnable()
 	{
@@ -41,18 +50,17 @@ public class ThrowablePickupableCosmetic : TransferrableObject
 		if (_events == null)
 		{
 			_events = base.gameObject.GetOrAddComponent<RubberDuckEvents>();
-			NetPlayer netPlayer = ((base.myOnlineRig != null) ? base.myOnlineRig.creator : ((!(base.myRig != null)) ? null : ((base.myRig.creator != null) ? base.myRig.creator : NetworkSystem.Instance.LocalPlayer)));
-			if (netPlayer != null)
+			owner = ((transferrableObject.myOnlineRig != null) ? transferrableObject.myOnlineRig.creator : ((transferrableObject.myRig != null) ? (transferrableObject.myRig.creator ?? NetworkSystem.Instance.LocalPlayer) : null));
+			if (owner != null)
 			{
-				_events.Init(netPlayer);
-			}
-			else
-			{
-				Debug.LogError("Failed to get a reference to the Photon Player needed to hook up the cosmetic event");
+				_events.Init(owner);
+				isLocal = owner.IsLocal;
 			}
 		}
 		if (_events != null)
 		{
+			_events.Activate.reliable = true;
+			_events.Deactivate.reliable = true;
 			_events.Activate += new Action<int, int, object[], PhotonMessageInfoWrapped>(OnReleaseEvent);
 			_events.Deactivate += new Action<int, int, object[], PhotonMessageInfoWrapped>(OnReturnToDockEvent);
 		}
@@ -65,7 +73,7 @@ public class ThrowablePickupableCosmetic : TransferrableObject
 		{
 			_events.Activate -= new Action<int, int, object[], PhotonMessageInfoWrapped>(OnReleaseEvent);
 			_events.Deactivate -= new Action<int, int, object[], PhotonMessageInfoWrapped>(OnReturnToDockEvent);
-			UnityEngine.Object.Destroy(_events);
+			_events.Dispose();
 			_events = null;
 		}
 		if (pickupableVariant != null && pickupableVariant.enabled)
@@ -103,7 +111,6 @@ public class ThrowablePickupableCosmetic : TransferrableObject
 			}
 		}
 		OnGrabLocal?.Invoke();
-		OnGrabShared?.Invoke();
 		base.OnGrab(pointGrabbed, grabbingHand);
 	}
 
@@ -126,8 +133,7 @@ public class ThrowablePickupableCosmetic : TransferrableObject
 		{
 			if (flag && _events.Activate != null)
 			{
-				_events.Activate.RaiseOthers(true, position, averageVelocity, scale);
-				OnReleaseEventLocal(position, averageVelocity, scale);
+				_events.Activate.RaiseAll(true, position, averageVelocity, scale);
 			}
 			else if (!flag && _events.Deactivate != null)
 			{
@@ -181,7 +187,6 @@ public class ThrowablePickupableCosmetic : TransferrableObject
 		else
 		{
 			pickupableVariant.Pickup();
-			OnGrabShared?.Invoke();
 		}
 	}
 

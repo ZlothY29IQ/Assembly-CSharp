@@ -17,12 +17,6 @@ public class BuilderShelf : MonoBehaviour
 
 		public Vector3 localAxis = Vector3.right;
 
-		[Tooltip("Use BuilderPiece:desiredShelfOffset instead")]
-		public Vector3 positionOffset;
-
-		[Tooltip("Use BuilderPiece:desiredShelfRotationOffset instead")]
-		public Vector3 rotationOffset;
-
 		[Tooltip("Optional Editor Visual")]
 		public Mesh previewMesh;
 	}
@@ -32,8 +26,6 @@ public class BuilderShelf : MonoBehaviour
 	public float separation;
 
 	public Transform center;
-
-	public Material overrideMaterial;
 
 	public List<BuildPieceSpawn> buildPieceSpawns;
 
@@ -145,8 +137,8 @@ public class BuilderShelf : MonoBehaviour
 		{
 			center = base.transform;
 		}
-		Vector3 vector = spawn.positionOffset;
-		Vector3 euler = spawn.rotationOffset;
+		Vector3 vector = Vector3.zero;
+		Vector3 euler = Vector3.zero;
 		BuilderPiece component = spawn.buildPiecePrefab.GetComponent<BuilderPiece>();
 		if (component != null)
 		{

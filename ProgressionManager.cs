@@ -47,7 +47,10 @@ public class ProgressionManager : MonoBehaviour
 		PurchaseDrillUpgrade,
 		RecycleTool,
 		StartOfShift,
-		EndOfShiftReward
+		EndOfShiftReward,
+		GetGhostReactorStats,
+		GetGhostReactorInventory,
+		SetGhostReactorInventory
 	}
 
 	public enum WristDockUpgradeType
@@ -427,12 +430,52 @@ public class ProgressionManager : MonoBehaviour
 		public int CoresRequired;
 
 		public int NumberOfPlayers;
+
+		public int Depth;
 	}
 
 	[Serializable]
 	private class EndOfShiftRewardRequest : MothershipUserDataWriteRequest
 	{
 		public string ShiftId;
+	}
+
+	[Serializable]
+	private class GhostReactorStatsRequest : MothershipRequest
+	{
+	}
+
+	[Serializable]
+	public class GhostReactorStatsResponse
+	{
+		public string MothershipId;
+
+		public int MaxDepthReached;
+	}
+
+	[Serializable]
+	private class GhostReactorInventoryRequest : MothershipRequest
+	{
+	}
+
+	[Serializable]
+	public class GhostReactorInventoryResponse
+	{
+		public string MothershipId;
+
+		public string InventoryJson;
+	}
+
+	[Serializable]
+	private class SetGhostReactorInventoryRequest : MothershipUserDataWriteRequest
+	{
+		public string InventoryJson;
+	}
+
+	[Serializable]
+	public class SetGhostReactorInventoryResponse
+	{
+		public string MothershipId;
 	}
 
 	private readonly Dictionary<string, UserHydratedProgressionTreeResponse> _trees = new Dictionary<string, UserHydratedProgressionTreeResponse>();
@@ -472,6 +515,10 @@ public class ProgressionManager : MonoBehaviour
 	public event Action<bool> OnPurchaseOverdrive;
 
 	public event Action<DockWristStatusResponse> OnDockWristStatusUpdated;
+
+	public event Action<GhostReactorStatsResponse> OnGhostReactorStatsUpdated;
+
+	public event Action<GhostReactorInventoryResponse> OnGhostReactorInventoryUpdated;
 
 	private void Awake()
 	{
@@ -853,7 +900,7 @@ public class ProgressionManager : MonoBehaviour
 		}));
 	}
 
-	public void StartOfShift(string shiftId, int coresRequired, int numberOfPlayers)
+	public void StartOfShift(string shiftId, int coresRequired, int numberOfPlayers, int depth)
 	{
 		StartCoroutine(DoStartOfShift(new StartOfShiftRequest
 		{
@@ -864,7 +911,8 @@ public class ProgressionManager : MonoBehaviour
 			MothershipToken = MothershipClientContext.Token,
 			ShiftId = shiftId,
 			CoresRequired = coresRequired,
-			NumberOfPlayers = numberOfPlayers
+			NumberOfPlayers = numberOfPlayers,
+			Depth = depth
 		}));
 	}
 
@@ -883,6 +931,49 @@ public class ProgressionManager : MonoBehaviour
 			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
 			MothershipToken = MothershipClientContext.Token,
 			ShiftId = shiftId,
+			SkipUserDataCache = skipUserDataCache
+		}));
+	}
+
+	public void GetGhostReactorStats()
+	{
+		StartCoroutine(DoGetGhostReactorStats(new GhostReactorStatsRequest
+		{
+			MothershipId = MothershipClientContext.MothershipId,
+			MothershipTitleId = MothershipClientApiUnity.TitleId,
+			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
+			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
+			MothershipToken = MothershipClientContext.Token
+		}));
+	}
+
+	public void GetGhostReactorInventory()
+	{
+		StartCoroutine(DoGetGhostReactorInventory(new GhostReactorInventoryRequest
+		{
+			MothershipId = MothershipClientContext.MothershipId,
+			MothershipTitleId = MothershipClientApiUnity.TitleId,
+			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
+			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
+			MothershipToken = MothershipClientContext.Token
+		}));
+	}
+
+	public void SetGhostReactorInventory(string jsonInventory)
+	{
+		SetGhostReactorInventoryInternal(jsonInventory);
+	}
+
+	private void SetGhostReactorInventoryInternal(string jsonInventory, bool skipUserDataCache = false)
+	{
+		StartCoroutine(DoSetGhostReactorInventory(new SetGhostReactorInventoryRequest
+		{
+			MothershipId = MothershipClientContext.MothershipId,
+			MothershipTitleId = MothershipClientApiUnity.TitleId,
+			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
+			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
+			MothershipToken = MothershipClientContext.Token,
+			InventoryJson = jsonInventory,
 			SkipUserDataCache = skipUserDataCache
 		}));
 	}
@@ -1468,7 +1559,7 @@ public class ProgressionManager : MonoBehaviour
 		{
 			yield return HandleWebRequestRetries(RequestType.StartOfShift, data, delegate
 			{
-				StartOfShift(data.ShiftId, data.CoresRequired, data.NumberOfPlayers);
+				StartOfShift(data.ShiftId, data.CoresRequired, data.NumberOfPlayers, data.Depth);
 			});
 		}
 	}
@@ -1489,6 +1580,61 @@ public class ProgressionManager : MonoBehaviour
 			yield return HandleWebRequestRetries(RequestType.EndOfShiftReward, data, delegate
 			{
 				EndOfShiftRewardInternal(data.ShiftId, request.responseCode == 409);
+			});
+		}
+	}
+
+	private IEnumerator DoGetGhostReactorStats(GhostReactorStatsRequest data)
+	{
+		UnityWebRequest request = FormatWebRequest(PlayFabAuthenticatorSettings.ProgressionApiBaseUrl, data, RequestType.GetGhostReactorStats);
+		yield return request.SendWebRequest();
+		if (request.result == UnityWebRequest.Result.Success)
+		{
+			GhostReactorStatsResponse obj = JsonConvert.DeserializeObject<GhostReactorStatsResponse>(request.downloadHandler.text);
+			retryCounters[RequestType.GetGhostReactorStats] = 0;
+			this.OnGhostReactorStatsUpdated?.Invoke(obj);
+		}
+		else if (HandleWebRequestFailures(request))
+		{
+			yield return HandleWebRequestRetries(RequestType.GetGhostReactorStats, data, delegate
+			{
+				GetGhostReactorStats();
+			});
+		}
+	}
+
+	private IEnumerator DoGetGhostReactorInventory(GhostReactorInventoryRequest data)
+	{
+		UnityWebRequest request = FormatWebRequest(PlayFabAuthenticatorSettings.ProgressionApiBaseUrl, data, RequestType.GetGhostReactorInventory);
+		yield return request.SendWebRequest();
+		if (request.result == UnityWebRequest.Result.Success)
+		{
+			GhostReactorInventoryResponse obj = JsonConvert.DeserializeObject<GhostReactorInventoryResponse>(request.downloadHandler.text);
+			retryCounters[RequestType.GetGhostReactorInventory] = 0;
+			this.OnGhostReactorInventoryUpdated?.Invoke(obj);
+		}
+		else if (HandleWebRequestFailures(request))
+		{
+			yield return HandleWebRequestRetries(RequestType.GetGhostReactorInventory, data, delegate
+			{
+				GetGhostReactorInventory();
+			});
+		}
+	}
+
+	private IEnumerator DoSetGhostReactorInventory(SetGhostReactorInventoryRequest data)
+	{
+		UnityWebRequest request = FormatWebRequest(PlayFabAuthenticatorSettings.ProgressionApiBaseUrl, data, RequestType.SetGhostReactorInventory);
+		yield return request.SendWebRequest();
+		if (request.result == UnityWebRequest.Result.Success)
+		{
+			retryCounters[RequestType.SetGhostReactorInventory] = 0;
+		}
+		else if (HandleWebRequestFailures(request, retryOnConflict: true))
+		{
+			yield return HandleWebRequestRetries(RequestType.SetGhostReactorInventory, data, delegate
+			{
+				SetGhostReactorInventoryInternal(data.InventoryJson, request.responseCode == 409);
 			});
 		}
 	}
@@ -1582,6 +1728,15 @@ public class ProgressionManager : MonoBehaviour
 			break;
 		case RequestType.EndOfShiftReward:
 			text = "/api/EndOfShiftReward";
+			break;
+		case RequestType.GetGhostReactorStats:
+			text = "/api/GetGhostReactorStats";
+			break;
+		case RequestType.GetGhostReactorInventory:
+			text = "/api/GetGhostReactorInventory";
+			break;
+		case RequestType.SetGhostReactorInventory:
+			text = "/api/SetGhostReactorInventory";
 			break;
 		}
 		UnityWebRequest unityWebRequest = new UnityWebRequest(url + text, "POST");

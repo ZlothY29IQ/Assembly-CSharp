@@ -7,6 +7,12 @@ using UnityEngine.Serialization;
 
 public class HauntedObject : MonoBehaviour
 {
+	private static readonly int _animHaunted = Animator.StringToHash("Haunted");
+
+	private const string _lurkerGhost = "LurkerGhost";
+
+	private const string _wanderingGhost = "WanderingGhost";
+
 	[Tooltip("If this box is checked, then object will rattle when hunted")]
 	public bool rattle;
 
@@ -88,7 +94,7 @@ public class HauntedObject : MonoBehaviour
 		}
 		if (rattle)
 		{
-			StartCoroutine("Shake");
+			StartCoroutine(Shake());
 		}
 		if ((bool)audioSource && (bool)hauntedSound)
 		{
@@ -100,14 +106,14 @@ public class HauntedObject : MonoBehaviour
 		}
 		if (TurnOffLight != null)
 		{
-			StartCoroutine("TurnOff");
+			StartCoroutine(TurnOff());
 		}
 		Animator[] array = animators;
 		foreach (Animator animator in array)
 		{
 			if ((bool)animator)
 			{
-				animator.SetTrigger("Haunted");
+				animator.SetTrigger(_animHaunted);
 			}
 		}
 	}

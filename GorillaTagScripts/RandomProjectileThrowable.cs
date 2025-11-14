@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Serialization;
@@ -15,6 +16,14 @@ public class RandomProjectileThrowable : MonoBehaviour
 	[Range(0f, 1f)]
 	public float spawnChance = 1f;
 
+	[Tooltip("Requires a collider")]
+	public bool destroyOnTrigger = true;
+
+	public string triggerTag = "Gorilla Head";
+
+	[FormerlySerializedAs("onMoveToHead")]
+	public UnityEvent OnDestroyed;
+
 	public AudioSource audioSource;
 
 	public AudioClip triggerClip;
@@ -29,7 +38,7 @@ public class RandomProjectileThrowable : MonoBehaviour
 	[Tooltip("If checked, any amount of passed time will be deducted from the lifetime of the slingshot projectile when thrownShould be less than or equal to lifetime of the slingshot projectile")]
 	public bool moveOverPassedLifeTime;
 
-	public UnityAction<bool> OnTriggerEntered;
+	public UnityAction<bool> OnDestroyRandomProjectile;
 
 	private GameObject currentProjectile;
 
@@ -65,18 +74,25 @@ public class RandomProjectileThrowable : MonoBehaviour
 
 	private void OnTriggerEnter(Collider other)
 	{
-		if (other.gameObject.layer == LayerMask.NameToLayer("Gorilla Head"))
+		if (destroyOnTrigger && other.gameObject.layer == LayerMask.NameToLayer(triggerTag))
 		{
 			if ((bool)audioSource && (bool)triggerClip)
 			{
 				audioSource.GTPlayOneShot(triggerClip);
 			}
-			Invoke("TriggerEvent", 0.25f);
+			OnDestroyed?.Invoke();
+			DestroyProjectile();
 		}
 	}
 
-	private void TriggerEvent()
+	public void DestroyProjectile()
 	{
-		OnTriggerEntered?.Invoke(arg0: false);
+		StartCoroutine(DestroyProjectileCoroutine(0.25f));
+	}
+
+	private IEnumerator DestroyProjectileCoroutine(float delay)
+	{
+		yield return new WaitForSeconds(delay);
+		OnDestroyRandomProjectile?.Invoke(arg0: false);
 	}
 }

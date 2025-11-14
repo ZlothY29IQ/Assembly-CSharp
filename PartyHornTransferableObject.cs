@@ -22,8 +22,6 @@ public class PartyHornTransferableObject : TransferrableObject
 
 	public Transform mouthPiece;
 
-	public Vector3 mouthOffset = new Vector3(0f, 0.02f, 0.17f);
-
 	public bool soundActivated;
 
 	public UnityEvent OnCooldownStart;
@@ -32,8 +30,6 @@ public class PartyHornTransferableObject : TransferrableObject
 
 	private float cooldownRemaining;
 
-	private Transform localHead;
-
 	private PartyHornState partyHornStateLastFrame;
 
 	private bool localWasActivated;
@@ -41,7 +37,6 @@ public class PartyHornTransferableObject : TransferrableObject
 	internal override void OnEnable()
 	{
 		base.OnEnable();
-		localHead = GorillaTagger.Instance.offlineVRRig.head.rigTarget.transform;
 		InitToDefault();
 	}
 
@@ -75,7 +70,7 @@ public class PartyHornTransferableObject : TransferrableObject
 		_ = base.transform;
 		Vector3 vector = CalcMouthPiecePos();
 		float num = mouthPieceRadius * mouthPieceRadius * GTPlayer.Instance.scale * GTPlayer.Instance.scale;
-		bool flag = (localHead.TransformPoint(mouthOffset) - vector).sqrMagnitude < num;
+		bool flag = (GorillaTagger.Instance.offlineVRRig.GetMouthPosition() - vector).sqrMagnitude < num;
 		if (soundActivated && PhotonNetwork.InRoom)
 		{
 			int num2;
@@ -93,11 +88,11 @@ public class PartyHornTransferableObject : TransferrableObject
 		for (int i = 0; i < GorillaParent.instance.vrrigs.Count; i++)
 		{
 			VRRig vRRig = GorillaParent.instance.vrrigs[i];
-			if (vRRig.head == null || vRRig.head.rigTarget == null || flag)
+			if (flag)
 			{
 				break;
 			}
-			flag = (vRRig.head.rigTarget.transform.TransformPoint(mouthOffset) - vector).sqrMagnitude < num;
+			flag = (vRRig.GetMouthPosition() - vector).sqrMagnitude < num;
 			if (soundActivated)
 			{
 				int num3;

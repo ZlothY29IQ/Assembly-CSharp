@@ -293,6 +293,8 @@ public class GRToolProgressionTree
 	private void InitializeDockWristPartMapping()
 	{
 		partMapping["DockWrist"] = GRToolProgressionManager.ToolParts.DockWrist;
+		partMapping["StatusWatch"] = GRToolProgressionManager.ToolParts.StatusWatch;
+		partMapping["RattyBackpack"] = GRToolProgressionManager.ToolParts.RattyBackpack;
 	}
 
 	private void InitializeDropPodPartMapping()
@@ -301,6 +303,78 @@ public class GRToolProgressionTree
 		partMapping["DropPodChassis01"] = GRToolProgressionManager.ToolParts.DropPodChassis1;
 		partMapping["DropPodChassis02"] = GRToolProgressionManager.ToolParts.DropPodChassis2;
 		partMapping["DropPodChassis03"] = GRToolProgressionManager.ToolParts.DropPodChassis3;
+	}
+
+	private void AddFakeNodes()
+	{
+		if (!toolTree.ContainsKey(GRTool.GRToolType.Club))
+		{
+			toolTree[GRTool.GRToolType.Club] = new GRToolProgressionNode
+			{
+				name = "Baton",
+				unlocked = true,
+				researchCost = 0,
+				rootNode = true,
+				type = GRToolProgressionManager.ToolParts.Baton,
+				partMetadata = manager.GetPartMetadata(GRToolProgressionManager.ToolParts.Baton),
+				requiredEmployeeLevel = EmployeeLevelRequirement.None
+			};
+		}
+		if (!partTree.ContainsKey(GRToolProgressionManager.ToolParts.Baton))
+		{
+			partTree[GRToolProgressionManager.ToolParts.Baton] = toolTree[GRTool.GRToolType.Club];
+		}
+		if (!toolTree.ContainsKey(GRTool.GRToolType.EnergyEfficiency))
+		{
+			toolTree[GRTool.GRToolType.EnergyEfficiency] = new GRToolProgressionNode
+			{
+				name = "EnergyEfficiency",
+				unlocked = true,
+				researchCost = 0,
+				rootNode = true,
+				type = GRToolProgressionManager.ToolParts.EnergyEff,
+				partMetadata = manager.GetPartMetadata(GRToolProgressionManager.ToolParts.EnergyEff),
+				requiredEmployeeLevel = EmployeeLevelRequirement.None
+			};
+		}
+		if (!partTree.ContainsKey(GRToolProgressionManager.ToolParts.EnergyEff))
+		{
+			partTree[GRToolProgressionManager.ToolParts.EnergyEff] = toolTree[GRTool.GRToolType.EnergyEfficiency];
+		}
+		if (!toolTree.ContainsKey(GRTool.GRToolType.Collector))
+		{
+			toolTree[GRTool.GRToolType.Collector] = new GRToolProgressionNode
+			{
+				name = "Collector",
+				unlocked = true,
+				researchCost = 0,
+				rootNode = true,
+				type = GRToolProgressionManager.ToolParts.Collector,
+				partMetadata = manager.GetPartMetadata(GRToolProgressionManager.ToolParts.Collector),
+				requiredEmployeeLevel = EmployeeLevelRequirement.None
+			};
+		}
+		if (!partTree.ContainsKey(GRToolProgressionManager.ToolParts.Collector))
+		{
+			partTree[GRToolProgressionManager.ToolParts.Collector] = toolTree[GRTool.GRToolType.Collector];
+		}
+		if (!toolTree.ContainsKey(GRTool.GRToolType.Lantern))
+		{
+			toolTree[GRTool.GRToolType.Lantern] = new GRToolProgressionNode
+			{
+				name = "Lantern",
+				unlocked = true,
+				researchCost = 0,
+				rootNode = true,
+				type = GRToolProgressionManager.ToolParts.Lantern,
+				partMetadata = manager.GetPartMetadata(GRToolProgressionManager.ToolParts.Lantern),
+				requiredEmployeeLevel = EmployeeLevelRequirement.None
+			};
+		}
+		if (!partTree.ContainsKey(GRToolProgressionManager.ToolParts.Lantern))
+		{
+			partTree[GRToolProgressionManager.ToolParts.Lantern] = toolTree[GRTool.GRToolType.Lantern];
+		}
 	}
 
 	private void ProcessNodes()
@@ -321,11 +395,11 @@ public class GRToolProgressionTree
 			if (toolMapping.ContainsKey(key))
 			{
 				GRTool.GRToolType key2 = toolMapping[key];
+				value.progressionNode.rootNode = true;
 				if (!value.progressionNode.unlocked && autoUnlockNodeId == string.Empty && value.progressionNode.researchCost == 0 && value.progressionNode.requiredEmployeeLevel == EmployeeLevelRequirement.None)
 				{
 					autoUnlockNodeId = value.progressionNode.id;
 				}
-				value.progressionNode.rootNode = true;
 				toolTree[key2] = value.progressionNode;
 			}
 			partTree[value.progressionNode.type] = value.progressionNode;
@@ -431,13 +505,14 @@ public class GRToolProgressionTree
 		}
 		PopulateMetadata();
 		ProcessNodes();
-		manager?.SendMothershipUpdated();
+		AddFakeNodes();
 		if (autoUnlockNodeId != string.Empty)
 		{
 			string nodeId = autoUnlockNodeId;
 			autoUnlockNodeId = string.Empty;
 			GhostReactorProgression.instance.UnlockProgressionTreeNode(treeId, nodeId, reactor);
 		}
+		manager?.SendMothershipUpdated();
 	}
 
 	public void AttemptToUnlockPart(GRToolProgressionManager.ToolParts part)

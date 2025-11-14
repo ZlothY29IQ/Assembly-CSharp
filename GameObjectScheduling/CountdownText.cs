@@ -104,6 +104,10 @@ public class CountdownText : MonoBehaviour
 			displayTextFormat = CountdownTo.FormatString;
 		}
 		displayText.text = CountdownTo.DefaultString;
+		if (!shouldLocalize)
+		{
+			return;
+		}
 		_locTextComp = GetComponent<LocalizedText>();
 		if (_locTextComp == null)
 		{

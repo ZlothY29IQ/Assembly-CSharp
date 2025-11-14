@@ -110,7 +110,7 @@ public class SIPlayer : MonoBehaviour
 
 	private ProgressionData currentProgression;
 
-	public List<int> activePlayerGadgets;
+	public List<int> activePlayerGadgets = new List<int>();
 
 	public static SIPlayer LocalPlayer => Get(NetworkSystem.Instance.LocalPlayer.ActorNumber);
 
@@ -130,12 +130,14 @@ public class SIPlayer : MonoBehaviour
 
 	private void Awake()
 	{
+		activePlayerGadgets = new List<int>();
 		progressionSO = progressionSORef;
 		clientToAuthorityRPCLimiter = new CallLimiter(25, 1f);
 		clientToClientRPCLimiter = new CallLimiter(25, 1f);
 		authorityToClientRPCLimiter = new CallLimiter(25, 1f);
-		activePlayerGadgets = new List<int>();
 		currentProgression = new ProgressionData(itsNullLol: true);
+		GamePlayer obj = gamePlayer;
+		obj.OnPlayerLeftZone = (Action)Delegate.Combine(obj.OnPlayerLeftZone, new Action(ClearGadgetsOnLeaveZone));
 	}
 
 	private void OnDisable()
@@ -153,7 +155,6 @@ public class SIPlayer : MonoBehaviour
 			SIProgression.StaticSaveQuestProgress();
 			SIProgression.StaticClearAllQuestEventListeners();
 		}
-		activePlayerGadgets.Clear();
 		lastQuestsAvailableToClaim = 999;
 		tpParticleSystem.Stop();
 		netInitialized = false;
@@ -161,25 +162,10 @@ public class SIPlayer : MonoBehaviour
 
 	public void WriteDataPUN(PhotonStream stream, PhotonMessageInfo info)
 	{
-		stream.SendNext(activePlayerGadgets.Count);
-		for (int i = 0; i < activePlayerGadgets.Count; i++)
-		{
-			stream.SendNext(activePlayerGadgets[i]);
-		}
 	}
 
 	public bool ReadDataPUN(PhotonStream stream, PhotonMessageInfo info)
 	{
-		int num = (int)stream.ReceiveNext();
-		if (num > 20)
-		{
-			return false;
-		}
-		activePlayerGadgets.Clear();
-		for (int i = 0; i < num; i++)
-		{
-			activePlayerGadgets.Add((int)stream.ReceiveNext());
-		}
 		return true;
 	}
 
@@ -399,7 +385,10 @@ public class SIPlayer : MonoBehaviour
 		{
 			BonusProgressCelebrate();
 		}
-		if (((num > 0 || currentProgression.bonusProgress >= 10) && currentProgression.resourceArray[0] < newProgression.resourceArray[0]) || (currentProgression.limitedDepositTimeArray[1] == 0 && newProgression.limitedDepositTimeArray[1] == 1))
+		bool num2 = num > 0 && currentProgression.stashedQuests > newProgression.stashedQuests;
+		bool flag = currentProgression.bonusProgress >= 10 && currentProgression.stashedBonusPoints > newProgression.stashedBonusPoints;
+		bool flag2 = currentProgression.limitedDepositTimeArray[1] == 0 && newProgression.limitedDepositTimeArray[1] == 1;
+		if ((num2 || flag || flag2) && currentProgression.resourceArray[0] < newProgression.resourceArray[0])
 		{
 			TechPointGrantedCelebrate();
 		}
@@ -584,7 +573,7 @@ public class SIPlayer : MonoBehaviour
 
 	public void UpdateVisualsForAvailableQuestRedemption()
 	{
-		bool flag = NetworkSystem.Instance.InRoom && (QuestsAvailableToClaim() > 0 || currentProgression.bonusProgress >= 10);
+		bool flag = SuperInfectionManager.activeSuperInfectionManager != null && SuperInfectionManager.activeSuperInfectionManager.IsZoneReady() && (QuestsAvailableToClaim() > 0 || (currentProgression.bonusProgress >= 10 && currentProgression.stashedBonusPoints > 0));
 		if (tpParticleSystem.isPlaying && !flag)
 		{
 			tpParticleSystem.Stop();
@@ -627,5 +616,13 @@ public class SIPlayer : MonoBehaviour
 		monkeIdolDepositCelebrate.transform.position = position;
 		monkeIdolDepositCelebrate.SetActive(value: false);
 		monkeIdolDepositCelebrate.SetActive(value: true);
+	}
+
+	public void ClearGadgetsOnLeaveZone()
+	{
+		if (SuperInfectionManager.activeSuperInfectionManager.gameEntityManager.IsAuthority())
+		{
+			SuperInfectionManager.activeSuperInfectionManager.ClearPlayerGadgets(this);
+		}
 	}
 }

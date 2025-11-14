@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Serialization;
@@ -45,20 +44,29 @@ public class ContinuousProperty
 		Renderer = 7168,
 		Behaviour = 8192,
 		GameObject = 9216,
-		Rigidbody = 10240
+		Rigidbody = 10240,
+		VoicePitchShiftCosmetic = 11264
 	}
 
 	[Flags]
 	public enum DataFlags
 	{
 		None = 0,
+		[Tooltip("Expose the AnimationCurve for single values")]
 		HasCurve = 1,
+		[Tooltip("Expose the Gradient for colors")]
 		HasColor = 2,
+		[Tooltip("Select which axis it should rotate on")]
 		HasAxis = 4,
+		[Tooltip("Expose the integer, usually for material index")]
 		HasInteger = 8,
+		[Tooltip("Select whether to use position, rotation, or both when interpolating")]
 		HasInterpolation = 0x10,
+		[Tooltip("Expose the string and hash it into a shader property ID")]
 		IsShaderProperty = 0x20,
+		[Tooltip("Expose the string and hash it into an animator parameter ID")]
 		IsAnimatorParameter = 0x40,
+		[Tooltip("Expose the threshold range as a dual slider")]
 		HasThreshold = 0x80
 	}
 
@@ -90,16 +98,19 @@ public class ContinuousProperty
 		PositionAndRotation = 12582912
 	}
 
+	public enum EventMode
+	{
+		Passthrough = 4194304,
+		Frequency = 8388608,
+		AveragePerSecond = 12582912
+	}
+
 	[SerializeField]
 	private ContinuousPropertyModeSO mode;
 
 	[FormerlySerializedAs("component")]
 	[SerializeField]
 	protected UnityEngine.Object target;
-
-	private static int linearCurveHash = AnimationCurves.Linear.GetHashCode();
-
-	private static int stepCurveHash = StepCurve.GetHashCode();
 
 	[SerializeField]
 	private Gradient color;
@@ -147,6 +158,9 @@ public class ContinuousProperty
 	private ThresholdOption thresholdOption = ThresholdOption.Normal;
 
 	[SerializeField]
+	private EventMode eventMode = EventMode.Passthrough;
+
+	[SerializeField]
 	private UnityEvent<float> unityEvent;
 
 	private int internalSwitchValue;
@@ -158,6 +172,8 @@ public class ContinuousProperty
 	private ParticleSystem.MinMaxCurve speedCurveCache;
 
 	private ParticleSystem.MinMaxCurve rateCurveCache;
+
+	private float frequencyTimer;
 
 	private bool previousBoolValue;
 
@@ -175,11 +191,21 @@ public class ContinuousProperty
 		}
 	}
 
-	private bool ModeErrorVisible => !IsValid();
-
 	private bool ModeInfoVisible => mode == null;
 
-	private string ModeErrorMessage => $"I can't find a target on '{target?.name}' to apply my '{MyType}' to. Did you drag in the wrong GameObject?\n\n{mode?.ListValidCasts()}";
+	private bool ModeErrorVisible => !IsValid();
+
+	private string ModeErrorMessage
+	{
+		get
+		{
+			if (!(mode != null))
+			{
+				return "How did we get here?";
+			}
+			return "I couldn't find any valid target to apply my '" + mode.name + "' to in the whole prefab.\n\n" + mode.ListValidCasts();
+		}
+	}
 
 	public ContinuousPropertyModeSO Mode => mode;
 
@@ -221,38 +247,9 @@ public class ContinuousProperty
 		}
 	}
 
-	private bool AssignButtonVisible
-	{
-		get
-		{
-			if (mode != null)
-			{
-				if (!(target == null))
-				{
-					return !mode.IsCastValid(GetTargetCast(target));
-				}
-				return true;
-			}
-			return false;
-		}
-	}
-
-	private bool ShiftButtonsVisible
-	{
-		get
-		{
-			IEnumerable<UnityEngine.Object> allValidObjectsOnMyTarget = GetAllValidObjectsOnMyTarget();
-			if (allValidObjectsOnMyTarget == null)
-			{
-				return false;
-			}
-			return allValidObjectsOnMyTarget.Count() > 1;
-		}
-	}
+	private bool ShiftButtonsVisible => mode != null;
 
 	public UnityEngine.Object Target => target;
-
-	private static AnimationCurve StepCurve => new AnimationCurve(new Keyframe(0f, 0f, float.PositiveInfinity, float.PositiveInfinity), new Keyframe(0.5f, 1f, float.PositiveInfinity, float.PositiveInfinity));
 
 	public bool IsShaderProperty_Cached { get; private set; }
 
@@ -276,11 +273,11 @@ public class ContinuousProperty
 
 	private bool AxisError => !Enum.IsDefined(typeof(RotationAxis), localAxis);
 
-	private bool HasAxis => HasAllFlags(DataFlags.HasAxis);
+	private bool HasAxisMode => HasAllFlags(DataFlags.HasAxis);
 
 	private bool InterpolationError => !Enum.IsDefined(typeof(InterpolationMode), interpolationMode);
 
-	private bool HasInterpolation => HasAllFlags(DataFlags.HasInterpolation);
+	private bool HasInterpolationMode => HasAllFlags(DataFlags.HasInterpolation);
 
 	private bool HasStopAction
 	{
@@ -338,6 +335,18 @@ public class ContinuousProperty
 		}
 	}
 
+	private bool HasEventMode
+	{
+		get
+		{
+			if (MyType == Type.UnityEvent)
+			{
+				return !HasAnyFlag(DataFlags.HasThreshold);
+			}
+			return false;
+		}
+	}
+
 	private bool HasUnityEvent => MyType == Type.UnityEvent;
 
 	private static Cast GetTargetCast(UnityEngine.Object o)
@@ -350,27 +359,31 @@ public class ContinuousProperty
 				{
 					if (!(o is AudioSource))
 					{
-						if (!(o is Rigidbody))
+						if (!(o is VoicePitchShiftCosmetic))
 						{
-							if (!(o is Transform))
+							if (!(o is Rigidbody))
 							{
-								if (!(o is Renderer))
+								if (!(o is Transform))
 								{
-									if (!(o is Behaviour))
+									if (!(o is Renderer))
 									{
-										if (o is GameObject)
+										if (!(o is Behaviour))
 										{
-											return Cast.GameObject;
+											if (o is GameObject)
+											{
+												return Cast.GameObject;
+											}
+											return Cast.Null;
 										}
-										return Cast.Null;
+										return Cast.Behaviour;
 									}
-									return Cast.Behaviour;
+									return Cast.Renderer;
 								}
-								return Cast.Renderer;
+								return Cast.Transform;
 							}
-							return Cast.Transform;
+							return Cast.Rigidbody;
 						}
-						return Cast.Rigidbody;
+						return Cast.VoicePitchShiftCosmetic;
 					}
 					return Cast.AudioSource;
 				}
@@ -403,24 +416,21 @@ public class ContinuousProperty
 		return (flags & test) != 0;
 	}
 
-	private static IEnumerable<UnityEngine.Object> GetAllObjects(UnityEngine.Object target)
+	private static void GetAllValidObjectsNonAlloc(Transform t, List<UnityEngine.Object> objects)
 	{
-		if (!(target is Component component))
+		objects.Clear();
+		objects.Add(t.gameObject);
+		Component[] components = t.GetComponents<Component>();
+		foreach (UnityEngine.Object @object in components)
 		{
-			if (target is GameObject gameObject)
+			if (IsValidObject(@object.GetType()))
 			{
-				return ((IEnumerable<UnityEngine.Object>)(from c in gameObject.GetComponents<Component>()
-					where IsValidComponent(c.GetType())
-					select c)).Append((UnityEngine.Object)gameObject);
+				objects.Add(@object);
 			}
-			return null;
 		}
-		return ((IEnumerable<UnityEngine.Object>)(from c in component.GetComponents<Component>()
-			where IsValidComponent(c.GetType())
-			select c)).Append((UnityEngine.Object)component.gameObject);
 	}
 
-	private static bool IsValidComponent(System.Type t)
+	private static bool IsValidObject(System.Type t)
 	{
 		if (t != typeof(Renderer))
 		{
@@ -436,21 +446,9 @@ public class ContinuousProperty
 	public ContinuousProperty(ContinuousPropertyModeSO mode, Transform initialTarget, Vector2 range = default(Vector2))
 	{
 		this.mode = mode;
+		target = initialTarget;
 		this.range = range;
-		FindATarget();
-	}
-
-	private void FindATarget()
-	{
-	}
-
-	private IEnumerable<UnityEngine.Object> GetAllValidObjectsOnMyTarget()
-	{
-		if (!mode)
-		{
-			return null;
-		}
-		return GetAllObjects(target)?.Where((UnityEngine.Object c) => mode.IsCastValid(GetTargetCast(c)));
+		ShiftTarget(0);
 	}
 
 	private void PreviousTarget()
@@ -463,19 +461,56 @@ public class ContinuousProperty
 		ShiftTarget(1);
 	}
 
-	public bool ShiftTarget(int amount)
+	public bool ShiftTarget(int shiftAmount)
 	{
-		List<UnityEngine.Object> list = GetAllValidObjectsOnMyTarget()?.ToList();
-		if (list == null || list.Count == 0)
+		if (mode == null)
 		{
 			return false;
 		}
-		int num = Mathf.Max(list.IndexOf(target), 0);
-		target = list[(num + amount + list.Count) % list.Count];
+		int num = -1;
+		Transform transform = ((!(target != null)) ? null : ((target as GameObject)?.transform ?? ((Component)target).transform));
+		Transform transform2 = transform;
+		if (transform2 == null)
+		{
+			return false;
+		}
+		Stack<Transform> stack = new Stack<Transform>();
+		stack.Push(transform2);
+		List<UnityEngine.Object> list = new List<UnityEngine.Object>();
+		List<UnityEngine.Object> list2 = new List<UnityEngine.Object>();
+		Transform result;
+		while (stack.TryPop(out result))
+		{
+			if (num < 0 && result == transform)
+			{
+				num = list.Count;
+			}
+			GetAllValidObjectsNonAlloc(result, list2);
+			foreach (UnityEngine.Object item in list2)
+			{
+				if (mode.IsCastValid(GetTargetCast(item)))
+				{
+					if (item == target)
+					{
+						num = list.Count;
+					}
+					list.Add(item);
+				}
+			}
+			for (int num2 = result.childCount - 1; num2 >= 0; num2--)
+			{
+				stack.Push(result.GetChild(num2));
+			}
+		}
+		if (list.Count == 0)
+		{
+			return false;
+		}
+		target = list[(num >= 0) ? ((num + shiftAmount + list.Count) % list.Count) : 0];
 		return true;
 	}
 
-	private void OnValueChanged()
+	private void OnModeOrTargetChanged()
 	{
 		if (!IsValid())
 		{
@@ -551,9 +586,11 @@ public class ContinuousProperty
 		Type type = mode.type;
 		Cast cast = mode.GetClosestCast(GetTargetCast(target));
 		DataFlags dataFlags = mode.GetFlagsForCast(cast);
-		if ((type == Type.BezierInterpolation && MissingBezier) || (type == Type.TransformInterpolation && MissingXforms) || (type == Type.UnityEvent && unityEvent == null))
+		if (cast == Cast.Null || (type == Type.BezierInterpolation && MissingBezier) || (type == Type.TransformInterpolation && MissingXforms) || (type == Type.UnityEvent && unityEvent == null))
 		{
 			internalSwitchValue = 0;
+			IsShaderProperty_Cached = false;
+			UsesThreshold_Cached = false;
 			return;
 		}
 		if (type == Type.Color && CastMatches(Cast.Renderer, cast))
@@ -568,7 +605,7 @@ public class ContinuousProperty
 			type = Type.EnableDisable;
 			cast = Cast.Behaviour;
 		}
-		internalSwitchValue = (int)((uint)type | (uint)cast | (uint)(HasAllFlags(dataFlags, DataFlags.HasAxis) ? localAxis : ((RotationAxis)0))) | (int)(HasAllFlags(dataFlags, DataFlags.HasInterpolation) ? interpolationMode : ((InterpolationMode)0));
+		internalSwitchValue = (int)((uint)type | (uint)cast | (uint)(HasAxisMode ? localAxis : ((RotationAxis)0)) | (uint)(HasInterpolationMode ? interpolationMode : ((InterpolationMode)0))) | (int)(HasEventMode ? eventMode : ((EventMode)0));
 		IsShaderProperty_Cached = HasAllFlags(dataFlags, DataFlags.IsShaderProperty);
 		UsesThreshold_Cached = HasAllFlags(dataFlags, DataFlags.HasThreshold);
 		if (cast == Cast.ParticleSystem)
@@ -600,15 +637,15 @@ public class ContinuousProperty
 			if (!IsShaderProperty_Cached)
 			{
 				previousBoolValue = !previousBoolValue;
-				Apply(0f, null);
+				Apply(0f, 0f, null);
 			}
 		}
 	}
 
-	public void Apply(float f, MaterialPropertyBlock mpb)
+	public void Apply(float f, float deltaTime, MaterialPropertyBlock mpb)
 	{
 		int num = internalSwitchValue | (int)CheckThreshold(f);
-		if (num <= 1056784)
+		if (num <= 1057808)
 		{
 			switch (num)
 			{
@@ -655,6 +692,9 @@ public class ContinuousProperty
 			case 6158:
 				((AudioSource)target).pitch = Mathf.Clamp(curve.Evaluate(f), -3f, 3f);
 				return;
+			case 11278:
+				((VoicePitchShiftCosmetic)target).Pitch = curve.Evaluate(f);
+				return;
 			case 1051663:
 				((ParticleSystem)target).Play();
 				return;
@@ -662,10 +702,11 @@ public class ContinuousProperty
 				((AudioSource)target).Play();
 				return;
 			case 1055760:
-				goto IL_0753;
+				goto IL_079a;
 			case 1056784:
-				goto IL_076a;
-			case 1041:
+				goto IL_07b1;
+			case 1057808:
+				goto IL_07c8;
 			case 1049617:
 				unityEvent.Invoke(curve.Evaluate(f));
 				return;
@@ -673,144 +714,151 @@ public class ContinuousProperty
 				((Animator)target).SetTrigger(stringHash);
 				return;
 			}
-			goto IL_0638;
 		}
-		if (num <= 3146769)
+		else
 		{
-			if (num <= 2102290)
+			if (num > 3150858)
 			{
-				if (num > 2098193)
+				if (num <= 3154960)
 				{
-					switch (num)
+					if (num <= 3151887)
 					{
-					default:
-						_ = 2102290;
-						return;
-					case 2102282:
-						break;
-					case 2100239:
-						((ParticleSystem)target).Stop(withChildren: true, stopType);
-						return;
+						if (num != 3150866)
+						{
+							_ = 3151887;
+						}
 					}
-					goto IL_0638;
-				}
-				if (num != 1057808)
-				{
-					_ = 2098193;
+					else if (num != 3152912 && num != 3153936)
+					{
+						_ = 3154960;
+					}
 					return;
 				}
-			}
-			else
-			{
-				if (num <= 2104336)
+				switch (num)
 				{
-					switch (num)
+				case 12584966:
+				{
+					float t = curve.Evaluate(f);
+					((Transform)target).SetPositionAndRotation(bezierCurve.GetPoint(t), Quaternion.LookRotation(bezierCurve.GetDirection(t)));
+					break;
+				}
+				case 4196358:
+					((Transform)target).position = bezierCurve.GetPoint(curve.Evaluate(f));
+					break;
+				case 8390662:
+					((Transform)target).rotation = Quaternion.LookRotation(bezierCurve.GetDirection(curve.Evaluate(f)));
+					break;
+				case 4196359:
+					((Transform)target).localRotation = Quaternion.Euler(curve.Evaluate(f) * 360f, 0f, 0f);
+					break;
+				case 8390663:
+					((Transform)target).localRotation = Quaternion.Euler(0f, curve.Evaluate(f) * 360f, 0f);
+					break;
+				case 12584967:
+					((Transform)target).localRotation = Quaternion.Euler(0f, 0f, curve.Evaluate(f) * 360f);
+					break;
+				case 12584968:
+				{
+					transformA.GetPositionAndRotation(out var position, out var rotation);
+					transformB.GetPositionAndRotation(out var position2, out var rotation2);
+					float t3 = curve.Evaluate(f);
+					((Transform)target).SetPositionAndRotation(Vector3.Lerp(position, position2, t3), Quaternion.Slerp(rotation, rotation2, t3));
+					break;
+				}
+				case 4196360:
+					((Transform)target).position = Vector3.Lerp(transformA.position, transformB.position, curve.Evaluate(f));
+					break;
+				case 8390664:
+					((Transform)target).rotation = Quaternion.Slerp(transformA.rotation, transformB.rotation, curve.Evaluate(f));
+					break;
+				case 12584969:
+				{
+					float t2 = curve.Evaluate(f);
+					((Transform)target).SetLocalPositionAndRotation(Vector3.Lerp(offsetA.pos, offsetB.pos, t2), Quaternion.Slerp(offsetA.rot, offsetB.rot, t2));
+					break;
+				}
+				case 4196361:
+					((Transform)target).localPosition = Vector3.Lerp(offsetA.pos, offsetB.pos, curve.Evaluate(f));
+					break;
+				case 8390665:
+					((Transform)target).localRotation = Quaternion.Slerp(offsetA.rot, offsetB.rot, curve.Evaluate(f));
+					break;
+				case 4195345:
+					unityEvent.Invoke(curve.Evaluate(f));
+					break;
+				case 8389649:
+				{
+					float num4 = curve.Evaluate(f);
+					float num5 = 1f / num4;
+					frequencyTimer += deltaTime;
+					if (frequencyTimer >= num5)
 					{
-					default:
-						return;
-					case 2103311:
-						((AudioSource)target).Stop();
-						return;
-					case 2104336:
-						break;
+						frequencyTimer = Mathf.Repeat(frequencyTimer - num5, num5);
+						unityEvent.Invoke(num4);
 					}
-					goto IL_0753;
+					break;
 				}
-				if (num == 2105360)
+				case 12583953:
 				{
-					goto IL_076a;
+					float num2 = curve.Evaluate(f);
+					float num3 = 1f - Mathf.Exp((0f - num2) * deltaTime);
+					if (UnityEngine.Random.value < num3)
+					{
+						unityEvent.Invoke(num2);
+					}
+					break;
 				}
-				if (num != 2106384)
-				{
-					_ = 3146769;
-					return;
 				}
+				return;
 			}
-			((GameObject)target).SetActive(previousBoolValue);
-			return;
-		}
-		if (num <= 3152912)
-		{
-			if (num <= 3150858)
+			if (num > 2103311)
 			{
-				if (num != 3148815)
+				if (num <= 2106384)
+				{
+					if (num == 2104336)
+					{
+						goto IL_079a;
+					}
+					if (num == 2105360)
+					{
+						goto IL_07b1;
+					}
+					if (num != 2106384)
+					{
+						return;
+					}
+					goto IL_07c8;
+				}
+				if (num != 3146769 && num != 3148815)
 				{
 					_ = 3150858;
 				}
+				return;
 			}
-			else if (num != 3150866 && num != 3151887)
+			switch (num)
 			{
-				_ = 3152912;
+			default:
+				return;
+			case 2102282:
+				break;
+			case 2100239:
+				((ParticleSystem)target).Stop(withChildren: true, stopType);
+				return;
+			case 2103311:
+				((AudioSource)target).Stop();
+				return;
 			}
-			return;
 		}
-		if (num <= 3154960)
-		{
-			if (num != 3153936)
-			{
-				_ = 3154960;
-			}
-			return;
-		}
-		switch (num)
-		{
-		case 12584966:
-		{
-			float t3 = curve.Evaluate(f);
-			((Transform)target).SetPositionAndRotation(bezierCurve.GetPoint(t3), Quaternion.LookRotation(bezierCurve.GetDirection(t3)));
-			break;
-		}
-		case 4196358:
-			((Transform)target).position = bezierCurve.GetPoint(curve.Evaluate(f));
-			break;
-		case 8390662:
-			((Transform)target).rotation = Quaternion.LookRotation(bezierCurve.GetDirection(curve.Evaluate(f)));
-			break;
-		case 4196359:
-			((Transform)target).localRotation = Quaternion.Euler(curve.Evaluate(f) * 360f, 0f, 0f);
-			break;
-		case 8390663:
-			((Transform)target).localRotation = Quaternion.Euler(0f, curve.Evaluate(f) * 360f, 0f);
-			break;
-		case 12584967:
-			((Transform)target).localRotation = Quaternion.Euler(0f, 0f, curve.Evaluate(f) * 360f);
-			break;
-		case 12584968:
-		{
-			transformA.GetPositionAndRotation(out var position, out var rotation);
-			transformB.GetPositionAndRotation(out var position2, out var rotation2);
-			float t2 = curve.Evaluate(f);
-			((Transform)target).SetPositionAndRotation(Vector3.Lerp(position, position2, t2), Quaternion.Slerp(rotation, rotation2, t2));
-			break;
-		}
-		case 4196360:
-			((Transform)target).position = Vector3.Lerp(transformA.position, transformB.position, curve.Evaluate(f));
-			break;
-		case 8390664:
-			((Transform)target).rotation = Quaternion.Slerp(transformA.rotation, transformB.rotation, curve.Evaluate(f));
-			break;
-		case 12584969:
-		{
-			float t = curve.Evaluate(f);
-			((Transform)target).SetLocalPositionAndRotation(Vector3.Lerp(offsetA.pos, offsetB.pos, t), Quaternion.Slerp(offsetA.rot, offsetB.rot, t));
-			break;
-		}
-		case 4196361:
-			((Transform)target).localPosition = Vector3.Lerp(offsetA.pos, offsetB.pos, curve.Evaluate(f));
-			break;
-		case 8390665:
-			((Transform)target).localRotation = Quaternion.Slerp(offsetA.rot, offsetB.rot, curve.Evaluate(f));
-			break;
-		}
-		return;
-		IL_0638:
 		((Animator)target).SetBool(stringHash, previousBoolValue);
 		return;
-		IL_0753:
-		((Renderer)target).enabled = previousBoolValue;
-		return;
-		IL_076a:
+		IL_07b1:
 		((Behaviour)target).enabled = previousBoolValue;
+		return;
+		IL_07c8:
+		((GameObject)target).SetActive(previousBoolValue);
+		return;
+		IL_079a:
+		((Renderer)target).enabled = previousBoolValue;
 	}
 
 	private ParticleSystem.MinMaxCurve ScaleCurve(in ParticleSystem.MinMaxCurve inCurve, float scale)
@@ -831,6 +879,30 @@ public class ContinuousProperty
 			break;
 		}
 		return result;
+	}
+
+	private bool CheckContinuousEvent(float f, float deltaTime)
+	{
+		switch (eventMode)
+		{
+		case EventMode.Passthrough:
+			return true;
+		case EventMode.Frequency:
+			frequencyTimer += deltaTime;
+			if (frequencyTimer < f)
+			{
+				return false;
+			}
+			frequencyTimer = Mathf.Repeat(frequencyTimer - f, f);
+			return true;
+		case EventMode.AveragePerSecond:
+		{
+			float num = 1f - Mathf.Exp((0f - f) * deltaTime);
+			return UnityEngine.Random.value < num;
+		}
+		default:
+			return false;
+		}
 	}
 
 	private ThresholdResult CheckThreshold(float f)

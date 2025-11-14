@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using GorillaNetworking;
+using GorillaTagScripts.GhostReactor.SoakTasks;
 using Photon.Pun;
 using UnityEngine;
 
@@ -35,6 +37,12 @@ public class GhostReactorSoak
 
 	public double disconnectTime;
 
+	public const float START_NEW_TASK_ODDS = 0.005f;
+
+	private IGhostReactorSoakTask _activeTask;
+
+	private readonly List<IGhostReactorSoakTask> _soakTasks = new List<IGhostReactorSoakTask>();
+
 	public void Setup(GRPlayer grPlayer)
 	{
 		this.grPlayer = grPlayer;
@@ -43,6 +51,10 @@ public class GhostReactorSoak
 		{
 			Debug.LogFormat("Soak Setup {0} InRoom {1} Auth {2}", state, grManager != null && grManager.IsAuthority(), PhotonNetwork.InRoom);
 		}
+		_soakTasks.Add(new SoakTaskGrabThrow(grPlayer));
+		_soakTasks.Add(new SoakTaskDepositCollectibles(grPlayer));
+		_soakTasks.Add(new SoakTaskBreakable(grPlayer));
+		_soakTasks.Add(new SoakTaskHitEnemy(grPlayer));
 	}
 
 	public bool IsSoaking()
@@ -142,5 +154,24 @@ public class GhostReactorSoak
 
 	private void UpdateActive()
 	{
+		if (_activeTask != null)
+		{
+			bool flag = false;
+			if (!_activeTask.Update())
+			{
+				Debug.LogError($"Failed to execute soak task of type {_activeTask.GetType()}");
+				flag = true;
+			}
+			if (flag || _activeTask.Complete)
+			{
+				_activeTask.Reset();
+				_activeTask = null;
+			}
+		}
+		else if (Random.value <= 0.005f)
+		{
+			int index = Random.Range(0, _soakTasks.Count);
+			_activeTask = _soakTasks[index];
+		}
 	}
 }

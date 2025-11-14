@@ -2,5 +2,6 @@ public enum ZoneClearReason
 {
 	JoinZone,
 	LeaveZone,
-	Disconnect
+	Disconnect,
+	MigrateGameEntityZone
 }

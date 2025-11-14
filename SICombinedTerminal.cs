@@ -61,6 +61,8 @@ public class SICombinedTerminal : MonoBehaviour, IGorillaSliceableSimple
 
 	private List<VRRig> rigs = new List<VRRig>();
 
+	public AudioSource wrongPlayerBuzz;
+
 	public bool IsAuthority => superInfection.siManager.gameEntityManager.IsAuthority();
 
 	public SuperInfectionManager SIManager => superInfection.siManager;
@@ -248,5 +250,11 @@ public class SICombinedTerminal : MonoBehaviour, IGorillaSliceableSimple
 				m_gtAnimators[i].QueueState((long)newState);
 			}
 		}
+	}
+
+	public void PlayWrongPlayerBuzz(Transform xForm)
+	{
+		wrongPlayerBuzz.transform.position = xForm.position;
+		wrongPlayerBuzz.PlayOneShot(wrongPlayerBuzz.clip);
 	}
 }

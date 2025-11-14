@@ -61,7 +61,7 @@ public class SIProgression : MonoBehaviour, IGorillaSliceableSimple, GorillaQues
 
 	public bool ClientReady;
 
-	private Dictionary<SIResource.ResourceType, string> _resourceToString;
+	private static Dictionary<SIResource.ResourceType, string> _resourceToString;
 
 	private const string TREE_NAME = "SI_Gadgets";
 
@@ -271,13 +271,7 @@ public class SIProgression : MonoBehaviour, IGorillaSliceableSimple, GorillaQues
 			Instance = this;
 		}
 		emptyNode = default(SINode);
-		_resourceToString = new Dictionary<SIResource.ResourceType, string>();
-		_resourceToString[SIResource.ResourceType.TechPoint] = "SI_TechPoints";
-		_resourceToString[SIResource.ResourceType.StrangeWood] = "SI_StrangeWood";
-		_resourceToString[SIResource.ResourceType.WeirdGear] = "SI_WeirdGear";
-		_resourceToString[SIResource.ResourceType.VibratingSpring] = "SI_VibratingSpring";
-		_resourceToString[SIResource.ResourceType.BouncySand] = "SI_BouncySand";
-		_resourceToString[SIResource.ResourceType.FloppyMetal] = "SI_FloppyMetal";
+		InitResourceToStringDictionary();
 		resourceCapsArray = Enumerable.Repeat(int.MaxValue, 6).ToArray();
 		for (int i = 0; i < resourceCaps.Length; i++)
 		{
@@ -313,6 +307,26 @@ public class SIProgression : MonoBehaviour, IGorillaSliceableSimple, GorillaQues
 			ProgressionManager.Instance.OnNodeUnlocked -= HandleNodeUnlocked;
 		}
 		GorillaSlicerSimpleManager.UnregisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
+	}
+
+	public static string GetResourceString(SIResource.ResourceType resourceType)
+	{
+		if (_resourceToString == null)
+		{
+			InitResourceToStringDictionary();
+		}
+		return _resourceToString[resourceType];
+	}
+
+	private static void InitResourceToStringDictionary()
+	{
+		_resourceToString = new Dictionary<SIResource.ResourceType, string>();
+		_resourceToString[SIResource.ResourceType.TechPoint] = "SI_TechPoints";
+		_resourceToString[SIResource.ResourceType.StrangeWood] = "SI_StrangeWood";
+		_resourceToString[SIResource.ResourceType.WeirdGear] = "SI_WeirdGear";
+		_resourceToString[SIResource.ResourceType.VibratingSpring] = "SI_VibratingSpring";
+		_resourceToString[SIResource.ResourceType.BouncySand] = "SI_BouncySand";
+		_resourceToString[SIResource.ResourceType.FloppyMetal] = "SI_FloppyMetal";
 	}
 
 	public void Init()
@@ -434,9 +448,9 @@ public class SIProgression : MonoBehaviour, IGorillaSliceableSimple, GorillaQues
 		if (_treeReady && _inventoryReady)
 		{
 			UserHydratedProgressionTreeResponse userHydratedProgressionTreeResponse = ProgressionManager.Instance?.GetTree("SI_Gadgets");
-			if (siNodes == null || !siNodes[upgradeType].unlocked)
+			if (siNodes != null && siNodes.TryGetValue(upgradeType, out var value) && !value.unlocked)
 			{
-				ProgressionManager.Instance.UnlockNode(userHydratedProgressionTreeResponse.Tree.id, siNodes[upgradeType].id);
+				ProgressionManager.Instance.UnlockNode(userHydratedProgressionTreeResponse.Tree.id, value.id);
 			}
 		}
 	}
@@ -501,7 +515,10 @@ public class SIProgression : MonoBehaviour, IGorillaSliceableSimple, GorillaQues
 		siNodes = new Dictionary<SIUpgradeType, SINode>();
 		foreach (UserHydratedNodeDefinition node in obj.Nodes)
 		{
-			Enum.TryParse<SIUpgradeType>(node.name, out var result);
+			if (!Enum.TryParse<SIUpgradeType>(node.name, out var result))
+			{
+				result = SIUpgradeType.InvalidNode;
+			}
 			Dictionary<SIResource.ResourceType, int> dictionary = new Dictionary<SIResource.ResourceType, int>();
 			if (node.cost?.items != null)
 			{
@@ -973,6 +990,7 @@ public class SIProgression : MonoBehaviour, IGorillaSliceableSimple, GorillaQues
 
 	private void OnSuccessfulBonusRedeem(ProgressionManager.UserQuestsStatusResponse userQuestsStatus)
 	{
+		bonusProgress = 0;
 		ApplyServerQuestsStatus(userQuestsStatus);
 		SIPlayer.LocalPlayer.TechPointGrantedCelebrate();
 		ProgressionManager.Instance.RefreshUserInventory();
@@ -1231,7 +1249,7 @@ public class SIProgression : MonoBehaviour, IGorillaSliceableSimple, GorillaQues
 			roomPlayTime += num;
 		}
 		intervalPlayTime += num;
-		for (int i = 0; i < 6; i++)
+		for (int i = 0; i < 11; i++)
 		{
 			SITechTreePageId key = (SITechTreePageId)i;
 			if (Instance.HeldOrSnappedByGadgetPageType[key] > 0)
@@ -1282,7 +1300,7 @@ public class SIProgression : MonoBehaviour, IGorillaSliceableSimple, GorillaQues
 	public void LoadSavedTelemetryData()
 	{
 		totalPlayTime = PlayerPrefs.GetFloat("super_infection_total_play_time", 0f);
-		for (int i = 0; i < 6; i++)
+		for (int i = 0; i < 11; i++)
 		{
 			SITechTreePageId sITechTreePageId = (SITechTreePageId)i;
 			timeUsingGadgetTypeTotal[sITechTreePageId] = PlayerPrefs.GetFloat("super_infection_time_holding_gadget_type_total" + sITechTreePageId.GetName(), 0f);
@@ -1302,7 +1320,7 @@ public class SIProgression : MonoBehaviour, IGorillaSliceableSimple, GorillaQues
 	private void SaveTelemetryData()
 	{
 		PlayerPrefs.SetFloat("super_infection_total_play_time", totalPlayTime);
-		for (int i = 0; i < 6; i++)
+		for (int i = 0; i < 11; i++)
 		{
 			SITechTreePageId sITechTreePageId = (SITechTreePageId)i;
 			PlayerPrefs.SetFloat("super_infection_time_holding_gadget_type_total" + sITechTreePageId.GetName(), timeUsingGadgetTypeTotal[sITechTreePageId]);
@@ -1325,7 +1343,7 @@ public class SIProgression : MonoBehaviour, IGorillaSliceableSimple, GorillaQues
 		lastTelemetrySent = Time.time;
 		intervalPlayTime = 0f;
 		activeTerminalTimeInterval = 0f;
-		for (int i = 0; i < 6; i++)
+		for (int i = 0; i < 11; i++)
 		{
 			SITechTreePageId key = (SITechTreePageId)i;
 			timeUsingGadgetTypeInterval[key] = 0f;
@@ -1349,7 +1367,7 @@ public class SIProgression : MonoBehaviour, IGorillaSliceableSimple, GorillaQues
 		{
 			return;
 		}
-		for (int i = 0; i < 6; i++)
+		for (int i = 0; i < 11; i++)
 		{
 			SITechTreePageId key = (SITechTreePageId)i;
 			if (Instance.HeldOrSnappedByGadgetPageType[key] > 0)

@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.SceneManagement;
@@ -21,6 +22,8 @@ public class GraphicsStateCollectionManager : MonoBehaviour
 	private string m_OutputCollectionName;
 
 	private GraphicsStateCollection m_GraphicsStateCollection;
+
+	private Coroutine _autoSaveRoutine;
 
 	private GraphicsStateCollection FindExistingCollection()
 	{
@@ -67,6 +70,7 @@ public class GraphicsStateCollectionManager : MonoBehaviour
 			}
 			Debug.Log("Tracing started for GraphicsStateCollection by Scene '" + SceneManager.GetActiveScene().name + "'.");
 			m_GraphicsStateCollection.BeginTrace();
+			_autoSaveRoutine = StartCoroutine(AutoSaveRoutine());
 		}
 		else
 		{
@@ -91,11 +95,28 @@ public class GraphicsStateCollectionManager : MonoBehaviour
 
 	private void OnDestroy()
 	{
+		if (_autoSaveRoutine != null)
+		{
+			StopCoroutine(_autoSaveRoutine);
+		}
 		if (mode == Mode.Tracing && m_GraphicsStateCollection != null)
 		{
 			m_GraphicsStateCollection.EndTrace();
 			Debug.Log("Sending collection to Editor with " + m_GraphicsStateCollection.totalGraphicsStateCount + " GraphicsState entries.");
 			m_GraphicsStateCollection.SendToEditor(m_OutputCollectionName);
+		}
+	}
+
+	private IEnumerator AutoSaveRoutine()
+	{
+		while (true)
+		{
+			yield return new WaitForSeconds(5f);
+			if (mode == Mode.Tracing && m_GraphicsStateCollection != null)
+			{
+				Debug.Log("Auto-saving collection with " + m_GraphicsStateCollection.totalGraphicsStateCount + " GraphicsState entries.");
+				m_GraphicsStateCollection.SendToEditor(m_OutputCollectionName);
+			}
 		}
 	}
 }
