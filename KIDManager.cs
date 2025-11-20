@@ -670,7 +670,7 @@ public class KIDManager : MonoBehaviour
 										TMPSession item = obj2.Item2;
 										if (_requestCancellationSource.IsCancellationRequested)
 										{
-											goto IL_0885;
+											goto IL_0887;
 										}
 										newSession = item;
 									}
@@ -682,7 +682,7 @@ public class KIDManager : MonoBehaviour
 										await LegalAgreements.instance.StartLegalAgreements();
 										if (_requestCancellationSource.IsCancellationRequested)
 										{
-											goto IL_0885;
+											goto IL_0887;
 										}
 									}
 									Debug.Log("[KID::MANAGER] PHASE FOUR -- COMPLETE");
@@ -745,8 +745,8 @@ public class KIDManager : MonoBehaviour
 					}
 				}
 			}
-			goto IL_0885;
-			IL_0885:
+			goto IL_0887;
+			IL_0887:
 			num = 1;
 			end_IL_005f:;
 		}

@@ -250,6 +250,10 @@ public class SIProgression : MonoBehaviour, IGorillaSliceableSimple, GorillaQues
 
 	private bool[] redeemingQuestInProgress = new bool[3];
 
+	private float lastDisconnectTelemetrySent;
+
+	private float minDisconnectTelemetryCooldown = 60f;
+
 	public static SIProgression Instance { get; private set; }
 
 	public Dictionary<SITechTreePageId, int> HeldOrSnappedByGadgetPageType => heldOrSnappedByGadgetPageType;
@@ -1279,10 +1283,14 @@ public class SIProgression : MonoBehaviour, IGorillaSliceableSimple, GorillaQues
 
 	public void SendTelemetryData()
 	{
-		SaveTelemetryData();
-		GorillaTelemetry.SuperInfectionEvent(roomDisconnect: true, totalPlayTime, roomPlayTime, Time.time, intervalPlayTime, activeTerminalTimeTotal, activeTerminalTimeInterval, timeUsingGadgetTypeTotal, timeUsingGadgetTypeInterval, timeUsingOwnGadgetsTotal, timeUsingOwnGadgetsInterval, timeUsingOthersGadgetsTotal, timeUsingOthersGadgetsInterval, tagsUsingGadgetTypeTotal, tagsUsingGadgetTypeInterval, tagsHoldingOwnGadgetTotal, tagsHoldingOwnGadgetInterval, tagsHoldingOthersGadgetTotal, tagsHoldingOthersGadgetInterval, resourcesCollectedTotal, resourcesCollectedInterval, roundsPlayedTotal, roundsPlayedInterval, Instance.unlockedTechTreeData, NetworkSystem.Instance.InRoom ? NetworkSystem.Instance.RoomPlayerCount : (-1));
-		ResetTelemetryIntervalData();
-		roomPlayTime = 0f;
+		if (!(Time.time < lastDisconnectTelemetrySent + minDisconnectTelemetryCooldown))
+		{
+			lastDisconnectTelemetrySent = Time.time;
+			SaveTelemetryData();
+			GorillaTelemetry.SuperInfectionEvent(roomDisconnect: true, totalPlayTime, roomPlayTime, Time.time, intervalPlayTime, activeTerminalTimeTotal, activeTerminalTimeInterval, timeUsingGadgetTypeTotal, timeUsingGadgetTypeInterval, timeUsingOwnGadgetsTotal, timeUsingOwnGadgetsInterval, timeUsingOthersGadgetsTotal, timeUsingOthersGadgetsInterval, tagsUsingGadgetTypeTotal, tagsUsingGadgetTypeInterval, tagsHoldingOwnGadgetTotal, tagsHoldingOwnGadgetInterval, tagsHoldingOthersGadgetTotal, tagsHoldingOthersGadgetInterval, resourcesCollectedTotal, resourcesCollectedInterval, roundsPlayedTotal, roundsPlayedInterval, Instance.unlockedTechTreeData, NetworkSystem.Instance.InRoom ? NetworkSystem.Instance.RoomPlayerCount : (-1));
+			ResetTelemetryIntervalData();
+			roomPlayTime = 0f;
+		}
 	}
 
 	public void SendPurchaseResourcesData()

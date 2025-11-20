@@ -178,7 +178,7 @@ public class KIDAgeGate : MonoBehaviour
 			HandRayController.Instance.DisableHandRays();
 		}
 		while (!flag);
-		await OnAgeGateCompleted();
+		OnAgeGateCompleted();
 		Debug.Log("[KID] Age Gate Complete");
 	}
 
@@ -223,7 +223,7 @@ public class KIDAgeGate : MonoBehaviour
 		_hasChosenAge = true;
 	}
 
-	private async Task OnAgeGateCompleted()
+	private void OnAgeGateCompleted()
 	{
 		FinaliseAgeGateAndContinue();
 	}

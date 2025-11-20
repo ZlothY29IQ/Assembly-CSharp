@@ -10,6 +10,9 @@ public class FlagEvents<T> where T : Enum
 	{
 		public string debugName = "Any flag true";
 
+		[Tooltip("Check this box if only the local player is supposed to run this event.")]
+		public bool runOnlyLocally;
+
 		private T flags;
 
 		[HideInInspector]
@@ -33,12 +36,12 @@ public class FlagEvents<T> where T : Enum
 	[SerializeField]
 	private FlagEvent[] list;
 
-	public void InvokeAll(T test)
+	public void InvokeAll(T test, bool isLocal = false)
 	{
 		int num = Convert.ToInt32(test);
 		for (int i = 0; i < list.Length; i++)
 		{
-			if ((num & list[i].flagsAsInt) != 0)
+			if ((num & list[i].flagsAsInt) != 0 && (!list[i].runOnlyLocally || isLocal))
 			{
 				list[i].anyFlagTrue?.Invoke();
 			}

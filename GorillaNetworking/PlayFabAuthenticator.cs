@@ -211,12 +211,8 @@ public class PlayFabAuthenticator : MonoBehaviour
 		{
 			AuthenticateWithPlayFab();
 		}
-		else
+		else if (instance.mothershipAuthenticator == null)
 		{
-			if (!(instance.mothershipAuthenticator == null))
-			{
-				return;
-			}
 			instance.mothershipAuthenticator = MothershipAuthenticator.Instance ?? instance.gameObject.GetOrAddComponent<MothershipAuthenticator>();
 			MothershipAuthenticator obj = instance.mothershipAuthenticator;
 			obj.OnLoginSuccess = (Action)Delegate.Combine(obj.OnLoginSuccess, (Action)delegate
@@ -224,12 +220,10 @@ public class PlayFabAuthenticator : MonoBehaviour
 				instance.AuthenticateWithPlayFab();
 			});
 			MothershipAuthenticator obj2 = instance.mothershipAuthenticator;
-			obj2.OnLoginAttemptFailure = (Action<int>)Delegate.Combine(obj2.OnLoginAttemptFailure, (Action<int>)delegate(int attempts)
+			obj2.OnLoginFailure = (Action<string>)Delegate.Combine(obj2.OnLoginFailure, (Action<string>)delegate(string errorMessage)
 			{
-				if (attempts == 1)
-				{
-					instance.AuthenticateWithPlayFab();
-				}
+				loginFailed = true;
+				ShowMothershipAuthErrorMessage(errorMessage);
 			});
 			instance.mothershipAuthenticator.BeginLoginFlow();
 		}
@@ -623,6 +617,18 @@ public class PlayFabAuthenticator : MonoBehaviour
 				callback(null);
 				ShowPlayFabAuthErrorMessage(request.downloadHandler.text);
 			}
+		}
+	}
+
+	private void ShowMothershipAuthErrorMessage(string errorMessage)
+	{
+		try
+		{
+			gorillaComputer.GeneralFailureMessage("UNABLE TO AUTHENTICATE WITH MOTHERSHIP.\nREASON: " + errorMessage);
+		}
+		catch (Exception arg)
+		{
+			Debug.LogError($"Failed to show Mothership auth error message: {arg}");
 		}
 	}
 

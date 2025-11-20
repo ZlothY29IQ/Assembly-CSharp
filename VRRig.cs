@@ -2095,56 +2095,54 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	void IWrappedSerializable.OnSerializeRead(PhotonStream stream, PhotonMessageInfo info)
 	{
-		if (Utils.ValidateServerTime(info.SentServerTime, 60.0))
+		_ = info.SentServerTime;
+		InputStruct data = default(InputStruct);
+		data.headRotation = (int)stream.ReceiveNext();
+		data.rightHandLong = (long)stream.ReceiveNext();
+		data.leftHandLong = (long)stream.ReceiveNext();
+		data.position = (long)stream.ReceiveNext();
+		data.handPosition = (int)stream.ReceiveNext();
+		data.packedFields = (int)stream.ReceiveNext();
+		data.packedCompetitiveData = (short)stream.ReceiveNext();
+		bool num = (data.packedFields & 0x400) != 0;
+		bool flag = (data.packedFields & 0x8000) != 0;
+		if (num)
 		{
-			InputStruct data = default(InputStruct);
-			data.headRotation = (int)stream.ReceiveNext();
-			data.rightHandLong = (long)stream.ReceiveNext();
-			data.leftHandLong = (long)stream.ReceiveNext();
-			data.position = (long)stream.ReceiveNext();
-			data.handPosition = (int)stream.ReceiveNext();
-			data.packedFields = (int)stream.ReceiveNext();
-			data.packedCompetitiveData = (short)stream.ReceiveNext();
-			bool num = (data.packedFields & 0x400) != 0;
-			bool flag = (data.packedFields & 0x8000) != 0;
-			if (num)
-			{
-				data.grabbedRopeIndex = (int)stream.ReceiveNext();
-				data.ropeBoneIndex = (int)stream.ReceiveNext();
-				data.ropeGrabIsLeft = (bool)stream.ReceiveNext();
-				data.ropeGrabIsBody = (bool)stream.ReceiveNext();
-				data.ropeGrabOffset = (Vector3)stream.ReceiveNext();
-			}
-			else if (flag)
-			{
-				data.grabbedRopeIndex = (int)stream.ReceiveNext();
-				data.ropeGrabIsLeft = (bool)stream.ReceiveNext();
-				data.ropeGrabIsBody = (bool)stream.ReceiveNext();
-				data.ropeGrabOffset = (Vector3)stream.ReceiveNext();
-			}
-			if ((data.packedFields & 0x2000) != 0)
-			{
-				data.hoverboardPosRot = (long)stream.ReceiveNext();
-				data.hoverboardColor = (short)stream.ReceiveNext();
-			}
-			if ((data.packedFields & 0x1000) != 0)
-			{
-				data.isGroundedHand = (bool)stream.ReceiveNext();
-				data.isGroundedButt = (bool)stream.ReceiveNext();
-				data.leftHandGrabbedActorNumber = (int)stream.ReceiveNext();
-				data.leftGrabbedHandIsLeft = (bool)stream.ReceiveNext();
-				data.rightHandGrabbedActorNumber = (int)stream.ReceiveNext();
-				data.rightGrabbedHandIsLeft = (bool)stream.ReceiveNext();
-				data.lastTouchedGroundAtTime = (float)stream.ReceiveNext();
-				data.lastHandTouchedGroundAtTime = (float)stream.ReceiveNext();
-			}
-			if ((data.packedFields & 0x10000) != 0)
-			{
-				data.propHuntPosRot = (long)stream.ReceiveNext();
-			}
-			data.serverTimeStamp = info.SentServerTime;
-			SerializeReadShared(data);
+			data.grabbedRopeIndex = (int)stream.ReceiveNext();
+			data.ropeBoneIndex = (int)stream.ReceiveNext();
+			data.ropeGrabIsLeft = (bool)stream.ReceiveNext();
+			data.ropeGrabIsBody = (bool)stream.ReceiveNext();
+			data.ropeGrabOffset = (Vector3)stream.ReceiveNext();
 		}
+		else if (flag)
+		{
+			data.grabbedRopeIndex = (int)stream.ReceiveNext();
+			data.ropeGrabIsLeft = (bool)stream.ReceiveNext();
+			data.ropeGrabIsBody = (bool)stream.ReceiveNext();
+			data.ropeGrabOffset = (Vector3)stream.ReceiveNext();
+		}
+		if ((data.packedFields & 0x2000) != 0)
+		{
+			data.hoverboardPosRot = (long)stream.ReceiveNext();
+			data.hoverboardColor = (short)stream.ReceiveNext();
+		}
+		if ((data.packedFields & 0x1000) != 0)
+		{
+			data.isGroundedHand = (bool)stream.ReceiveNext();
+			data.isGroundedButt = (bool)stream.ReceiveNext();
+			data.leftHandGrabbedActorNumber = (int)stream.ReceiveNext();
+			data.leftGrabbedHandIsLeft = (bool)stream.ReceiveNext();
+			data.rightHandGrabbedActorNumber = (int)stream.ReceiveNext();
+			data.rightGrabbedHandIsLeft = (bool)stream.ReceiveNext();
+			data.lastTouchedGroundAtTime = (float)stream.ReceiveNext();
+			data.lastHandTouchedGroundAtTime = (float)stream.ReceiveNext();
+		}
+		if ((data.packedFields & 0x10000) != 0)
+		{
+			data.propHuntPosRot = (long)stream.ReceiveNext();
+		}
+		data.serverTimeStamp = info.SentServerTime;
+		SerializeReadShared(data);
 	}
 
 	public object OnSerializeWrite()

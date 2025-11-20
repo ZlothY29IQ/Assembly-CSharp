@@ -1,9 +1,10 @@
 using System;
+using GorillaTag.CosmeticSystem;
 using UnityEngine;
 
 namespace GorillaTag.Cosmetics;
 
-public class ContinuousPropertyTimeline : MonoBehaviour, ITickSystemTick
+public class ContinuousPropertyTimeline : MonoBehaviour, ITickSystemTick, ISpawnable
 {
 	private enum TimelineEndBehavior
 	{
@@ -55,6 +56,8 @@ public class ContinuousPropertyTimeline : MonoBehaviour, ITickSystemTick
 
 	private bool IsPlaying;
 
+	private VRRig myRig;
+
 	private bool IsBackward
 	{
 		get
@@ -80,6 +83,10 @@ public class ContinuousPropertyTimeline : MonoBehaviour, ITickSystemTick
 	}
 
 	public bool TickRunning { get; set; }
+
+	public bool IsSpawned { get; set; }
+
+	public ECosmeticSelectSide CosmeticSelectedSide { get; set; }
 
 	public void TimelinePlay()
 	{
@@ -180,9 +187,13 @@ public class ContinuousPropertyTimeline : MonoBehaviour, ITickSystemTick
 
 	private void OnEnable()
 	{
+		if (myRig == null)
+		{
+			myRig = GetComponentInParent<VRRig>();
+		}
 		inverseDuration = 1f / durationSeconds;
 		backwardDeltaMult = durationSeconds / backwardDuration;
-		events.InvokeAll(TimelineEvent.OnEnable);
+		events.InvokeAll(TimelineEvent.OnEnable, myRig != null && myRig.isLocal);
 		if (IsPlaying)
 		{
 			TickSystem<object>.AddTickCallback(this);
@@ -191,7 +202,7 @@ public class ContinuousPropertyTimeline : MonoBehaviour, ITickSystemTick
 
 	private void OnDisable()
 	{
-		events.InvokeAll(TimelineEvent.OnDisable);
+		events.InvokeAll(TimelineEvent.OnDisable, myRig != null && myRig.isLocal);
 		TickSystem<object>.RemoveTickCallback(this);
 	}
 
@@ -214,8 +225,9 @@ public class ContinuousPropertyTimeline : MonoBehaviour, ITickSystemTick
 				break;
 			}
 		}
+		continuousProperties.cachedRigIsLocal = myRig != null && myRig.isLocal;
 		continuousProperties.ApplyAll(1f);
-		events.InvokeAll(TimelineEvent.OnReachedEnd);
+		events.InvokeAll(TimelineEvent.OnReachedEnd, myRig != null && myRig.isLocal);
 	}
 
 	private void OnReachedBeginning()
@@ -237,13 +249,15 @@ public class ContinuousPropertyTimeline : MonoBehaviour, ITickSystemTick
 				break;
 			}
 		}
+		continuousProperties.cachedRigIsLocal = myRig != null && myRig.isLocal;
 		continuousProperties.ApplyAll(0f);
-		events.InvokeAll(TimelineEvent.OnReachedBeginning);
+		events.InvokeAll(TimelineEvent.OnReachedBeginning, myRig != null && myRig.isLocal);
 	}
 
 	private void InBetween()
 	{
 		float f = time * inverseDuration;
+		continuousProperties.cachedRigIsLocal = myRig != null && myRig.isLocal;
 		continuousProperties.ApplyAll(f);
 	}
 
@@ -273,5 +287,14 @@ public class ContinuousPropertyTimeline : MonoBehaviour, ITickSystemTick
 				InBetween();
 			}
 		}
+	}
+
+	public void OnSpawn(VRRig rig)
+	{
+		myRig = rig;
+	}
+
+	public void OnDespawn()
+	{
 	}
 }

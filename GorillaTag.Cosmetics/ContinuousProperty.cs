@@ -163,6 +163,12 @@ public class ContinuousProperty
 	[SerializeField]
 	private UnityEvent<float> unityEvent;
 
+	[Tooltip("Check this box if only the owner/local player is supposed to run this property.")]
+	[SerializeField]
+	private bool runOnlyLocally;
+
+	private bool rigLocal;
+
 	private int internalSwitchValue;
 
 	private ParticleSystem.MainModule particleMain;
@@ -348,6 +354,8 @@ public class ContinuousProperty
 	}
 
 	private bool HasUnityEvent => MyType == Type.UnityEvent;
+
+	public bool RunOnlyLocally => runOnlyLocally;
 
 	private static Cast GetTargetCast(UnityEngine.Object o)
 	{
@@ -576,6 +584,11 @@ public class ContinuousProperty
 		return "String Value";
 	}
 
+	public void SetRigIsLocal(bool v)
+	{
+		rigLocal = v;
+	}
+
 	public void Init()
 	{
 		if (mode == null)
@@ -644,6 +657,10 @@ public class ContinuousProperty
 
 	public void Apply(float f, float deltaTime, MaterialPropertyBlock mpb)
 	{
+		if (runOnlyLocally && !rigLocal)
+		{
+			return;
+		}
 		int num = internalSwitchValue | (int)CheckThreshold(f);
 		if (num <= 1057808)
 		{
@@ -702,11 +719,11 @@ public class ContinuousProperty
 				((AudioSource)target).Play();
 				return;
 			case 1055760:
-				goto IL_079a;
+				goto IL_07ab;
 			case 1056784:
-				goto IL_07b1;
+				goto IL_07c2;
 			case 1057808:
-				goto IL_07c8;
+				goto IL_07d9;
 			case 1049617:
 				unityEvent.Invoke(curve.Evaluate(f));
 				return;
@@ -817,17 +834,17 @@ public class ContinuousProperty
 				{
 					if (num == 2104336)
 					{
-						goto IL_079a;
+						goto IL_07ab;
 					}
 					if (num == 2105360)
 					{
-						goto IL_07b1;
+						goto IL_07c2;
 					}
 					if (num != 2106384)
 					{
 						return;
 					}
-					goto IL_07c8;
+					goto IL_07d9;
 				}
 				if (num != 3146769 && num != 3148815)
 				{
@@ -851,14 +868,14 @@ public class ContinuousProperty
 		}
 		((Animator)target).SetBool(stringHash, previousBoolValue);
 		return;
-		IL_07b1:
-		((Behaviour)target).enabled = previousBoolValue;
+		IL_07ab:
+		((Renderer)target).enabled = previousBoolValue;
 		return;
-		IL_07c8:
+		IL_07d9:
 		((GameObject)target).SetActive(previousBoolValue);
 		return;
-		IL_079a:
-		((Renderer)target).enabled = previousBoolValue;
+		IL_07c2:
+		((Behaviour)target).enabled = previousBoolValue;
 	}
 
 	private ParticleSystem.MinMaxCurve ScaleCurve(in ParticleSystem.MinMaxCurve inCurve, float scale)

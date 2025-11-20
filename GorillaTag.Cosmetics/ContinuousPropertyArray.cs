@@ -48,6 +48,9 @@ public class ContinuousPropertyArray
 
 	private float lastApplyTime;
 
+	[NonSerialized]
+	public bool cachedRigIsLocal;
+
 	public int Count => list.Length;
 
 	private void InitIfNeeded()
@@ -115,8 +118,10 @@ public class ContinuousPropertyArray
 			num2 = 0;
 			((Renderer)list[0].Target).GetPropertyBlock(mpb, list[0].IntValue);
 		}
+		bool rigIsLocal = cachedRigIsLocal;
 		for (int i = 0; i < list.Length; i++)
 		{
+			list[i].SetRigIsLocal(rigIsLocal);
 			list[i].Apply(value, num, mpb);
 			if (num2 < uniqueShaderPropertyIndices.Count && i >= uniqueShaderPropertyIndices[num2] - 1)
 			{
