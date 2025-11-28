@@ -1,22 +1,11 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using GorillaNetworking;
 using GorillaNetworking.Store;
 using TMPro;
 using UnityEngine;
 
-public class ATM_Manager : MonoBehaviour
+public class ATM_Manager : MonoBehaviour, IBuildValidation
 {
-	public enum CreatorCodeStatus
-	{
-		Empty,
-		Unchecked,
-		Validating,
-		Valid
-	}
-
 	public enum ATMStages
 	{
 		Unavailable,
@@ -101,27 +90,20 @@ public class ATM_Manager : MonoBehaviour
 	[HideInInspector]
 	public List<CreatorCodeSmallDisplay> smallDisplays;
 
-	private string currentCreatorCode;
-
-	private string codeFirstUsedTime;
-
-	private string initialCode;
-
-	private string temporaryOverrideCode;
-
-	private CreatorCodeStatus creatorCodeStatus;
-
 	private ATMStages currentATMStage;
 
 	public int numShinyRocksToBuy;
 
 	public float shinyRocksCost;
 
-	private Member supportedMember;
-
 	public bool alreadyBegan;
 
-	public string ValidatedCreatorCode { get; set; }
+	[SerializeField]
+	private NexusGroupId[] nexusGroups;
+
+	private string _tempCreatorCodeOveride;
+
+	private const string ATM_TERMINAL_ID = "atm_terminal_id";
 
 	public ATMStages CurrentATMStage => currentATMStage;
 
@@ -129,7 +111,7 @@ public class ATM_Manager : MonoBehaviour
 	{
 		if ((bool)instance)
 		{
-			UnityEngine.Object.Destroy(this);
+			Object.Destroy(this);
 		}
 		else
 		{
@@ -146,6 +128,7 @@ public class ATM_Manager : MonoBehaviour
 		}
 		SwitchToStage(ATMStages.Unavailable);
 		smallDisplays = new List<CreatorCodeSmallDisplay>();
+		HookupToCreatorCodes();
 	}
 
 	public void Start()
@@ -153,37 +136,85 @@ public class ATM_Manager : MonoBehaviour
 		Debug.Log("ATM COUNT: " + atmUIs.Count);
 		Debug.Log("SMALL DISPLAY COUNT: " + smallDisplays.Count);
 		GameEvents.OnGorrillaATMKeyButtonPressedEvent.AddListener(PressButton);
-		currentCreatorCode = "";
-		if (PlayerPrefs.HasKey("CodeUsedTime"))
+	}
+
+	public void HookupToCreatorCodes()
+	{
+		CreatorCodes.InitializedEvent += CreatorCodesInitialized;
+		CreatorCodes.OnCreatorCodeChangedEvent += OnCreatorCodeChanged;
+		CreatorCodes.OnCreatorCodeFailureEvent += OnOnCreatorCodeFailureEvent;
+		if (CreatorCodes.Intialized)
 		{
-			codeFirstUsedTime = PlayerPrefs.GetString("CodeUsedTime");
-			DateTime dateTime = DateTime.Parse(codeFirstUsedTime);
-			if ((DateTime.Now - dateTime).TotalDays > 14.0)
-			{
-				PlayerPrefs.SetString("CreatorCode", "");
-			}
-			else
-			{
-				currentCreatorCode = PlayerPrefs.GetString("CreatorCode", "");
-				initialCode = currentCreatorCode;
-				Debug.Log("Initial code: " + initialCode);
-				if (string.IsNullOrEmpty(currentCreatorCode))
-				{
-					creatorCodeStatus = CreatorCodeStatus.Empty;
-				}
-				else
-				{
-					creatorCodeStatus = CreatorCodeStatus.Unchecked;
-				}
-				foreach (CreatorCodeSmallDisplay smallDisplay in smallDisplays)
-				{
-					smallDisplay.SetCode(currentCreatorCode);
-				}
-			}
+			CreatorCodesInitialized();
+		}
+	}
+
+	public void CreatorCodesInitialized()
+	{
+		foreach (CreatorCodeSmallDisplay smallDisplay in smallDisplays)
+		{
+			smallDisplay.SetCode(CreatorCodes.getCurrentCreatorCode("atm_terminal_id"));
 		}
 		foreach (ATM_UI atmUI in atmUIs)
 		{
-			atmUI.creatorCodeField.text = currentCreatorCode;
+			atmUI.creatorCodeField.text = CreatorCodes.getCurrentCreatorCode("atm_terminal_id");
+		}
+	}
+
+	public void OnCreatorCodeChanged(string id)
+	{
+		if (id != "atm_terminal_id")
+		{
+			return;
+		}
+		foreach (CreatorCodeSmallDisplay smallDisplay in smallDisplays)
+		{
+			smallDisplay.SetCode(CreatorCodes.getCurrentCreatorCode("atm_terminal_id"));
+		}
+		foreach (ATM_UI atmUI in atmUIs)
+		{
+			atmUI.creatorCodeField.text = CreatorCodes.getCurrentCreatorCode("atm_terminal_id");
+		}
+		string text = "CREATOR CODE:";
+		switch (CreatorCodes.getCurrentCreatorCodeStatus("atm_terminal_id"))
+		{
+		case CreatorCodes.CreatorCodeStatus.Valid:
+			text += " VALID";
+			break;
+		case CreatorCodes.CreatorCodeStatus.Validating:
+			text += " VALIDATING";
+			break;
+		}
+		foreach (ATM_UI atmUI2 in atmUIs)
+		{
+			atmUI2.creatorCodeTitle.text = text;
+		}
+	}
+
+	private void OnOnCreatorCodeFailureEvent(string id)
+	{
+		if (id != "atm_terminal_id")
+		{
+			return;
+		}
+		foreach (ATM_UI atmUI in atmUIs)
+		{
+			atmUI.creatorCodeTitle.text = "CREATOR CODE: INVALID";
+			LocalisationManager.TryGetKeyForCurrentLocale("ATM_CREATOR_CODE_INVALID", out var result, atmUI.atmText.text);
+			atmUI.creatorCodeTitle.text = result;
+		}
+		Debug.Log("ATM CODE FAILURE");
+	}
+
+	public void OnCreatorCodeInvalid(string id)
+	{
+		if (id != "atm_terminal_id")
+		{
+			return;
+		}
+		foreach (ATM_UI atmUI in atmUIs)
+		{
+			atmUI.creatorCodeTitle.text = "CREATOR CODE: INVALID";
 		}
 	}
 
@@ -205,7 +236,7 @@ public class ATM_Manager : MonoBehaviour
 
 	public void PressButton(GorillaATMKeyBindings buttonPressed)
 	{
-		if (currentATMStage != ATMStages.Confirm || creatorCodeStatus == CreatorCodeStatus.Validating)
+		if (currentATMStage != ATMStages.Confirm || CreatorCodes.getCurrentCreatorCodeStatus("atm_terminal_id") == CreatorCodes.CreatorCodeStatus.Validating)
 		{
 			return;
 		}
@@ -217,49 +248,23 @@ public class ATM_Manager : MonoBehaviour
 		}
 		if (buttonPressed == GorillaATMKeyBindings.delete)
 		{
-			if (currentCreatorCode.Length > 0)
-			{
-				currentCreatorCode = currentCreatorCode.Substring(0, currentCreatorCode.Length - 1);
-				if (currentCreatorCode.Length == 0)
-				{
-					creatorCodeStatus = CreatorCodeStatus.Empty;
-					ValidatedCreatorCode = "";
-					foreach (CreatorCodeSmallDisplay smallDisplay in smallDisplays)
-					{
-						smallDisplay.SetCode("");
-					}
-					PlayerPrefs.SetString("CreatorCode", "");
-					PlayerPrefs.Save();
-				}
-				else
-				{
-					creatorCodeStatus = CreatorCodeStatus.Unchecked;
-				}
-			}
+			CreatorCodes.DeleteCharacter("atm_terminal_id");
+			return;
 		}
-		else if (currentCreatorCode.Length < 10)
+		string input;
+		if (buttonPressed >= GorillaATMKeyBindings.delete)
 		{
-			string text = currentCreatorCode;
-			string text2;
-			if (buttonPressed >= GorillaATMKeyBindings.delete)
-			{
-				text2 = buttonPressed.ToString();
-			}
-			else
-			{
-				int num = (int)buttonPressed;
-				text2 = num.ToString();
-			}
-			currentCreatorCode = text + text2;
-			creatorCodeStatus = CreatorCodeStatus.Unchecked;
+			input = buttonPressed.ToString();
 		}
-		foreach (ATM_UI atmUI2 in atmUIs)
+		else
 		{
-			atmUI2.creatorCodeField.text = currentCreatorCode;
+			int num = (int)buttonPressed;
+			input = num.ToString();
 		}
+		CreatorCodes.AppendKey("atm_terminal_id", input);
 	}
 
-	public void ProcessATMState(string currencyButton)
+	public async void ProcessATMState(string currencyButton)
 	{
 		switch (currentATMStage)
 		{
@@ -269,9 +274,10 @@ public class ATM_Manager : MonoBehaviour
 		case ATMStages.Menu:
 			if (PlayFabAuthenticator.instance.GetSafety())
 			{
-				if (!(currencyButton == "one"))
+				string text = currencyButton;
+				if (!(text == "one"))
 				{
-					if (currencyButton == "four")
+					if (text == "four")
 					{
 						SwitchToStage(ATMStages.Begin);
 					}
@@ -338,23 +344,40 @@ public class ATM_Manager : MonoBehaviour
 			}
 			break;
 		case ATMStages.Confirm:
-			if (!(currencyButton == "one"))
+		{
+			string text = currencyButton;
+			if (!(text == "one"))
 			{
-				if (currencyButton == "back")
+				if (text == "back")
 				{
 					SwitchToStage(ATMStages.Choose);
 				}
+				break;
 			}
-			else if (creatorCodeStatus == CreatorCodeStatus.Empty)
+			if (CreatorCodes.getCurrentCreatorCodeStatus("atm_terminal_id") == CreatorCodes.CreatorCodeStatus.Empty)
 			{
 				CosmeticsController.instance.SteamPurchase();
 				SwitchToStage(ATMStages.Purchasing);
+				break;
+			}
+			CreatorCodeValidating();
+			NexusManager.MemberCode memberCode = await CreatorCodes.CheckValidationCoroutineJIT("atm_terminal_id", CreatorCodes.getCurrentCreatorCode("atm_terminal_id"), nexusGroups);
+			if (memberCode != null)
+			{
+				SwitchToStage(ATMStages.Purchasing);
+				CosmeticsController.instance.SetValidatedCreatorCode(new NexusManager.MemberCode
+				{
+					memberCode = memberCode.memberCode,
+					groupId = memberCode.groupId
+				});
+				CosmeticsController.instance.SteamPurchase();
 			}
 			else
 			{
-				StartCoroutine(CheckValidationCoroutine());
+				OnCreatorCodeInvalid("atm_terminal_id");
 			}
 			break;
+		}
 		default:
 			SwitchToStage(ATMStages.Menu);
 			break;
@@ -367,7 +390,7 @@ public class ATM_Manager : MonoBehaviour
 	public void AddATM(ATM_UI newATM)
 	{
 		atmUIs.Add(newATM);
-		newATM.creatorCodeField.text = currentCreatorCode;
+		newATM.creatorCodeField.text = CreatorCodes.getCurrentCreatorCode("atm_terminal_id");
 		SwitchToStage(currentATMStage);
 	}
 
@@ -376,118 +399,24 @@ public class ATM_Manager : MonoBehaviour
 		atmUIs.Remove(atmToRemove);
 	}
 
-	public void SetTemporaryCreatorCode(string creatorCode, bool onlyIfEmpty = true, Action<bool> OnComplete = null)
-	{
-		if (onlyIfEmpty && (creatorCodeStatus != 0 || !currentCreatorCode.IsNullOrEmpty()))
-		{
-			OnComplete?.Invoke(obj: false);
-			return;
-		}
-		string pattern = "^[a-zA-Z0-9]+$";
-		if (creatorCode.Length > 10 || !Regex.IsMatch(creatorCode, pattern))
-		{
-			OnComplete?.Invoke(obj: false);
-			return;
-		}
-		NexusManager.instance.VerifyCreatorCode(creatorCode, delegate
-		{
-			if (currentATMStage > ATMStages.Confirm)
-			{
-				OnComplete?.Invoke(obj: false);
-			}
-			else if (onlyIfEmpty && (creatorCodeStatus != 0 || !currentCreatorCode.IsNullOrEmpty()))
-			{
-				OnComplete?.Invoke(obj: false);
-			}
-			else
-			{
-				temporaryOverrideCode = creatorCode;
-				currentCreatorCode = creatorCode;
-				creatorCodeStatus = CreatorCodeStatus.Unchecked;
-				foreach (CreatorCodeSmallDisplay smallDisplay in smallDisplays)
-				{
-					smallDisplay.SetCode(currentCreatorCode);
-				}
-				foreach (ATM_UI atmUI in atmUIs)
-				{
-					atmUI.creatorCodeField.text = currentCreatorCode;
-				}
-				OnComplete?.Invoke(obj: true);
-			}
-		}, delegate
-		{
-			OnComplete?.Invoke(obj: false);
-		});
-	}
-
-	public void ResetTemporaryCreatorCode()
-	{
-		if (creatorCodeStatus == CreatorCodeStatus.Unchecked && currentCreatorCode.Equals(temporaryOverrideCode))
-		{
-			currentCreatorCode = "";
-			creatorCodeStatus = CreatorCodeStatus.Empty;
-			foreach (CreatorCodeSmallDisplay smallDisplay in smallDisplays)
-			{
-				smallDisplay.SetCode("");
-			}
-			foreach (ATM_UI atmUI in atmUIs)
-			{
-				atmUI.creatorCodeField.text = currentCreatorCode;
-			}
-		}
-		temporaryOverrideCode = "";
-	}
-
-	private void ResetCreatorCode()
-	{
-		Debug.Log("Resetting creator code");
-		string defaultResult = "CREATOR CODE: ";
-		LocalisationManager.TryGetKeyForCurrentLocale("ATM_CREATOR_CODE", out var result, defaultResult);
-		foreach (ATM_UI atmUI in atmUIs)
-		{
-			atmUI.creatorCodeTitle.text = result;
-		}
-		foreach (CreatorCodeSmallDisplay smallDisplay in smallDisplays)
-		{
-			smallDisplay.SetCode("");
-		}
-		currentCreatorCode = "";
-		creatorCodeStatus = CreatorCodeStatus.Empty;
-		supportedMember = default(Member);
-		ValidatedCreatorCode = "";
-		PlayerPrefs.SetString("CreatorCode", "");
-		PlayerPrefs.Save();
-		foreach (ATM_UI atmUI2 in atmUIs)
-		{
-			atmUI2.creatorCodeField.text = currentCreatorCode;
-		}
-	}
-
-	private IEnumerator CheckValidationCoroutine()
+	public void CreatorCodeValidating()
 	{
 		foreach (ATM_UI atmUI in atmUIs)
 		{
 			atmUI.creatorCodeTitle.text = "CREATOR CODE: VALIDATING";
-			LocalisationManager.TryGetKeyForCurrentLocale("ATM_CREATOR_CODE_VALIDATING", out var result, atmUI.atmText.text);
-			atmUI.creatorCodeTitle.text = result;
 		}
-		VerifyCreatorCode();
-		while (creatorCodeStatus == CreatorCodeStatus.Validating)
+	}
+
+	public void CreatorCodeValid()
+	{
+		foreach (ATM_UI atmUI in atmUIs)
 		{
-			yield return new WaitForSeconds(0.5f);
+			atmUI.creatorCodeTitle.text = "CREATOR CODE: VALIDATING";
 		}
-		if (creatorCodeStatus != CreatorCodeStatus.Valid)
+		if (currentATMStage == ATMStages.Confirm)
 		{
-			yield break;
+			SwitchToStage(ATMStages.Purchasing);
 		}
-		foreach (ATM_UI atmUI2 in atmUIs)
-		{
-			atmUI2.creatorCodeTitle.text = "CREATOR CODE: VALID";
-			LocalisationManager.TryGetKeyForCurrentLocale("ATM_CREATOR_CODE_VALID", out var result2, atmUI2.atmText.text);
-			atmUI2.creatorCodeTitle.text = result2;
-		}
-		SwitchToStage(ATMStages.Purchasing);
-		CosmeticsController.instance.SteamPurchase();
 	}
 
 	public void SwitchToStage(ATMStages newStage)
@@ -641,9 +570,9 @@ public class ATM_Manager : MonoBehaviour
 				atmUI.atmText.text = "SUCCESS! NEW SHINY ROCKS BALANCE: " + (CosmeticsController.instance.CurrencyBalance + numShinyRocksToBuy);
 				LocalisationManager.TryGetKeyForCurrentLocale("ATM_SUCCESS_NEW_BALANCE", out result, atmUI.atmText.text);
 				atmUI.atmText.text = result + (CosmeticsController.instance.CurrencyBalance + numShinyRocksToBuy);
-				if (creatorCodeStatus == CreatorCodeStatus.Valid)
+				if (CreatorCodes.getCurrentCreatorCodeStatus("atm_terminal_id") == CreatorCodes.CreatorCodeStatus.Valid)
 				{
-					string text = supportedMember.name;
+					string text = CreatorCodes.supportedMember.name;
 					if (!string.IsNullOrEmpty(text))
 					{
 						TMP_Text atmText = atmUI.atmText;
@@ -709,44 +638,34 @@ public class ATM_Manager : MonoBehaviour
 		ProcessATMState(currencyPurchaseSize);
 	}
 
-	public void VerifyCreatorCode()
-	{
-		creatorCodeStatus = CreatorCodeStatus.Validating;
-		NexusManager.instance.VerifyCreatorCode(currentCreatorCode, OnCreatorCodeSucess, OnCreatorCodeFailure);
-	}
-
-	private void OnCreatorCodeSucess(Member member)
-	{
-		creatorCodeStatus = CreatorCodeStatus.Valid;
-		supportedMember = member;
-		ValidatedCreatorCode = currentCreatorCode;
-		foreach (CreatorCodeSmallDisplay smallDisplay in smallDisplays)
-		{
-			smallDisplay.SetCode(ValidatedCreatorCode);
-		}
-		PlayerPrefs.SetString("CreatorCode", ValidatedCreatorCode);
-		if (initialCode != ValidatedCreatorCode)
-		{
-			PlayerPrefs.SetString("CodeUsedTime", DateTime.Now.ToString());
-		}
-		PlayerPrefs.Save();
-		Debug.Log("ATM CODE SUCCESS: " + supportedMember.name);
-	}
-
-	private void OnCreatorCodeFailure()
-	{
-		supportedMember = default(Member);
-		ResetCreatorCode();
-		foreach (ATM_UI atmUI in atmUIs)
-		{
-			atmUI.creatorCodeTitle.text = "CREATOR CODE: INVALID";
-			LocalisationManager.TryGetKeyForCurrentLocale("ATM_CREATOR_CODE_INVALID", out var result, atmUI.atmText.text);
-			atmUI.creatorCodeTitle.text = result;
-		}
-		Debug.Log("ATM CODE FAILURE");
-	}
-
 	public void LeaveSystemMenu()
 	{
+	}
+
+	bool IBuildValidation.BuildValidationCheck()
+	{
+		if (nexusGroups.Length == 0)
+		{
+			Debug.LogError("You have to set at least one nexusGroup in " + base.name + " or things will not work!");
+			return false;
+		}
+		return true;
+	}
+
+	internal void SetTemporaryCreatorCode(string code)
+	{
+		if (code == null)
+		{
+			CreatorCodes.ResetCreatorCode("atm_terminal_id");
+			CreatorCodes.AppendKey("atm_terminal_id", _tempCreatorCodeOveride);
+			_tempCreatorCodeOveride = null;
+			return;
+		}
+		if (_tempCreatorCodeOveride == null)
+		{
+			_tempCreatorCodeOveride = CreatorCodes.getCurrentCreatorCode("atm_terminal_id");
+		}
+		CreatorCodes.ResetCreatorCode("atm_terminal_id");
+		CreatorCodes.AppendKey("atm_terminal_id", code);
 	}
 }

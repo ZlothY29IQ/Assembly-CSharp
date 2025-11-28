@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Cosmetics;
 using GorillaExtensions;
 using Sirenix.OdinInspector;
 using UnityEngine;
@@ -222,9 +223,9 @@ public class BundleManager : MonoBehaviour
 		}
 	}
 
-	public void BundlePurchaseButtonPressed(string playFabItemName)
+	public void BundlePurchaseButtonPressed(string playFabItemName, ICreatorCodeProvider ccp)
 	{
-		CosmeticsController.instance.PurchaseBundle(storeBundlesById[playFabItemName]);
+		CosmeticsController.instance.PurchaseBundle(storeBundlesById[playFabItemName], ccp);
 	}
 
 	public void FixBundles()

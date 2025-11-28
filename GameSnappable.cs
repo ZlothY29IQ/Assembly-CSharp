@@ -56,7 +56,7 @@ public class GameSnappable : MonoBehaviour
 		{
 			return null;
 		}
-		SnapJointType snapJointType = (GamePlayerLocal.IsLeftHand(heldByHandIndex) ? SnapJointType.ArmL : SnapJointType.ArmR);
+		SnapJointType snapJointType = (GamePlayerLocal.IsLeftHand(heldByHandIndex) ? SnapJointType.HandL : SnapJointType.HandR);
 		SnapJointType snapJointType2 = (GamePlayerLocal.IsLeftHand(heldByHandIndex) ? SnapJointType.ForearmL : SnapJointType.ForearmR);
 		List<SuperInfectionSnapPoint> snapPoints = GamePlayerLocal.instance.gamePlayer.snapPointManager.SnapPoints;
 		float num = float.MaxValue;
@@ -112,7 +112,7 @@ public class GameSnappable : MonoBehaviour
 		{
 			return GameEntityId.Invalid;
 		}
-		SnapJointType snapJointType = (GamePlayerLocal.IsLeftHand(heldByHandIndex) ? SnapJointType.ArmL : SnapJointType.ArmR);
+		SnapJointType snapJointType = (GamePlayerLocal.IsLeftHand(heldByHandIndex) ? SnapJointType.HandL : SnapJointType.HandR);
 		SnapJointType snapJointType2 = (GamePlayerLocal.IsLeftHand(heldByHandIndex) ? SnapJointType.ForearmL : SnapJointType.ForearmR);
 		List<SuperInfectionSnapPoint> snapPoints = GamePlayerLocal.instance.gamePlayer.snapPointManager.SnapPoints;
 		float num = float.MaxValue;
@@ -145,9 +145,9 @@ public class GameSnappable : MonoBehaviour
 			return true;
 		}
 		SnapJointType jointType = snappedToJoint.jointType;
-		if (!leftHand || jointType == SnapJointType.ArmL || jointType == SnapJointType.ForearmL)
+		if (!leftHand || jointType == SnapJointType.HandL || jointType == SnapJointType.ForearmL)
 		{
-			if (!leftHand && jointType != SnapJointType.ArmR)
+			if (!leftHand && jointType != SnapJointType.HandR)
 			{
 				return jointType != SnapJointType.ForearmR;
 			}
@@ -169,7 +169,7 @@ public class GameSnappable : MonoBehaviour
 			return false;
 		}
 		SnapJointType jointType = snappedToJoint.jointType;
-		if (jointType != SnapJointType.ArmL)
+		if (jointType != SnapJointType.HandL)
 		{
 			return jointType == SnapJointType.ForearmL;
 		}
@@ -183,7 +183,7 @@ public class GameSnappable : MonoBehaviour
 			return false;
 		}
 		SnapJointType jointType = snappedToJoint.jointType;
-		if (jointType != SnapJointType.ArmR)
+		if (jointType != SnapJointType.HandR)
 		{
 			return jointType == SnapJointType.ForearmR;
 		}

@@ -2,14 +2,8 @@ using UnityEngine;
 
 public class SIGadgetDashYoyo_TargetRB : MonoBehaviour
 {
-	private const string preLog = "[SIGadgetDashYoyo_TargetRB]  ";
-
-	private const string preErr = "[SIGadgetDashYoyo_TargetRB]  ERROR!!!  ";
-
 	[SerializeField]
 	private SIGadgetDashYoyo gadget;
-
-	private readonly object[] _onHitPlayerRpcArgs = new object[2];
 
 	protected void OnEnable()
 	{

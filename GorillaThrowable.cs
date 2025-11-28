@@ -1,4 +1,5 @@
 using System;
+using GorillaExtensions;
 using GorillaLocomotion;
 using Photon.Pun;
 using UnityEngine;
@@ -219,9 +220,11 @@ public class GorillaThrowable : MonoBehaviourPun, IPunObservable, IPhotonViewCal
 		}
 		else
 		{
-			targetPosition = (Vector3)stream.ReceiveNext();
-			targetRotation = (Quaternion)stream.ReceiveNext();
-			rigidbody.linearVelocity = (Vector3)stream.ReceiveNext();
+			targetPosition.SetValueSafe((Vector3)stream.ReceiveNext());
+			targetRotation.SetValueSafe((Quaternion)stream.ReceiveNext());
+			Vector3 v = rigidbody.linearVelocity;
+			v.SetValueSafe((Vector3)stream.ReceiveNext());
+			rigidbody.linearVelocity = v;
 		}
 	}
 
@@ -237,7 +240,6 @@ public class GorillaThrowable : MonoBehaviourPun, IPunObservable, IPhotonViewCal
 		}
 	}
 
-	[PunRPC]
 	public void PlaySurfaceHit(int soundIndex, float tapVolume)
 	{
 		if (soundIndex > -1 && soundIndex < GTPlayer.Instance.materialData.Count)

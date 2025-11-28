@@ -346,14 +346,6 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	public Dictionary<CosmeticEffectsOnPlayers.EFFECTTYPE, CosmeticEffectsOnPlayers.CosmeticEffect> TemporaryCosmeticEffects = new Dictionary<CosmeticEffectsOnPlayers.EFFECTTYPE, CosmeticEffectsOnPlayers.CosmeticEffect>();
 
-	private float cosmeticStepsDuration;
-
-	private CosmeticSwapper cosmeticSwapper;
-
-	private Stack<CosmeticSwapper.CosmeticState> newSwappedCosmetics = new Stack<CosmeticSwapper.CosmeticState>();
-
-	private bool isAtFinalCosmeticStep;
-
 	private float _nextUpdateTime = -1f;
 
 	public VRRigReliableState reliableState;
@@ -771,10 +763,6 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	public bool HasBracelet => reliableState.HasBracelet;
 
-	public int CosmeticStepIndex => newSwappedCosmetics.Count;
-
-	public float LastCosmeticSwapTime { get; private set; } = float.PositiveInfinity;
-
 	public GorillaSkin CurrentCosmeticSkin { get; set; }
 
 	public GorillaSkin CurrentModeSkin { get; set; }
@@ -1071,29 +1059,6 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 			return HandLink.IsHandInChainWithOtherPlayer(rightHandLink, otherPlayer);
 		}
 		return true;
-	}
-
-	public void SetCosmeticSwapper(CosmeticSwapper swapper, float timeout)
-	{
-		cosmeticSwapper = swapper;
-		cosmeticStepsDuration = timeout;
-	}
-
-	public void AddNewSwappedCosmetic(CosmeticSwapper.CosmeticState state)
-	{
-		newSwappedCosmetics.Push(state);
-		LastCosmeticSwapTime = Time.time;
-	}
-
-	public void MarkFinalCosmeticStep()
-	{
-		isAtFinalCosmeticStep = true;
-		LastCosmeticSwapTime = Time.time;
-	}
-
-	public void UnmarkFinalCosmeticStep()
-	{
-		isAtFinalCosmeticStep = false;
 	}
 
 	public Vector3 GetMouthPosition()
@@ -1704,40 +1669,6 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 				{
 					RemoveTemporaryCosmeticEffects(effect);
 				}
-			}
-		}
-		if (isOfflineVRRig && cosmeticSwapper.IsNotNull() && newSwappedCosmetics.Count > 0)
-		{
-			if (cosmeticSwapper.GetCurrentMode() == CosmeticSwapper.SwapMode.StepByStep)
-			{
-				if (isAtFinalCosmeticStep && cosmeticSwapper.ShouldHoldFinalStep())
-				{
-					if (Time.time - LastCosmeticSwapTime <= cosmeticStepsDuration)
-					{
-						return;
-					}
-					isAtFinalCosmeticStep = false;
-				}
-				if (Time.time - LastCosmeticSwapTime > cosmeticStepsDuration)
-				{
-					CosmeticSwapper.CosmeticState state = newSwappedCosmetics.Pop();
-					cosmeticSwapper.RestorePreviousCosmetic(state, this);
-					LastCosmeticSwapTime = Time.time;
-					if (newSwappedCosmetics.Count == 0)
-					{
-						isAtFinalCosmeticStep = false;
-					}
-				}
-			}
-			else if (cosmeticSwapper.GetCurrentMode() == CosmeticSwapper.SwapMode.AllAtOnce && Time.time - LastCosmeticSwapTime > cosmeticStepsDuration)
-			{
-				while (newSwappedCosmetics.Count > 0)
-				{
-					CosmeticSwapper.CosmeticState state2 = newSwappedCosmetics.Pop();
-					cosmeticSwapper.RestorePreviousCosmetic(state2, this);
-				}
-				LastCosmeticSwapTime = float.PositiveInfinity;
-				isAtFinalCosmeticStep = false;
 			}
 		}
 		lateUpdateCallbacks.TryRunCallbacks();

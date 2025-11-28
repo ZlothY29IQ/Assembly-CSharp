@@ -78,7 +78,6 @@ public class GorillaFireball : GorillaThrowable, IPunInstantiateMagicCallback
 		}
 	}
 
-	[PunRPC]
 	public void Explode()
 	{
 		LocalExplode();

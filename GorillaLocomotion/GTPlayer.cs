@@ -1510,6 +1510,36 @@ public class GTPlayer : MonoBehaviour
 		}
 	}
 
+	public void ApplyClampedKnockback(Vector3 direction, float speed, float boostMultiplier, bool forceOffTheGround = false)
+	{
+		if (forceOffTheGround)
+		{
+			if (leftHand.wasColliding || rightHand.wasColliding)
+			{
+				leftHand.wasColliding = false;
+				rightHand.wasColliding = false;
+				playerRigidBody.transform.position += minimumRaycastDistance * scale * Vector3.up;
+			}
+			didAJump = true;
+			SetMaximumSlipThisFrame();
+		}
+		if (!(speed > 0.01f))
+		{
+			return;
+		}
+		float num = Vector3.Dot(playerRigidBody.linearVelocity, direction.normalized);
+		if (!(num >= speed))
+		{
+			float num2 = Mathf.Clamp(speed - num, 0f, speed * boostMultiplier);
+			Vector3 vector = playerRigidBody.linearVelocity + direction.normalized * num2;
+			playerRigidBody.linearVelocity = vector;
+			for (int i = 0; i < velocityHistory.Length; i++)
+			{
+				velocityHistory[i] = vector;
+			}
+		}
+	}
+
 	public void FixedUpdate()
 	{
 		AntiTeleportTechnology();

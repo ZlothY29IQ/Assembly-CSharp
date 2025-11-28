@@ -19,6 +19,8 @@ public class SITechTreeNode
 
 	public SIResource.ResourceCost[] nodeCost;
 
+	public bool costOverride;
+
 	public EAssetReleaseTier EdReleaseTier
 	{
 		get

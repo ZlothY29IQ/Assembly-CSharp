@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
 using Cysharp.Text;
 using ExitGames.Client.Photon;
 using Fusion;
@@ -13,7 +14,7 @@ using Unity.Collections;
 using UnityEngine;
 
 [NetworkBehaviourWeaved(0)]
-public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoomCallbacks, IRequestableOwnershipGuardCallbacks, ITickSystemTick
+public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoomCallbacks, IRequestableOwnershipGuardCallbacks, ITickSystemTick, IGorillaSliceableSimple
 {
 	public delegate void ZoneStartEvent(GTZone zoneId);
 
@@ -188,7 +189,7 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 
 	private List<Collider> _collidersList = new List<Collider>(16);
 
-	private static List<VRRig> tempRigs = new List<VRRig>(16);
+	private static List<VRRig> tempRigs = new List<VRRig>(32);
 
 	private static List<GameEntity> tempEntitiesToSerialize = new List<GameEntity>(512);
 
@@ -254,6 +255,9 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 		base.OnEnable();
 		TickSystem<object>.AddTickCallback(this);
 		VRRigCache.OnRigDeactivated += OnRigDeactivated;
+		VRRigCache.OnActiveRigsChanged += RefreshRigList;
+		RefreshRigList();
+		GorillaSlicerSimpleManager.RegisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
 	}
 
 	internal override void OnDisable()
@@ -262,6 +266,8 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 		base.OnDisable();
 		TickSystem<object>.RemoveTickCallback(this);
 		VRRigCache.OnRigDeactivated -= OnRigDeactivated;
+		VRRigCache.OnActiveRigsChanged -= RefreshRigList;
+		GorillaSlicerSimpleManager.UnregisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
 	}
 
 	private void OnDestroy()
@@ -283,13 +289,17 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 		return null;
 	}
 
+	public void SliceUpdate()
+	{
+		UpdateZoneState();
+	}
+
 	public void Tick()
 	{
 		if (ApplicationQuittingState.IsQuitting)
 		{
 			return;
 		}
-		UpdateZoneState();
 		float time = Time.time;
 		for (int i = 0; i < entities.Count; i++)
 		{
@@ -822,8 +832,8 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 				byte b = 0;
 				b = gameEntity.snappedJoint switch
 				{
-					SnapJointType.ArmR => 2, 
-					SnapJointType.ArmL => 3, 
+					SnapJointType.HandR => 2, 
+					SnapJointType.HandL => 3, 
 					_ => (gameEntity.heldByHandIndex == 0) ? ((byte)1) : ((byte)0), 
 				};
 				binaryWriter.Write(typeId);
@@ -935,10 +945,10 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 									isLeftHand = true;
 									break;
 								case 2:
-									snapJointType = SnapJointType.ArmR;
+									snapJointType = SnapJointType.HandR;
 									break;
 								case 3:
-									snapJointType = SnapJointType.ArmL;
+									snapJointType = SnapJointType.HandL;
 									isLeftHand = true;
 									break;
 								}
@@ -1071,7 +1081,10 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 			{
 				list.Add(GetNetIdFromEntityId(entityIds[i]));
 			}
-			photonView.RPC("DestroyItemRPC", RpcTarget.All, list.ToArray());
+			if (PhotonNetwork.InRoom)
+			{
+				photonView.RPC("DestroyItemRPC", RpcTarget.All, list.ToArray());
+			}
 		}
 	}
 
@@ -1366,98 +1379,99 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 
 	public GameEntityId TryGrabLocal(Vector3 handPosition, bool isLeftHand, out Vector3 closestPointOnBoundingBox)
 	{
+		float a = 0.03f;
 		float num = 0f;
 		float num2 = 0.1f;
 		float max = 0.25f;
-		float minimumObjectExtent = 0.04f;
 		int actorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
 		Vector3 rigidbodyVelocity = GTPlayer.Instance.RigidbodyVelocity;
-		GameEntityId bestEntity = GameEntityId.Invalid;
+		GameEntity bestEntity = null;
 		float bestDist = float.MaxValue;
 		Vector3 closestPoint = handPosition;
-		GameEntity entity;
-		float slopForSpeed;
-		Vector3 slopProjection;
 		for (int i = 0; i < entities.Count; i++)
 		{
-			entity = entities[i];
-			if (!ValidateGrab(entity, actorNumber, isLeftHand))
+			GameEntity gameEntity = entities[i];
+			if (!ValidateGrab(gameEntity, actorNumber, isLeftHand))
 			{
 				continue;
 			}
 			float num3 = 0.75f;
-			float sqrMagnitude = (handPosition - entity.transform.position).sqrMagnitude;
+			float sqrMagnitude = (handPosition - gameEntity.transform.position).sqrMagnitude;
 			if (sqrMagnitude > num3 * num3)
 			{
 				continue;
 			}
-			Vector3 vector = entity.GetVelocity() - rigidbodyVelocity;
+			Vector3 vector = gameEntity.GetVelocity() - rigidbodyVelocity;
 			float magnitude = vector.magnitude;
-			slopForSpeed = Mathf.Clamp(magnitude * num2, 0f, max);
-			slopProjection = vector.normalized * slopForSpeed;
-			num = entity.pickupRangeFromSurface;
+			float num4 = Mathf.Clamp(magnitude * num2, 0f, max);
+			Vector3 slopProjection = ((magnitude > 0.2f) ? (vector.normalized * num4) : Vector3.zero);
+			num = Mathf.Max(a, gameEntity.pickupRangeFromSurface);
 			renderSearchList.Clear();
-			entity.GetComponentsInChildren(includeInactive: false, renderSearchList);
+			gameEntity.GetComponentsInChildren(includeInactive: false, renderSearchList);
 			foreach (MeshFilter renderSearch in renderSearchList)
 			{
-				if (!(GetParentEntity<GameEntity>(renderSearch.transform) != entity))
+				if (!(GetParentEntity<GameEntity>(renderSearch.transform) != gameEntity))
 				{
-					TestAgainstBounds(renderSearch.transform, renderSearch.sharedMesh.bounds);
+					_TryGrabLocal_TestBounds(handPosition, renderSearch.transform, slopProjection, renderSearch.sharedMesh.bounds, num4, num, gameEntity, ref bestDist, ref bestEntity, ref closestPoint);
 				}
 			}
 			renderSearchListSkinned.Clear();
-			entity.GetComponentsInChildren(includeInactive: false, renderSearchListSkinned);
+			gameEntity.GetComponentsInChildren(includeInactive: false, renderSearchListSkinned);
 			foreach (SkinnedMeshRenderer item in renderSearchListSkinned)
 			{
-				if (!(GetParentEntity<GameEntity>(item.transform) != entity))
+				if (!(GetParentEntity<GameEntity>(item.transform) != gameEntity))
 				{
-					TestAgainstBounds(item.transform, item.localBounds);
+					_TryGrabLocal_TestBounds(handPosition, item.transform, slopProjection, item.localBounds, num4, num, gameEntity, ref bestDist, ref bestEntity, ref closestPoint);
 				}
 			}
 			if (renderSearchList.Count == 0 && renderSearchListSkinned.Count == 0)
 			{
-				float num4 = Mathf.Sqrt(sqrMagnitude);
-				if (num4 < bestDist)
+				float num5 = Mathf.Sqrt(sqrMagnitude);
+				if (num5 < bestDist)
 				{
-					bestDist = num4;
-					bestEntity = entity.id;
-					closestPoint = entity.transform.position;
+					bestDist = num5;
+					bestEntity = gameEntity;
+					closestPoint = gameEntity.transform.position;
 				}
 			}
 		}
 		closestPointOnBoundingBox = closestPoint;
-		if (!(bestDist <= num))
+		if (bestEntity != null)
 		{
-			return GameEntityId.Invalid;
+			if (!(bestDist <= Mathf.Max(a, bestEntity.pickupRangeFromSurface)))
+			{
+				return GameEntityId.Invalid;
+			}
+			return bestEntity.id;
 		}
-		return bestEntity;
-		void TestAgainstBounds(Transform t, Bounds bounds)
+		return GameEntityId.Invalid;
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private static void _TryGrabLocal_TestBounds(Vector3 handPosition, Transform t, Vector3 slopProjection, Bounds bounds, float slopForSpeed, float maxAdjustedGrabDistance, GameEntity entity, ref float bestDist, ref GameEntity bestEntity, ref Vector3 closestPoint)
+	{
+		Vector3 vector = t.InverseTransformPoint(handPosition);
+		Vector3 b = t.InverseTransformPoint(handPosition + slopProjection);
+		_ = bounds.extents != bounds.extents;
+		float num;
+		Vector3 vector2;
+		if (SegmentHitsBounds(bounds, vector, b, out var hitPoint, out var distance))
 		{
-			Vector3 vector2 = t.InverseTransformPoint(handPosition);
-			Vector3 b = t.InverseTransformPoint(handPosition + slopProjection);
-			float magnitude2 = bounds.extents.magnitude;
-			Vector3 extents = bounds.extents;
-			float b2 = Mathf.Min(magnitude2 / 2f, minimumObjectExtent);
-			bounds.extents = new Vector3(Mathf.Max(bounds.extents.x, b2), Mathf.Max(bounds.extents.y, b2), Mathf.Max(bounds.extents.z, b2));
-			_ = extents != bounds.extents;
-			Vector3 vector3;
-			float num5;
-			if (SegmentHitsBounds(bounds, vector2, b, out var hitPoint, out var distance))
-			{
-				vector3 = ((distance <= 0f) ? Vector3.zero : t.TransformVector(vector2 - hitPoint));
-				num5 = vector3.magnitude - slopForSpeed;
-			}
-			else
-			{
-				vector3 = t.TransformVector(vector2 - bounds.ClosestPoint(vector2));
-				num5 = vector3.magnitude;
-			}
-			if (num5 < bestDist)
-			{
-				bestDist = num5;
-				bestEntity = entity.id;
-				closestPoint = handPosition - vector3;
-			}
+			vector2 = ((distance <= 0f) ? Vector3.zero : t.TransformVector(vector - hitPoint));
+			num = vector2.magnitude - slopForSpeed;
+		}
+		else
+		{
+			vector2 = t.TransformVector(vector - bounds.ClosestPoint(vector));
+			num = vector2.magnitude;
+		}
+		num = Mathf.Max(0f, num - maxAdjustedGrabDistance);
+		vector2 = vector2.normalized * num;
+		if (num < bestDist)
+		{
+			bestDist = num;
+			bestEntity = entity;
+			closestPoint = handPosition - vector2;
 		}
 	}
 
@@ -2340,21 +2354,11 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 				}
 			}
 		}
-		tempRigs.Clear();
-		tempRigs.Add(VRRig.LocalRig);
-		VRRigCache.Instance.GetAllUsedRigs(tempRigs);
-		for (int num2 = tempRigs.Count - 1; num2 >= 0; num2--)
-		{
-			if (tempRigs[num2].OwningNetPlayer == null)
-			{
-				tempRigs.RemoveAt(num2);
-			}
-		}
 		int count = tempRigs.Count;
 		binaryWriter.Write(count);
-		for (int num3 = 0; num3 < tempRigs.Count; num3++)
+		for (int num2 = 0; num2 < tempRigs.Count; num2++)
 		{
-			VRRig vRRig = tempRigs[num3];
+			VRRig vRRig = tempRigs[num2];
 			NetPlayer owningNetPlayer = vRRig.OwningNetPlayer;
 			binaryWriter.Write(owningNetPlayer.ActorNumber);
 			GamePlayer gamePlayerRef = vRRig.GamePlayerRef;
@@ -2363,9 +2367,9 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 			if (flag2)
 			{
 				gamePlayerRef.SerializeNetworkState(binaryWriter, owningNetPlayer, this);
-				for (int num4 = 0; num4 < zoneComponents.Count; num4++)
+				for (int num3 = 0; num3 < zoneComponents.Count; num3++)
 				{
-					zoneComponents[num4].SerializeZonePlayerData(binaryWriter, owningNetPlayer.ActorNumber);
+					zoneComponents[num3].SerializeZonePlayerData(binaryWriter, owningNetPlayer.ActorNumber);
 				}
 			}
 		}
@@ -2477,9 +2481,6 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 
 	private void UpdateZoneState()
 	{
-		tempRigs.Clear();
-		tempRigs.Add(VRRig.LocalRig);
-		VRRigCache.Instance.GetAllUsedRigs(tempRigs);
 		UpdateAuthority(tempRigs);
 		if (IsAuthority())
 		{
@@ -2745,6 +2746,7 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 		case ZoneState.WaitingToRequestState:
 			if (Time.timeAsDouble - zoneStateData.stateStartTime > 1.0)
 			{
+				nextNetId = 1;
 				SetZoneState(ZoneState.WaitingForState);
 				photonView.RPC("RequestZoneStateRPC", GetAuthorityPlayer(), (int)zone);
 				JoinWithItems(GamePlayerLocal.instance.gamePlayer.HeldAndSnappedEntities());
@@ -2939,6 +2941,19 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 
 	public void OnOwnershipTransferred(NetPlayer toPlayer, NetPlayer fromPlayer)
 	{
+		if (toPlayer == null || !toPlayer.IsLocal || fromPlayer == null || fromPlayer.InRoom || !GamePlayer.TryGetGamePlayer(fromPlayer.ActorNumber, out var out_gamePlayer))
+		{
+			return;
+		}
+		foreach (GameEntityId item in out_gamePlayer.IterateHeldAndSnappedItems(this))
+		{
+			if (!netIdsForDelete.Contains(GetNetIdFromEntityId(item)))
+			{
+				netIdsForDelete.Add(GetNetIdFromEntityId(item));
+			}
+			DestroyItemLocal(item);
+		}
+		out_gamePlayer.OnPlayerLeftZone?.Invoke();
 	}
 
 	public bool OnOwnershipRequest(NetPlayer fromPlayer)
@@ -2957,6 +2972,13 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 
 	public void OnMyCreatorLeft()
 	{
+	}
+
+	public void RefreshRigList()
+	{
+		tempRigs.Clear();
+		tempRigs.Add(VRRig.LocalRig);
+		VRRigCache.Instance.GetAllUsedRigs(tempRigs);
 	}
 
 	[WeaverGenerated]

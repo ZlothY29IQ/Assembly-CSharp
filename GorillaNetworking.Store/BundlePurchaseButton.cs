@@ -1,4 +1,5 @@
 using System.Collections;
+using Cosmetics;
 using UnityEngine;
 
 namespace GorillaNetworking.Store;
@@ -20,6 +21,8 @@ public class BundlePurchaseButton : GorillaPressableButton, IGorillaSliceableSim
 	public string UnavailableText = "UNAVAILABLE";
 
 	public string playfabID = "";
+
+	public ICreatorCodeProvider codeProvider;
 
 	public new void OnEnable()
 	{
@@ -47,7 +50,7 @@ public class BundlePurchaseButton : GorillaPressableButton, IGorillaSliceableSim
 		if (!bError)
 		{
 			base.ButtonActivation();
-			BundleManager.instance.BundlePurchaseButtonPressed(playfabID);
+			BundleManager.instance.BundlePurchaseButtonPressed(playfabID, codeProvider);
 			StartCoroutine(ButtonColorUpdate());
 		}
 	}

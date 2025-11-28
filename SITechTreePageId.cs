@@ -8,7 +8,7 @@ public enum SITechTreePageId
 	TapTeleport,
 	Tentacle,
 	AirGrab,
-	SlashDash,
+	Unused8,
 	SlipMitt,
 	Blaster,
 	Count

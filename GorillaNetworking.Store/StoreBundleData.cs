@@ -8,6 +8,8 @@ public class StoreBundleData : ScriptableObject
 
 	public string bundleSKU = "NULL SKU";
 
+	public NexusCreatorCode creatorCode;
+
 	public Sprite bundleImage;
 
 	public string bundleDescriptionText = "THE NULL_BUNDLE PACK WITH 10,000 SHINY ROCKS IN THIS LIMITED TIME DLC!";

@@ -1,5 +1,7 @@
+using System;
 using System.Collections;
 using GorillaLocomotion;
+using Liv.Lck.Cosmetics;
 using Liv.Lck.GorillaTag;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
@@ -42,6 +44,16 @@ public class LckWallCameraSpawner : MonoBehaviour
 
 	[SerializeField]
 	private Color _normalColor = Color.red;
+
+	[Header("Cosmetics References")]
+	[SerializeField]
+	private GtDummyTablet _dummyTablet;
+
+	[SerializeField]
+	private LckGameObjectSwapCosmetic _swapTablet;
+
+	[SerializeField]
+	private LckGameObjectSwapCosmetic _swapEmobi;
 
 	private static LckBodyCameraSpawner _bodySpawner;
 
@@ -102,7 +114,7 @@ public class LckWallCameraSpawner : MonoBehaviour
 		AddGTag(Camera.main.gameObject, GtTagType.HMD);
 		AddGTag(instance.gameObject, GtTagType.Player);
 		Transform transform = instance.bodyCollider.transform;
-		GameObject obj = Object.Instantiate(_lckBodySpawnerPrefab, transform.parent);
+		GameObject obj = UnityEngine.Object.Instantiate(_lckBodySpawnerPrefab, transform.parent);
 		Transform obj2 = obj.transform;
 		obj2.localPosition = Vector3.zero;
 		obj2.localRotation = Quaternion.identity;
@@ -139,6 +151,13 @@ public class LckWallCameraSpawner : MonoBehaviour
 
 	private void OnEnable()
 	{
+		if (_swapTablet != null && _swapEmobi != null && _dummyTablet != null)
+		{
+			LckGameObjectSwapCosmetic swapTablet = _swapTablet;
+			swapTablet.OnCosmeticSpawned = (Action<GameObject>)Delegate.Combine(swapTablet.OnCosmeticSpawned, new Action<GameObject>(_dummyTablet.OnTabletCosmeticSpawned));
+			LckGameObjectSwapCosmetic swapEmobi = _swapEmobi;
+			swapEmobi.OnCosmeticSpawned = (Action<GameObject>)Delegate.Combine(swapEmobi.OnCosmeticSpawned, new Action<GameObject>(_dummyTablet.OnEmobiCosmeticSpawned));
+		}
 		_cameraHandleGrabbable.onGrabbed += OnGrabbed;
 		_cameraHandleGrabbable.onReleased += OnReleased;
 		wallSpawnerState = WallSpawnerState.CameraOnHook;
@@ -184,6 +203,13 @@ public class LckWallCameraSpawner : MonoBehaviour
 
 	private void OnDisable()
 	{
+		if (_swapTablet != null && _swapEmobi != null && _dummyTablet != null)
+		{
+			LckGameObjectSwapCosmetic swapTablet = _swapTablet;
+			swapTablet.OnCosmeticSpawned = (Action<GameObject>)Delegate.Remove(swapTablet.OnCosmeticSpawned, new Action<GameObject>(_dummyTablet.OnTabletCosmeticSpawned));
+			LckGameObjectSwapCosmetic swapEmobi = _swapEmobi;
+			swapEmobi.OnCosmeticSpawned = (Action<GameObject>)Delegate.Remove(swapEmobi.OnCosmeticSpawned, new Action<GameObject>(_dummyTablet.OnEmobiCosmeticSpawned));
+		}
 		_cameraHandleGrabbable.onGrabbed -= OnGrabbed;
 		_cameraHandleGrabbable.onReleased -= OnReleased;
 	}
@@ -284,7 +310,7 @@ public class LckWallCameraSpawner : MonoBehaviour
 			RenderTexture targetTexture = _prewarmCamera.targetTexture;
 			_prewarmCamera.targetTexture = null;
 			targetTexture.Release();
-			Object.Destroy(_prewarmCamera.gameObject);
+			UnityEngine.Object.Destroy(_prewarmCamera.gameObject);
 			_prewarmCamera = null;
 		}
 	}

@@ -167,23 +167,27 @@ public sealed class SuperInfectionGame : GorillaTagManager
 		}
 		if (VRRigCache.Instance.TryGetVrrig(taggedPlayer, out var _) && VRRigCache.Instance.TryGetVrrig(taggingPlayer, out var _) && taggingPlayer.ActorNumber == SIPlayer.LocalPlayer.ActorNr)
 		{
-			if (SIProgression.Instance.HeldOrSnappedByGadgetPageType[SITechTreePageId.Dash] > 0)
+			if (SIProgression.Instance.heldOrSnappedByGadgetPageType[SITechTreePageId.Dash] > 0)
 			{
 				PlayerGameEvents.MiscEvent("SIDashTag");
 			}
-			if (SIProgression.Instance.HeldOrSnappedByGadgetPageType[SITechTreePageId.Thruster] > 0)
+			if (SIProgression.Instance.heldOrSnappedByGadgetPageType[SITechTreePageId.Thruster] > 0)
 			{
 				PlayerGameEvents.MiscEvent("SIThrusterTag");
 			}
-			if (SIProgression.Instance.HeldOrSnappedByGadgetPageType[SITechTreePageId.Stilt] > 0)
+			if (SIProgression.Instance.heldOrSnappedByGadgetPageType[SITechTreePageId.Stilt] > 0)
 			{
 				PlayerGameEvents.MiscEvent("SIStiltTag");
 			}
-			if (SIProgression.Instance.HeldOrSnappedByGadgetPageType[SITechTreePageId.Platform] > 0)
+			if (SIProgression.Instance.heldOrSnappedByGadgetPageType[SITechTreePageId.Platform] > 0)
 			{
 				PlayerGameEvents.MiscEvent("SIPlatformTag");
 			}
-			if (SIProgression.Instance.HeldOrSnappedOthersGadgets)
+			if (SIProgression.Instance.heldOrSnappedByGadgetPageType[SITechTreePageId.Blaster] > 0)
+			{
+				PlayerGameEvents.MiscEvent("SIBlasterTag");
+			}
+			if (SIProgression.Instance.heldOrSnappedOthersGadgets > 0)
 			{
 				PlayerGameEvents.MiscEvent("SIBorrowedGadgetTag");
 			}

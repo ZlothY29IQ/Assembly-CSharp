@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using GorillaLocomotion;
 using Photon.Pun;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -105,6 +106,9 @@ public class SIPlayer : MonoBehaviour
 
 	[NonSerialized]
 	public int totalGadgetLimit = 3;
+
+	[NonSerialized]
+	public int exclusionZoneCount;
 
 	public bool netInitialized;
 
@@ -233,9 +237,13 @@ public class SIPlayer : MonoBehaviour
 			{
 				reader.ReadInt16();
 			}
-			for (int j = 0; j < progressionSO.TreePageCount; j++)
+			for (int j = 0; j < 2; j++)
 			{
-				for (int k = 0; k < progressionSO.TreeNodeCounts[j]; k++)
+				reader.ReadInt32();
+			}
+			for (int k = 0; k < progressionSO.TreePageCount; k++)
+			{
+				for (int l = 0; l < progressionSO.TreeNodeCounts[k]; l++)
 				{
 					reader.ReadBoolean();
 				}
@@ -254,20 +262,20 @@ public class SIPlayer : MonoBehaviour
 		int[] array = new int[6];
 		int[] array2 = new int[2];
 		bool[][] array3 = new bool[progressionSO.TreePageCount][];
-		for (int l = 0; l < 6; l++)
+		for (int m = 0; m < 6; m++)
 		{
-			array[l] = reader.ReadInt32();
+			array[m] = reader.ReadInt32();
 		}
-		for (int m = 0; m < 2; m++)
+		for (int n = 0; n < 2; n++)
 		{
-			array2[m] = reader.ReadInt32();
+			array2[n] = reader.ReadInt32();
 		}
-		for (int n = 0; n < progressionSO.TreePageCount; n++)
+		for (int num = 0; num < progressionSO.TreePageCount; num++)
 		{
-			array3[n] = new bool[progressionSO.TreeNodeCounts[n]];
-			for (int num = 0; num < progressionSO.TreeNodeCounts[n]; num++)
+			array3[num] = new bool[progressionSO.TreeNodeCounts[num]];
+			for (int num2 = 0; num2 < progressionSO.TreeNodeCounts[num]; num2++)
 			{
-				array3[n][num] = reader.ReadBoolean();
+				array3[num][num2] = reader.ReadBoolean();
 			}
 		}
 		int stashedQuests = reader.ReadByte();
@@ -275,10 +283,10 @@ public class SIPlayer : MonoBehaviour
 		int bonusProgress = reader.ReadByte();
 		int[] array4 = new int[3];
 		int[] array5 = new int[3];
-		for (int num2 = 0; num2 < 3; num2++)
+		for (int num3 = 0; num3 < 3; num3++)
 		{
-			array4[num2] = reader.ReadInt32();
-			array5[num2] = reader.ReadInt32();
+			array4[num3] = reader.ReadInt32();
+			array5[num3] = reader.ReadInt32();
 		}
 		player.UpdateProgression(array, array2, array3, stashedQuests, stashedBonusPoints, bonusProgress, array4, array5);
 	}
@@ -623,6 +631,22 @@ public class SIPlayer : MonoBehaviour
 		if (SuperInfectionManager.activeSuperInfectionManager.gameEntityManager.IsAuthority())
 		{
 			SuperInfectionManager.activeSuperInfectionManager.ClearPlayerGadgets(this);
+		}
+	}
+
+	public void PlayerKnockback(Vector3 directionAndMagnitude, bool forceOffGround = true, bool applyExclusionZone = true)
+	{
+		if (!applyExclusionZone || exclusionZoneCount <= 0)
+		{
+			GTPlayer.Instance.ApplyClampedKnockback(directionAndMagnitude.normalized, directionAndMagnitude.magnitude, 1.5f, forceOffGround);
+		}
+	}
+
+	public void PlayerHandHaptic(bool isLeft, float hapticStrength, float hapticDuration, bool applyExclusionZone = true)
+	{
+		if (!applyExclusionZone || exclusionZoneCount <= 0)
+		{
+			GorillaTagger.Instance.StartVibration(isLeft, hapticStrength, hapticDuration);
 		}
 	}
 }

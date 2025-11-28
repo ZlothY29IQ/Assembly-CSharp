@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.XR;
 
 [RequireComponent(typeof(GameEntity))]
-public abstract class SIGadget : MonoBehaviour, IGameEntityComponent, IPrefabRequirements, IGameActivatable
+public abstract class SIGadget : MonoBehaviour, IGameEntityComponent, IPrefabRequirements, IGameActivatable, IGameStateProvider
 {
 	[Serializable]
 	private struct UpgradeVisual
@@ -83,6 +83,8 @@ public abstract class SIGadget : MonoBehaviour, IGameEntityComponent, IPrefabReq
 
 	private readonly List<SIExclusionZone> appliedExclusionZones = new List<SIExclusionZone>();
 
+	private List<IGameStateReceiver> _gameStateReceivers = new List<IGameStateReceiver>();
+
 	public SITechTreePageId PageId
 	{
 		get
@@ -138,7 +140,7 @@ public abstract class SIGadget : MonoBehaviour, IGameEntityComponent, IPrefabReq
 		{
 			return default(Vector2);
 		}
-		return ControllerInputPoller.Primary2DAxis((gameEntity.heldByHandIndex == 0 || gameEntity.snappedJoint == SnapJointType.ArmL) ? XRNode.LeftHand : XRNode.RightHand);
+		return ControllerInputPoller.Primary2DAxis((gameEntity.heldByHandIndex == 0 || gameEntity.snappedJoint == SnapJointType.HandL) ? XRNode.LeftHand : XRNode.RightHand);
 	}
 
 	protected bool ShouldProcessInput()
@@ -151,8 +153,8 @@ public abstract class SIGadget : MonoBehaviour, IGameEntityComponent, IPrefabReq
 		{
 			GameEntity gameEntity = this.gameEntity.snappedJoint switch
 			{
-				SnapJointType.ArmL => out_gamePlayer.GetGrabbedGameEntity(0), 
-				SnapJointType.ArmR => out_gamePlayer.GetGrabbedGameEntity(1), 
+				SnapJointType.HandL => out_gamePlayer.GetGrabbedGameEntity(0), 
+				SnapJointType.HandR => out_gamePlayer.GetGrabbedGameEntity(1), 
 				_ => null, 
 			};
 			if ((bool)gameEntity)
@@ -287,6 +289,10 @@ public abstract class SIGadget : MonoBehaviour, IGameEntityComponent, IPrefabReq
 
 	public virtual void OnEntityStateChange(long prevState, long newState)
 	{
+		foreach (IGameStateReceiver gameStateReceiver in _gameStateReceivers)
+		{
+			gameStateReceiver.GameStateReceiverOnStateChanged(prevState, newState);
+		}
 	}
 
 	public virtual void ProcessClientToAuthorityRPC(PhotonMessageInfo info, int rpcID, object[] data)
@@ -429,5 +435,15 @@ public abstract class SIGadget : MonoBehaviour, IGameEntityComponent, IPrefabReq
 
 	protected virtual void HandleBlockedActionChanged(bool isBlocked)
 	{
+	}
+
+	void IGameStateProvider.GameStateReceiverRegister(IGameStateReceiver receiver)
+	{
+		_gameStateReceivers.Add(receiver);
+	}
+
+	void IGameStateProvider.GameStateReceiverUnregister(IGameStateReceiver receiver)
+	{
+		_gameStateReceivers.Remove(receiver);
 	}
 }

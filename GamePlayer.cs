@@ -654,7 +654,7 @@ public class GamePlayer : MonoBehaviour
 				BitPackUtils.UnpackHandPosRotFromNetwork(num4, out var localPos2, out var handRot2);
 				if (gamePlayer != null && gamePlayer.rig.OwningNetPlayer != null)
 				{
-					SnapJointType jointType = (IsLeftHand(i) ? SnapJointType.ArmL : SnapJointType.ArmR);
+					SnapJointType jointType = (IsLeftHand(i) ? SnapJointType.HandL : SnapJointType.HandR);
 					manager.SnapEntityOnCreate(entityIdFromNetId2, IsLeftHand(i), localPos2, handRot2, (int)jointType, gamePlayer.rig.OwningNetPlayer);
 				}
 			}

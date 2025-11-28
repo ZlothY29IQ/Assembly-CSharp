@@ -62,7 +62,7 @@ public class WarningScreens : MonoBehaviour
 		if (value.header.IsNullOrEmpty() || value.body.IsNullOrEmpty())
 		{
 			Debug.Log("[WARNINGS] Not showing warning screen.");
-			return WarningButtonResult.None;
+			return value.noWarningResult;
 		}
 		_messageBox.Header = value.header;
 		_messageBox.Body = value.body;

@@ -209,14 +209,11 @@ public class ProgressionManager : MonoBehaviour
 	private class SetSIQuestCompleteRequest : RewardRequest
 	{
 		public int QuestID;
-
-		public string ClientVersion;
 	}
 
 	[Serializable]
 	private class SetSIBonusCompleteRequest : RewardRequest
 	{
-		public string ClientVersion;
 	}
 
 	[Serializable]

@@ -1,18 +1,22 @@
 using System.Collections.Generic;
 using System.Linq;
+using Cosmetics;
 using GorillaNetworking;
 using GorillaNetworking.Store;
 using PlayFab;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class TryOnBundlesStand : MonoBehaviour
+public class TryOnBundlesStand : MonoBehaviour, IBuildValidation
 {
 	[SerializeField]
 	private TryOnBundleButton[] TryOnBundleButtons;
 
 	[SerializeField]
 	private Image[] BundleIcons;
+
+	[SerializeField]
+	private GameObject creatorCodeProvider;
 
 	[Header("The Index of the Selected Bundle from CosmeticsBundle Array in CosmeticsController")]
 	private int SelectedButtonIndex = -1;
@@ -274,7 +278,7 @@ public class TryOnBundlesStand : MonoBehaviour
 	{
 		if (SelectedButtonIndex != -1)
 		{
-			CosmeticsController.instance.PurchaseBundle(BundleManager.instance.storeBundlesById[SelectedBundlePlayFabID]);
+			CosmeticsController.instance.PurchaseBundle(BundleManager.instance.storeBundlesById[SelectedBundlePlayFabID], creatorCodeProvider.GetComponent<ICreatorCodeProvider>());
 		}
 	}
 
@@ -348,5 +352,15 @@ public class TryOnBundlesStand : MonoBehaviour
 		bError = true;
 		purchaseButton.ErrorHappened();
 		computerScreenText.text = computerScreeErrorText;
+	}
+
+	bool IBuildValidation.BuildValidationCheck()
+	{
+		if (creatorCodeProvider == null || !creatorCodeProvider.TryGetComponent<ICreatorCodeProvider>(out var _))
+		{
+			Debug.LogError(base.name + " has no Creator Code Provider. This will break bundle purchasing.");
+			return false;
+		}
+		return true;
 	}
 }

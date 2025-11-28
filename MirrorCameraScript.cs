@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Pool;
 
 public class MirrorCameraScript : MonoBehaviour
 {
@@ -43,14 +45,18 @@ public class MirrorCameraScript : MonoBehaviour
 		Debug.Log($"Reflected Camera position {mirrorCamera.transform.position}");
 		mirrorCamera.transform.rotation = mainCamera.transform.rotation * Quaternion.Inverse(base.transform.rotation);
 		Renderer[] componentsInChildren = GetComponentsInChildren<Renderer>();
-		for (int i = 0; i < componentsInChildren.Length; i++)
+		foreach (Renderer renderer in componentsInChildren)
 		{
-			Material[] sharedMaterials = componentsInChildren[i].sharedMaterials;
-			foreach (Material material in sharedMaterials)
+			List<Material> value;
+			using (CollectionPool<List<Material>, Material>.Get(out value))
 			{
-				if (material.shader == Shader.Find("Reflection"))
+				renderer.GetSharedMaterials(value);
+				foreach (Material item in value)
 				{
-					material.SetTexture("_ReflectionTex", mirrorCamera.targetTexture);
+					if (item.shader == Shader.Find("Reflection"))
+					{
+						item.SetTexture("_ReflectionTex", mirrorCamera.targetTexture);
+					}
 				}
 			}
 		}

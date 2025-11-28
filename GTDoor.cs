@@ -305,8 +305,9 @@ public class GTDoor : NetworkSceneObject
 	}
 
 	[PunRPC]
-	public void ChangeDoorState(DoorState shouldOpenState)
+	public void ChangeDoorState(DoorState shouldOpenState, PhotonMessageInfo info)
 	{
+		GorillaNot.IncrementRPCCall(info, "ChangeDoorState");
 		ChangeDoorStateShared(shouldOpenState);
 	}
 
@@ -380,8 +381,6 @@ public class GTDoor : NetworkSceneObject
 				audioSource.GTPlayOneShot(openSound);
 				currentState = DoorState.HeldOpen;
 				break;
-			default:
-				throw new ArgumentOutOfRangeException();
 			case DoorState.Closed:
 			case DoorState.ClosingWaitingOnRPC:
 			case DoorState.OpeningWaitingOnRPC:
@@ -398,8 +397,6 @@ public class GTDoor : NetworkSceneObject
 			case DoorState.HeldOpen:
 				CloseDoor();
 				break;
-			default:
-				throw new ArgumentOutOfRangeException();
 			case DoorState.Closed:
 			case DoorState.Closing:
 			case DoorState.OpeningWaitingOnRPC:
@@ -415,8 +412,6 @@ public class GTDoor : NetworkSceneObject
 			case DoorState.OpeningWaitingOnRPC:
 				OpenDoor();
 				break;
-			default:
-				throw new ArgumentOutOfRangeException();
 			case DoorState.ClosingWaitingOnRPC:
 			case DoorState.Closing:
 			case DoorState.Open:
@@ -426,8 +421,6 @@ public class GTDoor : NetworkSceneObject
 				break;
 			}
 			break;
-		default:
-			throw new ArgumentOutOfRangeException("shouldOpenState", shouldOpenState, null);
 		case DoorState.Closed:
 		case DoorState.ClosingWaitingOnRPC:
 		case DoorState.Open:

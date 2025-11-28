@@ -14,6 +14,8 @@ internal struct PlayerAgeGateWarningStatus
 
 	public WarningButtonResult rightButtonResult;
 
+	public WarningButtonResult noWarningResult;
+
 	public EImageVisibility showImage;
 
 	public Action onLeftButtonPressedAction;

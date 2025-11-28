@@ -16,10 +16,6 @@ public class CosmeticsProximityReactorManager : MonoBehaviour, IGorillaSliceable
 
 	private readonly Dictionary<CosmeticsProximityReactor, int> matchedFrame = new Dictionary<CosmeticsProximityReactor, int>();
 
-	[Tooltip("Perf - How many cosmetic groups should we fully process per frame (slice)")]
-	[SerializeField]
-	private int groupsPerSlice = 1;
-
 	private readonly List<string> typeKeysCache = new List<string>();
 
 	private bool typeKeysDirty;
@@ -126,22 +122,13 @@ public class CosmeticsProximityReactorManager : MonoBehaviour, IGorillaSliceable
 			}
 			if (typeKeysCache.Count > 0)
 			{
-				for (int i = 0; i < groupsPerSlice; i++)
+				for (int i = 0; i < typeKeysCache.Count; i++)
 				{
-					if (typeKeysCache.Count <= 0)
-					{
-						break;
-					}
-					if (groupCursor >= typeKeysCache.Count)
-					{
-						groupCursor = 0;
-					}
-					string key = typeKeysCache[groupCursor];
+					string key = typeKeysCache[i];
 					if (byType.TryGetValue(key, out var value) && value != null && value.Count > 0)
 					{
 						ProcessOneGroup(value);
 					}
-					groupCursor++;
 				}
 			}
 		}

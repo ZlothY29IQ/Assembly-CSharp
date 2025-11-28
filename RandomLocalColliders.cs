@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 public class RandomLocalColliders : MonoBehaviour
@@ -20,42 +19,47 @@ public class RandomLocalColliders : MonoBehaviour
 	[SerializeField]
 	private LightningDispatcherEvent colliderFound;
 
-	private List<Collider> colliders;
-
 	private float timeSinceSeek;
 
 	private float seekFreq;
 
+	private RaycastHit[] raycastHits = new RaycastHit[100];
+
 	private void Start()
 	{
-		colliders = new List<Collider>();
 		seekFreq = rand.NextFloat(minseekFreq, maxseekFreq);
 	}
 
 	private void Update()
 	{
-		timeSinceSeek += Time.deltaTime;
-		if (timeSinceSeek > seekFreq)
+		if (colliderFound != null)
 		{
-			seek();
-			timeSinceSeek = 0f;
-			seekFreq = rand.NextFloat(minseekFreq, maxseekFreq);
+			timeSinceSeek += Time.deltaTime;
+			if (timeSinceSeek > seekFreq)
+			{
+				seek();
+				timeSinceSeek = 0f;
+				seekFreq = rand.NextFloat(minseekFreq, maxseekFreq);
+			}
 		}
 	}
 
 	private void seek()
 	{
 		float num = Mathf.Max(base.transform.lossyScale.x, base.transform.lossyScale.y, base.transform.lossyScale.z);
-		colliders.Clear();
-		colliders.AddRange(Physics.OverlapSphere(base.transform.position, maxRadias * num));
-		Collider[] array = Physics.OverlapSphere(base.transform.position, minRadias * num);
-		for (int i = 0; i < array.Length; i++)
+		int num2 = Physics.RaycastNonAlloc(base.transform.position, rand.NextPointOnSphere(1f), raycastHits, maxRadias * num);
+		if (num2 <= 0)
 		{
-			colliders.Remove(array[i]);
+			return;
 		}
-		if (colliders.Count > 0 && colliderFound != null)
+		int num3 = rand.NextInt(num2);
+		for (int i = 0; i < num2; i++)
 		{
-			colliderFound.Invoke(base.transform.position, colliders[rand.NextInt(colliders.Count)].transform.position);
+			if (!(raycastHits[(i + num3) % num2].distance < minRadias * num))
+			{
+				colliderFound.Invoke(base.transform.position, raycastHits[(i + num3) % num2].point);
+				break;
+			}
 		}
 	}
 }

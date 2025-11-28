@@ -38,6 +38,8 @@ public class StoreBundle
 
 	public Sprite bundleImage => _storeBundleDataReference.bundleImage;
 
+	public NexusCreatorCode nexusCreatorCode => _storeBundleDataReference.creatorCode;
+
 	public string price => _price;
 
 	public string bundleName

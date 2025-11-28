@@ -57,6 +57,7 @@ internal class MockWarningServer : WarningsServer
 		result.rightButtonText = string.Empty;
 		result.leftButtonResult = WarningButtonResult.None;
 		result.rightButtonResult = WarningButtonResult.None;
+		result.noWarningResult = WarningButtonResult.None;
 		result.showImage = showImage;
 		result.onLeftButtonPressedAction = leftButtonCallback;
 		result.onRightButtonPressedAction = rightButtonCallback;
@@ -98,6 +99,10 @@ internal class MockWarningServer : WarningsServer
 		}
 		default:
 			return CreateWarningStatus("", "", null, null, EImageVisibility.None, null, null);
+		case 5:
+			value2 = CreateWarningStatus("", "", null, null, EImageVisibility.None, null, null);
+			value2.noWarningResult = WarningButtonResult.Continue;
+			break;
 		case 2:
 			if (flag)
 			{

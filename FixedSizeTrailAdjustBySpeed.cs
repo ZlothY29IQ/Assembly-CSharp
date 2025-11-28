@@ -73,6 +73,31 @@ public class FixedSizeTrailAdjustBySpeed : MonoBehaviour
 		Setup();
 	}
 
+	private void OnEnable()
+	{
+		ResetTrailState();
+	}
+
+	private void OnDisable()
+	{
+		ResetTrailState();
+	}
+
+	private void ResetTrailState()
+	{
+		_rawVelocity = Vector3.zero;
+		_rawSpeed = 0f;
+		_speed = 0f;
+		_lastSpeed = 0f;
+		_lastPosition = base.transform.position;
+		if ((bool)trail)
+		{
+			trail.length = minLength;
+			trail.Setup();
+			LerpTrailColors(0f);
+		}
+	}
+
 	private void Setup()
 	{
 		_lastPosition = base.transform.position;

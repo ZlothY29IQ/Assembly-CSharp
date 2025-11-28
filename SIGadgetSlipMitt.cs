@@ -117,11 +117,11 @@ public class SIGadgetSlipMitt : SIGadget
 	{
 		get
 		{
-			if ((m_snappable.snappedToJoint != null && m_snappable.snappedToJoint.jointType == SnapJointType.ArmL) || gameEntity.heldByHandIndex == 0)
+			if ((m_snappable.snappedToJoint != null && m_snappable.snappedToJoint.jointType == SnapJointType.HandL) || gameEntity.heldByHandIndex == 0)
 			{
 				return 0;
 			}
-			if ((m_snappable.snappedToJoint != null && m_snappable.snappedToJoint.jointType == SnapJointType.ArmR) || gameEntity.heldByHandIndex == 1)
+			if ((m_snappable.snappedToJoint != null && m_snappable.snappedToJoint.jointType == SnapJointType.HandR) || gameEntity.heldByHandIndex == 1)
 			{
 				return 1;
 			}

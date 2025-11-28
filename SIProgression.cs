@@ -256,10 +256,6 @@ public class SIProgression : MonoBehaviour, IGorillaSliceableSimple, GorillaQues
 
 	public static SIProgression Instance { get; private set; }
 
-	public Dictionary<SITechTreePageId, int> HeldOrSnappedByGadgetPageType => heldOrSnappedByGadgetPageType;
-
-	public bool HeldOrSnappedOthersGadgets => heldOrSnappedOthersGadgets > 0;
-
 	public int[] ActiveQuestIds => activeQuestIds;
 
 	public int[] ActiveQuestProgresses => activeQuestProgresses;
@@ -1256,7 +1252,7 @@ public class SIProgression : MonoBehaviour, IGorillaSliceableSimple, GorillaQues
 		for (int i = 0; i < 11; i++)
 		{
 			SITechTreePageId key = (SITechTreePageId)i;
-			if (Instance.HeldOrSnappedByGadgetPageType[key] > 0)
+			if (Instance.heldOrSnappedByGadgetPageType[key] > 0)
 			{
 				timeUsingGadgetTypeInterval[key] += num;
 				timeUsingGadgetTypeTotal[key] += num;
@@ -1378,7 +1374,7 @@ public class SIProgression : MonoBehaviour, IGorillaSliceableSimple, GorillaQues
 		for (int i = 0; i < 11; i++)
 		{
 			SITechTreePageId key = (SITechTreePageId)i;
-			if (Instance.HeldOrSnappedByGadgetPageType[key] > 0)
+			if (Instance.heldOrSnappedByGadgetPageType[key] > 0)
 			{
 				tagsUsingGadgetTypeTotal[key]++;
 				tagsUsingGadgetTypeInterval[key]++;

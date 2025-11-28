@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using GorillaTag;
 using GorillaTag.CosmeticSystem;
+using Unity.XR.CoreUtils;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.ResourceManagement.AsyncOperations;
 
 namespace GorillaNetworking.Store;
@@ -22,9 +24,11 @@ public class HeadModel_CosmeticStand : HeadModel
 		TagEffectDisplay
 	}
 
+	[ReadOnly]
 	public BustType bustType = BustType.JewelryBox;
 
 	[SerializeField]
+	[ReadOnly]
 	private List<GameObject> _manuallySpawnedCosmeticParts = new List<GameObject>();
 
 	public GameObject mannequin;
@@ -34,9 +38,6 @@ public class HeadModel_CosmeticStand : HeadModel
 	public Material defaultMannequinChest;
 
 	public Material defaultMannequinBody;
-
-	[DebugReadout]
-	protected new readonly List<_CosmeticPartLoadInfo> _currentPartLoadInfos = new List<_CosmeticPartLoadInfo>(1);
 
 	[DebugReadout]
 	private readonly Dictionary<AsyncOperationHandle, int> _loadOp_to_partInfoIndex = new Dictionary<AsyncOperationHandle, int>(1);
@@ -58,17 +59,32 @@ public class HeadModel_CosmeticStand : HeadModel
 
 	private void ResetMannequinSkin()
 	{
-		mannequin.GetComponent<SkinnedMeshRenderer>();
-		MeshRenderer component2;
+		List<Material> value;
 		if (mannequin.TryGetComponent<SkinnedMeshRenderer>(out var component))
 		{
-			Material[] sharedMaterials = new Material[3] { defaultMannequinBody, defaultMannequinChest, defaultMannequinFace };
-			component.sharedMaterials = sharedMaterials;
+			using (ListPool<Material>.Get(out value))
+			{
+				value.Clear();
+				value.EnsureCapacity(3);
+				value.Add(defaultMannequinBody);
+				value.Add(defaultMannequinChest);
+				value.Add(defaultMannequinFace);
+				component.SetSharedMaterials(value);
+				return;
+			}
 		}
-		else if (mannequin.TryGetComponent<MeshRenderer>(out component2))
+		List<Material> value2;
+		if (mannequin.TryGetComponent<MeshRenderer>(out var component2))
 		{
-			Material[] sharedMaterials2 = new Material[3] { defaultMannequinBody, defaultMannequinChest, defaultMannequinFace };
-			component2.sharedMaterials = sharedMaterials2;
+			using (ListPool<Material>.Get(out value2))
+			{
+				value2.Clear();
+				value2.EnsureCapacity(3);
+				value2.Add(defaultMannequinBody);
+				value2.Add(defaultMannequinChest);
+				value2.Add(defaultMannequinFace);
+				component2.SetSharedMaterials(value2);
+			}
 		}
 	}
 

@@ -234,7 +234,7 @@ public class SIGadgetStilt : SIGadget
 		if (IsEquippedLocal())
 		{
 			wasSnappedByLocalJoint = gameEntity.snappedJoint;
-			if (wasSnappedByLocalJoint == SnapJointType.ArmL)
+			if (wasSnappedByLocalJoint == SnapJointType.HandL)
 			{
 				currentStiltID = StiltID.Snapped_Left;
 				GTPlayer.Instance.EnableStilt(currentStiltID, isLeftHand: true, stiltEnd.position, maxArmLength, CanTag, CanStun);
@@ -249,7 +249,7 @@ public class SIGadgetStilt : SIGadget
 					GTPlayer.Instance.EnableStilt(currentStiltIDC, isLeftHand: true, stiltEndC.position, maxArmLength, CanTag, CanStun);
 				}
 			}
-			else if (wasSnappedByLocalJoint == SnapJointType.ArmR)
+			else if (wasSnappedByLocalJoint == SnapJointType.HandR)
 			{
 				currentStiltID = StiltID.Snapped_Right;
 				GTPlayer.Instance.EnableStilt(currentStiltID, isLeftHand: false, stiltEnd.position, maxArmLength, CanTag, CanStun);
@@ -275,11 +275,11 @@ public class SIGadgetStilt : SIGadget
 	{
 		DisableCurrentStilt();
 		HandleStopInteraction();
-		if (wasSnappedByLocalJoint == SnapJointType.ArmL)
+		if (wasSnappedByLocalJoint == SnapJointType.HandL)
 		{
 			wasSnappedByLocalJoint = SnapJointType.None;
 		}
-		else if (wasSnappedByLocalJoint == SnapJointType.ArmR)
+		else if (wasSnappedByLocalJoint == SnapJointType.HandR)
 		{
 			wasSnappedByLocalJoint = SnapJointType.None;
 		}

@@ -83,13 +83,19 @@ internal abstract class TickSystem<T> : MonoBehaviour
 
 	private void Update()
 	{
-		preTickCallbacks.TryRunCallbacks();
-		tickCallbacks.TryRunCallbacks();
+		if (!ApplicationQuittingState.IsQuitting)
+		{
+			preTickCallbacks.TryRunCallbacks();
+			tickCallbacks.TryRunCallbacks();
+		}
 	}
 
 	private void LateUpdate()
 	{
-		postTickCallbacks.TryRunCallbacks();
+		if (!ApplicationQuittingState.IsQuitting)
+		{
+			postTickCallbacks.TryRunCallbacks();
+		}
 	}
 
 	static TickSystem()

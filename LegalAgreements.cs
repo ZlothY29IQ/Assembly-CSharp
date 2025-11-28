@@ -281,7 +281,7 @@ public class LegalAgreements : MonoBehaviour
 		{
 			result = null;
 			state = -1;
-			Debug.LogError(err.ErrorMessage);
+			Debug.LogError("[GT/LegalAgreements]  ERROR!!!  GetTitleDataAsync: Encountered error while getting title data: " + err.ErrorMessage);
 		});
 		while (state == 0)
 		{

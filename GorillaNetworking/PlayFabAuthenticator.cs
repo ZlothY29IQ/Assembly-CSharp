@@ -109,6 +109,8 @@ public class PlayFabAuthenticator : MonoBehaviour
 
 	public static volatile PlayFabAuthenticator instance;
 
+	private const int PlayFabAuthRequestTimeout = 30;
+
 	private string _playFabPlayerIdCache;
 
 	private string _sessionTicket;
@@ -570,7 +572,7 @@ public class PlayFabAuthenticator : MonoBehaviour
 		request.uploadHandler = new UploadHandlerRaw(bytes);
 		request.downloadHandler = new DownloadHandlerBuffer();
 		request.SetRequestHeader("Content-Type", "application/json");
-		request.timeout = 15;
+		request.timeout = 30;
 		yield return request.SendWebRequest();
 		if (request.result != UnityWebRequest.Result.ConnectionError && request.result != UnityWebRequest.Result.ProtocolError)
 		{
@@ -676,7 +678,7 @@ public class PlayFabAuthenticator : MonoBehaviour
 		request.uploadHandler = new UploadHandlerRaw(bytes);
 		request.downloadHandler = new DownloadHandlerBuffer();
 		request.SetRequestHeader("Content-Type", "application/json");
-		request.timeout = 15;
+		request.timeout = 30;
 		yield return request.SendWebRequest();
 		if (request.result != UnityWebRequest.Result.ConnectionError && request.result != UnityWebRequest.Result.ProtocolError)
 		{

@@ -1,5 +1,6 @@
 using System;
 using GorillaLocomotion;
+using Photon.Pun;
 using UnityEngine;
 
 [RequireComponent(typeof(GameGrabbable))]
@@ -7,24 +8,12 @@ using UnityEngine;
 [RequireComponent(typeof(GameButtonActivatable))]
 public class SIGadgetSlashDash : SIGadget
 {
-	private enum EState
-	{
-		Idle,
-		StartAirGrabbing,
-		PreparedToDash,
-		DashUsed,
-		Count
-	}
-
 	private const string preLog = "[SIGadgetSlashDash]  ";
 
 	private const string preErr = "[SIGadgetSlashDash]  ERROR!!!  ";
 
 	[SerializeField]
 	private GameSnappable m_snappable;
-
-	[SerializeField]
-	private Transform m_yoyoDefaultPosXform;
 
 	[SerializeField]
 	private GameButtonActivatable m_buttonActivatable;
@@ -35,25 +24,13 @@ public class SIGadgetSlashDash : SIGadget
 	[SerializeField]
 	private float m_inputDeactivateThreshold = 0.25f;
 
+	[Tooltip("Hand min speed: How fast you have to be moving your hand for the dash to trigger.")]
 	[SerializeField]
-	private MeshRenderer m_yoyoRenderer;
+	private float m_handMinSpeed = 2f;
 
+	[Tooltip("Hand move max speed: The fastest hand speed that will be registered.")]
 	[SerializeField]
-	private AudioSource m_audioSource;
-
-	[SerializeField]
-	public AudioClip[] m_clips;
-
-	[SerializeField]
-	public float[] m_clipVolumes;
-
-	[Tooltip("Yank min/max: How fast you have to be moving your hand for the yank to register and result in a dash.")]
-	[SerializeField]
-	private float m_yankMinSpeed = 2f;
-
-	[Tooltip("Yank min/max: How fast you have to be moving your hand for the yank to register and result in a dash.")]
-	[SerializeField]
-	private float m_yankMaxSpeed = 8f;
+	private float m_handMaxSpeed = 8f;
 
 	[Tooltip("Dash min/max speed: The fastest speed the player will move")]
 	[SerializeField]
@@ -62,10 +39,18 @@ public class SIGadgetSlashDash : SIGadget
 	private float _maxDashSpeed;
 
 	[SerializeField]
-	private float m_maxDashSpeedDefault = 11f;
+	private float m_maxDashSpeedDefault = 5f;
 
 	[SerializeField]
-	private float m_maxDashSpeedUpgraded = 13f;
+	private float m_maxDashSpeedUpgraded = 7f;
+
+	private float _coolDown;
+
+	[SerializeField]
+	private float m_coolDownDefault = 1f;
+
+	[SerializeField]
+	private float m_coolDownUpgraded = 0.5f;
 
 	[Tooltip("Maps yank speed to dash speed.\nX = Yank Speed (min to max)\nY = Dash Speed (min to max).")]
 	[SerializeField]
@@ -81,43 +66,37 @@ public class SIGadgetSlashDash : SIGadget
 	private float m_maxInfluenceAngleUpgrade = 15f;
 
 	[SerializeField]
-	private float m_cooldownDurationDefault = 6f;
+	private ParticleSystem m_particleSystem;
 
-	[SerializeField]
-	private float m_cooldownDurationUpgrade = 5f;
+	private GameObject _fxGObj;
 
-	[SerializeField]
-	private Transform m_airGrabXform;
+	private Transform _fxXform;
+
+	private ParticleSystem.MainModule _fxMain;
 
 	private bool _isActivated;
 
 	private bool _wasActivated;
 
-	private float _airGrabTime;
+	private float _dashStartTime;
 
-	private float _airReleaseSpeed;
+	private float _dashStartNetworkTime;
 
 	private Vector3 _airReleaseVector;
 
-	private VRRig _attachedVRRig;
-
-	private int _lastAttachedPlayerActorNr;
-
-	private int _attachedPlayerActorNr = int.MinValue;
-
 	private bool _isTagged;
 
-	private EState _state;
+	private SIGadgetSlashDash_EState _state;
 
 	private int _HandIndex
 	{
 		get
 		{
-			if ((m_snappable.snappedToJoint != null && m_snappable.snappedToJoint.jointType == SnapJointType.ArmL) || gameEntity.heldByHandIndex == 0)
+			if ((m_snappable.snappedToJoint != null && m_snappable.snappedToJoint.jointType == SnapJointType.HandL) || gameEntity.heldByHandIndex == 0)
 			{
 				return 0;
 			}
-			if ((m_snappable.snappedToJoint != null && m_snappable.snappedToJoint.jointType == SnapJointType.ArmR) || gameEntity.heldByHandIndex == 1)
+			if ((m_snappable.snappedToJoint != null && m_snappable.snappedToJoint.jointType == SnapJointType.HandR) || gameEntity.heldByHandIndex == 1)
 			{
 				return 1;
 			}
@@ -135,14 +114,10 @@ public class SIGadgetSlashDash : SIGadget
 		obj3.OnReleased = (Action)Delegate.Combine(obj3.OnReleased, new Action(_HandleStopInteraction));
 		GameEntity obj4 = gameEntity;
 		obj4.OnUnsnapped = (Action)Delegate.Combine(obj4.OnUnsnapped, new Action(_HandleStopInteraction));
-		AudioClip[] clips = m_clips;
-		foreach (AudioClip audioClip in clips)
-		{
-			if ((bool)audioClip)
-			{
-				audioClip.LoadAudioData();
-			}
-		}
+		_fxGObj = m_particleSystem.gameObject;
+		_fxXform = m_particleSystem.transform;
+		_fxMain = m_particleSystem.main;
+		_fxGObj.SetActive(value: false);
 	}
 
 	private void OnDestroy()
@@ -162,30 +137,14 @@ public class SIGadgetSlashDash : SIGadget
 
 	private void _HandleStartInteraction()
 	{
-		if (!ApplicationQuittingState.IsQuitting)
-		{
-			_attachedPlayerActorNr = GetAttachedPlayerActorNumber();
-			if (GamePlayer.TryGetGamePlayer(_attachedPlayerActorNr, out var out_gamePlayer))
-			{
-				_attachedVRRig = out_gamePlayer.rig;
-			}
-		}
+		_ = ApplicationQuittingState.IsQuitting;
 	}
 
 	private void _HandleStopInteraction()
 	{
-		_attachedPlayerActorNr = -1;
-		_attachedVRRig = null;
-		if (gameEntity.IsAuthority())
+		if (gameEntity.IsAuthority() && _state != SIGadgetSlashDash_EState.DashUsed)
 		{
-			if (_state == EState.DashUsed)
-			{
-				SetStateAuthority(EState.DashUsed);
-			}
-			else
-			{
-				SetStateAuthority(EState.Idle);
-			}
+			_SetStateAuthority(SIGadgetSlashDash_EState.Idle);
 		}
 	}
 
@@ -197,90 +156,87 @@ public class SIGadgetSlashDash : SIGadget
 		}
 		_wasActivated = _isActivated;
 		_isActivated = _CheckInput();
-		if (Time.unscaledTime < _airGrabTime + m_slipperySurfacesTime)
+		if (Time.unscaledTime < _dashStartTime + m_slipperySurfacesTime)
 		{
 			GTPlayer.Instance.SetMaximumSlipThisFrame();
 		}
 		switch (_state)
 		{
-		case EState.Idle:
+		case SIGadgetSlashDash_EState.Idle:
 			if (_isActivated)
 			{
 				_PlayHaptic(0.1f);
-				SetStateAuthority(EState.StartAirGrabbing);
+				_SetStateAuthority(SIGadgetSlashDash_EState.TriggerPressHold);
 			}
 			break;
-		case EState.StartAirGrabbing:
-			if (_isActivated)
-			{
-				_airReleaseSpeed = 0f;
-				SetStateAuthority(EState.PreparedToDash);
-			}
-			break;
-		case EState.PreparedToDash:
+		case SIGadgetSlashDash_EState.TriggerPressHold:
 			if (!_isActivated)
 			{
 				_DoDash();
 			}
-			else
+			break;
+		case SIGadgetSlashDash_EState.DashUsed:
+			if (GTPlayer.Instance.LastTouchedGroundAtNetworkTime > _dashStartNetworkTime)
 			{
-				_DoAirGrab();
+				_SetStateAuthority(SIGadgetSlashDash_EState.Idle);
 			}
 			break;
-		case EState.DashUsed:
-			SetStateAuthority(EState.Idle);
-			break;
 		}
+		_OnUpdateShared();
 	}
 
 	protected override void OnUpdateRemote(float dt)
 	{
 		base.OnUpdateRemote(dt);
-		EState eState = (EState)gameEntity.GetState();
-		if (eState != _state)
-		{
-			_SetStateShared(eState);
-		}
+		SIGadgetSlashDash_EState newState = (SIGadgetSlashDash_EState)gameEntity.GetState();
+		_TrySetStateShared(newState);
+		_OnUpdateShared();
 	}
 
-	private static bool _CanChangeState(long newStateIndex)
+	private void _OnUpdateShared()
 	{
-		if (newStateIndex >= 0)
-		{
-			return newStateIndex < 4;
-		}
-		return false;
-	}
-
-	private void SetStateAuthority(EState newState)
-	{
-		_SetStateShared(newState);
-		gameEntity.RequestState(gameEntity.id, (long)newState);
-	}
-
-	private void _SetStateShared(EState newState)
-	{
-		if (newState == _state || !_CanChangeState((long)newState))
-		{
-			return;
-		}
-		EState state = _state;
-		_state = newState;
 		switch (_state)
 		{
-		case EState.StartAirGrabbing:
-			if (state != EState.PreparedToDash)
-			{
-				_PlayAudio(1);
-			}
+		case SIGadgetSlashDash_EState.Idle:
+			_fxGObj.SetActive(value: false);
 			break;
-		case EState.DashUsed:
-			_PlayAudio(2);
+		case SIGadgetSlashDash_EState.TriggerPressHold:
+			_fxGObj.SetActive(value: true);
+			_fxMain.startColor = new ParticleSystem.MinMaxGradient(Color.gray3);
+			_UpdateFxRotation();
 			break;
-		case EState.Idle:
-		case EState.PreparedToDash:
+		case SIGadgetSlashDash_EState.DashUsed:
+			_fxMain.startColor = new ParticleSystem.MinMaxGradient(Color.white);
+			_UpdateFxRotation();
 			break;
 		}
+	}
+
+	private void _UpdateFxRotation()
+	{
+		Vector3 vector = _fxXform.rotation.eulerAngles * (MathF.PI / 180f);
+		_fxMain.startRotationX = new ParticleSystem.MinMaxCurve(vector.x);
+		_fxMain.startRotationY = new ParticleSystem.MinMaxCurve(vector.y);
+		_fxMain.startRotationZ = new ParticleSystem.MinMaxCurve(vector.z);
+	}
+
+	private void _SetStateAuthority(SIGadgetSlashDash_EState newState)
+	{
+		if (_TrySetStateShared(newState))
+		{
+			gameEntity.RequestState(gameEntity.id, (long)newState);
+		}
+	}
+
+	private bool _TrySetStateShared(SIGadgetSlashDash_EState newState)
+	{
+		long num = (long)newState;
+		if (newState == _state || num < 0 || num >= 3)
+		{
+			return false;
+		}
+		_state = newState;
+		return true;
 	}
 
 	private bool _CheckInput()
@@ -289,26 +245,26 @@ public class SIGadgetSlashDash : SIGadget
 		return m_buttonActivatable.CheckInput(checkHeld: true, checkSnapped: true, sensitivity);
 	}
 
-	private void _DoAirGrab()
-	{
-		_ = GamePlayerLocal.instance.GetHandVelocity(_HandIndex).magnitude;
-	}
-
 	private void _DoDash()
 	{
-		_airGrabTime = Time.unscaledTime;
 		Vector3 handVelocity = GamePlayerLocal.instance.GetHandVelocity(_HandIndex);
-		float num = _CalculateDashSpeed(handVelocity.magnitude);
-		GTPlayer instance = GTPlayer.Instance;
-		instance.SetMaximumSlipThisFrame();
-		instance.SetVelocity(handVelocity.normalized * (0f - num));
-		_PlayHaptic(2f);
-		SetStateAuthority(EState.DashUsed);
+		if (!(handVelocity.magnitude < m_handMinSpeed))
+		{
+			_dashStartTime = Time.unscaledTime;
+			_dashStartNetworkTime = (float)PhotonNetwork.Time;
+			float num = _CalculateDashSpeed(handVelocity.magnitude);
+			GTPlayer instance = GTPlayer.Instance;
+			instance.SetMaximumSlipThisFrame();
+			Vector3 normalized = handVelocity.normalized;
+			instance.SetVelocity(normalized * (0f - num));
+			_PlayHaptic(2f);
+			_SetStateAuthority(SIGadgetSlashDash_EState.DashUsed);
+		}
 	}
 
 	private float _CalculateDashSpeed(float currentYankSpeed)
 	{
-		float time = Mathf.InverseLerp(m_yankMinSpeed, m_yankMaxSpeed, currentYankSpeed);
+		float time = Mathf.InverseLerp(m_handMinSpeed, m_handMaxSpeed, currentYankSpeed);
 		float t = m_speedMappingCurve.Evaluate(time);
 		return Mathf.Lerp(m_minDashSpeed, _maxDashSpeed, t);
 	}
@@ -321,15 +277,9 @@ public class SIGadgetSlashDash : SIGadget
 		}
 	}
 
-	private void _PlayAudio(int index)
-	{
-		m_audioSource.clip = m_clips[index];
-		m_audioSource.volume = m_clipVolumes[index];
-		m_audioSource.GTPlay();
-	}
-
 	public override void ApplyUpgradeNodes(SIUpgradeSet withUpgrades)
 	{
-		_maxDashSpeed = (withUpgrades.Contains(SIUpgradeType.Dash_Yoyo_Speed) ? m_maxDashSpeedUpgraded : m_maxDashSpeedDefault);
+		_maxDashSpeed = (withUpgrades.Contains(SIUpgradeType.Dash_Slash_Speed) ? m_maxDashSpeedUpgraded : m_maxDashSpeedDefault);
+		_coolDown = (withUpgrades.Contains(SIUpgradeType.Dash_Slash_Cooldown) ? m_coolDownUpgraded : m_coolDownDefault);
 	}
 }

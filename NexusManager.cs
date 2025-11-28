@@ -1,19 +1,25 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using NexusSDK;
 using UnityEngine;
 using UnityEngine.Networking;
 
-public class NexusManager : MonoBehaviour
+public class NexusManager : MonoBehaviour, IBuildValidation
 {
+	public enum Environment
+	{
+		PRODUCTION,
+		SANDBOX
+	}
+
 	[Serializable]
-	public struct GetMemberByCodeRequest
+	public class MemberCode
 	{
 		public string memberCode { get; set; }
 
-		public string groupId { get; set; }
+		public NexusGroupId groupId { get; set; }
 	}
 
 	[Serializable]
@@ -24,18 +30,30 @@ public class NexusManager : MonoBehaviour
 		public int pageSize { get; set; }
 	}
 
-	private string publicApiKey = "nexus_pk_4c18dcb1531846c7abad4cb00c5242bb";
+	private const string ENV_PRODUCTION = "production";
 
-	private string environment = "production";
+	private const string ENV_SANDBOX = "sandbox";
+
+	private const string ENV_PRODUCTION_API_KEY = "nexus_pk_4c18dcb1531846c7abad4cb00c5242bb";
+
+	private const string ENV_SANDBOX_API_KEY = "nexus_pk_ba155a8c229740489d214f024e25f25c";
+
+	[SerializeField]
+	private NexusGroupId defaultNexusGroupId;
+
+	private Environment environment = Environment.SANDBOX;
 
 	public static NexusManager instance;
 
 	private Member[] validatedMembers;
 
+	public Environment CurrentEnvironment => environment;
+
 	private void Awake()
 	{
 		if (instance == null)
 		{
+			environment = Environment.PRODUCTION;
 			instance = this;
 		}
 		else
@@ -46,69 +64,58 @@ public class NexusManager : MonoBehaviour
 
 	private void Start()
 	{
-		SDKInitializer.Init(publicApiKey, environment);
+		SDKInitializer.Init((environment == Environment.SANDBOX) ? "nexus_pk_ba155a8c229740489d214f024e25f25c" : "nexus_pk_4c18dcb1531846c7abad4cb00c5242bb", (environment == Environment.SANDBOX) ? "sandbox" : "production");
 	}
 
-	public static IEnumerator GetMembers(GetMembersRequest RequestParams, Action<AttributionAPI.GetMembers200Response> onSuccess, Action<string> onFailure)
+	public async Task<Member> VerifyCreatorCode(string terminalId, string code, NexusGroupId id)
 	{
-		string text = SDKInitializer.ApiBaseUrl + "/manage/members";
+		string text = SDKInitializer.ApiBaseUrl + "/manage/members/{memberCode}";
+		text = text.Replace("{memberCode}", code);
 		List<string> list = new List<string>();
-		if (RequestParams.page != 0)
+		list.Add("groupId=" + id.Code);
+		text += "?";
+		text += string.Join("&", list);
+		Debug.Log("CreatorCodeTerminal " + terminalId + " :: GetMemberByCode :: " + text);
+		using UnityWebRequest webRequest = UnityWebRequest.Get(text);
+		webRequest.SetRequestHeader("x-shared-secret", SDKInitializer.ApiKey);
+		await webRequest.SendWebRequest();
+		if (webRequest.responseCode == 200)
 		{
-			list.Add("page=" + RequestParams.page);
+			Debug.Log("CreatorCodeTerminal " + terminalId + " :: GetMemberByCode :: valid");
+			return JsonConvert.DeserializeObject<Member>(webRequest.downloadHandler.text, new JsonSerializerSettings
+			{
+				NullValueHandling = NullValueHandling.Ignore
+			});
 		}
-		if (RequestParams.pageSize != 0)
-		{
-			list.Add("pageSize=" + RequestParams.pageSize);
-		}
+		Debug.Log("CreatorCodeTerminal " + terminalId + " :: GetMemberByCode :: invalid");
+		return default(Member);
+	}
+
+	public async Task<bool> VerifyCreatorCodeJIT(string memberCode, string groupCode)
+	{
+		string text = SDKInitializer.ApiBaseUrl + "/manage/members/{memberCode}";
+		text = text.Replace("{memberCode}", memberCode);
+		List<string> list = new List<string>();
+		list.Add("groupId=" + groupCode);
 		text += "?";
 		text += string.Join("&", list);
 		using UnityWebRequest webRequest = UnityWebRequest.Get(text);
 		webRequest.SetRequestHeader("x-shared-secret", SDKInitializer.ApiKey);
-		yield return webRequest.SendWebRequest();
+		await webRequest.SendWebRequest();
 		if (webRequest.responseCode == 200)
 		{
-			AttributionAPI.GetMembers200Response obj = JsonConvert.DeserializeObject<AttributionAPI.GetMembers200Response>(webRequest.downloadHandler.text, new JsonSerializerSettings
-			{
-				NullValueHandling = NullValueHandling.Ignore
-			});
-			onSuccess?.Invoke(obj);
+			return true;
 		}
-		else
-		{
-			onFailure?.Invoke(webRequest.error);
-		}
+		return false;
 	}
 
-	public void VerifyCreatorCode(string code, Action<Member> onSuccess, Action onFailure)
+	public bool BuildValidationCheck()
 	{
-		GetMemberByCodeRequest getMemberByCodeRequest = default(GetMemberByCodeRequest);
-		getMemberByCodeRequest.memberCode = code;
-		GetMemberByCodeRequest requestParams = getMemberByCodeRequest;
-		StartCoroutine(GetMemberByCode(requestParams, onSuccess, onFailure));
-	}
-
-	public static IEnumerator GetMemberByCode(GetMemberByCodeRequest RequestParams, Action<Member> onSuccess, Action onFailure)
-	{
-		string text = SDKInitializer.ApiBaseUrl + "/manage/members/{memberCode}";
-		text = text.Replace("{memberCode}", RequestParams.memberCode);
-		List<string> values = new List<string>();
-		text += "?";
-		text += string.Join("&", values);
-		using UnityWebRequest webRequest = UnityWebRequest.Get(text);
-		webRequest.SetRequestHeader("x-shared-secret", SDKInitializer.ApiKey);
-		yield return webRequest.SendWebRequest();
-		if (webRequest.responseCode == 200)
+		if (defaultNexusGroupId == null)
 		{
-			Member obj = JsonConvert.DeserializeObject<Member>(webRequest.downloadHandler.text, new JsonSerializerSettings
-			{
-				NullValueHandling = NullValueHandling.Ignore
-			});
-			onSuccess?.Invoke(obj);
+			Debug.LogError("You have to set defaultNexusGroupId in " + base.name + " or things will not work!");
+			return false;
 		}
-		else
-		{
-			onFailure?.Invoke();
-		}
+		return true;
 	}
 }

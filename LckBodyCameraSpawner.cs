@@ -1,5 +1,7 @@
+using System;
 using GorillaLocomotion;
 using Liv.Lck;
+using Liv.Lck.Cosmetics;
 using Liv.Lck.GorillaTag;
 using UnityEngine;
 using UnityEngine.XR;
@@ -75,8 +77,15 @@ public class LckBodyCameraSpawner : MonoBehaviourTick
 	[SerializeField]
 	private Color _ghostColor = Color.gray;
 
+	[Header("Cosmetics References")]
 	[SerializeField]
 	private GtDummyTablet _dummyTablet;
+
+	[SerializeField]
+	private LckGameObjectSwapCosmetic _swapTablet;
+
+	[SerializeField]
+	private LckGameObjectSwapCosmetic _swapEmobi;
 
 	private Transform _followTransform;
 
@@ -130,7 +139,7 @@ public class LckBodyCameraSpawner : MonoBehaviourTick
 				}
 				cameraVisible = true;
 				_shouldMoveCameraToNeck = false;
-				_dummyTablet.SetTabletIsSpawned(isSpawned: false);
+				_dummyTablet.SetDummyTabletBodyState(isActive: true);
 				break;
 			case CameraState.CameraSpawned:
 				cameraPosition = CameraPosition.CameraDefault;
@@ -143,7 +152,7 @@ public class LckBodyCameraSpawner : MonoBehaviourTick
 				ResetCameraModel();
 				cameraVisible = true;
 				_shouldMoveCameraToNeck = false;
-				_dummyTablet.SetTabletIsSpawned(isSpawned: true);
+				_dummyTablet.SetDummyTabletBodyState(isActive: false);
 				break;
 			}
 			_cameraState = value;
@@ -227,12 +236,26 @@ public class LckBodyCameraSpawner : MonoBehaviourTick
 			_previousMode = _tabletSpawnInstance.Controller.CurrentCameraMode;
 		}
 		ZoneManagement.OnZoneChange += OnZoneChanged;
+		if (_swapTablet != null && _swapEmobi != null && _dummyTablet != null)
+		{
+			LckGameObjectSwapCosmetic swapTablet = _swapTablet;
+			swapTablet.OnCosmeticSpawned = (Action<GameObject>)Delegate.Combine(swapTablet.OnCosmeticSpawned, new Action<GameObject>(_dummyTablet.OnTabletCosmeticSpawned));
+			LckGameObjectSwapCosmetic swapEmobi = _swapEmobi;
+			swapEmobi.OnCosmeticSpawned = (Action<GameObject>)Delegate.Combine(swapEmobi.OnCosmeticSpawned, new Action<GameObject>(_dummyTablet.OnEmobiCosmeticSpawned));
+		}
 	}
 
 	private new void OnDisable()
 	{
 		base.OnDisable();
 		ZoneManagement.OnZoneChange -= OnZoneChanged;
+		if (_swapTablet != null && _swapEmobi != null && _dummyTablet != null)
+		{
+			LckGameObjectSwapCosmetic swapTablet = _swapTablet;
+			swapTablet.OnCosmeticSpawned = (Action<GameObject>)Delegate.Remove(swapTablet.OnCosmeticSpawned, new Action<GameObject>(_dummyTablet.OnTabletCosmeticSpawned));
+			LckGameObjectSwapCosmetic swapEmobi = _swapEmobi;
+			swapEmobi.OnCosmeticSpawned = (Action<GameObject>)Delegate.Remove(swapEmobi.OnCosmeticSpawned, new Action<GameObject>(_dummyTablet.OnEmobiCosmeticSpawned));
+		}
 	}
 
 	public override void Tick()

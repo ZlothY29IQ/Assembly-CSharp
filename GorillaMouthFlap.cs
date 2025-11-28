@@ -152,6 +152,10 @@ public class GorillaMouthFlap : MonoBehaviour, IGorillaSliceableSimple
 			hasDefaultFaceMaterial = true;
 		}
 		targetFaceRenderer.material = replacementFaceMaterial;
+		if (hasDefaultMouthAtlas && defaultMouthAtlas != null)
+		{
+			targetFaceRenderer.material.SetTexture(_MouthMap, defaultMouthAtlas);
+		}
 		return targetFaceRenderer.material;
 	}
 

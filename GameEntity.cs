@@ -99,9 +99,9 @@ public class GameEntity : MonoBehaviour
 	{
 		get
 		{
-			if (heldByHandIndex != 0 && (snappedJoint & SnapJointType.ArmL) == 0)
+			if (heldByHandIndex != 0 && (snappedJoint & SnapJointType.HandL) == 0)
 			{
-				if (heldByHandIndex != 1 && (snappedJoint & SnapJointType.ArmR) == 0)
+				if (heldByHandIndex != 1 && (snappedJoint & SnapJointType.HandR) == 0)
 				{
 					return EHandedness.None;
 				}
@@ -234,7 +234,6 @@ public class GameEntity : MonoBehaviour
 
 	public GameEntityId MigrateToEntityManager(GameEntityManager newManager)
 	{
-		Debug.Log($"Migrating {base.gameObject} into {newManager}");
 		manager.RemoveGameEntity(this);
 		manager = newManager;
 		GameEntityId result = (id = newManager.AddGameEntity(this));

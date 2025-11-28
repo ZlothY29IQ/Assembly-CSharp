@@ -19,7 +19,11 @@ public class GamePlayerLocal : MonoBehaviour
 
 		public bool gripWasHeld;
 
+		public bool triggerWasHeld;
+
 		public double gripPressedTime;
+
+		public double triggerPressedTime;
 
 		public GameEntityId grabbedGameBallId;
 	}
@@ -252,34 +256,64 @@ public class GamePlayerLocal : MonoBehaviour
 		}
 		double num = timeAsDouble - handData.gripPressedTime;
 		handData.gripWasHeld = flag;
-		hands[handIndex] = handData;
-		if (!flag || !(num < 0.15000000596046448))
+		bool flag2 = (IsLeftHand(handIndex) ? ControllerInputPoller.GetIndexPressed(XRNode.LeftHand) : ControllerInputPoller.GetIndexPressed(XRNode.RightHand));
+		if (flag2 && !handData.gripWasHeld)
 		{
-			return;
+			handData.triggerPressedTime = timeAsDouble;
 		}
-		Transform handTransform = GetHandTransform(handIndex);
-		Vector3 position = handTransform.position;
-		Transform fingerTransform = GetFingerTransform(handIndex);
-		position = Vector3.Lerp(position, fingerTransform.position, 0.5f);
-		Vector3 closestPointOnBoundingBox = position;
-		Quaternion rotation = handTransform.rotation;
-		bool isLeftHand = IsLeftHand(handIndex);
-		GameEntityId gameEntityId = gameEntityManager.TryGrabLocal(position, isLeftHand, out closestPointOnBoundingBox);
-		if (gameEntityId.IsValid())
+		double num2 = timeAsDouble - handData.triggerPressedTime;
+		handData.triggerWasHeld = flag2;
+		hands[handIndex] = handData;
+		if (flag && num < 0.15000000596046448)
 		{
-			Transform handTransform2 = GetHandTransform(handIndex);
-			GameEntity gameEntity = gameEntityManager.GetGameEntity(gameEntityId);
-			Vector3 position2 = gameEntity.transform.position + (position - closestPointOnBoundingBox);
-			Quaternion rotation2 = gameEntity.transform.rotation;
-			GameGrabbable component = gameEntity.GetComponent<GameGrabbable>();
-			if ((bool)component && component.GetBestGrabPoint(position, rotation, handIndex, out var grab))
+			Transform handTransform = GetHandTransform(handIndex);
+			Vector3 position = handTransform.position;
+			Vector3 closestPointOnBoundingBox = position;
+			Quaternion rotation = handTransform.rotation;
+			bool isLeftHand = IsLeftHand(handIndex);
+			GameEntityId gameEntityId = gameEntityManager.TryGrabLocal(position, isLeftHand, out closestPointOnBoundingBox);
+			if (gameEntityId.IsValid())
 			{
-				position2 = grab.position;
-				rotation2 = grab.rotation;
+				Transform handTransform2 = GetHandTransform(handIndex);
+				GameEntity gameEntity = gameEntityManager.GetGameEntity(gameEntityId);
+				Vector3 position2 = gameEntity.transform.position + (position - closestPointOnBoundingBox);
+				Quaternion rotation2 = gameEntity.transform.rotation;
+				GameGrabbable component = gameEntity.GetComponent<GameGrabbable>();
+				if ((bool)component && component.GetBestGrabPoint(position, rotation, handIndex, out var grab))
+				{
+					position2 = grab.position;
+					rotation2 = grab.rotation;
+				}
+				Vector3 localPosition = handTransform2.InverseTransformPoint(position2);
+				Quaternion localRotation = Quaternion.Inverse(handTransform2.rotation) * rotation2;
+				gameEntityManager.RequestGrabEntity(gameEntityId, isLeftHand, localPosition, localRotation);
 			}
-			Vector3 localPosition = handTransform2.InverseTransformPoint(position2);
-			Quaternion localRotation = Quaternion.Inverse(handTransform2.rotation) * rotation2;
-			gameEntityManager.RequestGrabEntity(gameEntityId, isLeftHand, localPosition, localRotation);
+		}
+		if (flag2 && num2 < 0.15000000596046448)
+		{
+			Vector3 position3 = GetHandTransform(handIndex).position;
+			GameTriggerInteractable gameTriggerInteractable = null;
+			float num3 = float.MaxValue;
+			for (int i = 0; i < GameTriggerInteractable.LocalInteractableTriggers.Count && !GameTriggerInteractable.LocalInteractableTriggers[i].triggerInteractionActive; i++)
+			{
+				if (GameTriggerInteractable.LocalInteractableTriggers[i].PointWithinInteractableArea(position3))
+				{
+					float magnitude = (GameTriggerInteractable.LocalInteractableTriggers[i].interactableCenter.position - position3).magnitude;
+					if (!(magnitude > num3))
+					{
+						num3 = magnitude;
+						gameTriggerInteractable = GameTriggerInteractable.LocalInteractableTriggers[i];
+					}
+				}
+			}
+			if (gameTriggerInteractable != null)
+			{
+				gameTriggerInteractable.BeginTriggerInteraction(handIndex);
+			}
+		}
+		if (!flag2)
+		{
+			ClearTriggerInteractables(handIndex);
 		}
 	}
 
@@ -358,13 +392,15 @@ public class GamePlayerLocal : MonoBehaviour
 		GorillaVelocityTracker bodyVelocityTracker = GTPlayer.Instance.bodyVelocityTracker;
 		vector3 += bodyVelocityTracker.GetAverageVelocity(worldSpace: true, 0.05f);
 		gameEntityManager.RequestThrowEntity(grabbedGameEntityId, IsLeftHand(handIndex), GTPlayer.Instance.HeadCenterPosition, vector3, vector2);
-		return;
+		goto IL_02a0;
 		IL_004a:
-		if (grab)
+		if (!grab)
 		{
-			return;
+			goto IL_004f;
 		}
-		goto IL_004f;
+		goto IL_02a0;
+		IL_02a0:
+		ClearTriggerInteractables(handIndex);
 	}
 
 	private XRNode GetXRNode(int handIndex)
@@ -376,7 +412,7 @@ public class GamePlayerLocal : MonoBehaviour
 		return XRNode.LeftHand;
 	}
 
-	private Transform GetHandTransform(int handIndex)
+	public Transform GetHandTransform(int handIndex)
 	{
 		return GamePlayer.GetHandTransform(GorillaTagger.Instance.offlineVRRig, handIndex);
 	}
@@ -448,5 +484,16 @@ public class GamePlayerLocal : MonoBehaviour
 	public void PlayThrowFx(bool isLeftHand)
 	{
 		GorillaTagger.Instance.StartVibration(isLeftHand, GorillaTagger.Instance.tapHapticStrength * 0.15f, 0.1f);
+	}
+
+	public void ClearTriggerInteractables(int handIndex)
+	{
+		for (int i = 0; i < GameTriggerInteractable.LocalInteractableTriggers.Count; i++)
+		{
+			if (GameTriggerInteractable.LocalInteractableTriggers[i].triggerInteractionActive && GameTriggerInteractable.LocalInteractableTriggers[i].handIndex == handIndex)
+			{
+				GameTriggerInteractable.LocalInteractableTriggers[i].EndTriggerInteraction();
+			}
+		}
 	}
 }

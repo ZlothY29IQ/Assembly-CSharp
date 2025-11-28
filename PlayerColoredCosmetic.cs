@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Pool;
 
 public class PlayerColoredCosmetic : MonoBehaviour
 {
@@ -24,11 +26,15 @@ public class PlayerColoredCosmetic : MonoBehaviour
 		public void Init()
 		{
 			hashId = Shader.PropertyToID(shaderColorProperty);
-			Material[] sharedMaterials = meshRenderer.sharedMaterials;
-			defaultMaterial = sharedMaterials[materialIndex];
-			instancedMaterial = new Material(sharedMaterials[materialIndex]);
-			sharedMaterials[materialIndex] = instancedMaterial;
-			meshRenderer.sharedMaterials = sharedMaterials;
+			List<Material> value;
+			using (CollectionPool<List<Material>, Material>.Get(out value))
+			{
+				meshRenderer.GetSharedMaterials(value);
+				defaultMaterial = value[materialIndex];
+				instancedMaterial = new Material(value[materialIndex]);
+				value[materialIndex] = instancedMaterial;
+				meshRenderer.SetSharedMaterials(value);
+			}
 		}
 
 		public void Apply(Color color)

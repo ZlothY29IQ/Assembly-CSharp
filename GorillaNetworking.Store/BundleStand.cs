@@ -1,15 +1,19 @@
+using Cosmetics;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
 
 namespace GorillaNetworking.Store;
 
-public class BundleStand : MonoBehaviour
+public class BundleStand : MonoBehaviour, IBuildValidation
 {
 	public BundlePurchaseButton _bundlePurchaseButton;
 
 	[SerializeField]
 	public StoreBundleData _bundleDataReference;
+
+	[SerializeField]
+	private GameObject creatorCodeProvider;
 
 	public GameObject[] EditorOnlyObjects;
 
@@ -23,6 +27,16 @@ public class BundleStand : MonoBehaviour
 
 	public string playfabBundleID => _bundleDataReference.playfabBundleID;
 
+	bool IBuildValidation.BuildValidationCheck()
+	{
+		if (creatorCodeProvider == null || !creatorCodeProvider.TryGetComponent<ICreatorCodeProvider>(out var _))
+		{
+			Debug.LogError(base.name + " has no Creator Code Provider. This will break bundle purchasing.");
+			return false;
+		}
+		return true;
+	}
+
 	public void Awake()
 	{
 		_bundlePurchaseButton.playfabID = playfabBundleID;
@@ -30,6 +44,7 @@ public class BundleStand : MonoBehaviour
 		{
 			_bundleIcon.sprite = _bundleDataReference.bundleImage;
 		}
+		_bundlePurchaseButton.codeProvider = creatorCodeProvider.GetComponent<ICreatorCodeProvider>();
 	}
 
 	public void InitializeEventListeners()

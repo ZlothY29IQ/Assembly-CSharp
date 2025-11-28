@@ -1,4 +1,5 @@
 using ExitGames.Client.Photon;
+using GorillaExtensions;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
@@ -41,8 +42,8 @@ public class GorillaEnemyAI : MonoBehaviourPun, IPunObservable, IInRoomCallbacks
 		}
 		else
 		{
-			targetPosition = (Vector3)stream.ReceiveNext();
-			targetRotation = (Vector3)stream.ReceiveNext();
+			targetPosition.SetValueSafe((Vector3)stream.ReceiveNext());
+			targetRotation.SetValueSafe((Vector3)stream.ReceiveNext());
 		}
 	}
 

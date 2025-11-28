@@ -254,12 +254,9 @@ public class LckSocialCamera : NetworkComponent, IGorillaSliceableSimple
 
 	public void SetVisibility(bool isVisible)
 	{
-		if (base.Object.HasInputAuthority)
-		{
-			CameraData networkedData = _networkedData;
-			networkedData.currentState = SetFlag(networkedData.currentState, CameraState.Visible, isVisible);
-			_networkedData = networkedData;
-		}
+		CameraData networkedData = _networkedData;
+		networkedData.currentState = SetFlag(networkedData.currentState, CameraState.Visible, isVisible);
+		_networkedData = networkedData;
 	}
 
 	private void OnSuccesfullSpawn(in RigContainer rig, in PhotonMessageInfoWrapped info)

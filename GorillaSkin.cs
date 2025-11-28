@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using GorillaExtensions;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -42,6 +43,10 @@ public class GorillaSkin : ScriptableObject
 	[NonSerialized]
 	private Material _scoreRuntime;
 
+	private static List<Material> _g_sharedMaterialsCache = new List<Material>(2);
+
+	private static List<Material> _g_materialsWriteCache = new List<Material>(3);
+
 	public Mesh bodyMesh => _bodyMesh;
 
 	public bool allowHeadless => !_disableHeadless;
@@ -80,37 +85,33 @@ public class GorillaSkin : ScriptableObject
 				component.sharedMesh = bodyMesh;
 			}
 			int subMeshCount2 = component.sharedMesh.subMeshCount;
+			component.GetSharedMaterials(_g_sharedMaterialsCache);
 			if (subMeshCount == subMeshCount2)
 			{
-				Material[] sharedMaterials = component.sharedMaterials;
-				sharedMaterials[0] = bodyMaterial;
+				_g_sharedMaterialsCache[0] = bodyMaterial;
 				if (subMeshCount > 2)
 				{
-					sharedMaterials[1] = chestMaterial;
+					_g_sharedMaterialsCache[1] = chestMaterial;
 				}
-				component.sharedMaterials = sharedMaterials;
+				component.SetSharedMaterials(_g_sharedMaterialsCache);
 				return;
 			}
-			if (component.sharedMaterials.Length == subMeshCount)
+			if (_g_sharedMaterialsCache.Count == subMeshCount)
 			{
 				if (subMeshCount2 == 2 && subMeshCount > subMeshCount2)
 				{
-					Material[] sharedMaterials2 = new Material[2]
-					{
-						bodyMaterial,
-						component.sharedMaterials[2]
-					};
-					component.sharedMaterials = sharedMaterials2;
+					_g_materialsWriteCache.Clear();
+					_g_materialsWriteCache.Add(bodyMaterial);
+					_g_materialsWriteCache.Add(_g_sharedMaterialsCache[2]);
+					component.SetSharedMaterials(_g_materialsWriteCache);
 				}
-				else if (subMeshCount2 == 3 && subMeshCount < subMeshCount2 && component.sharedMaterials.Length > 1)
+				else if (subMeshCount2 == 3 && subMeshCount < subMeshCount2 && _g_sharedMaterialsCache.Count > 1)
 				{
-					Material[] sharedMaterials3 = new Material[3]
-					{
-						bodyMaterial,
-						chestMaterial,
-						component.sharedMaterials[1]
-					};
-					component.sharedMaterials = sharedMaterials3;
+					_g_materialsWriteCache.Clear();
+					_g_materialsWriteCache.Add(bodyMaterial);
+					_g_materialsWriteCache.Add(chestMaterial);
+					_g_materialsWriteCache.Add(_g_sharedMaterialsCache[1]);
+					component.SetSharedMaterials(_g_materialsWriteCache);
 				}
 				else
 				{
@@ -121,17 +122,16 @@ public class GorillaSkin : ScriptableObject
 			switch (subMeshCount2)
 			{
 			case 2:
-			{
-				Material[] sharedMaterials5 = new Material[1] { bodyMaterial };
-				component.sharedMaterials = sharedMaterials5;
+				_g_materialsWriteCache.Clear();
+				_g_materialsWriteCache.Add(bodyMaterial);
+				component.SetSharedMaterials(_g_materialsWriteCache);
 				break;
-			}
 			case 3:
-			{
-				Material[] sharedMaterials4 = new Material[2] { bodyMaterial, chestMaterial };
-				component.sharedMaterials = sharedMaterials4;
+				_g_materialsWriteCache.Clear();
+				_g_materialsWriteCache.Add(bodyMaterial);
+				_g_materialsWriteCache.Add(chestMaterial);
+				component.SetSharedMaterials(_g_materialsWriteCache);
 				break;
-			}
 			default:
 				Debug.LogError($"Unexpected Submesh count {subMeshCount2}");
 				break;
@@ -139,10 +139,10 @@ public class GorillaSkin : ScriptableObject
 		}
 		else if (mannequin.TryGetComponent<MeshRenderer>(out component2))
 		{
-			Material[] sharedMaterials6 = component2.sharedMaterials;
-			sharedMaterials6[0] = bodyMaterial;
-			sharedMaterials6[1] = chestMaterial;
-			component2.sharedMaterials = sharedMaterials6;
+			component2.GetSharedMaterials(_g_sharedMaterialsCache);
+			_g_sharedMaterialsCache[0] = bodyMaterial;
+			_g_sharedMaterialsCache[1] = chestMaterial;
+			component2.SetSharedMaterials(_g_sharedMaterialsCache);
 		}
 	}
 

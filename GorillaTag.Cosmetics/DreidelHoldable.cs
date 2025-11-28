@@ -19,7 +19,7 @@ public class DreidelHoldable : TransferrableObject
 		if (_events == null)
 		{
 			_events = base.gameObject.GetOrAddComponent<RubberDuckEvents>();
-			NetPlayer netPlayer = ((base.myOnlineRig != null) ? base.myOnlineRig.creator : ((!(base.myRig != null)) ? null : ((base.myRig.creator != null) ? base.myRig.creator : NetworkSystem.Instance.LocalPlayer)));
+			NetPlayer netPlayer = ((base.myOnlineRig != null) ? base.myOnlineRig.creator : ((base.myRig != null) ? (base.myRig.creator ?? NetworkSystem.Instance.LocalPlayer) : null));
 			if (netPlayer != null)
 			{
 				_events.Init(netPlayer);
@@ -31,6 +31,7 @@ public class DreidelHoldable : TransferrableObject
 		}
 		if (_events != null)
 		{
+			_events.Activate.reliable = true;
 			_events.Activate += new Action<int, int, object[], PhotonMessageInfoWrapped>(OnDreidelSpin);
 		}
 	}
@@ -41,7 +42,7 @@ public class DreidelHoldable : TransferrableObject
 		if (_events != null)
 		{
 			_events.Activate -= new Action<int, int, object[], PhotonMessageInfoWrapped>(OnDreidelSpin);
-			UnityEngine.Object.Destroy(_events);
+			_events.Dispose();
 			_events = null;
 		}
 	}

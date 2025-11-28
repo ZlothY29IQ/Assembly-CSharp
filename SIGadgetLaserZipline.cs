@@ -3,7 +3,7 @@ using GorillaExtensions;
 using GorillaLocomotion;
 using UnityEngine;
 
-public class SIGadgetLaserZipline : SIGadget
+public class SIGadgetLaserZipline : SIGadget, ICallBack
 {
 	[SerializeField]
 	private GameButtonActivatable m_buttonActivatable;
@@ -23,7 +23,7 @@ public class SIGadgetLaserZipline : SIGadget
 	[SerializeField]
 	private bool cooldownOnUseUntilTouchGround;
 
-	private bool wasActive;
+	private bool wasTriggerPressed;
 
 	private bool isLineBroken;
 
@@ -62,10 +62,12 @@ public class SIGadgetLaserZipline : SIGadget
 
 	private void OnReleased()
 	{
+		wasTriggerPressed = false;
 	}
 
 	private void OnUnsnapped()
 	{
+		wasTriggerPressed = false;
 	}
 
 	protected override void OnUpdateAuthority(float dt)
@@ -81,46 +83,46 @@ public class SIGadgetLaserZipline : SIGadget
 			{
 				return;
 			}
-			if (!wasActive)
+			if (GTPlayer.Instance.IsGroundedButt || GTPlayer.Instance.IsGroundedHand)
+			{
+				isLineBroken = true;
+				laserBeam.SetActive(value: false);
+				return;
+			}
+			if (!wasTriggerPressed)
 			{
 				if (Time.time < coolingDownUntilTimestamp || coolingDownUntilNextTouchGround)
 				{
 					isLineBroken = true;
+					laserBeam.SetActive(value: false);
 					return;
 				}
 				laserBeam.SetActive(value: true);
-				activatedAtRotation = zipline.transform.rotation;
+				laserBeam.transform.localPosition = Vector3.zero;
+				VRRig.LocalRig.AddLateUpdateCallback(this);
 				activatedAtPoint = zipline.transform.position;
 				ziplineDirection = zipline.transform.forward;
 				if (ziplineDirection.y > 0f)
 				{
 					ziplineDirection = -ziplineDirection;
 				}
-			}
-			else
-			{
-				zipline.transform.rotation = activatedAtRotation;
-				Vector3 point = activatedAtPoint - zipline.transform.position;
-				point = GTExt.ProjectOnPlane(point, Vector3.zero, ziplineDirection);
-				if (point.sqrMagnitude > 1f)
+				if (ziplineDirection.y > -0.5f)
 				{
-					isLineBroken = true;
-					laserBeam.SetActive(value: false);
-					return;
+					ziplineDirection = GTPlayer.Instance.mainCamera.transform.forward.WithY(-0.5f).normalized;
 				}
-				GTPlayer.Instance.transform.position += point;
+				activatedAtRotation = Quaternion.LookRotation(ziplineDirection);
 			}
 			float magnitude = GTPlayer.Instance.RigidbodyVelocity.magnitude;
 			float num2 = Mathf.Lerp(Vector3.Dot(GTPlayer.Instance.RigidbodyVelocity, ziplineDirection), magnitude, 0.5f) - speedBoost * ziplineDirection.y * Time.deltaTime;
 			GTPlayer.Instance.SetVelocity(ziplineDirection * num2);
-			wasActive = true;
+			wasTriggerPressed = true;
 		}
-		else if (wasActive)
+		else if (wasTriggerPressed)
 		{
 			laserBeam.SetActive(value: false);
 			zipline.transform.localRotation = Quaternion.identity;
 			isLineBroken = false;
-			wasActive = false;
+			wasTriggerPressed = false;
 			coolingDownUntilTimestamp = Time.time + cooldownDuration;
 			coolingDownUntilNextTouchGround = cooldownOnUseUntilTouchGround;
 			GTPlayer.Instance.SetVelocity(GTPlayer.Instance.AveragedVelocity);
@@ -137,5 +139,26 @@ public class SIGadgetLaserZipline : SIGadget
 
 	private void OnEntityStateChanged(long oldState, long newState)
 	{
+	}
+
+	public void CallBack()
+	{
+		if (!wasTriggerPressed || isLineBroken)
+		{
+			VRRig.LocalRig.RemoveLateUpdateCallback(this);
+			return;
+		}
+		Vector3 point = activatedAtPoint - zipline.transform.position;
+		point = GTExt.ProjectOnPlane(point, Vector3.zero, ziplineDirection);
+		if (point.sqrMagnitude > 1f)
+		{
+			isLineBroken = true;
+			laserBeam.SetActive(value: false);
+			return;
+		}
+		GTPlayer.Instance.transform.position += point;
+		zipline.transform.rotation = activatedAtRotation;
+		Vector3 position = activatedAtPoint + Vector3.Project(zipline.transform.position - activatedAtPoint, ziplineDirection);
+		laserBeam.transform.position = position;
 	}
 }

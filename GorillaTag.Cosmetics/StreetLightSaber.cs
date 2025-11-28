@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using GorillaLocomotion.Climbing;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.Pool;
 
 namespace GorillaTag.Cosmetics;
 
@@ -80,10 +81,14 @@ public class StreetLightSaber : MonoBehaviour
 		currentIndex = 0;
 		autoSwitchEnabledTime = 0f;
 		hashId = Shader.PropertyToID(shaderColorProperty);
-		Material[] sharedMaterials = meshRenderer.sharedMaterials;
-		instancedMaterial = new Material(sharedMaterials[materialIndex]);
-		sharedMaterials[materialIndex] = instancedMaterial;
-		meshRenderer.sharedMaterials = sharedMaterials;
+		List<Material> value;
+		using (CollectionPool<List<Material>, Material>.Get(out value))
+		{
+			meshRenderer.GetSharedMaterials(value);
+			instancedMaterial = new Material(value[materialIndex]);
+			value[materialIndex] = instancedMaterial;
+			meshRenderer.SetSharedMaterials(value);
+		}
 	}
 
 	private void Update()

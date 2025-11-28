@@ -20,7 +20,7 @@ public class GameDockable : MonoBehaviour
 		{
 			return GameEntityId.Invalid;
 		}
-		SnapJointType snapJointType = (GamePlayerLocal.IsLeftHand(heldByHandIndex) ? SnapJointType.ArmL : SnapJointType.ArmR);
+		SnapJointType snapJointType = (GamePlayerLocal.IsLeftHand(heldByHandIndex) ? SnapJointType.HandL : SnapJointType.HandR);
 		SnapJointType snapJointType2 = (GamePlayerLocal.IsLeftHand(heldByHandIndex) ? SnapJointType.ForearmL : SnapJointType.ForearmR);
 		List<SuperInfectionSnapPoint> snapPoints = GamePlayerLocal.instance.gamePlayer.snapPointManager.SnapPoints;
 		float num = float.MaxValue;

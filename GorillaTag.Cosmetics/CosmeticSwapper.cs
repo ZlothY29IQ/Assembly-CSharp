@@ -6,15 +6,15 @@ using UnityEngine.Events;
 
 namespace GorillaTag.Cosmetics;
 
-public class CosmeticSwapper : MonoBehaviour
+public class CosmeticSwapper : MonoBehaviour, ITickSystemTick
 {
-	public enum SwapMode
+	private enum SwapMode
 	{
 		AllAtOnce,
 		StepByStep
 	}
 
-	public struct CosmeticState
+	private struct CosmeticState
 	{
 		public string cosmeticId;
 
@@ -46,6 +46,16 @@ public class CosmeticSwapper : MonoBehaviour
 
 	private CosmeticsController controller;
 
+	private Stack<CosmeticState> newSwappedCosmetics = new Stack<CosmeticState>();
+
+	private float lastCosmeticSwapTime = float.PositiveInfinity;
+
+	private bool isAtFinalCosmeticStep;
+
+	private int CosmeticStepIndex => newSwappedCosmetics.Count;
+
+	public bool TickRunning { get; set; }
+
 	private void Awake()
 	{
 		controller = CosmeticsController.instance;
@@ -53,12 +63,14 @@ public class CosmeticSwapper : MonoBehaviour
 
 	private void OnEnable()
 	{
+		TickSystem<object>.AddTickCallback(this);
 		PlayerCosmeticsSystem.UnlockTemporaryCosmeticsGlobal(cosmeticIDs);
 	}
 
 	private void OnDisable()
 	{
 		PlayerCosmeticsSystem.LockTemporaryCosmeticsGlobal(cosmeticIDs);
+		TickSystem<object>.RemoveTickCallback(this);
 	}
 
 	public void SwapInCosmetic(VRRig vrRig)
@@ -66,12 +78,12 @@ public class CosmeticSwapper : MonoBehaviour
 		TriggerSwap(vrRig);
 	}
 
-	public SwapMode GetCurrentMode()
+	private SwapMode GetCurrentMode()
 	{
 		return swapMode;
 	}
 
-	public bool ShouldHoldFinalStep()
+	private bool ShouldHoldFinalStep()
 	{
 		return holdFinalStep;
 	}
@@ -82,7 +94,7 @@ public class CosmeticSwapper : MonoBehaviour
 		{
 			return 0;
 		}
-		return rig.CosmeticStepIndex;
+		return CosmeticStepIndex;
 	}
 
 	public int GetNumberOfSteps()
@@ -96,7 +108,6 @@ public class CosmeticSwapper : MonoBehaviour
 		{
 			return;
 		}
-		rig.SetCosmeticSwapper(this, stepTimeout);
 		if (swapMode == SwapMode.AllAtOnce)
 		{
 			foreach (string cosmeticID in cosmeticIDs)
@@ -104,12 +115,12 @@ public class CosmeticSwapper : MonoBehaviour
 				CosmeticState? cosmeticState = SwapInCosmeticWithReturn(cosmeticID, rig);
 				if (cosmeticState.HasValue)
 				{
-					rig.AddNewSwappedCosmetic(cosmeticState.Value);
+					AddNewSwappedCosmetic(cosmeticState.Value);
 				}
 			}
 			return;
 		}
-		int cosmeticStepIndex = rig.CosmeticStepIndex;
+		int cosmeticStepIndex = CosmeticStepIndex;
 		if (cosmeticStepIndex < 0 || cosmeticStepIndex >= cosmeticIDs.Count)
 		{
 			return;
@@ -120,12 +131,12 @@ public class CosmeticSwapper : MonoBehaviour
 		{
 			return;
 		}
-		rig.AddNewSwappedCosmetic(cosmeticState2.Value);
+		AddNewSwappedCosmetic(cosmeticState2.Value);
 		if (cosmeticStepIndex == cosmeticIDs.Count - 1)
 		{
 			if (holdFinalStep)
 			{
-				rig.MarkFinalCosmeticStep();
+				MarkFinalCosmeticStep();
 			}
 			if (OnSwappingSequenceCompleted != null)
 			{
@@ -134,7 +145,7 @@ public class CosmeticSwapper : MonoBehaviour
 		}
 		else
 		{
-			rig.UnmarkFinalCosmeticStep();
+			UnmarkFinalCosmeticStep();
 		}
 	}
 
@@ -168,7 +179,7 @@ public class CosmeticSwapper : MonoBehaviour
 		return value;
 	}
 
-	public void RestorePreviousCosmetic(CosmeticState state, VRRig rig)
+	private void RestorePreviousCosmetic(CosmeticState state)
 	{
 		if (controller == null)
 		{
@@ -218,5 +229,61 @@ public class CosmeticSwapper : MonoBehaviour
 			return CosmeticsController.CosmeticSlots.HandLeft;
 		}
 		return CosmeticsController.CategoryToNonTransferrableSlot(item.itemCategory);
+	}
+
+	public void Tick()
+	{
+		if (newSwappedCosmetics.Count <= 0)
+		{
+			return;
+		}
+		if (GetCurrentMode() == SwapMode.StepByStep)
+		{
+			if (isAtFinalCosmeticStep && ShouldHoldFinalStep())
+			{
+				if (Time.time - lastCosmeticSwapTime <= stepTimeout)
+				{
+					return;
+				}
+				isAtFinalCosmeticStep = false;
+			}
+			if (Time.time - lastCosmeticSwapTime > stepTimeout)
+			{
+				while (newSwappedCosmetics.Count > 0)
+				{
+					CosmeticState state = newSwappedCosmetics.Pop();
+					RestorePreviousCosmetic(state);
+				}
+				isAtFinalCosmeticStep = false;
+				lastCosmeticSwapTime = float.PositiveInfinity;
+			}
+		}
+		else if (GetCurrentMode() == SwapMode.AllAtOnce && Time.time - lastCosmeticSwapTime > stepTimeout)
+		{
+			while (newSwappedCosmetics.Count > 0)
+			{
+				CosmeticState state2 = newSwappedCosmetics.Pop();
+				RestorePreviousCosmetic(state2);
+			}
+			lastCosmeticSwapTime = float.PositiveInfinity;
+			isAtFinalCosmeticStep = false;
+		}
+	}
+
+	private void AddNewSwappedCosmetic(CosmeticState state)
+	{
+		newSwappedCosmetics.Push(state);
+		lastCosmeticSwapTime = Time.time;
+	}
+
+	private void MarkFinalCosmeticStep()
+	{
+		isAtFinalCosmeticStep = true;
+		lastCosmeticSwapTime = Time.time;
+	}
+
+	private void UnmarkFinalCosmeticStep()
+	{
+		isAtFinalCosmeticStep = false;
 	}
 }

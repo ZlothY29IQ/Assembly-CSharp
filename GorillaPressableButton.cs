@@ -27,6 +27,9 @@ public class GorillaPressableButton : MonoBehaviour, IClickable
 
 	public bool testHandLeft;
 
+	[SerializeField]
+	private bool _useOnOffText = true;
+
 	[TextArea]
 	public string offText;
 
@@ -77,7 +80,7 @@ public class GorillaPressableButton : MonoBehaviour, IClickable
 
 	protected virtual void RefreshText()
 	{
-		if (_offLocalizedText == null || _offLocalizedText.IsEmpty || _onLocalizedText == null || _onLocalizedText.IsEmpty)
+		if (_offLocalizedText == null || _offLocalizedText.IsEmpty || _onLocalizedText == null || _onLocalizedText.IsEmpty || !_useOnOffText)
 		{
 			return;
 		}
@@ -118,6 +121,10 @@ public class GorillaPressableButton : MonoBehaviour, IClickable
 
 	protected virtual void SetOffText(bool setMyText, bool setMyTmpText = false, bool setMyTmpText2 = false)
 	{
+		if (!_useOnOffText)
+		{
+			return;
+		}
 		string localizedString = offText;
 		if (_offLocalizedText != null && !_offLocalizedText.IsEmpty)
 		{
@@ -147,6 +154,10 @@ public class GorillaPressableButton : MonoBehaviour, IClickable
 
 	protected virtual void SetOnText(bool setMyText, bool setMyTmpText = false, bool setMyTmpText2 = false)
 	{
+		if (!_useOnOffText)
+		{
+			return;
+		}
 		string localizedString = onText;
 		if (_onLocalizedText != null && !_onLocalizedText.IsEmpty)
 		{

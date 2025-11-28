@@ -322,7 +322,6 @@ internal class PlayerCosmeticsSystem : MonoBehaviour, ITickSystemPre
 	{
 		if (code == 199 && source >= 0)
 		{
-			Debug.Log("OnNetEvent in Cosmetics called!!");
 			NetPlayer player = NetworkSystem.Instance.GetPlayer(source);
 			GorillaNot.IncrementRPCCall(new PhotonMessageInfoWrapped(source, NetworkSystem.Instance.ServerTimestamp), "UpdatePlayerCosmetics");
 			UpdatePlayerCosmetics(player);

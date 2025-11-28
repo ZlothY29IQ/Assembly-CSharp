@@ -294,10 +294,8 @@ public class BarrelCannon : NetworkComponent
 		}
 	}
 
-	[PunRPC]
 	private void FireBarrelCannonRPC(Vector3 cannonCenter, Vector3 firingDirection)
 	{
-		FireBarrelCannonLocal(cannonCenter, firingDirection);
 	}
 
 	private void FireBarrelCannonLocal(Vector3 cannonCenter, Vector3 firingDirection)

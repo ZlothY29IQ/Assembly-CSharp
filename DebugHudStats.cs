@@ -15,7 +15,9 @@ public class DebugHudStats : MonoBehaviour
 		Inactive,
 		Active,
 		ShowLog,
-		ShowStats
+		ShowError,
+		ShowStats,
+		ShowRBs
 	}
 
 	private const int FPS_THRESHOLD = 89;
@@ -67,11 +69,18 @@ public class DebugHudStats : MonoBehaviour
 
 	private GroupJoinZoneAB lastGroupJoinZone;
 
+	[SerializeField]
+	private string logFilter;
+
 	private State currentState = State.Active;
+
+	private int logVerbosity;
 
 	private ProfilerRecorder drawCallsRecorder;
 
 	private ProfilerRecorder trisRecorder;
+
+	private string pLog;
 
 	public static DebugHudStats Instance => _instance;
 
@@ -104,47 +113,60 @@ public class DebugHudStats : MonoBehaviour
 		}
 	}
 
-	private void Update()
+	private void LateUpdate()
 	{
+		base.transform.LookAt(Camera.main.transform.position, Vector3.up);
 		bool flag = ControllerInputPoller.SecondaryButtonPress(XRNode.LeftHand);
-		if (flag != buttonDown)
+		if (buttonDown && !flag)
 		{
-			buttonDown = flag;
-			if (!buttonDown)
+			Application.logMessageReceived -= LogMessageReceived;
+			PlayerGameEvents.OnPlayerMoved -= OnPlayerMoved;
+			PlayerGameEvents.OnPlayerSwam -= OnPlayerSwam;
+			switch (currentState)
 			{
-				switch (currentState)
-				{
-				case State.ShowStats:
-					PlayerGameEvents.OnPlayerMoved += OnPlayerMoved;
-					PlayerGameEvents.OnPlayerSwam += OnPlayerSwam;
-					break;
-				}
-				switch (currentState)
-				{
-				case State.Inactive:
-					currentState = State.Active;
-					text.gameObject.SetActive(value: true);
-					break;
-				case State.Active:
-					currentState = State.ShowLog;
-					break;
-				case State.ShowLog:
-					currentState = State.ShowStats;
-					distanceMoved = (distanceSwam = 0f);
-					PlayerGameEvents.OnPlayerMoved += OnPlayerMoved;
-					PlayerGameEvents.OnPlayerSwam += OnPlayerSwam;
-					break;
-				case State.ShowStats:
-					currentState = State.Inactive;
-					text.gameObject.SetActive(value: false);
-					break;
-				}
-				if (RigidbodyHighlighter.Instance != null)
-				{
-					RigidbodyHighlighter.Instance.Active = currentState != State.Inactive;
-				}
+			case State.Inactive:
+				currentState = State.Active;
+				break;
+			case State.Active:
+				currentState = State.ShowLog;
+				break;
+			case State.ShowLog:
+				currentState = State.ShowError;
+				break;
+			case State.ShowError:
+				currentState = State.ShowStats;
+				break;
+			case State.ShowStats:
+				currentState = State.ShowRBs;
+				break;
+			case State.ShowRBs:
+				currentState = State.Inactive;
+				break;
+			}
+			Application.logMessageReceived -= LogMessageReceived;
+			PlayerGameEvents.OnPlayerMoved -= OnPlayerMoved;
+			PlayerGameEvents.OnPlayerSwam -= OnPlayerSwam;
+			switch (currentState)
+			{
+			case State.ShowLog:
+			case State.ShowError:
+				Application.logMessageReceived += LogMessageReceived;
+				break;
+			case State.ShowStats:
+				distanceMoved = (distanceSwam = 0f);
+				PlayerGameEvents.OnPlayerMoved += OnPlayerMoved;
+				PlayerGameEvents.OnPlayerSwam += OnPlayerSwam;
+				break;
+			}
+			logMessages.Clear();
+			logVerbosity = ((currentState == State.ShowError) ? 1 : 0);
+			text.gameObject.SetActive(currentState != State.Inactive);
+			if (RigidbodyHighlighter.Instance != null)
+			{
+				RigidbodyHighlighter.Instance.Active = currentState == State.ShowRBs;
 			}
 		}
+		buttonDown = flag;
 		if (firstAwake == 0f)
 		{
 			firstAwake = Time.time;
@@ -167,10 +189,12 @@ public class DebugHudStats : MonoBehaviour
 		if (currentState != 0)
 		{
 			builder.Clear();
-			builder.Append("v: ");
+			builder.Append("<color=\"" + colorFromState(currentState) + "\">");
+			builder.Append("gt: ");
 			builder.Append(GorillaComputer.instance.version);
 			builder.Append(":");
 			builder.Append(GorillaComputer.instance.buildCode);
+			builder.Append("</color>");
 			num = Mathf.Min(num, 90);
 			builder.Append((num < 89) ? " - <color=\"red\">" : " - <color=\"white\">");
 			builder.Append(num);
@@ -184,7 +208,7 @@ public class DebugHudStats : MonoBehaviour
 			{
 				builder.AppendLine("Server Time Unavailable");
 			}
-			zones = GorillaTagger.Instance.offlineVRRig.zoneEntity.currentZone.ToString();
+			zones = GorillaTagger.Instance.offlineVRRig.zoneEntity.currentZone.ToString().ToUpperInvariant();
 			if (NetworkSystem.Instance.IsMasterClient)
 			{
 				builder.Append("H");
@@ -204,7 +228,7 @@ public class DebugHudStats : MonoBehaviour
 			{
 				builder.Append("DC ");
 			}
-			builder.Append("Z: <color=\"orange\">");
+			builder.Append("z: <color=\"green\">");
 			builder.Append(zones);
 			builder.AppendLine("</color>");
 			if (NetworkSystem.Instance.InRoom)
@@ -241,23 +265,35 @@ public class DebugHudStats : MonoBehaviour
 				float magnitude = vector.magnitude;
 				groundVelocity = vector;
 				groundVelocity.y = 0f;
-				builder.AppendLine($"v: {magnitude:F1} m/s");
-				builder.AppendLine($"ground: {groundVelocity.magnitude:F1} m/s");
-				builder.AppendLine($"head: {headCenterPosition:F2}\n");
-				builder.AppendLine($"odo: {distanceMoved:F2}m");
-				builder.AppendLine($"swam: {distanceSwam:F2}m");
+				builder.AppendLine($"v: {magnitude:F1} m/s\t\todo: {distanceMoved:F2}m\tswam: {distanceSwam:F2}m");
+				builder.AppendLine($"ground: {groundVelocity.magnitude:F1} m/s\thead: {headCenterPosition:F2}");
 			}
-			else if (currentState == State.ShowLog)
+			else if (currentState == State.ShowLog || currentState == State.ShowError)
 			{
 				builder.AppendLine();
-				for (int i = 0; i < logMessages.Count; i++)
+				for (int num2 = logMessages.Count - 1; num2 >= 0; num2--)
 				{
-					builder.AppendLine(logMessages[i]);
+					if (logFilter.Length == 0 || logMessages[num2].Contains(logFilter))
+					{
+						builder.AppendLine(logMessages[num2]);
+					}
 				}
 			}
 			text.text = builder.ToString();
 		}
 		updateTimer = 0f;
+	}
+
+	private string colorFromState(State s)
+	{
+		return s switch
+		{
+			State.ShowStats => "green", 
+			State.ShowLog => "yellow", 
+			State.ShowError => "orange", 
+			State.ShowRBs => "red", 
+			_ => "white", 
+		};
 	}
 
 	private void OnPlayerSwam(float distance, float speed)
@@ -276,11 +312,6 @@ public class DebugHudStats : MonoBehaviour
 		}
 	}
 
-	private void OnEnable()
-	{
-		Application.logMessageReceived += LogMessageReceived;
-	}
-
 	private void OnDisable()
 	{
 		Application.logMessageReceived -= LogMessageReceived;
@@ -288,10 +319,22 @@ public class DebugHudStats : MonoBehaviour
 
 	private void LogMessageReceived(string condition, string stackTrace, LogType type)
 	{
-		logMessages.Add(getColorStringFromLogType(type) + condition + "</color>");
-		if (logMessages.Count > 6)
+		if (logVerbosity != 1 || type == LogType.Exception || type == LogType.Assert || type == LogType.Error)
 		{
-			logMessages.RemoveAt(0);
+			string text = $"{Time.realtimeSinceStartup:F2}> {getColorStringFromLogType(type)}{condition}</color>";
+			if (pLog != condition)
+			{
+				logMessages.Add(text);
+			}
+			else
+			{
+				logMessages[logMessages.Count - 1] = text;
+			}
+			pLog = condition;
+			if (logMessages.Count > 10)
+			{
+				logMessages.RemoveAt(0);
+			}
 		}
 	}
 

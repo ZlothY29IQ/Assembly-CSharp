@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 using CosmeticRoom;
+using Cosmetics;
 using ExitGames.Client.Photon;
 using GorillaExtensions;
 using GorillaLocomotion;
@@ -383,7 +384,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 			if (rig.IsItemAllowed(itemNameFromDisplayName2) && cosmeticItemInstance2 != null)
 			{
 				cosmeticItemInstance2.EnableItem((CosmeticSlots)slotIndex, rig);
-				if ((rig.isLocal && slotIndex == 0) || slotIndex == 2)
+				if (rig.isLocal && (slotIndex == 0 || slotIndex == 2))
 				{
 					PlayerPrefFlags.TouchIf(PlayerPrefFlags.Flag.SHOW_1P_COSMETICS, value: false);
 				}
@@ -693,6 +694,10 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 
 		public string sku;
 
+		public string mothershipEnvId;
+
+		public string mothershipDeploymentId;
+
 		public Dictionary<string, string> customTags;
 	}
 
@@ -916,6 +921,8 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 	private string returnString;
 
 	private bool checkoutCartButtonPressedWithLeft;
+
+	private NexusManager.MemberCode validatedCreatorCode;
 
 	private Callback<MicroTxnAuthorizationResponse_t> _steamMicroTransactionAuthorizationResponse;
 
@@ -1165,6 +1172,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 			inventoryStringList.Add("Inventory");
 			StartCoroutine(CheckCanGetDaily());
 		}
+		CreatorCodes.Initialize();
 	}
 
 	public void Start()
@@ -1802,14 +1810,54 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		ProcessPurchaseItemState(pressedPurchaseItemButton.buttonSide, isLeftHand);
 	}
 
-	public void PurchaseBundle(StoreBundle bundleToPurchase)
+	public async void PurchaseBundle(StoreBundle bundleToPurchase, ICreatorCodeProvider ccp)
 	{
-		if (bundleToPurchase.playfabBundleID != "NULL")
+		if (!(bundleToPurchase.playfabBundleID != "NULL"))
 		{
-			currentPurchaseItemStage = PurchaseItemStages.Start;
-			ProcessPurchaseItemState("left", isLeftHand: false);
-			buyingBundle = true;
+			return;
+		}
+		ccp.GetCreatorCode(out var code, out var groups);
+		ATM_Manager.instance.SwitchToStage(ATM_Manager.ATMStages.Begin);
+		currentPurchaseItemStage = PurchaseItemStages.Start;
+		ProcessPurchaseItemState("left", isLeftHand: false);
+		buyingBundle = true;
+		if (bundleToPurchase.nexusCreatorCode != null)
+		{
+			code = bundleToPurchase.nexusCreatorCode.Code;
+			groups = new NexusGroupId[1] { bundleToPurchase.nexusCreatorCode.GroupId };
+		}
+		if (code.IsNullOrEmpty())
+		{
 			itemToPurchase = bundleToPurchase.playfabBundleID;
+			SteamPurchase();
+			return;
+		}
+		itemToPurchase = bundleToPurchase.playfabBundleID;
+		NexusManager.MemberCode memberCode = await CreatorCodes.CheckValidationCoroutineJIT(ccp.TerminalId, code, groups);
+		if (memberCode != null)
+		{
+			OnCreatorCodeValid(memberCode.groupId, memberCode.memberCode);
+		}
+		else
+		{
+			OnCreatorCodeFailure();
+		}
+	}
+
+	private void OnCreatorCodeFailure()
+	{
+		buyingBundle = false;
+	}
+
+	private void OnCreatorCodeValid(NexusGroupId id, string creatorCode)
+	{
+		if (buyingBundle)
+		{
+			SetValidatedCreatorCode(new NexusManager.MemberCode
+			{
+				memberCode = creatorCode,
+				groupId = id
+			});
 			SteamPurchase();
 		}
 	}
@@ -1822,11 +1870,6 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		itemToPurchase = BundlePlayfabItemName;
 		ATM_Manager.instance.shinyRocksCost = BundleShinyRocks;
 		SteamPurchase();
-	}
-
-	public void PressPurchaseBundleButton(string PlayFabItemName)
-	{
-		BundleManager.instance.BundlePurchaseButtonPressed(PlayFabItemName);
 	}
 
 	public void ProcessPurchaseItemState(string buttonSide, bool isLeftHand)
@@ -2915,32 +2958,53 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 
 	private ConfirmPurchaseRequest GetConfirmBundlePurchaseRequest()
 	{
+		Dictionary<string, string> dictionary = new Dictionary<string, string>
+		{
+			{
+				"PlayerName",
+				GorillaComputer.instance.savedName
+			},
+			{
+				"Location",
+				GorillaTagger.Instance.offlineVRRig.zoneEntity.currentZone.ToString()
+			}
+		};
+		if (validatedCreatorCode != null)
+		{
+			dictionary.Add("NexusCreatorId", validatedCreatorCode.memberCode);
+			dictionary.Add("NexusGroupId", validatedCreatorCode.groupId.Code);
+			validatedCreatorCode = null;
+		}
 		return new ConfirmPurchaseRequest
 		{
-			OrderId = currentPurchaseID
+			OrderId = currentPurchaseID,
+			CustomTags = dictionary
 		};
 	}
 
 	private ConfirmPurchaseRequest GetConfirmATMPurchaseRequest()
 	{
+		Dictionary<string, string> dictionary = new Dictionary<string, string>
+		{
+			{
+				"PlayerName",
+				GorillaComputer.instance.savedName
+			},
+			{
+				"Location",
+				GorillaTagger.Instance.offlineVRRig.zoneEntity.currentZone.ToString()
+			}
+		};
+		if (validatedCreatorCode != null)
+		{
+			dictionary.Add("NexusCreatorId", validatedCreatorCode.memberCode);
+			dictionary.Add("NexusGroupId", validatedCreatorCode.groupId.Code);
+			validatedCreatorCode = null;
+		}
 		return new ConfirmPurchaseRequest
 		{
 			OrderId = currentPurchaseID,
-			CustomTags = new Dictionary<string, string>
-			{
-				{
-					"NexusCreatorId",
-					ATM_Manager.instance.ValidatedCreatorCode
-				},
-				{
-					"PlayerName",
-					GorillaComputer.instance.savedName
-				},
-				{
-					"Location",
-					GorillaTagger.Instance.offlineVRRig.zoneEntity.currentZone.ToString()
-				}
-			}
+			CustomTags = dictionary
 		};
 	}
 
@@ -3414,6 +3478,11 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 			}
 		}
 		return packed.Length == num + 1;
+	}
+
+	public void SetValidatedCreatorCode(NexusManager.MemberCode memberCode)
+	{
+		validatedCreatorCode = memberCode;
 	}
 
 	public static bool CanScrollOutfits()

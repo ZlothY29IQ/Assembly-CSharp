@@ -4,8 +4,8 @@ using System;
 public enum SnapJointType
 {
 	None = 0,
-	ArmL = 1,
-	ArmR = 4,
+	HandL = 1,
+	HandR = 4,
 	Chest = 8,
 	Back = 0x10,
 	Head = 0x20,

@@ -45,6 +45,14 @@ public static class Utils
 		}
 	}
 
+	public static void RemoveIfContains<T>(this List<T> list, T item)
+	{
+		if (list.Contains(item))
+		{
+			list.Remove(item);
+		}
+	}
+
 	public static bool InRoom(this NetPlayer player)
 	{
 		if (NetworkSystem.Instance.InRoom)

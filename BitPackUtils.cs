@@ -323,6 +323,53 @@ public static class BitPackUtils
 		handRot = UnpackQuaternionFromNetwork(data2);
 	}
 
+	public static long PackAnchoredPosRotForNetwork(Vector3 worldPos, Quaternion rot)
+	{
+		Vector3Int parityForWorldPos = GetParityForWorldPos(worldPos);
+		long num = parityForWorldPos.x + parityForWorldPos.y * 3 + parityForWorldPos.z * 9;
+		Vector3 vector = new Vector3((worldPos.x % 5f + 5f) % 5f, (worldPos.y % 5f + 5f) % 5f, (worldPos.z % 5f + 5f) % 5f);
+		long num2 = Mathf.Clamp(Mathf.RoundToInt(vector.x * 102.3f), 0, 511);
+		long num3 = Mathf.Clamp(Mathf.RoundToInt(vector.y * 102.3f), 0, 511);
+		long num4 = Mathf.Clamp(Mathf.RoundToInt(vector.z * 102.3f), 0, 511);
+		long num5 = PackQuaternionForNetwork(rot);
+		return num + (num2 << 5) + (num3 << 14) + (num4 << 23) + (num5 << 32);
+	}
+
+	public static void UnpackAnchoredPosRotForNetwork(long packed, Vector3 anchorPos, out Vector3 pos, out Quaternion rot)
+	{
+		Vector3Int parityForWorldPos = GetParityForWorldPos(anchorPos);
+		long num = packed & 0x1F;
+		Vector3Int vector3Int = new Vector3Int((int)(num % 3), (int)(num / 3 % 3), (int)(num / 9 % 3));
+		pos = new Vector3((float)((packed >> 5) & 0x1FF) / 102.3f + GetParityOffset(anchorPos.x, parityForWorldPos.x, vector3Int.x), (float)((packed >> 14) & 0x1FF) / 102.3f + GetParityOffset(anchorPos.y, parityForWorldPos.y, vector3Int.y), (float)((packed >> 23) & 0x1FF) / 102.3f + GetParityOffset(anchorPos.z, parityForWorldPos.z, vector3Int.z));
+		rot = UnpackQuaternionFromNetwork((int)(packed >> 32));
+	}
+
+	private static Vector3Int GetParityForWorldPos(Vector3 worldPos)
+	{
+		return new Vector3Int(GetParityForAxis(worldPos.x), GetParityForAxis(worldPos.y), GetParityForAxis(worldPos.z));
+	}
+
+	private static int GetParityForAxis(float axisPos)
+	{
+		return Mathf.FloorToInt(axisPos % 15f / 5f + 3f) % 3;
+	}
+
+	private static float GetParityOffset(float anchorAxisPos, int anchorParity, int incomingParity)
+	{
+		float num = anchorAxisPos - (anchorAxisPos % 5f + 5f) % 5f;
+		switch (incomingParity - anchorParity)
+		{
+		case -2:
+		case 1:
+			return num + 5f;
+		case -1:
+		case 2:
+			return num - 5f;
+		default:
+			return num;
+		}
+	}
+
 	public static long PackWorldPosForNetwork(Vector3 worldPos)
 	{
 		long num = Mathf.Clamp(Mathf.RoundToInt(worldPos.x * 1024f) + 1048576, 0, 2097151);

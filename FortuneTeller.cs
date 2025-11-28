@@ -182,7 +182,7 @@ public class FortuneTeller : MonoBehaviourPunCallbacks
 	private void RequestFortuneRPC(PhotonMessageInfo info)
 	{
 		GorillaNot.IncrementRPCCall(info, "RequestFortune");
-		if (info.Sender != null && VRRigCache.Instance.TryGetVrrig(info.Sender, out var playerRig))
+		if (NetworkSystem.Instance.IsMasterClient && info.Sender != null && VRRigCache.Instance.TryGetVrrig(info.Sender, out var playerRig))
 		{
 			CallLimitType<CallLimiter> callLimitType = playerRig.Rig.fxSettings.callSettings[(int)limiterType];
 			if (callLimitType.UseNetWorkTime ? callLimitType.CallLimitSettings.CheckCallServerTime(info.SentServerTime) : callLimitType.CallLimitSettings.CheckCallTime(Time.time))

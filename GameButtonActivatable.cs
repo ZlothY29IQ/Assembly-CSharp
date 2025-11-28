@@ -30,7 +30,7 @@ public class GameButtonActivatable : MonoBehaviour, IGameActivatable
 		};
 	}
 
-	public bool CheckInput(bool checkHeld = true, bool checkSnapped = true, float sensitivity = 0.25f, bool checkHeldActivatable = true)
+	public bool CheckInput(bool checkHeld = true, bool checkSnapped = true, float sensitivity = 0.25f, bool checkHeldActivatable = true, bool checkTriggerInteractable = true)
 	{
 		int num = -1;
 		if (checkHeld && GamePlayer.TryGetGamePlayer(gameEntity.heldByActorNumber, out var out_gamePlayer))
@@ -45,12 +45,28 @@ public class GameButtonActivatable : MonoBehaviour, IGameActivatable
 		{
 			return false;
 		}
-		if (checkHeldActivatable && gameEntity.IsSnappedByLocalPlayer() && GamePlayer.TryGetGamePlayer(gameEntity.snappedByActorNumber, out var out_gamePlayer3))
+		if (gameEntity.IsSnappedByLocalPlayer() && (checkHeldActivatable || checkTriggerInteractable))
 		{
-			GameEntity grabbedGameEntity = out_gamePlayer3.GetGrabbedGameEntity(num);
-			if (grabbedGameEntity != null && grabbedGameEntity.GetComponent<IGameActivatable>() != null)
+			GamePlayer out_gamePlayer3;
+			bool flag = GamePlayer.TryGetGamePlayer(gameEntity.snappedByActorNumber, out out_gamePlayer3);
+			if (flag && checkHeldActivatable)
 			{
-				return false;
+				GameEntity grabbedGameEntity = out_gamePlayer3.GetGrabbedGameEntity(num);
+				if (grabbedGameEntity != null && grabbedGameEntity.GetComponent<IGameActivatable>() != null)
+				{
+					return false;
+				}
+			}
+			if (flag && checkTriggerInteractable && inputButton == InputButton.Trigger && GameTriggerInteractable.LocalInteractableTriggers.Count > 0)
+			{
+				Vector3 position = GamePlayerLocal.instance.GetHandTransform(num).position;
+				for (int i = 0; i < GameTriggerInteractable.LocalInteractableTriggers.Count; i++)
+				{
+					if (GameTriggerInteractable.LocalInteractableTriggers[i].PointWithinInteractableArea(position))
+					{
+						return false;
+					}
+				}
 			}
 		}
 		XRNode xrNode = (GamePlayer.IsLeftHand(num) ? XRNode.LeftHand : XRNode.RightHand);

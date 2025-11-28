@@ -27,7 +27,6 @@ public class GorillaFaceTextureReplacement : MonoBehaviour, ISpawnable
 
 	private void OnEnable()
 	{
-		myRig.GetComponent<GorillaMouthFlap>().SetFaceMaterialReplacement(newFaceMaterial);
 		Material sharedMaterial = myRig.GetComponent<GorillaMouthFlap>().SetFaceMaterialReplacement(newFaceMaterial);
 		MeshRenderer[] array = alsoApplyFaceTo;
 		for (int i = 0; i < array.Length; i++)

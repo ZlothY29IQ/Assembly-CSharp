@@ -32,7 +32,7 @@ using UnityEngine.Serialization;
 using UnityEngine.UI;
 using UnityEngine.Video;
 
-public class CustomMapLoader : MonoBehaviour
+public class CustomMapLoader : MonoBehaviour, IBuildValidation
 {
 	private struct LoadZoneRequest
 	{
@@ -44,6 +44,9 @@ public class CustomMapLoader : MonoBehaviour
 
 		public Action<string> onSceneUnloadedCallback;
 	}
+
+	[SerializeField]
+	private NexusGroupId defaultNexusGroupId;
 
 	[OnEnterPlay_SetNull]
 	private static volatile CustomMapLoader instance;
@@ -1116,21 +1119,45 @@ public class CustomMapLoader : MonoBehaviour
 		{
 			mapLoadProgressCallback?.Invoke(MapLoadStatus.Loading, endingProgress, "PROCESSING COMPLETE");
 		}
-		if (loadedMapPackageInfo != null && loadedMapPackageInfo.customMapSupportVersion < 3 && sceneDescriptor.IsInitialScene)
+		if (loadedMapPackageInfo == null || loadedMapPackageInfo.customMapSupportVersion >= 3 || !sceneDescriptor.IsInitialScene)
 		{
-			maxPlayersForMap = (byte)System.Math.Clamp(sceneDescriptor.MaxPlayers, 1, 10);
-			cachedLuauScript = ((sceneDescriptor.CustomGamemode != null) ? sceneDescriptor.CustomGamemode.text : "");
-			devModeEnabled = sceneDescriptor.DevMode;
-			disableHoldingHandsAllModes = sceneDescriptor.DisableHoldingHandsAllGameModes;
-			disableHoldingHandsCustomMode = sceneDescriptor.DisableHoldingHandsCustomOnly;
-			if (sceneDescriptor.UseUberShaderDynamicLighting)
-			{
-				GameLightingManager.instance.SetCustomDynamicLightingEnabled(enable: true);
-				GameLightingManager.instance.SetAmbientLightDynamic(sceneDescriptor.UberShaderAmbientDynamicLight);
-				usingDynamicLighting = true;
-			}
-			VirtualStumpReturnWatch.SetWatchProperties(sceneDescriptor.GetReturnToVStumpWatchProps());
+			yield break;
 		}
+		maxPlayersForMap = (byte)System.Math.Clamp(sceneDescriptor.MaxPlayers, 1, 10);
+		cachedLuauScript = ((sceneDescriptor.CustomGamemode != null) ? sceneDescriptor.CustomGamemode.text : "");
+		devModeEnabled = sceneDescriptor.DevMode;
+		disableHoldingHandsAllModes = sceneDescriptor.DisableHoldingHandsAllGameModes;
+		disableHoldingHandsCustomMode = sceneDescriptor.DisableHoldingHandsCustomOnly;
+		if (sceneDescriptor.UseUberShaderDynamicLighting)
+		{
+			GameLightingManager.instance.SetCustomDynamicLightingEnabled(enable: true);
+			GameLightingManager.instance.SetAmbientLightDynamic(sceneDescriptor.UberShaderAmbientDynamicLight);
+			usingDynamicLighting = true;
+		}
+		List<int> list = new List<int>();
+		foreach (GameModeType availableModesForOldMap in instance.availableModesForOldMaps)
+		{
+			list.Add((int)availableModesForOldMap);
+		}
+		GameModeType gameModeType = instance.defaultGameModeForNonCustomOldMaps;
+		if (!cachedLuauScript.IsNullOrEmpty())
+		{
+			gameModeType = GameModeType.Custom;
+			list.Add(7);
+		}
+		CustomMapModeSelector.SetAvailableGameModes(list.ToArray(), (int)gameModeType);
+		if (RoomSystem.JoinedRoom && NetworkSystem.Instance.LocalPlayer.IsMasterClient && NetworkSystem.Instance.SessionIsPrivate)
+		{
+			if (GameMode.ActiveGameMode.IsNull())
+			{
+				GameMode.ChangeGameMode(gameModeType.ToString());
+			}
+			else if (GameMode.ActiveGameMode.GameType() != gameModeType)
+			{
+				GameMode.ChangeGameMode(gameModeType.ToString());
+			}
+		}
+		VirtualStumpReturnWatch.SetWatchProperties(sceneDescriptor.GetReturnToVStumpWatchProps());
 	}
 
 	private static IEnumerator ProcessChildObjects(GameObject parent, bool useProgressCallback = false, int startingProgress = 75, int endingProgress = 90)
@@ -2446,7 +2473,7 @@ public class CustomMapLoader : MonoBehaviour
 			if (componentInChildren.IsNotNull() && componentInChildren.IsFromCustomMapScene(unloadingScene) && ATM_Manager.instance.IsNotNull())
 			{
 				ATM_Manager.instance.RemoveATM(componentInChildren);
-				ATM_Manager.instance.ResetTemporaryCreatorCode();
+				ATM_Manager.instance.SetTemporaryCreatorCode(null);
 			}
 			UnityEngine.Object.Destroy(customMapATM);
 			customMapATM = null;
@@ -2681,5 +2708,15 @@ public class CustomMapLoader : MonoBehaviour
 			return true;
 		}
 		return false;
+	}
+
+	bool IBuildValidation.BuildValidationCheck()
+	{
+		if (defaultNexusGroupId == null)
+		{
+			Debug.LogError("You have to set defaultNexusGroupId in " + base.name + " or things will not work!");
+			return false;
+		}
+		return true;
 	}
 }

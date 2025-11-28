@@ -702,7 +702,9 @@ public class BodyDockPositions : MonoBehaviour
 			int num = ((i == 0) ? myRig.LeftThrowableProjectileIndex : myRig.RightThrowableProjectileIndex);
 			for (int j = 0; j < array.Length; j++)
 			{
-				bool activeSelf = array[j].activeSelf;
+				GameObject obj = array[j];
+				_ = obj == null;
+				bool activeSelf = obj.activeSelf;
 				bool flag = j == num;
 				array[j].SetActive(flag);
 				if (activeSelf && !flag)
