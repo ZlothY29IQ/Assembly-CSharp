@@ -66,22 +66,6 @@ public class RendererCullerByTriggers : MonoBehaviour, IBuildValidation
 
 	public bool BuildValidationCheck()
 	{
-		for (int i = 0; i < renderers.Length; i++)
-		{
-			if (renderers[i] == null)
-			{
-				Debug.LogError("rendererculllerbytriggers has null renderer", base.gameObject);
-				return false;
-			}
-		}
-		for (int j = 0; j < colliders.Length; j++)
-		{
-			if (colliders[j] == null)
-			{
-				Debug.LogError("rendererculllerbytriggers has null collider", base.gameObject);
-				return false;
-			}
-		}
 		return true;
 	}
 }

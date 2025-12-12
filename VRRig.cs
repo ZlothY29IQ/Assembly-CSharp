@@ -408,6 +408,8 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	public bool inTryOnRoom;
 
+	public bool inTempCosmSpace;
+
 	public bool muted;
 
 	private float lastScaleFactor = 1f;
@@ -2336,7 +2338,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		TagEffectPack tagEffectPack = null;
 		quaternion quaternion = base.transform.rotation;
 		TagEffectsLibrary.EffectType effectType = ((!(LocalRig == this)) ? TagEffectsLibrary.EffectType.THIRD_PERSON : TagEffectsLibrary.EffectType.FIRST_PERSON);
-		if (GorillaGameManager.instance != null && OwningNetPlayer == null)
+		if (GorillaGameManager.instance != null && OwningNetPlayer != null)
 		{
 			GorillaGameManager.instance.lastTaggedActorNr.TryGetValue(OwningNetPlayer.ActorNumber, out taggedById);
 		}
@@ -3394,6 +3396,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 			initialized = false;
 			initializedCosmetics = false;
 			inTryOnRoom = false;
+			inTempCosmSpace = false;
 			timeSpawned = 0f;
 			setMatIndex = 0;
 			currentCosmeticTries = 0;
@@ -3904,7 +3907,6 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		}
 		rawCosmeticString = cosmetics ?? "";
 		concatStringOfCosmeticsAllowed = rawCosmeticString;
-		concatStringOfCosmeticsAllowed += "LHAJJ.LHAJK.LHAJL.";
 		InitializedCosmetics = true;
 		currentCosmeticTries = 0;
 		CheckForEarlyAccess();

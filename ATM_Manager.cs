@@ -103,7 +103,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 
 	private string _tempCreatorCodeOveride;
 
-	private const string ATM_TERMINAL_ID = "atm_terminal_id";
+	private string ATM_TERMINAL_ID = "atm_terminal_id";
 
 	public ATMStages CurrentATMStage => currentATMStage;
 
@@ -128,6 +128,11 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 		}
 		SwitchToStage(ATMStages.Unavailable);
 		smallDisplays = new List<CreatorCodeSmallDisplay>();
+		ATM_TERMINAL_ID = string.Empty;
+		for (int i = 0; i < nexusGroups.Length; i++)
+		{
+			ATM_TERMINAL_ID += nexusGroups[i];
+		}
 		HookupToCreatorCodes();
 	}
 
@@ -153,30 +158,30 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 	{
 		foreach (CreatorCodeSmallDisplay smallDisplay in smallDisplays)
 		{
-			smallDisplay.SetCode(CreatorCodes.getCurrentCreatorCode("atm_terminal_id"));
+			smallDisplay.SetCode(CreatorCodes.getCurrentCreatorCode(ATM_TERMINAL_ID));
 		}
 		foreach (ATM_UI atmUI in atmUIs)
 		{
-			atmUI.creatorCodeField.text = CreatorCodes.getCurrentCreatorCode("atm_terminal_id");
+			atmUI.creatorCodeField.text = CreatorCodes.getCurrentCreatorCode(ATM_TERMINAL_ID);
 		}
 	}
 
 	public void OnCreatorCodeChanged(string id)
 	{
-		if (id != "atm_terminal_id")
+		if (id != ATM_TERMINAL_ID)
 		{
 			return;
 		}
 		foreach (CreatorCodeSmallDisplay smallDisplay in smallDisplays)
 		{
-			smallDisplay.SetCode(CreatorCodes.getCurrentCreatorCode("atm_terminal_id"));
+			smallDisplay.SetCode(CreatorCodes.getCurrentCreatorCode(ATM_TERMINAL_ID));
 		}
 		foreach (ATM_UI atmUI in atmUIs)
 		{
-			atmUI.creatorCodeField.text = CreatorCodes.getCurrentCreatorCode("atm_terminal_id");
+			atmUI.creatorCodeField.text = CreatorCodes.getCurrentCreatorCode(ATM_TERMINAL_ID);
 		}
 		string text = "CREATOR CODE:";
-		switch (CreatorCodes.getCurrentCreatorCodeStatus("atm_terminal_id"))
+		switch (CreatorCodes.getCurrentCreatorCodeStatus(ATM_TERMINAL_ID))
 		{
 		case CreatorCodes.CreatorCodeStatus.Valid:
 			text += " VALID";
@@ -193,7 +198,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 
 	private void OnOnCreatorCodeFailureEvent(string id)
 	{
-		if (id != "atm_terminal_id")
+		if (id != ATM_TERMINAL_ID)
 		{
 			return;
 		}
@@ -208,7 +213,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 
 	public void OnCreatorCodeInvalid(string id)
 	{
-		if (id != "atm_terminal_id")
+		if (id != ATM_TERMINAL_ID)
 		{
 			return;
 		}
@@ -236,7 +241,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 
 	public void PressButton(GorillaATMKeyBindings buttonPressed)
 	{
-		if (currentATMStage != ATMStages.Confirm || CreatorCodes.getCurrentCreatorCodeStatus("atm_terminal_id") == CreatorCodes.CreatorCodeStatus.Validating)
+		if (currentATMStage != ATMStages.Confirm || CreatorCodes.getCurrentCreatorCodeStatus(ATM_TERMINAL_ID) == CreatorCodes.CreatorCodeStatus.Validating)
 		{
 			return;
 		}
@@ -248,9 +253,10 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 		}
 		if (buttonPressed == GorillaATMKeyBindings.delete)
 		{
-			CreatorCodes.DeleteCharacter("atm_terminal_id");
+			CreatorCodes.DeleteCharacter(ATM_TERMINAL_ID);
 			return;
 		}
+		string aTM_TERMINAL_ID = ATM_TERMINAL_ID;
 		string input;
 		if (buttonPressed >= GorillaATMKeyBindings.delete)
 		{
@@ -261,7 +267,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 			int num = (int)buttonPressed;
 			input = num.ToString();
 		}
-		CreatorCodes.AppendKey("atm_terminal_id", input);
+		CreatorCodes.AppendKey(aTM_TERMINAL_ID, input);
 	}
 
 	public async void ProcessATMState(string currencyButton)
@@ -354,27 +360,23 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 				}
 				break;
 			}
-			if (CreatorCodes.getCurrentCreatorCodeStatus("atm_terminal_id") == CreatorCodes.CreatorCodeStatus.Empty)
+			if (CreatorCodes.getCurrentCreatorCodeStatus(ATM_TERMINAL_ID) == CreatorCodes.CreatorCodeStatus.Empty)
 			{
 				CosmeticsController.instance.SteamPurchase();
 				SwitchToStage(ATMStages.Purchasing);
 				break;
 			}
 			CreatorCodeValidating();
-			NexusManager.MemberCode memberCode = await CreatorCodes.CheckValidationCoroutineJIT("atm_terminal_id", CreatorCodes.getCurrentCreatorCode("atm_terminal_id"), nexusGroups);
+			NexusManager.MemberCode memberCode = await CreatorCodes.CheckValidationCoroutineJIT(ATM_TERMINAL_ID, CreatorCodes.getCurrentCreatorCode(ATM_TERMINAL_ID), nexusGroups);
 			if (memberCode != null)
 			{
 				SwitchToStage(ATMStages.Purchasing);
-				CosmeticsController.instance.SetValidatedCreatorCode(new NexusManager.MemberCode
-				{
-					memberCode = memberCode.memberCode,
-					groupId = memberCode.groupId
-				});
+				CosmeticsController.instance.SetValidatedCreatorCode(memberCode.memberCode, memberCode.groupId.Code, ATM_TERMINAL_ID);
 				CosmeticsController.instance.SteamPurchase();
 			}
 			else
 			{
-				OnCreatorCodeInvalid("atm_terminal_id");
+				OnCreatorCodeInvalid(ATM_TERMINAL_ID);
 			}
 			break;
 		}
@@ -390,7 +392,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 	public void AddATM(ATM_UI newATM)
 	{
 		atmUIs.Add(newATM);
-		newATM.creatorCodeField.text = CreatorCodes.getCurrentCreatorCode("atm_terminal_id");
+		newATM.creatorCodeField.text = CreatorCodes.getCurrentCreatorCode(ATM_TERMINAL_ID);
 		SwitchToStage(currentATMStage);
 	}
 
@@ -570,7 +572,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 				atmUI.atmText.text = "SUCCESS! NEW SHINY ROCKS BALANCE: " + (CosmeticsController.instance.CurrencyBalance + numShinyRocksToBuy);
 				LocalisationManager.TryGetKeyForCurrentLocale("ATM_SUCCESS_NEW_BALANCE", out result, atmUI.atmText.text);
 				atmUI.atmText.text = result + (CosmeticsController.instance.CurrencyBalance + numShinyRocksToBuy);
-				if (CreatorCodes.getCurrentCreatorCodeStatus("atm_terminal_id") == CreatorCodes.CreatorCodeStatus.Valid)
+				if (CreatorCodes.getCurrentCreatorCodeStatus(ATM_TERMINAL_ID) == CreatorCodes.CreatorCodeStatus.Valid)
 				{
 					string text = CreatorCodes.supportedMember.name;
 					if (!string.IsNullOrEmpty(text))
@@ -656,16 +658,16 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 	{
 		if (code == null)
 		{
-			CreatorCodes.ResetCreatorCode("atm_terminal_id");
-			CreatorCodes.AppendKey("atm_terminal_id", _tempCreatorCodeOveride);
+			CreatorCodes.ResetCreatorCode(ATM_TERMINAL_ID);
+			CreatorCodes.AppendKey(ATM_TERMINAL_ID, _tempCreatorCodeOveride);
 			_tempCreatorCodeOveride = null;
 			return;
 		}
 		if (_tempCreatorCodeOveride == null)
 		{
-			_tempCreatorCodeOveride = CreatorCodes.getCurrentCreatorCode("atm_terminal_id");
+			_tempCreatorCodeOveride = CreatorCodes.getCurrentCreatorCode(ATM_TERMINAL_ID);
 		}
-		CreatorCodes.ResetCreatorCode("atm_terminal_id");
-		CreatorCodes.AppendKey("atm_terminal_id", code);
+		CreatorCodes.ResetCreatorCode(ATM_TERMINAL_ID);
+		CreatorCodes.AppendKey(ATM_TERMINAL_ID, code);
 	}
 }

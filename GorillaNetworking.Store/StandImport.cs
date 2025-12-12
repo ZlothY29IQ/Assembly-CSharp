@@ -8,6 +8,8 @@ public class StandImport
 {
 	public List<StandTypeData> standData = new List<StandTypeData>();
 
+	public Dictionary<string, StandTypeData> standKeyToDataDict = new Dictionary<string, StandTypeData>();
+
 	public void DecomposeFromTitleDataString(string data)
 	{
 		string[] array = data.Split("\\n");

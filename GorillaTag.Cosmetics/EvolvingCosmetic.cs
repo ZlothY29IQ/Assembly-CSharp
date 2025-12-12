@@ -319,4 +319,91 @@ public class EvolvingCosmetic : MonoBehaviour, ITickSystemTick
 			}
 		}
 	}
+
+	private void SetStage(int targetIndex)
+	{
+		if (stages == null || stages.Length == 0)
+		{
+			return;
+		}
+		if (enableLooping)
+		{
+			if (targetIndex < 0)
+			{
+				targetIndex = stages.Length - 1;
+			}
+			else if (targetIndex >= stages.Length)
+			{
+				targetIndex = 0;
+			}
+		}
+		else
+		{
+			targetIndex = Mathf.Clamp(targetIndex, 0, stages.Length - 1);
+		}
+		activeStageIndex = targetIndex;
+		activeStage = stages[targetIndex];
+		float num = 0f;
+		for (int i = 0; i < targetIndex; i++)
+		{
+			num += stages[i].Duration;
+		}
+		totalTimeOfPreviousStages = num;
+		totalElapsedTime = num + Mathf.Epsilon;
+		nextEventIndex = 0;
+		nextEvent = activeStage.GetEventOrNull(0);
+		if (activeStage.HasDuration)
+		{
+			TickSystem<object>.AddTickCallback(this);
+		}
+		else
+		{
+			TickSystem<object>.RemoveTickCallback(this);
+		}
+		int num2 = 0;
+		for (EvolutionStage.EventAtTime eventOrNull = activeStage.GetEventOrNull(num2); eventOrNull != null; eventOrNull = activeStage.GetEventOrNull(num2))
+		{
+			eventOrNull.onTimeReached?.Invoke();
+			num2++;
+		}
+		HandleStages();
+	}
+
+	private void RestartStageInternal()
+	{
+		SetStage(activeStageIndex);
+	}
+
+	public void IncrementStage()
+	{
+		SetStage(activeStageIndex + 1);
+	}
+
+	public void DecrementStage()
+	{
+		SetStage(activeStageIndex - 1);
+	}
+
+	public void JumpToFirstStage()
+	{
+		SetStage(0);
+	}
+
+	public void JumpToLastStage()
+	{
+		if (stages != null && stages.Length != 0)
+		{
+			SetStage(stages.Length - 1);
+		}
+	}
+
+	public void RestartCurrentStage()
+	{
+		RestartStageInternal();
+	}
+
+	public void JumpToStageIndex(int index)
+	{
+		SetStage(index);
+	}
 }

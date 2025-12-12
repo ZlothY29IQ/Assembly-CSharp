@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using GorillaTag;
 using GorillaTag.Cosmetics;
 using UnityEngine;
@@ -14,6 +15,9 @@ public class ThermalReceiver : MonoBehaviour, IDynamicFloat, IResettableItem
 
 	[Tooltip("Optional: Fire events if temperature goes below or above this threshold - Celsius")]
 	public float temperatureThreshold;
+
+	[Tooltip("Exclude these thermal sources from impacting this receiver")]
+	public List<ThermalSourceVolume> exclusionSources = new List<ThermalSourceVolume>();
 
 	[Space]
 	public UnityEvent OnAboveThreshold;

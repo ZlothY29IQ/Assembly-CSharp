@@ -33,6 +33,24 @@ public class ItemCheckout : MonoBehaviour
 
 	private int iterator;
 
+	public bool addOnEnable;
+
+	private void OnEnable()
+	{
+		if (addOnEnable)
+		{
+			CosmeticsController.instance.AddItemCheckout(this);
+		}
+	}
+
+	private void OnDisable()
+	{
+		if (addOnEnable)
+		{
+			CosmeticsController.instance.RemoveItemCheckout(this);
+		}
+	}
+
 	public void InitializeForCustomMap(CompositeTriggerEvents customMapTryOnArea, Scene customMapScene, bool useCustomCounterMesh = true)
 	{
 		checkoutCounterMesh?.SetActive(!useCustomCounterMesh);

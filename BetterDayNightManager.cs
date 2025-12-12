@@ -6,6 +6,14 @@ using UnityEngine;
 
 public class BetterDayNightManager : MonoBehaviour, IGorillaSliceableSimple, ITimeOfDaySystem
 {
+	public enum Season
+	{
+		Winter,
+		Spring,
+		Summer,
+		Fall
+	}
+
 	public enum WeatherType
 	{
 		None,
@@ -64,7 +72,11 @@ public class BetterDayNightManager : MonoBehaviour, IGorillaSliceableSimple, ITi
 
 	public float currentTimestep;
 
-	public double[] timeOfDayRange;
+	public Season currentSeason;
+
+	public double[] summerTimeOfDayRange;
+
+	public double[] winterTimeOfDayRange;
 
 	public double timeMultiplier;
 
@@ -178,6 +190,18 @@ public class BetterDayNightManager : MonoBehaviour, IGorillaSliceableSimple, ITi
 	private bool shouldRepopulate;
 
 	private Coroutine animatingLightFlash;
+
+	public double[] timeOfDayRange
+	{
+		get
+		{
+			if (currentSeason == Season.Winter)
+			{
+				return winterTimeOfDayRange;
+			}
+			return summerTimeOfDayRange;
+		}
+	}
 
 	public string currentTimeOfDay { get; private set; }
 

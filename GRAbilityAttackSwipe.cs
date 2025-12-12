@@ -20,6 +20,8 @@ public class GRAbilityAttackSwipe : GRAbilityBase
 
 	public float attackDuration;
 
+	public float coolDown;
+
 	public float attackMoveSpeed;
 
 	public List<AnimationData> animData;
@@ -54,9 +56,8 @@ public class GRAbilityAttackSwipe : GRAbilityBase
 		}
 	}
 
-	public override void Start()
+	protected override void OnStart()
 	{
-		base.Start();
 		if (animData.Count > 0)
 		{
 			lastAnimIndex = AbilityHelperFunctions.RandomRangeUnique(0, animData.Count, lastAnimIndex);
@@ -79,7 +80,7 @@ public class GRAbilityAttackSwipe : GRAbilityBase
 		state = State.Tell;
 	}
 
-	public override void Stop()
+	protected override void OnStop()
 	{
 		agent.SetIsPathing(isPathing: true, ignoreRigiBody: true);
 		agent.SetDisableNetworkSync(disable: false);
@@ -94,7 +95,7 @@ public class GRAbilityAttackSwipe : GRAbilityBase
 		return state == State.Done;
 	}
 
-	protected override void UpdateShared(float dt)
+	protected override void OnUpdateShared(float dt)
 	{
 		float num = (float)(Time.timeAsDouble - startTime);
 		switch (state)
@@ -165,5 +166,10 @@ public class GRAbilityAttackSwipe : GRAbilityBase
 	public string GetAnimName()
 	{
 		return animNameString;
+	}
+
+	public override bool IsCoolDownOver()
+	{
+		return IsCoolDownOver(coolDown);
 	}
 }

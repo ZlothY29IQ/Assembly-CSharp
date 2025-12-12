@@ -406,6 +406,21 @@ internal class PlayerCosmeticsSystem : MonoBehaviour, ITickSystemPre
 		rig.myBodyDockPositions.RefreshTransferrableItems();
 	}
 
+	public static void SetRigTemporarySpace(bool enteringSpace, RigContainer rigRef, IReadOnlyList<string> cosmeticIds)
+	{
+		rigRef.Rig.inTempCosmSpace = enteringSpace;
+		if (enteringSpace)
+		{
+			CosmeticsController.CosmeticSet currentWornSet = CosmeticsController.instance.currentWornSet;
+			CosmeticsController.instance.tempUnlockedSet.CopyItemsIntoEmpty(currentWornSet);
+			UnlockTemporaryCosmeticsForPlayer(rigRef, cosmeticIds);
+		}
+		else
+		{
+			LockTemporaryCosmeticsForPlayer(rigRef, cosmeticIds);
+		}
+	}
+
 	public static void UnlockTemporaryCosmeticsForPlayer(RigContainer rigRef)
 	{
 		UnlockTemporaryCosmeticsForPlayer(rigRef, TempUnlockCosmeticString);
@@ -421,7 +436,7 @@ internal class PlayerCosmeticsSystem : MonoBehaviour, ITickSystemPre
 		VRRig rig = rigRef.Rig;
 		foreach (string cosmeticId in cosmeticIds)
 		{
-			if (!rig.concatStringOfCosmeticsAllowed.Contains(cosmeticId) && rig.TemporaryCosmetics.Add(cosmeticId) && rig.isOfflineVRRig)
+			if (rig.TemporaryCosmetics.Add(cosmeticId) && rig.isOfflineVRRig && !rig.concatStringOfCosmeticsAllowed.Contains(cosmeticId))
 			{
 				CosmeticsController.instance.AddTempUnlockToWardrobe(cosmeticId);
 			}
@@ -518,6 +533,21 @@ internal class PlayerCosmeticsSystem : MonoBehaviour, ITickSystemPre
 			return false;
 		}
 		return true;
+	}
+
+	public static bool LocalIsTemporaryCosmetic(string cosmeticId)
+	{
+		VRRig rig = VRRigCache.Instance.localRig.Rig;
+		if (!rig.concatStringOfCosmeticsAllowed.Contains(cosmeticId))
+		{
+			return IsTemporaryCosmeticAllowed(rig, cosmeticId);
+		}
+		return false;
+	}
+
+	public static bool LocalPlayerInTemporaryCosmeticSpace()
+	{
+		return VRRigCache.Instance.localRig.Rig.inTempCosmSpace;
 	}
 
 	public static void StaticReset()

@@ -33,6 +33,8 @@ public class GREnemySummoner : MonoBehaviour, IGameEntityComponent, IGameEntityS
 
 	private GameAgent agent;
 
+	private GREnemy enemy;
+
 	public GRArmorEnemy armor;
 
 	public GRAttributes attributes;
@@ -145,6 +147,7 @@ public class GREnemySummoner : MonoBehaviour, IGameEntityComponent, IGameEntityS
 		GetComponentsInChildren(colliders);
 		agent = GetComponent<GameAgent>();
 		entity = GetComponent<GameEntity>();
+		enemy = GetComponent<GREnemy>();
 		if (armor != null)
 		{
 			armor.SetHp(0);
@@ -484,42 +487,42 @@ public class GREnemySummoner : MonoBehaviour, IGameEntityComponent, IGameEntityS
 		switch (currBehavior)
 		{
 		case Behavior.Idle:
-			abilityIdle.Update(dt);
+			abilityIdle.UpdateAuthority(dt);
 			break;
 		case Behavior.Stagger:
-			abilityStagger.Update(dt);
+			abilityStagger.UpdateAuthority(dt);
 			if (abilityStagger.IsDone())
 			{
 				SetBehavior(Behavior.Wander);
 			}
 			break;
 		case Behavior.Destroyed:
-			abilityDie.Update(dt);
+			abilityDie.UpdateAuthority(dt);
 			break;
 		case Behavior.Wander:
-			abilityWander.Update(dt);
+			abilityWander.UpdateAuthority(dt);
 			break;
 		case Behavior.Summon:
-			abilitySummon.Update(dt);
+			abilitySummon.UpdateAuthority(dt);
 			break;
 		case Behavior.KeepDistance:
-			abilityKeepDistance.Update(dt);
+			abilityKeepDistance.UpdateAuthority(dt);
 			break;
 		case Behavior.MoveToTarget:
-			abilityMoveToTarget.Update(dt);
+			abilityMoveToTarget.UpdateAuthority(dt);
 			break;
 		case Behavior.Investigate:
-			abilityInvestigate.Update(dt);
+			abilityInvestigate.UpdateAuthority(dt);
 			break;
 		case Behavior.Jump:
-			abilityJump.Update(dt);
+			abilityJump.UpdateAuthority(dt);
 			if (abilityJump.IsDone())
 			{
 				ChooseNewBehavior();
 			}
 			break;
 		case Behavior.Flashed:
-			abilityFlashed.Update(dt);
+			abilityFlashed.UpdateAuthority(dt);
 			if (abilityFlashed.IsDone())
 			{
 				ChooseNewBehavior();

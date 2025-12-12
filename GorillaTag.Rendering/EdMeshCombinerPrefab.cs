@@ -636,6 +636,12 @@ public class EdMeshCombinerPrefab : MonoBehaviour
 					component4.enabled = false;
 					combinedPrefabData.disabled.Add(component4);
 				}
+				SkinnedMeshRenderer component5 = item9.GetComponent<SkinnedMeshRenderer>();
+				if (component5 != null)
+				{
+					component5.enabled = false;
+					combinedPrefabData.disabled.Add(component5);
+				}
 			}
 		}
 	}

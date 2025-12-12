@@ -45,11 +45,14 @@ public class ThermalManager : MonoBehaviour, IGorillaSliceableSimple
 			for (int j = 0; j < sources.Count; j++)
 			{
 				ThermalSourceVolume thermalSourceVolume = sources[j];
-				Transform obj2 = thermalSourceVolume.transform;
-				float x2 = obj2.lossyScale.x;
-				float num3 = Vector3.Distance(obj2.position, position);
-				float num4 = 1f - Mathf.InverseLerp(thermalSourceVolume.innerRadius * x2, thermalSourceVolume.outerRadius * x2, num3 - thermalReceiver.radius * x);
-				num2 += thermalSourceVolume.celsius * num4;
+				if ((thermalSourceVolume.exclusionReceivers.Count <= 0 || !thermalSourceVolume.exclusionReceivers.Contains(thermalReceiver)) && (thermalReceiver.exclusionSources.Count <= 0 || !thermalReceiver.exclusionSources.Contains(thermalSourceVolume)))
+				{
+					Transform obj2 = thermalSourceVolume.transform;
+					float x2 = obj2.lossyScale.x;
+					float num3 = Vector3.Distance(obj2.position, position);
+					float num4 = 1f - Mathf.InverseLerp(thermalSourceVolume.innerRadius * x2, thermalSourceVolume.outerRadius * x2, num3 - thermalReceiver.radius * x);
+					num2 += thermalSourceVolume.celsius * num4;
+				}
 			}
 			thermalReceiver.celsius = Mathf.Lerp(thermalReceiver.celsius, num2, num * thermalReceiver.conductivity);
 			thermalReceiver.continuousProperties?.ApplyAll(thermalReceiver.celsius);

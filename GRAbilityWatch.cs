@@ -24,21 +24,20 @@ public class GRAbilityWatch : GRAbilityBase
 		target = null;
 	}
 
-	public override void Start()
+	protected override void OnStart()
 	{
-		base.Start();
 		PlayAnim(animName, 0.1f, animSpeed);
 		endTime = -1.0;
 		if (duration > 0f)
 		{
 			endTime = Time.timeAsDouble + (double)duration;
 		}
-		agent.navAgent.isStopped = true;
+		agent.SetStopped(stopMovement: true);
 	}
 
-	public override void Stop()
+	protected override void OnStop()
 	{
-		agent.navAgent.isStopped = false;
+		agent.SetStopped(stopMovement: false);
 	}
 
 	public override bool IsDone()
@@ -50,7 +49,7 @@ public class GRAbilityWatch : GRAbilityBase
 		return false;
 	}
 
-	protected override void UpdateShared(float dt)
+	protected override void OnUpdateShared(float dt)
 	{
 		GameAgent.UpdateFacingTarget(root, agent.navAgent, target, maxTurnSpeed);
 	}

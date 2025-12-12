@@ -56,18 +56,16 @@ public class GRAbilityChase : GRAbilityBase
 		}
 	}
 
-	public override void Start()
+	protected override void OnStart()
 	{
-		base.Start();
 		PlayAnim(animName, 0.1f, animSpeed);
-		agent.navAgent.speed = chaseSpeed;
+		agent.SetSpeed(chaseSpeed);
 		lastSeenTargetTime = Time.timeAsDouble;
 		movementSound.Play(null);
 	}
 
-	public override void Stop()
+	protected override void OnStop()
 	{
-		base.Stop();
 	}
 
 	public override bool IsDone()
@@ -79,7 +77,7 @@ public class GRAbilityChase : GRAbilityBase
 		return true;
 	}
 
-	public override void Think(float dt)
+	protected override void OnThink(float dt)
 	{
 		GRPlayer gRPlayer = GRPlayer.Get(targetPlayer);
 		if (gRPlayer != null && gRPlayer.State == GRPlayer.GRPlayerState.Alive)
@@ -98,7 +96,7 @@ public class GRAbilityChase : GRAbilityBase
 		agent.RequestDestination(lastSeenTargetPosition);
 	}
 
-	protected override void UpdateShared(float dt)
+	protected override void OnUpdateShared(float dt)
 	{
 		GameAgent.UpdateFacing(root, agent.navAgent, targetPlayer, maxTurnSpeed);
 	}

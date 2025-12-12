@@ -23,9 +23,8 @@ public class GRAbilityFlashed : GRAbilityBase
 		stunTime = time;
 	}
 
-	public override void Start()
+	protected override void OnStart()
 	{
-		base.Start();
 		if (flashAnimations.Count > 0)
 		{
 			flashAnimationIndex = AbilityHelperFunctions.RandomRangeUnique(0, flashAnimations.Count, flashAnimationIndex);
@@ -41,7 +40,7 @@ public class GRAbilityFlashed : GRAbilityBase
 		agent.SetDisableNetworkSync(disable: true);
 	}
 
-	public override void Stop()
+	protected override void OnStop()
 	{
 		agent.SetIsPathing(isPathing: true, ignoreRigiBody: true);
 		agent.SetDisableNetworkSync(disable: false);

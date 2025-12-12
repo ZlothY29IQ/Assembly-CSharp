@@ -99,6 +99,10 @@ public class GameAgent : MonoBehaviour, IGameEntityComponent
 
 	public void OnUpdate()
 	{
+		if (navAgent == null)
+		{
+			return;
+		}
 		if (navAgent.isOnNavMesh)
 		{
 			lastPosOnNavMesh = navAgent.transform.position;
@@ -187,7 +191,7 @@ public class GameAgent : MonoBehaviour, IGameEntityComponent
 			dest = hit.position;
 			lastReceivedDest = dest;
 			hasNotifiedNavigationFailure = false;
-			if (navAgent.isOnNavMesh)
+			if (navAgent != null && navAgent.isOnNavMesh)
 			{
 				navAgent.destination = dest;
 			}
@@ -201,23 +205,45 @@ public class GameAgent : MonoBehaviour, IGameEntityComponent
 
 	public void SetIsPathing(bool isPathing, bool ignoreRigiBody = false)
 	{
-		navAgent.enabled = isPathing;
+		if (navAgent != null)
+		{
+			navAgent.enabled = isPathing;
+		}
 		if (!ignoreRigiBody && rigidBody != null)
 		{
 			rigidBody.isKinematic = isPathing;
 		}
 	}
 
+	public void SetStopped(bool stopMovement)
+	{
+		if (navAgent != null)
+		{
+			navAgent.isStopped = stopMovement;
+		}
+	}
+
 	public void SetSpeed(float speed)
 	{
-		navAgent.speed = speed;
+		if (navAgent != null)
+		{
+			navAgent.speed = speed;
+		}
+	}
+
+	public void SetVelocity(Vector3 vel)
+	{
+		if (navAgent != null)
+		{
+			navAgent.velocity = vel;
+		}
 	}
 
 	public void ApplyNetworkUpdate(Vector3 position, Quaternion rotation)
 	{
 		if (!disableNetworkSync)
 		{
-			if ((base.transform.position - position).sqrMagnitude > networkPositionCorrectionDist * networkPositionCorrectionDist)
+			if ((base.transform.position - position).sqrMagnitude > networkPositionCorrectionDist * networkPositionCorrectionDist && navAgent != null)
 			{
 				navAgent.Warp(position);
 				navAgent.destination = lastReceivedDest;
@@ -262,16 +288,16 @@ public class GameAgent : MonoBehaviour, IGameEntityComponent
 		}
 		else
 		{
-			Vector3 desiredVelocity = navAgent.desiredVelocity;
-			desiredVelocity.y = 0f;
-			float magnitude2 = desiredVelocity.magnitude;
+			Vector3 vector2 = ((navAgent == null) ? Vector3.zero : navAgent.desiredVelocity);
+			vector2.y = 0f;
+			float magnitude2 = vector2.magnitude;
 			if (magnitude2 > 0f)
 			{
-				forward = desiredVelocity / magnitude2;
+				forward = vector2 / magnitude2;
 			}
 		}
 		Quaternion b = Quaternion.LookRotation(forward);
-		if (navAgent.speed > 0f)
+		if (navAgent != null && navAgent.speed > 0f)
 		{
 			transform.rotation = Quaternion.Lerp(transform.rotation, b, Mathf.Clamp(turnspeed * navAgent.speed / Quaternion.Angle(transform.rotation, b) * Time.deltaTime, 0f, 1f));
 		}
@@ -283,12 +309,12 @@ public class GameAgent : MonoBehaviour, IGameEntityComponent
 
 	public static void UpdateFacingForward(Transform transform, NavMeshAgent navAgent, float turnspeed = 3600f)
 	{
-		Vector3 desiredVelocity = navAgent.desiredVelocity;
-		desiredVelocity.y = 0f;
-		float magnitude = desiredVelocity.magnitude;
+		Vector3 vector = ((navAgent == null) ? Vector3.zero : navAgent.desiredVelocity);
+		vector.y = 0f;
+		float magnitude = vector.magnitude;
 		if (!(magnitude <= 0f))
 		{
-			Vector3 facingDir = desiredVelocity / magnitude;
+			Vector3 facingDir = vector / magnitude;
 			UpdateFacingDir(transform, navAgent, facingDir, turnspeed);
 		}
 	}
@@ -303,7 +329,8 @@ public class GameAgent : MonoBehaviour, IGameEntityComponent
 
 	public static void UpdateFacingDir(Transform transform, NavMeshAgent navAgent, Vector3 facingDir, float turnspeed = 3600f)
 	{
+		float num = ((navAgent == null) ? 0f : navAgent.speed);
 		Quaternion b = Quaternion.LookRotation(facingDir);
-		transform.rotation = Quaternion.Lerp(transform.rotation, b, Mathf.Clamp(turnspeed * navAgent.speed / Quaternion.Angle(transform.rotation, b) * Time.deltaTime, 0f, 1f));
+		transform.rotation = Quaternion.Lerp(transform.rotation, b, Mathf.Clamp(turnspeed * num / Quaternion.Angle(transform.rotation, b) * Time.deltaTime, 0f, 1f));
 	}
 }

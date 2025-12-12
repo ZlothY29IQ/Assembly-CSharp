@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 public static class MaterialUtils
 {
@@ -9,16 +11,20 @@ public static class MaterialUtils
 
 	public static void SwapMaterial(MeshAndMaterials meshAndMaterial, bool isOnToOff)
 	{
-		Material[] sharedMaterials = meshAndMaterial.meshRenderer.sharedMaterials;
-		for (int i = 0; i < sharedMaterials.Length; i++)
+		List<Material> value;
+		using (ListPool<Material>.Get(out value))
 		{
-			string trimmedMaterialName = GetTrimmedMaterialName(sharedMaterials[i]);
-			string text = ((!isOnToOff) ? ((meshAndMaterial.offMaterial != null) ? GetTrimmedMaterialName(meshAndMaterial.offMaterial) : null) : ((meshAndMaterial.onMaterial != null) ? GetTrimmedMaterialName(meshAndMaterial.onMaterial) : null));
-			if (text != null && trimmedMaterialName == text)
+			meshAndMaterial.meshRenderer.GetSharedMaterials(value);
+			for (int i = 0; i < value.Count; i++)
 			{
-				sharedMaterials[i] = (isOnToOff ? meshAndMaterial.offMaterial : meshAndMaterial.onMaterial);
+				string trimmedMaterialName = GetTrimmedMaterialName(value[i]);
+				string text = ((!isOnToOff) ? ((meshAndMaterial.offMaterial != null) ? GetTrimmedMaterialName(meshAndMaterial.offMaterial) : null) : ((meshAndMaterial.onMaterial != null) ? GetTrimmedMaterialName(meshAndMaterial.onMaterial) : null));
+				if (text != null && trimmedMaterialName == text)
+				{
+					value[i] = (isOnToOff ? meshAndMaterial.offMaterial : meshAndMaterial.onMaterial);
+				}
 			}
+			meshAndMaterial.meshRenderer.SetSharedMaterials(value);
 		}
-		meshAndMaterial.meshRenderer.sharedMaterials = sharedMaterials;
 	}
 }

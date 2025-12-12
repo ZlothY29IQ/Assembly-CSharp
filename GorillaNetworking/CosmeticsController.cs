@@ -193,6 +193,17 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 			}
 		}
 
+		public void CopyItemsIntoEmpty(CosmeticSet other)
+		{
+			for (int i = 0; i < items.Length; i++)
+			{
+				if (items[i].isNullItem)
+				{
+					items[i] = other.items[i];
+				}
+			}
+		}
+
 		public void MergeSets(CosmeticSet tryOn, CosmeticSet current)
 		{
 			for (int i = 0; i < 16; i++)
@@ -213,6 +224,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 			int num = 16;
 			for (int i = 0; i < num; i++)
 			{
+				_ = ref tempOverrideSet.items[i];
 				bool flag = predicate(tempOverrideSet.items[i].itemName);
 				items[i] = (flag ? tempOverrideSet.items[i] : playerPref.items[i]);
 			}
@@ -701,6 +713,15 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		public Dictionary<string, string> customTags;
 	}
 
+	private class ValidatedCreatorCode
+	{
+		public string terminalId { get; set; }
+
+		public string memberCode { get; set; }
+
+		public string groupId { get; set; }
+	}
+
 	public enum EWearingCosmeticSet
 	{
 		NotASet,
@@ -746,6 +767,8 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 
 	[OnEnterPlay_SetNull]
 	public static volatile CosmeticsController instance;
+
+	public static Action<string, string> PushTerminalMessage;
 
 	public Action V2_OnGetCosmeticsPlayFabCatalogData_PostSuccess;
 
@@ -922,7 +945,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 
 	private bool checkoutCartButtonPressedWithLeft;
 
-	private NexusManager.MemberCode validatedCreatorCode;
+	private ValidatedCreatorCode validatedCreatorCode;
 
 	private Callback<MicroTxnAuthorizationResponse_t> _steamMicroTransactionAuthorizationResponse;
 
@@ -1310,7 +1333,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 
 	public void RemoveItemCheckout(ItemCheckout checkoutToRemove)
 	{
-		itemCheckouts.Remove(checkoutToRemove);
+		itemCheckouts.RemoveIfContains(checkoutToRemove);
 	}
 
 	public void AddFittingRoom(FittingRoom newFittingRoom)
@@ -1324,7 +1347,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 
 	public void RemoveFittingRoom(FittingRoom fittingRoomToRemove)
 	{
-		fittingRooms.Remove(fittingRoomToRemove);
+		fittingRooms.RemoveIfContains(fittingRoomToRemove);
 	}
 
 	private void SaveItemPreference(CosmeticSlots slot, int slotIdx, CosmeticItem newItem)
@@ -1836,7 +1859,11 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		NexusManager.MemberCode memberCode = await CreatorCodes.CheckValidationCoroutineJIT(ccp.TerminalId, code, groups);
 		if (memberCode != null)
 		{
-			OnCreatorCodeValid(memberCode.groupId, memberCode.memberCode);
+			if (buyingBundle)
+			{
+				SetValidatedCreatorCode(memberCode.memberCode, memberCode.groupId.Code, ccp.TerminalId);
+				SteamPurchase();
+			}
 		}
 		else
 		{
@@ -1847,19 +1874,6 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 	private void OnCreatorCodeFailure()
 	{
 		buyingBundle = false;
-	}
-
-	private void OnCreatorCodeValid(NexusGroupId id, string creatorCode)
-	{
-		if (buyingBundle)
-		{
-			SetValidatedCreatorCode(new NexusManager.MemberCode
-			{
-				memberCode = creatorCode,
-				groupId = id
-			});
-			SteamPurchase();
-		}
 	}
 
 	public void PressEarlyAccessButton()
@@ -2354,7 +2368,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 	public void UpdateWornCosmetics(bool sync, bool playfx)
 	{
 		VRRig localRig = VRRig.LocalRig;
-		activeMergedSet.MergeInSets(currentWornSet, tempUnlockedSet, (string id) => PlayerCosmeticsSystem.IsTemporaryCosmeticAllowed(localRig, id));
+		activeMergedSet.MergeInSets(currentWornSet, tempUnlockedSet, (string id) => PlayerCosmeticsSystem.LocalPlayerInTemporaryCosmeticSpace() || PlayerCosmeticsSystem.IsTemporaryCosmeticAllowed(localRig, id));
 		GorillaTagger.Instance.offlineVRRig.LocalUpdateCosmeticsWithTryon(activeMergedSet, tryOnSet, playfx);
 		if (sync && GorillaTagger.Instance.myVRRig != null)
 		{
@@ -2972,8 +2986,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		if (validatedCreatorCode != null)
 		{
 			dictionary.Add("NexusCreatorId", validatedCreatorCode.memberCode);
-			dictionary.Add("NexusGroupId", validatedCreatorCode.groupId.Code);
-			validatedCreatorCode = null;
+			dictionary.Add("NexusGroupId", validatedCreatorCode.groupId);
 		}
 		return new ConfirmPurchaseRequest
 		{
@@ -2998,8 +3011,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		if (validatedCreatorCode != null)
 		{
 			dictionary.Add("NexusCreatorId", validatedCreatorCode.memberCode);
-			dictionary.Add("NexusGroupId", validatedCreatorCode.groupId.Code);
-			validatedCreatorCode = null;
+			dictionary.Add("NexusGroupId", validatedCreatorCode.groupId);
 		}
 		return new ConfirmPurchaseRequest
 		{
@@ -3012,6 +3024,10 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 	{
 		if (buyingBundle)
 		{
+			if (validatedCreatorCode != null && PushTerminalMessage != null)
+			{
+				PushTerminalMessage(validatedCreatorCode.terminalId, "THIS PURCHASE SUPPORTED\n" + CreatorCodes.supportedMember.name + "!");
+			}
 			buyingBundle = false;
 			if (PhotonNetwork.InRoom)
 			{
@@ -3480,9 +3496,12 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		return packed.Length == num + 1;
 	}
 
-	public void SetValidatedCreatorCode(NexusManager.MemberCode memberCode)
+	public void SetValidatedCreatorCode(string memberCode, string groupCode, string terminalId)
 	{
-		validatedCreatorCode = memberCode;
+		validatedCreatorCode = new ValidatedCreatorCode();
+		validatedCreatorCode.memberCode = memberCode;
+		validatedCreatorCode.groupId = groupCode;
+		validatedCreatorCode.terminalId = terminalId;
 	}
 
 	public static bool CanScrollOutfits()

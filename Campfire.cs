@@ -72,6 +72,8 @@ public class Campfire : MonoBehaviour, IGorillaSliceableSimple
 
 	private float lastTime;
 
+	public bool playDuringRain;
+
 	private void Start()
 	{
 		lastAngleBottom = 0f;
@@ -107,7 +109,7 @@ public class Campfire : MonoBehaviour, IGorillaSliceableSimple
 		{
 			return;
 		}
-		if ((isActive[BetterDayNightManager.instance.currentTimeIndex] && BetterDayNightManager.instance.CurrentWeather() != BetterDayNightManager.WeatherType.Raining) || overrideDayNight == 1)
+		if ((isActive[BetterDayNightManager.instance.currentTimeIndex] && (playDuringRain || BetterDayNightManager.instance.CurrentWeather() != BetterDayNightManager.WeatherType.Raining)) || overrideDayNight == 1)
 		{
 			if (!wasActive)
 			{

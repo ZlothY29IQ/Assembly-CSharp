@@ -27,15 +27,14 @@ public class GRAbilityWander : GRAbilityBase
 		moveAbility.Setup(agent, anim, audioSource, root, head, lineOfSight);
 	}
 
-	public override void Start()
+	protected override void OnStart()
 	{
-		base.Start();
 		moveAbility.Start();
 		Vector3 targetPos = PickRandomDestination();
 		moveAbility.SetTargetPos(targetPos);
 	}
 
-	public override void Stop()
+	protected override void OnStop()
 	{
 		moveAbility.Stop();
 	}
@@ -45,7 +44,7 @@ public class GRAbilityWander : GRAbilityBase
 		return false;
 	}
 
-	public override void Think(float dt)
+	protected override void OnThink(float dt)
 	{
 		if (moveAbility.IsDone())
 		{
@@ -86,8 +85,13 @@ public class GRAbilityWander : GRAbilityBase
 		return position;
 	}
 
-	protected override void UpdateShared(float dt)
+	protected override void OnUpdateAuthority(float dt)
 	{
-		moveAbility.Update(dt);
+		moveAbility.UpdateAuthority(dt);
+	}
+
+	protected override void OnUpdateRemote(float dt)
+	{
+		moveAbility.UpdateRemote(dt);
 	}
 }

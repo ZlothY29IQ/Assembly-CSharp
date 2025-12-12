@@ -82,6 +82,8 @@ public class LckSocialCamera : NetworkComponent, IGorillaSliceableSimple
 		}
 	}
 
+	public VRRig VrRig => _vrrig;
+
 	public LCKSocialCameraFollower SocialCameraFollower { get; private set; }
 
 	public bool IsOnNeck
@@ -303,9 +305,24 @@ public class LckSocialCamera : NetworkComponent, IGorillaSliceableSimple
 
 	public void SliceUpdate()
 	{
-		if (!_vrrig.IsNull())
+		if (_vrrig.IsNull())
 		{
-			CameraVisuals.transform.localScale = Vector3.one * _vrrig.scaleFactor;
+			return;
+		}
+		if (m_cameraType == CameraType.Tablet)
+		{
+			if (IsOnNeck)
+			{
+				SocialCameraFollower.transform.localScale = Vector3.one * 0.3f;
+			}
+			else
+			{
+				SocialCameraFollower.transform.localScale = Vector3.one * 0.3f * _vrrig.scaleFactor;
+			}
+		}
+		else if (m_cameraType == CameraType.Cococam)
+		{
+			SocialCameraFollower.transform.localScale = Vector3.one * _vrrig.scaleFactor;
 		}
 	}
 

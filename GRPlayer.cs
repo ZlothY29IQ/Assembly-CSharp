@@ -345,6 +345,10 @@ public class GRPlayer : MonoBehaviourTick
 
 	private Vector3 lastPlayerPosition = Vector3.zero;
 
+	private bool saveEquipmentInProgress;
+
+	private bool hasPulledEquipment;
+
 	public int dropPodLevel;
 
 	public int dropPodChasisLevel;
@@ -551,10 +555,19 @@ public class GRPlayer : MonoBehaviourTick
 		}
 	}
 
-	public void OnPlayerHit(Vector3 hitPosition, GhostReactorManager manager, GameEntityId hitByEntityId)
+	public void OnPlayerHit(Vector3 hitPosition, Vector3 hitImpulse, GhostReactorManager manager, GameEntityId hitByEntityId)
 	{
 		GameEntity gameEntity = manager.gameEntityManager.GetGameEntity(hitByEntityId);
 		int num = 1;
+		if (gamePlayer.IsLocal())
+		{
+			GTPlayer instance = GTPlayer.Instance;
+			float magnitude = hitImpulse.magnitude;
+			if (magnitude > 0f)
+			{
+				instance.ApplyKnockback(hitImpulse / magnitude, magnitude, forceOffTheGround: true);
+			}
+		}
 		if (State != 0)
 		{
 			return;
@@ -1351,6 +1364,85 @@ public class GRPlayer : MonoBehaviourTick
 		{
 			synchronizedSessionStats[i] = 0f;
 		}
+	}
+
+	private void RequestSetMothershipUserData(string keyName, string value)
+	{
+		if (saveEquipmentInProgress)
+		{
+			Debug.LogError("SharedBlocksManager RequestSetMothershipUserData: request already in progress");
+			return;
+		}
+		saveEquipmentInProgress = true;
+		try
+		{
+			if (!MothershipClientApiUnity.SetUserDataValue(keyName, value, OnSetMothershipUserDataSuccess, OnSetMothershipUserDataFail))
+			{
+				Debug.LogError("SharedBlocksManager RequestSetMothershipUserData: SetUserDataValue Fail");
+				OnSetMothershipDataComplete(success: false);
+			}
+		}
+		catch (Exception ex)
+		{
+			Debug.LogError("SharedBlocksManager RequestSetMothershipUserData: exception " + ex.Message);
+			OnSetMothershipDataComplete(success: false);
+		}
+	}
+
+	private void OnSetMothershipUserDataSuccess(SetUserDataResponse response)
+	{
+		GTDev.Log("GRPlayer OnSetMothershipUserDataSuccess");
+		OnSetMothershipDataComplete(success: true);
+		response.Dispose();
+	}
+
+	private void OnSetMothershipUserDataFail(MothershipError error, int status)
+	{
+		string text = ((error == null) ? status.ToString() : error.Message);
+		GTDev.LogError("GRPlayer OnSetMothershipUserDataFail: " + text);
+		OnSetMothershipDataComplete(success: false);
+		error?.Dispose();
+	}
+
+	private void OnSetMothershipDataComplete(bool success)
+	{
+		saveEquipmentInProgress = false;
+	}
+
+	public void RequestFetchMothershipUserData(string key)
+	{
+		if (hasPulledEquipment)
+		{
+			return;
+		}
+		try
+		{
+			if (!MothershipClientApiUnity.GetUserDataValue(key, OnGetMothershipFetchUserDataSuccess, OnGetMothershipFetchUserDataFail))
+			{
+				Debug.LogError("GRPlayer RequestFetchMothershipUserData failed ");
+			}
+		}
+		catch (Exception ex)
+		{
+			Debug.LogError("GRPlayer RequestFetchMothershipUserData exception " + ex.Message);
+		}
+	}
+
+	private void OnGetMothershipFetchUserDataSuccess(MothershipUserData response)
+	{
+		GTDev.Log("GRPlayer OnGetMothershipFetchUserDataSuccess");
+		bool flag = response != null && response.value != null && response.value.Length > 0;
+		if (response != null)
+		{
+		}
+		response?.Dispose();
+	}
+
+	private void OnGetMothershipFetchUserDataFail(MothershipError error, int status)
+	{
+		string text = ((error == null) ? status.ToString() : error.Message);
+		GTDev.LogError("GRPlayer OnGetMothershipFetchUserDataFail: " + text);
+		error?.Dispose();
 	}
 
 	public bool IsDropPodUnlocked()

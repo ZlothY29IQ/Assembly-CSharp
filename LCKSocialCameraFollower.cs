@@ -26,8 +26,6 @@ public class LCKSocialCameraFollower : MonoBehaviour, ITickSystemTick
 
 	private IGtCameraVisuals m_gtCameraVisuals;
 
-	private Vector3 _initialScale = Vector3.one;
-
 	private bool isParentedToRig;
 
 	public Transform ScaleTransform => _scaleTransform;
@@ -40,7 +38,6 @@ public class LCKSocialCameraFollower : MonoBehaviour, ITickSystemTick
 
 	private void Awake()
 	{
-		_initialScale = base.transform.localScale;
 		m_gtCameraVisuals = _cameraVisualsRoot.GetComponent<IGtCameraVisuals>();
 		if (m_rigContainer.Rig.isOfflineVRRig)
 		{
@@ -65,14 +62,12 @@ public class LCKSocialCameraFollower : MonoBehaviour, ITickSystemTick
 		base.transform.parent = m_rigContainer.transform;
 		base.transform.localPosition = new Vector3(0f, -0.2f, 0.132f);
 		base.transform.localRotation = Quaternion.identity;
-		base.transform.localScale = _initialScale * 0.3f;
 	}
 
 	public void SetParentNull()
 	{
 		isParentedToRig = false;
 		base.transform.parent = null;
-		base.transform.localScale = _initialScale;
 	}
 
 	private void PostRigEnable(RigContainer _)

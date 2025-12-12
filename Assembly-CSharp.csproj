@@ -68,6 +68,9 @@
     <Reference Include="AstarPathfindingProject">
       <HintPath>..\..\..\..\Program Files (x86)\Steam\steamapps\common\Gorilla Tag\Gorilla Tag_Data\Managed\AstarPathfindingProject.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.VideoModule">
+      <HintPath>..\..\..\..\Program Files (x86)\Steam\steamapps\common\Gorilla Tag\Gorilla Tag_Data\Managed\UnityEngine.VideoModule.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine.DirectorModule">
       <HintPath>..\..\..\..\Program Files (x86)\Steam\steamapps\common\Gorilla Tag\Gorilla Tag_Data\Managed\UnityEngine.DirectorModule.dll</HintPath>
     </Reference>
@@ -119,14 +122,14 @@
     <Reference Include="Unity.Burst">
       <HintPath>..\..\..\..\Program Files (x86)\Steam\steamapps\common\Gorilla Tag\Gorilla Tag_Data\Managed\Unity.Burst.dll</HintPath>
     </Reference>
+    <Reference Include="LIV.LCKCore">
+      <HintPath>..\..\..\..\Program Files (x86)\Steam\steamapps\common\Gorilla Tag\Gorilla Tag_Data\Managed\LIV.LCKCore.dll</HintPath>
+    </Reference>
     <Reference Include="LIV.LCK">
       <HintPath>..\..\..\..\Program Files (x86)\Steam\steamapps\common\Gorilla Tag\Gorilla Tag_Data\Managed\LIV.LCK.dll</HintPath>
     </Reference>
     <Reference Include="LIV.LCK_GorillaTag">
       <HintPath>..\..\..\..\Program Files (x86)\Steam\steamapps\common\Gorilla Tag\Gorilla Tag_Data\Managed\LIV.LCK_GorillaTag.dll</HintPath>
-    </Reference>
-    <Reference Include="LIV.LCKCore">
-      <HintPath>..\..\..\..\Program Files (x86)\Steam\steamapps\common\Gorilla Tag\Gorilla Tag_Data\Managed\LIV.LCKCore.dll</HintPath>
     </Reference>
     <Reference Include="Fusion.Unity">
       <HintPath>..\..\..\..\Program Files (x86)\Steam\steamapps\common\Gorilla Tag\Gorilla Tag_Data\Managed\Fusion.Unity.dll</HintPath>
@@ -229,9 +232,6 @@
     </Reference>
     <Reference Include="BakeryRuntimeAssembly">
       <HintPath>..\..\..\..\Program Files (x86)\Steam\steamapps\common\Gorilla Tag\Gorilla Tag_Data\Managed\BakeryRuntimeAssembly.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.VideoModule">
-      <HintPath>..\..\..\..\Program Files (x86)\Steam\steamapps\common\Gorilla Tag\Gorilla Tag_Data\Managed\UnityEngine.VideoModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.TerrainModule">
       <HintPath>..\..\..\..\Program Files (x86)\Steam\steamapps\common\Gorilla Tag\Gorilla Tag_Data\Managed\UnityEngine.TerrainModule.dll</HintPath>

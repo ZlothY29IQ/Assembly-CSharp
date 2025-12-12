@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using GorillaLocomotion;
 using GorillaNetworking;
+using Unity.Profiling;
 using UnityEngine;
 
 public class GorillaFriendCollider : MonoBehaviour, IGorillaSliceableSimple
@@ -41,6 +42,8 @@ public class GorillaFriendCollider : MonoBehaviour, IGorillaSliceableSimple
 
 	private float _nextUpdateTime = -1f;
 
+	private static readonly ProfilerMarker profiler_SliceUpdate = new ProfilerMarker("GT/FriendCollider.SliceUpdate");
+
 	public void Awake()
 	{
 		thisCapsule = GetComponent<CapsuleCollider>();
@@ -69,17 +72,20 @@ public class GorillaFriendCollider : MonoBehaviour, IGorillaSliceableSimple
 
 	public void SliceUpdate()
 	{
-		float time = Time.time;
-		if (_nextUpdateTime < 0f)
+		using (profiler_SliceUpdate.Auto())
 		{
-			_nextUpdateTime = time + 1f + jiggleAmount;
-		}
-		else if (!(time < _nextUpdateTime))
-		{
-			_nextUpdateTime = time + 1f;
-			if (NetworkSystem.Instance.InRoom || runCheckWhileNotInRoom)
+			float time = Time.time;
+			if (_nextUpdateTime < 0f)
 			{
-				RefreshPlayersInSphere();
+				_nextUpdateTime = time + 1f + jiggleAmount;
+			}
+			else if (!(time < _nextUpdateTime))
+			{
+				_nextUpdateTime = time + 1f;
+				if (NetworkSystem.Instance.InRoom || runCheckWhileNotInRoom)
+				{
+					RefreshPlayersInSphere();
+				}
 			}
 		}
 	}

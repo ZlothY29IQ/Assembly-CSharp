@@ -1,4 +1,3 @@
-using System.Collections;
 using UnityEngine;
 
 public class TimeOfDayDependentAudio : MonoBehaviour, IGorillaSliceableSimple, IBuildValidation
@@ -23,10 +22,6 @@ public class TimeOfDayDependentAudio : MonoBehaviour, IGorillaSliceableSimple, I
 
 	private float startingEmissionRate;
 
-	private int lastEmission;
-
-	private int nextEmission;
-
 	private ParticleSystem.MinMaxCurve newCurve;
 
 	private ParticleSystem.EmissionModule myEmissionModule;
@@ -47,145 +42,109 @@ public class TimeOfDayDependentAudio : MonoBehaviour, IGorillaSliceableSimple, I
 			myEmissionModule = myParticleSystem.emission;
 			startingEmissionRate = myEmissionModule.rateOverTime.constant;
 		}
-	}
-
-	public void OnDisable()
-	{
-		GorillaSlicerSimpleManager.UnregisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.FixedUpdate);
-		StopAllCoroutines();
+		if (isModified)
+		{
+			positionMultiplier = positionMultiplierSet;
+		}
+		else
+		{
+			positionMultiplier = 1f;
+		}
 	}
 
 	public void OnEnable()
 	{
 		GorillaSlicerSimpleManager.RegisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.FixedUpdate);
-		StartCoroutine(UpdateTimeOfDay());
+	}
+
+	public void OnDisable()
+	{
+		GorillaSlicerSimpleManager.UnregisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.FixedUpdate);
 	}
 
 	public void SliceUpdate()
 	{
 		isModified = false;
+		UpdateTimeOfDay();
 	}
 
-	private IEnumerator UpdateTimeOfDay()
+	private void UpdateTimeOfDay()
 	{
-		yield return 0;
-		while (true)
+		if (BetterDayNightManager.instance == null)
 		{
-			if (BetterDayNightManager.instance != null)
+			return;
+		}
+		BetterDayNightManager.WeatherType weatherType = BetterDayNightManager.instance.CurrentWeather();
+		BetterDayNightManager.WeatherType weatherType2 = BetterDayNightManager.instance.NextWeather();
+		bool num = myWeather == BetterDayNightManager.WeatherType.All || myWeather == weatherType || myWeather == weatherType2;
+		bool flag = myWeather != BetterDayNightManager.WeatherType.All && weatherType != weatherType2;
+		int currentTimeIndex = BetterDayNightManager.instance.currentTimeIndex;
+		int num2 = (currentTimeIndex + 1) % BetterDayNightManager.instance.timeOfDayRange.Length;
+		int num3 = (currentTimeIndex - 1) % BetterDayNightManager.instance.timeOfDayRange.Length;
+		if (num3 < 0)
+		{
+			num3 = BetterDayNightManager.instance.timeOfDayRange.Length - 1;
+		}
+		float currentLerp = BetterDayNightManager.instance.currentLerp;
+		if (!num)
+		{
+			if (dependentStuff.activeSelf)
 			{
-				if (isModified)
-				{
-					positionMultiplier = positionMultiplierSet;
-				}
-				else
-				{
-					positionMultiplier = 1f;
-				}
-				if (myWeather == BetterDayNightManager.WeatherType.All || BetterDayNightManager.instance.CurrentWeather() == myWeather || BetterDayNightManager.instance.NextWeather() == myWeather)
-				{
-					if (!dependentStuff.activeSelf && (!includesAudio || dependentStuff != timeOfDayDependent))
-					{
-						dependentStuff.SetActive(value: true);
-					}
-					if (includesAudio)
-					{
-						if (timeOfDayDependent != null)
-						{
-							if (volumes[BetterDayNightManager.instance.currentTimeIndex] == 0f)
-							{
-								if (timeOfDayDependent.activeSelf)
-								{
-									timeOfDayDependent.SetActive(value: false);
-								}
-							}
-							else if (!timeOfDayDependent.activeSelf)
-							{
-								timeOfDayDependent.SetActive(value: true);
-							}
-						}
-						if (volumes[BetterDayNightManager.instance.currentTimeIndex] != audioSources[0].volume)
-						{
-							if (BetterDayNightManager.instance.currentLerp < 0.05f)
-							{
-								currentVolume = Mathf.Lerp(currentVolume, volumes[BetterDayNightManager.instance.currentTimeIndex], BetterDayNightManager.instance.currentLerp * 20f);
-							}
-							else
-							{
-								currentVolume = volumes[BetterDayNightManager.instance.currentTimeIndex];
-							}
-						}
-					}
-					if (myWeather == BetterDayNightManager.WeatherType.All || BetterDayNightManager.instance.CurrentWeather() == myWeather)
-					{
-						if (myWeather == BetterDayNightManager.WeatherType.All || BetterDayNightManager.instance.NextWeather() == myWeather)
-						{
-							if (myParticleSystem != null)
-							{
-								newRate = startingEmissionRate;
-							}
-							if (includesAudio && myParticleSystem != null)
-							{
-								currentVolume = Mathf.Lerp(volumes[BetterDayNightManager.instance.currentTimeIndex], volumes[(BetterDayNightManager.instance.currentTimeIndex + 1) % volumes.Length], BetterDayNightManager.instance.currentLerp);
-							}
-							else if (includesAudio)
-							{
-								if (BetterDayNightManager.instance.currentLerp < 0.05f)
-								{
-									currentVolume = Mathf.Lerp(currentVolume, volumes[BetterDayNightManager.instance.currentTimeIndex], BetterDayNightManager.instance.currentLerp * 20f);
-								}
-								else
-								{
-									currentVolume = volumes[BetterDayNightManager.instance.currentTimeIndex];
-								}
-							}
-						}
-						else
-						{
-							if (myParticleSystem != null)
-							{
-								newRate = ((BetterDayNightManager.instance.currentLerp < 0.5f) ? Mathf.Lerp(startingEmissionRate, 0f, BetterDayNightManager.instance.currentLerp * 2f) : 0f);
-							}
-							if (includesAudio)
-							{
-								currentVolume = ((BetterDayNightManager.instance.currentLerp < 0.5f) ? Mathf.Lerp(volumes[BetterDayNightManager.instance.currentTimeIndex], 0f, BetterDayNightManager.instance.currentLerp * 2f) : 0f);
-							}
-						}
-					}
-					else
-					{
-						if (myParticleSystem != null)
-						{
-							newRate = ((BetterDayNightManager.instance.currentLerp > 0.5f) ? Mathf.Lerp(0f, startingEmissionRate, (BetterDayNightManager.instance.currentLerp - 0.5f) * 2f) : 0f);
-						}
-						if (includesAudio)
-						{
-							currentVolume = ((BetterDayNightManager.instance.currentLerp > 0.5f) ? Mathf.Lerp(0f, volumes[(BetterDayNightManager.instance.currentTimeIndex + 1) % volumes.Length], (BetterDayNightManager.instance.currentLerp - 0.5f) * 2f) : 0f);
-						}
-					}
-					if (myParticleSystem != null)
-					{
-						myEmissionModule = myParticleSystem.emission;
-						myEmissionModule.rateOverTime = newRate;
-					}
-					if (includesAudio)
-					{
-						for (int i = 0; i < audioSources.Length; i++)
-						{
-							MusicSource component = audioSources[i].gameObject.GetComponent<MusicSource>();
-							if (!(component != null) || !component.VolumeOverridden)
-							{
-								audioSources[i].volume = currentVolume * positionMultiplier;
-								audioSources[i].enabled = currentVolume != 0f;
-							}
-						}
-					}
-				}
-				else if (dependentStuff.activeSelf)
-				{
-					dependentStuff.SetActive(value: false);
-				}
+				dependentStuff.SetActive(value: false);
 			}
-			yield return new WaitForSeconds(stepTime);
+			return;
+		}
+		if (!dependentStuff.activeSelf && (!includesAudio || dependentStuff != timeOfDayDependent))
+		{
+			dependentStuff.SetActive(value: true);
+		}
+		if (includesAudio && timeOfDayDependent != null)
+		{
+			bool flag2 = volumes[currentTimeIndex] != 0f;
+			if (timeOfDayDependent.activeSelf != flag2)
+			{
+				timeOfDayDependent.SetActive(flag2);
+			}
+		}
+		if (!flag)
+		{
+			newRate = startingEmissionRate;
+			currentVolume = Mathf.Lerp(volumes[num3], volumes[currentTimeIndex], Mathf.Clamp(currentLerp * 20f, 0f, 1f));
+		}
+		else if (myWeather == weatherType2)
+		{
+			float t = Mathf.Clamp(currentLerp * 2f - 1f, 0f, 1f);
+			newRate = Mathf.Lerp(0f, startingEmissionRate, t);
+			currentVolume = Mathf.Lerp(0f, volumes[num2], currentLerp);
+		}
+		else
+		{
+			float t2 = Mathf.Clamp(currentLerp * 2f, 0f, 1f);
+			newRate = Mathf.Lerp(startingEmissionRate, 0f, t2);
+			currentVolume = Mathf.Lerp(volumes[currentTimeIndex], 0f, currentLerp);
+		}
+		if (myParticleSystem != null)
+		{
+			myEmissionModule = myParticleSystem.emission;
+			myEmissionModule.rateOverTime = newRate;
+			bool flag3 = newRate != 0f;
+			if (myParticleSystem.gameObject.activeSelf != flag3)
+			{
+				myParticleSystem.gameObject.SetActive(flag3);
+			}
+		}
+		if (!includesAudio)
+		{
+			return;
+		}
+		for (int i = 0; i < audioSources.Length; i++)
+		{
+			MusicSource component = audioSources[i].gameObject.GetComponent<MusicSource>();
+			if (!(component != null) || !component.VolumeOverridden)
+			{
+				audioSources[i].volume = currentVolume * positionMultiplier;
+				audioSources[i].enabled = currentVolume != 0f;
+			}
 		}
 	}
 

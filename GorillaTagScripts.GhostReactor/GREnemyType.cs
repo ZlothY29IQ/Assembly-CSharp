@@ -7,5 +7,12 @@ public enum GREnemyType
 	Pest,
 	Phantom,
 	Ranged,
-	Summoner
+	Summoner,
+	Monkeye,
+	ArmoredPest,
+	ArmoredRanged,
+	ArmoredChaser,
+	ArmoredSummoner,
+	BigChaser,
+	BigPest
 }

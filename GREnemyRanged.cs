@@ -38,6 +38,8 @@ public class GREnemyRanged : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 
 	public GameAgent agent;
 
+	public GREnemy enemy;
+
 	public GRArmorEnemy armor;
 
 	public GameHittable hittable;
@@ -718,7 +720,7 @@ public class GREnemyRanged : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 			ChooseNewBehavior();
 			break;
 		case Behavior.Patrol:
-			abilityPatrol.Update(dt);
+			abilityPatrol.UpdateAuthority(dt);
 			ChooseNewBehavior();
 			break;
 		case Behavior.Search:
@@ -726,7 +728,7 @@ public class GREnemyRanged : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 			ChooseNewBehavior();
 			break;
 		case Behavior.Stagger:
-			abilityStagger.Update(dt);
+			abilityStagger.UpdateAuthority(dt);
 			if (abilityStagger.IsDone())
 			{
 				if (targetPlayer == null)
@@ -740,7 +742,7 @@ public class GREnemyRanged : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 			}
 			break;
 		case Behavior.Flashed:
-			abilityFlashed.Update(dt);
+			abilityFlashed.UpdateAuthority(dt);
 			if (abilityFlashed.IsDone())
 			{
 				if (targetPlayer == null)
@@ -754,7 +756,7 @@ public class GREnemyRanged : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 			}
 			break;
 		case Behavior.Dying:
-			abilityDie.Update(dt);
+			abilityDie.UpdateAuthority(dt);
 			break;
 		case Behavior.SeekRangedAttackPosition:
 		{
@@ -833,11 +835,11 @@ public class GREnemyRanged : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 			}
 			else
 			{
-				abilityKeepDistance.Update(dt);
+				abilityKeepDistance.UpdateAuthority(dt);
 			}
 			break;
 		case Behavior.Investigate:
-			abilityInvestigate.Update(dt);
+			abilityInvestigate.UpdateAuthority(dt);
 			if (GhostReactorManager.noiseDebugEnabled)
 			{
 				DebugUtil.DrawLine(base.transform.position, abilityInvestigate.GetTargetPos(), Color.green);
@@ -845,7 +847,7 @@ public class GREnemyRanged : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 			ChooseNewBehavior();
 			break;
 		case Behavior.Jump:
-			abilityJump.Update(dt);
+			abilityJump.UpdateAuthority(dt);
 			if (abilityJump.IsDone())
 			{
 				ChooseNewBehavior();
@@ -872,7 +874,7 @@ public class GREnemyRanged : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 			abilityPatrol.UpdateRemote(dt);
 			break;
 		case Behavior.RangedAttackCooldown:
-			abilityKeepDistance.Update(dt);
+			abilityKeepDistance.UpdateRemote(dt);
 			break;
 		case Behavior.Investigate:
 			abilityInvestigate.UpdateRemote(dt);

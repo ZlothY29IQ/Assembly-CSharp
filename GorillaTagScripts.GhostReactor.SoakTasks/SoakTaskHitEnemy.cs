@@ -112,9 +112,9 @@ public sealed class SoakTaskHitEnemy : IGhostReactorSoakTask
 
 	private static bool IsEnemy(GameEntity entity)
 	{
-		if (!(entity.GetComponent<GREnemyChaser>() != null) && !(entity.GetComponent<GREnemyPest>() != null) && !(entity.GetComponent<GREnemyRanged>() != null))
+		if (!(entity.GetComponent<GREnemyChaser>() != null) && !(entity.GetComponent<GREnemyPest>() != null) && !(entity.GetComponent<GREnemyRanged>() != null) && !(entity.GetComponent<GREnemySummoner>() != null))
 		{
-			return entity.GetComponent<GREnemySummoner>() != null;
+			return entity.GetComponent<GREnemyMonkeye>() != null;
 		}
 		return true;
 	}
@@ -133,11 +133,15 @@ public sealed class SoakTaskHitEnemy : IGhostReactorSoakTask
 					if ((object)component3 == null || component3.hp <= 0)
 					{
 						GREnemySummoner component4 = entity.GetComponent<GREnemySummoner>();
-						if ((object)component4 != null)
+						if ((object)component4 == null || component4.hp <= 0)
 						{
-							return component4.hp > 0;
+							GREnemyMonkeye component5 = entity.GetComponent<GREnemyMonkeye>();
+							if ((object)component5 != null)
+							{
+								return component5.hp > 0;
+							}
+							return false;
 						}
-						return false;
 					}
 				}
 			}

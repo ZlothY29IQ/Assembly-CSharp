@@ -64,9 +64,8 @@ public class GRAbilityPatrol : GRAbilityBase
 		patrolGroanSoundRandom = new Unity.Mathematics.Random((uint)entity.GetNetId());
 	}
 
-	public override void Start()
+	protected override void OnStart()
 	{
-		base.Start();
 		moveAbility.Start();
 		agent.SetIsPathing(isPathing: true, ignoreRigiBody: true);
 		if (patrolPath != null)
@@ -80,7 +79,7 @@ public class GRAbilityPatrol : GRAbilityBase
 		CalculateNextPatrolGroan();
 	}
 
-	public override void Stop()
+	protected override void OnStop()
 	{
 		moveAbility.Stop();
 	}
@@ -118,9 +117,9 @@ public class GRAbilityPatrol : GRAbilityBase
 		CalculateNextPatrolGroan();
 	}
 
-	public override void Update(float dt)
+	protected override void OnUpdateAuthority(float dt)
 	{
-		moveAbility.Update(dt);
+		moveAbility.UpdateAuthority(dt);
 		if (GhostReactorManager.entityDebugEnabled)
 		{
 			DebugUtil.DrawLine(root.position, moveAbility.GetTargetPos(), Color.green);
@@ -136,11 +135,11 @@ public class GRAbilityPatrol : GRAbilityBase
 		}
 	}
 
-	public override void UpdateRemote(float dt)
+	protected override void OnUpdateRemote(float dt)
 	{
 		moveAbility.SetTarget(null);
 		moveAbility.SetTargetPos(agent.navAgent.destination);
-		moveAbility.Update(dt);
+		moveAbility.UpdateRemote(dt);
 		if (GhostReactorManager.entityDebugEnabled)
 		{
 			DebugUtil.DrawLine(root.position, moveAbility.GetTargetPos(), Color.green);

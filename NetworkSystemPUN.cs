@@ -349,7 +349,7 @@ public class NetworkSystemPUN : NetworkSystem
 		}
 		if (internalState == InternalState.Searching_JoinFailed_Full)
 		{
-			return false;
+			return true;
 		}
 		bool foundRoom = internalState == InternalState.Searching_Joined;
 		if (!foundRoom)
@@ -557,24 +557,29 @@ public class NetworkSystemPUN : NetworkSystem
 					string roomID = NetworkSystem.ShuffleRoomName(array[0], shufflerToFollow.Substring(2, 8), encode: false);
 					string value = NetworkSystem.ShuffleRoomName(array[1], shufflerToFollow.Substring(0, 2), encode: false);
 					int regionIndex = "ABCDEFGHIJKLMNPQRSTUVWXYZ123456789".IndexOf(value);
-					if (regionIndex >= 0 && regionIndex < NetworkSystem.Instance.regionNames.Length)
+					if (regionIndex < 0 || regionIndex >= NetworkSystem.Instance.regionNames.Length)
 					{
-						foundFriend = true;
-						if (InRoom && PhotonNetwork.CurrentRoom.Players.TryGetValue(actorIDToFollow, out var value2) && value2 != null)
+						continue;
+					}
+					foundFriend = true;
+					if (InRoom && PhotonNetwork.CurrentRoom.Players.TryGetValue(actorIDToFollow, out var value2) && value2 != null)
+					{
+						GorillaNot.instance.SendReport("possible kick attempt", value2.UserId, value2.NickName);
+					}
+					else if (RoomName != roomID)
+					{
+						await ReturnToSinglePlayer();
+						RoomConfig roomConfig = new RoomConfig();
+						roomConfig.createIfMissing = false;
+						roomConfig.isPublic = true;
+						roomConfig.isJoinable = true;
+						Task<NetJoinResult> ConnectToRoomTask = ConnectToRoom(roomID, roomConfig, regionIndex);
+						await ConnectToRoomTask;
+						NetJoinResult result2 = ConnectToRoomTask.Result;
+						failedToJoinFriend = result2 != NetJoinResult.Success;
+						if (result2 == NetJoinResult.Success)
 						{
-							GorillaNot.instance.SendReport("possible kick attempt", value2.UserId, value2.NickName);
-						}
-						else if (RoomName != roomID)
-						{
-							await ReturnToSinglePlayer();
-							RoomConfig roomConfig = new RoomConfig();
-							roomConfig.createIfMissing = false;
-							roomConfig.isPublic = true;
-							roomConfig.isJoinable = true;
-							Task<NetJoinResult> ConnectToRoomTask = ConnectToRoom(roomID, roomConfig, regionIndex);
-							await ConnectToRoomTask;
-							NetJoinResult result2 = ConnectToRoomTask.Result;
-							failedToJoinFriend = result2 != NetJoinResult.Success;
+							groupJoinOverrideGameMode = NetworkSystem.Instance.GameModeString;
 						}
 					}
 				}
@@ -1181,6 +1186,7 @@ public class NetworkSystemPUN : NetworkSystem
 	{
 		if (!ApplicationQuittingState.IsQuitting)
 		{
+			groupJoinOverrideGameMode = "";
 			await RefreshNonce();
 			if (internalState == InternalState.Searching_Disconnecting)
 			{

@@ -36,6 +36,8 @@ public class GREnemyPest : MonoBehaviour, IGameEntityComponent, IGameEntitySeria
 
 	public GameAgent agent;
 
+	public GREnemy enemy;
+
 	public GRArmorEnemy armor;
 
 	public GRAttributes attributes;
@@ -420,11 +422,11 @@ public class GREnemyPest : MonoBehaviour, IGameEntityComponent, IGameEntitySeria
 		switch (currBehavior)
 		{
 		case Behavior.Idle:
-			abilityIdle.Update(dt);
+			abilityIdle.UpdateAuthority(dt);
 			break;
 		case Behavior.Chase:
 		{
-			abilityChase.Update(dt);
+			abilityChase.UpdateAuthority(dt);
 			if (abilityChase.IsDone())
 			{
 				SetBehavior(Behavior.Wander);
@@ -442,24 +444,24 @@ public class GREnemyPest : MonoBehaviour, IGameEntityComponent, IGameEntitySeria
 			break;
 		}
 		case Behavior.Attack:
-			abilityAttack.Update(dt);
+			abilityAttack.UpdateAuthority(dt);
 			if (abilityAttack.IsDone())
 			{
 				SetBehavior(Behavior.Chase);
 			}
 			break;
 		case Behavior.Stagger:
-			abilityStagger.Update(dt);
+			abilityStagger.UpdateAuthority(dt);
 			if (abilityStagger.IsDone())
 			{
 				SetBehavior(Behavior.Wander);
 			}
 			break;
 		case Behavior.Destroyed:
-			abilityDie.Update(dt);
+			abilityDie.UpdateAuthority(dt);
 			break;
 		case Behavior.Wander:
-			abilityWander.Update(dt);
+			abilityWander.UpdateAuthority(dt);
 			break;
 		case Behavior.Thrown:
 			if (abilityThrown.IsDone())
@@ -468,17 +470,17 @@ public class GREnemyPest : MonoBehaviour, IGameEntityComponent, IGameEntitySeria
 			}
 			break;
 		case Behavior.Investigate:
-			abilityInvestigate.Update(dt);
+			abilityInvestigate.UpdateAuthority(dt);
 			break;
 		case Behavior.Jump:
-			abilityJump.Update(dt);
+			abilityJump.UpdateAuthority(dt);
 			if (abilityJump.IsDone())
 			{
 				ChooseNewBehavior();
 			}
 			break;
 		case Behavior.Flashed:
-			abilityFlashed.Update(dt);
+			abilityFlashed.UpdateAuthority(dt);
 			if (abilityFlashed.IsDone())
 			{
 				ChooseNewBehavior();

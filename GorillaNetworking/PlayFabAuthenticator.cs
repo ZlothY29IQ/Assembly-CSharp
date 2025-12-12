@@ -222,10 +222,10 @@ public class PlayFabAuthenticator : MonoBehaviour
 				instance.AuthenticateWithPlayFab();
 			});
 			MothershipAuthenticator obj2 = instance.mothershipAuthenticator;
-			obj2.OnLoginFailure = (Action<string>)Delegate.Combine(obj2.OnLoginFailure, (Action<string>)delegate(string errorMessage)
+			obj2.OnLoginFailure = (Action<string, string, string>)Delegate.Combine(obj2.OnLoginFailure, (Action<string, string, string>)delegate(string errorMessage, string errorCode, string traceId)
 			{
 				loginFailed = true;
-				ShowMothershipAuthErrorMessage(errorMessage);
+				ShowMothershipAuthErrorMessage(errorMessage, errorCode, traceId);
 			});
 			instance.mothershipAuthenticator.BeginLoginFlow();
 		}
@@ -622,11 +622,24 @@ public class PlayFabAuthenticator : MonoBehaviour
 		}
 	}
 
-	private void ShowMothershipAuthErrorMessage(string errorMessage)
+	private void ShowMothershipAuthErrorMessage(string errorMessage, string errorCode, string traceId)
 	{
 		try
 		{
-			gorillaComputer.GeneralFailureMessage("UNABLE TO AUTHENTICATE WITH MOTHERSHIP.\nREASON: " + errorMessage);
+			StringBuilder stringBuilder = new StringBuilder("UNABLE TO AUTHENTICATE WITH MOTHERSHIP.\nREASON: " + errorMessage);
+			if (!char.IsPunctuation(stringBuilder[stringBuilder.Length - 1]))
+			{
+				stringBuilder.Append('.');
+			}
+			if (!string.IsNullOrEmpty(errorCode))
+			{
+				stringBuilder.Append("\nERROR CODE: " + errorCode);
+			}
+			if (!string.IsNullOrEmpty(traceId))
+			{
+				stringBuilder.Append("\nTRACE ID: " + traceId);
+			}
+			gorillaComputer.GeneralFailureMessage(stringBuilder.ToString());
 		}
 		catch (Exception arg)
 		{
@@ -639,7 +652,12 @@ public class PlayFabAuthenticator : MonoBehaviour
 		try
 		{
 			ErrorInfo errorInfo = JsonUtility.FromJson<ErrorInfo>(errorJson);
-			gorillaComputer.GeneralFailureMessage("UNABLE TO AUTHENTICATE WITH PLAYFAB.\nREASON: " + errorInfo.Message);
+			StringBuilder stringBuilder = new StringBuilder("UNABLE TO AUTHENTICATE WITH PLAYFAB.\nREASON: " + errorInfo.Message);
+			if (!char.IsPunctuation(stringBuilder[stringBuilder.Length - 1]))
+			{
+				stringBuilder.Append('.');
+			}
+			gorillaComputer.GeneralFailureMessage(stringBuilder.ToString());
 		}
 		catch (Exception arg)
 		{

@@ -105,6 +105,7 @@ public class LckTabletSizeManager : MonoBehaviour
 		if (!_lckDirectGrabbable.isGrabbed)
 		{
 			SetCameraOnNeck();
+			base.transform.localScale = Vector3.one;
 		}
 		ClearCustomNearClip();
 	}

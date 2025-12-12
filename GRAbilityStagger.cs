@@ -41,9 +41,8 @@ public class GRAbilityStagger : GRAbilityBase
 		staggerMovement.interpolationType = GRAbilityInterpolatedMovement.InterpType.EaseOut;
 	}
 
-	public override void Start()
+	protected override void OnStart()
 	{
-		base.Start();
 		if (animData.Count > 0)
 		{
 			lastAnimIndex = AbilityHelperFunctions.RandomRangeUnique(0, animData.Count, lastAnimIndex);
@@ -61,7 +60,7 @@ public class GRAbilityStagger : GRAbilityBase
 		staggerMovement.Start();
 	}
 
-	public override void Stop()
+	protected override void OnStop()
 	{
 		agent.SetIsPathing(isPathing: true, ignoreRigiBody: true);
 		agent.SetDisableNetworkSync(disable: false);
@@ -72,7 +71,7 @@ public class GRAbilityStagger : GRAbilityBase
 		return staggerMovement.IsDone();
 	}
 
-	protected override void UpdateShared(float dt)
+	protected override void OnUpdateShared(float dt)
 	{
 		staggerMovement.Update(dt);
 	}

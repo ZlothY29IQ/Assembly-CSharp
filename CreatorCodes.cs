@@ -128,8 +128,8 @@ public static class CreatorCodes
 
 	public static async Task<NexusManager.MemberCode> CheckValidationCoroutineJIT(string terminalId, string code, NexusGroupId[] group)
 	{
-		CreatorCodes.OnCreatorCodeChangedEvent?.Invoke(terminalId);
 		creatorCodeStatus[terminalId] = CreatorCodeStatus.Validating;
+		CreatorCodes.OnCreatorCodeChangedEvent?.Invoke(terminalId);
 		for (int i = 0; i < group.Length; i++)
 		{
 			Member member = await NexusManager.instance.VerifyCreatorCode(terminalId, code, group[i]);

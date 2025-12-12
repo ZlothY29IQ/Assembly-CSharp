@@ -12,14 +12,13 @@ public class GRAbilityGrabbed : GRAbilityBase
 		idleAbility.Setup(agent, anim, audioSource, root, head, lineOfSight);
 	}
 
-	public override void Start()
+	protected override void OnStart()
 	{
-		base.Start();
 		agent.SetIsPathing(isPathing: false, ignoreRigiBody: true);
 		idleAbility.Start();
 	}
 
-	public override void Stop()
+	protected override void OnStop()
 	{
 		idleAbility.Stop();
 		agent.SetIsPathing(isPathing: true, ignoreRigiBody: true);
@@ -30,8 +29,13 @@ public class GRAbilityGrabbed : GRAbilityBase
 		return idleAbility.IsDone();
 	}
 
-	public override void Update(float dt)
+	protected override void OnUpdateAuthority(float dt)
 	{
-		idleAbility.Update(dt);
+		idleAbility.UpdateAuthority(dt);
+	}
+
+	protected override void OnUpdateRemote(float dt)
+	{
+		idleAbility.UpdateRemote(dt);
 	}
 }

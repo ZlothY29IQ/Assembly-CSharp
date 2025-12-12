@@ -6,7 +6,7 @@ using NexusSDK;
 using UnityEngine;
 using UnityEngine.Networking;
 
-public class NexusManager : MonoBehaviour, IBuildValidation
+public class NexusManager : MonoBehaviour
 {
 	public enum Environment
 	{
@@ -37,9 +37,6 @@ public class NexusManager : MonoBehaviour, IBuildValidation
 	private const string ENV_PRODUCTION_API_KEY = "nexus_pk_4c18dcb1531846c7abad4cb00c5242bb";
 
 	private const string ENV_SANDBOX_API_KEY = "nexus_pk_ba155a8c229740489d214f024e25f25c";
-
-	[SerializeField]
-	private NexusGroupId defaultNexusGroupId;
 
 	private Environment environment = Environment.SANDBOX;
 
@@ -107,15 +104,5 @@ public class NexusManager : MonoBehaviour, IBuildValidation
 			return true;
 		}
 		return false;
-	}
-
-	public bool BuildValidationCheck()
-	{
-		if (defaultNexusGroupId == null)
-		{
-			Debug.LogError("You have to set defaultNexusGroupId in " + base.name + " or things will not work!");
-			return false;
-		}
-		return true;
 	}
 }

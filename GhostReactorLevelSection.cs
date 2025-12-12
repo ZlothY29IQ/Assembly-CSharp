@@ -129,7 +129,7 @@ public class GhostReactorLevelSection : MonoBehaviour
 
 	private void Awake()
 	{
-		spawnPointGroupLookup = new SpawnPointGroup[10];
+		spawnPointGroupLookup = new SpawnPointGroup[11];
 		for (int i = 0; i < spawnPointGroups.Count; i++)
 		{
 			spawnPointGroups[i].SpawnPointIndexes = new List<int>();

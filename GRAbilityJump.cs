@@ -55,24 +55,22 @@ public class GRAbilityJump : GRAbilityBase
 		}
 	}
 
-	public override void Start()
+	protected override void OnStart()
 	{
-		base.Start();
 		elapsedTime = 0f;
 		isActive = true;
 		PlayAnim(animationData.animName, 0.05f, animationData.speed);
-		agent.navAgent.isStopped = true;
+		agent.SetStopped(stopMovement: true);
 		agent.SetDisableNetworkSync(disable: true);
 		agent.pauseEntityThink = true;
 		soundJump.Play(audioSource);
 	}
 
-	public override void Stop()
+	protected override void OnStop()
 	{
-		base.Stop();
 		agent.navAgent.Warp(endPos);
 		agent.navAgent.CompleteOffMeshLink();
-		agent.navAgent.isStopped = false;
+		agent.SetStopped(stopMovement: false);
 		isActive = false;
 		agent.SetDisableNetworkSync(disable: false);
 		agent.pauseEntityThink = false;
@@ -88,7 +86,7 @@ public class GRAbilityJump : GRAbilityBase
 		return isActive;
 	}
 
-	protected override void UpdateShared(float dt)
+	protected override void OnUpdateShared(float dt)
 	{
 		if (GhostReactorManager.entityDebugEnabled)
 		{

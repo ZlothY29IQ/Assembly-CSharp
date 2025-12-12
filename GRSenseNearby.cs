@@ -8,6 +8,8 @@ public class GRSenseNearby
 {
 	public float range;
 
+	public float hearingRange;
+
 	public float exitRange;
 
 	public float fov;
@@ -21,6 +23,19 @@ public class GRSenseNearby
 	{
 		rigsNearby = new List<VRRig>();
 		this.headTransform = headTransform;
+	}
+
+	public void OnHitByPlayer(int hitByActorId)
+	{
+		GRPlayer gRPlayer = GRPlayer.Get(hitByActorId);
+		if (gRPlayer != null)
+		{
+			VRRig rig = gRPlayer.gamePlayer.rig;
+			if (!rigsNearby.Contains(rig))
+			{
+				rigsNearby.Add(rig);
+			}
+		}
 	}
 
 	public void UpdateNearby(List<VRRig> allRigs, GRSenseLineOfSight senseLineOfSight)
@@ -37,6 +52,24 @@ public class GRSenseNearby
 		if (!GhostReactorManager.AggroDisabled && rigsNearby != null)
 		{
 			return rigsNearby.Count > 0;
+		}
+		return false;
+	}
+
+	public bool IsAnyoneNearby(float range)
+	{
+		if (!IsAnyoneNearby())
+		{
+			return false;
+		}
+		Vector3 position = headTransform.position;
+		float num = range * range;
+		for (int i = 0; i < rigsNearby.Count; i++)
+		{
+			if (!(rigsNearby[i] == null) && (GetRigTestLocation(rigsNearby[i]) - position).sqrMagnitude <= num)
+			{
+				return true;
+			}
 		}
 		return false;
 	}
@@ -60,16 +93,20 @@ public class GRSenseNearby
 			}
 			Vector3 vector = GetRigTestLocation(vRRig) - position;
 			float sqrMagnitude = vector.sqrMagnitude;
-			if (sqrMagnitude > num)
+			float num3 = hearingRange * hearingRange;
+			if (!(sqrMagnitude < num3))
 			{
-				continue;
-			}
-			if (sqrMagnitude > 0f)
-			{
-				float num3 = Mathf.Sqrt(sqrMagnitude);
-				if (Vector3.Dot(vector / num3, forward) < num2)
+				if (!(sqrMagnitude < num))
 				{
 					continue;
+				}
+				if (sqrMagnitude > 0f)
+				{
+					float num4 = Mathf.Sqrt(sqrMagnitude);
+					if (Vector3.Dot(vector / num4, forward) < num2)
+					{
+						continue;
+					}
 				}
 			}
 			rigsNearby.Add(vRRig);

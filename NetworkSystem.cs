@@ -73,6 +73,9 @@ public abstract class NetworkSystem : MonoBehaviour
 
 	protected static StringBuilder reusableSB = new StringBuilder();
 
+	[NonSerialized]
+	public string groupJoinOverrideGameMode = "";
+
 	public bool groupJoinInProgress { get; protected set; }
 
 	public NetSystemState netState

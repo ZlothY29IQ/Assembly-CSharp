@@ -6,6 +6,8 @@ using GorillaTag;
 using TMPro;
 using Unity.Profiling;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.XR;
 
 public class DebugHudStats : MonoBehaviour
@@ -20,7 +22,7 @@ public class DebugHudStats : MonoBehaviour
 		ShowRBs
 	}
 
-	private const int FPS_THRESHOLD = 89;
+	public static int FPS_THRESHOLD = 89;
 
 	private static DebugHudStats _instance;
 
@@ -57,7 +59,9 @@ public class DebugHudStats : MonoBehaviour
 
 	private float distanceSwam;
 
-	private List<string> logMessages = new List<string>();
+	private List<string> logMessage = new List<string>();
+
+	private List<string> logError = new List<string>();
 
 	private bool buttonDown;
 
@@ -69,12 +73,7 @@ public class DebugHudStats : MonoBehaviour
 
 	private GroupJoinZoneAB lastGroupJoinZone;
 
-	[SerializeField]
-	private string logFilter;
-
 	private State currentState = State.Active;
-
-	private int logVerbosity;
 
 	private ProfilerRecorder drawCallsRecorder;
 
@@ -158,8 +157,6 @@ public class DebugHudStats : MonoBehaviour
 				PlayerGameEvents.OnPlayerSwam += OnPlayerSwam;
 				break;
 			}
-			logMessages.Clear();
-			logVerbosity = ((currentState == State.ShowError) ? 1 : 0);
 			text.gameObject.SetActive(currentState != State.Inactive);
 			if (RigidbodyHighlighter.Instance != null)
 			{
@@ -177,7 +174,7 @@ public class DebugHudStats : MonoBehaviour
 			return;
 		}
 		int num = Mathf.RoundToInt(1f / Time.smoothDeltaTime);
-		if (num < 89)
+		if (num < FPS_THRESHOLD)
 		{
 			lowFps++;
 		}
@@ -196,10 +193,13 @@ public class DebugHudStats : MonoBehaviour
 			builder.Append(GorillaComputer.instance.buildCode);
 			builder.Append("</color>");
 			num = Mathf.Min(num, 90);
-			builder.Append((num < 89) ? " - <color=\"red\">" : " - <color=\"white\">");
+			builder.Append((num < FPS_THRESHOLD) ? " - <color=\"red\">" : " - <color=\"white\">");
 			builder.Append(num);
 			builder.AppendLine(" fps</color>");
-			builder.AppendLine($"draw calls: {drawCallsRecorder.LastValue} tris: {trisRecorder.LastValue}");
+			float eyeTextureResolutionScale = XRSettings.eyeTextureResolutionScale;
+			float renderViewportScale = XRSettings.renderViewportScale;
+			float renderScale = (GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset).renderScale;
+			builder.AppendLine($"draw calls: {drawCallsRecorder.LastValue} tris: {trisRecorder.LastValue} " + $"rs: {eyeTextureResolutionScale}/{renderViewportScale}/{renderScale} ");
 			if (GorillaComputer.instance != null)
 			{
 				builder.AppendLine(GorillaComputer.instance.GetServerTime().ToString());
@@ -268,15 +268,20 @@ public class DebugHudStats : MonoBehaviour
 				builder.AppendLine($"v: {magnitude:F1} m/s\t\todo: {distanceMoved:F2}m\tswam: {distanceSwam:F2}m");
 				builder.AppendLine($"ground: {groundVelocity.magnitude:F1} m/s\thead: {headCenterPosition:F2}");
 			}
-			else if (currentState == State.ShowLog || currentState == State.ShowError)
+			else if (currentState == State.ShowLog)
 			{
 				builder.AppendLine();
-				for (int num2 = logMessages.Count - 1; num2 >= 0; num2--)
+				for (int num2 = logMessage.Count - 1; num2 >= 0; num2--)
 				{
-					if (logFilter.Length == 0 || logMessages[num2].Contains(logFilter))
-					{
-						builder.AppendLine(logMessages[num2]);
-					}
+					builder.AppendLine(logMessage[num2]);
+				}
+			}
+			else if (currentState == State.ShowError)
+			{
+				builder.AppendLine();
+				for (int num3 = logError.Count - 1; num3 >= 0; num3--)
+				{
+					builder.AppendLine(logError[num3]);
 				}
 			}
 			text.text = builder.ToString();
@@ -319,21 +324,26 @@ public class DebugHudStats : MonoBehaviour
 
 	private void LogMessageReceived(string condition, string stackTrace, LogType type)
 	{
-		if (logVerbosity != 1 || type == LogType.Exception || type == LogType.Assert || type == LogType.Error)
+		string text = $"{Time.realtimeSinceStartup:F2}> {getColorStringFromLogType(type)}{condition}</color>";
+		if (pLog != condition)
 		{
-			string text = $"{Time.realtimeSinceStartup:F2}> {getColorStringFromLogType(type)}{condition}</color>";
-			if (pLog != condition)
+			logMessage.Add(text);
+		}
+		else
+		{
+			logMessage[logMessage.Count - 1] = text;
+		}
+		pLog = condition;
+		if (logMessage.Count > 10)
+		{
+			logMessage.RemoveAt(0);
+		}
+		if (type == LogType.Error || type == LogType.Assert || type == LogType.Exception)
+		{
+			logError.Add(text + "\n" + stackTrace);
+			if (logError.Count > 10)
 			{
-				logMessages.Add(text);
-			}
-			else
-			{
-				logMessages[logMessages.Count - 1] = text;
-			}
-			pLog = condition;
-			if (logMessages.Count > 10)
-			{
-				logMessages.RemoveAt(0);
+				logError.RemoveAt(0);
 			}
 		}
 	}

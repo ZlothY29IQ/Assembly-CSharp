@@ -8,6 +8,8 @@ public class CreatorCodeProvider : MonoBehaviour, ICreatorCodeProvider, IBuildVa
 
 	string ICreatorCodeProvider.TerminalId => nexusCreatorCode.GroupId.Code + nexusCreatorCode.Code;
 
+	GameObject ICreatorCodeProvider.GameObject => base.gameObject;
+
 	bool IBuildValidation.BuildValidationCheck()
 	{
 		if (nexusCreatorCode == null)

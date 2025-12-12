@@ -8,6 +8,7 @@ using GorillaGameModes;
 using GorillaNetworking;
 using GorillaTag;
 using Photon.Pun;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Scripting;
 
@@ -100,7 +101,11 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 
 	private bool WillJoinLeftHanded;
 
+	private static readonly ProfilerMarker profiler_Tick = new ProfilerMarker("GT/FriendshipGroupDetection.Tick");
+
 	private List<PlayerFist> playersMakingFists = new List<PlayerFist>();
+
+	private static readonly ProfilerMarker profiler_updateProvisionalGroup = new ProfilerMarker("GT/FriendshipGroupDetection.UpdateProvisionalGroup");
 
 	private StringBuilder debugStr = new StringBuilder();
 
@@ -214,208 +219,214 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 
 	public void Tick()
 	{
-		if (wantsPartyRefreshPostJoin && lastJoinedRoomTime + joinedRoomRefreshPartyDelay < (double)Time.time)
+		using (profiler_Tick.Auto())
 		{
-			RefreshPartyMembers();
-		}
-		if (wantsPartyRefreshPostFollowFailed && lastFailedToFollowPartyTime + failedToFollowRefreshPartyDelay < (double)Time.time)
-		{
-			RefreshPartyMembers();
-		}
-		List<int> list = playersInProvisionalGroup;
-		List<int> list2 = playersInProvisionalGroup;
-		List<int> list3 = tempIntList;
-		tempIntList = list2;
-		playersInProvisionalGroup = list3;
-		UpdateProvisionalGroup(out var midpoint);
-		if (playersInProvisionalGroup.Count > 0)
-		{
-			friendshipBubble.transform.position = midpoint;
-		}
-		bool flag = false;
-		if (list.Count == playersInProvisionalGroup.Count)
-		{
-			for (int i = 0; i < list.Count; i++)
+			if (wantsPartyRefreshPostJoin && lastJoinedRoomTime + joinedRoomRefreshPartyDelay < (double)Time.time)
 			{
-				if (list[i] != playersInProvisionalGroup[i])
-				{
-					flag = true;
-					break;
-				}
+				RefreshPartyMembers();
 			}
-		}
-		else
-		{
-			flag = true;
-		}
-		if (flag)
-		{
-			groupCreateAfterTimestamp = Time.time + groupTime;
-			amFirstProvisionalPlayer = playersInProvisionalGroup.Count > 0 && playersInProvisionalGroup[0] == NetworkSystem.Instance.LocalPlayer.ActorNumber;
-			if (playersInProvisionalGroup.Count > 0 && !amFirstProvisionalPlayer)
+			if (wantsPartyRefreshPostFollowFailed && lastFailedToFollowPartyTime + failedToFollowRefreshPartyDelay < (double)Time.time)
 			{
-				List<int> list4 = tempIntList;
-				list4.Clear();
-				NetPlayer netPlayer = null;
-				foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+				RefreshPartyMembers();
+			}
+			List<int> list = playersInProvisionalGroup;
+			List<int> list2 = playersInProvisionalGroup;
+			List<int> list3 = tempIntList;
+			tempIntList = list2;
+			playersInProvisionalGroup = list3;
+			UpdateProvisionalGroup(out var midpoint);
+			if (playersInProvisionalGroup.Count > 0)
+			{
+				friendshipBubble.transform.position = midpoint;
+			}
+			bool flag = false;
+			if (list.Count == playersInProvisionalGroup.Count)
+			{
+				for (int i = 0; i < list.Count; i++)
 				{
-					if (vrrig.creator.ActorNumber == playersInProvisionalGroup[0])
+					if (list[i] != playersInProvisionalGroup[i])
 					{
-						netPlayer = vrrig.creator;
-						if (vrrig.IsLocalPartyMember)
-						{
-							list4.Clear();
-							break;
-						}
-					}
-					else if (vrrig.IsLocalPartyMember)
-					{
-						list4.Add(vrrig.creator.ActorNumber);
+						flag = true;
+						break;
 					}
 				}
-				if (list4.Count > 0)
-				{
-					photonView.RPC("NotifyPartyMerging", netPlayer.GetPlayerRef(), list4.ToArray());
-				}
-				else
-				{
-					photonView.RPC("NotifyNoPartyToMerge", netPlayer.GetPlayerRef());
-				}
-			}
-			if (playersInProvisionalGroup.Count == 0)
-			{
-				if (Time.time > suppressPartyCreationUntilTimestamp && playEffectsAfterTimestamp == 0f)
-				{
-					audioSource.GTStop();
-					audioSource.GTPlayOneShot(fistBumpInterruptedAudio);
-				}
-				particleSystem.Stop();
-				playEffectsAfterTimestamp = 0f;
 			}
 			else
 			{
-				playEffectsAfterTimestamp = Time.time + playEffectsDelay;
+				flag = true;
 			}
-		}
-		else if (playEffectsAfterTimestamp > 0f && Time.time > playEffectsAfterTimestamp)
-		{
-			audioSource.time = 0f;
-			audioSource.GTPlay();
-			particleSystem.Play();
-			playEffectsAfterTimestamp = 0f;
-		}
-		else if (playersInProvisionalGroup.Count > 0 && Time.time > groupCreateAfterTimestamp && amFirstProvisionalPlayer)
-		{
-			List<int> list5 = tempIntList;
-			list5.Clear();
-			list5.AddRange(playersInProvisionalGroup);
-			int num = 0;
-			if (IsInParty)
+			if (flag)
 			{
-				foreach (VRRig vrrig2 in GorillaParent.instance.vrrigs)
+				groupCreateAfterTimestamp = Time.time + groupTime;
+				amFirstProvisionalPlayer = playersInProvisionalGroup.Count > 0 && playersInProvisionalGroup[0] == NetworkSystem.Instance.LocalPlayer.ActorNumber;
+				if (playersInProvisionalGroup.Count > 0 && !amFirstProvisionalPlayer)
 				{
-					if (vrrig2.IsLocalPartyMember)
+					List<int> list4 = tempIntList;
+					list4.Clear();
+					NetPlayer netPlayer = null;
+					foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
 					{
-						list5.Add(vrrig2.creator.ActorNumber);
-						num++;
+						if (vrrig.creator.ActorNumber == playersInProvisionalGroup[0])
+						{
+							netPlayer = vrrig.creator;
+							if (vrrig.IsLocalPartyMember)
+							{
+								list4.Clear();
+								break;
+							}
+						}
+						else if (vrrig.IsLocalPartyMember)
+						{
+							list4.Add(vrrig.creator.ActorNumber);
+						}
+					}
+					if (list4.Count > 0)
+					{
+						photonView.RPC("NotifyPartyMerging", netPlayer.GetPlayerRef(), list4.ToArray());
+					}
+					else
+					{
+						photonView.RPC("NotifyNoPartyToMerge", netPlayer.GetPlayerRef());
 					}
 				}
-			}
-			int num2 = 0;
-			foreach (int item in playersInProvisionalGroup)
-			{
-				if (partyMergeIDs.TryGetValue(item, out var value))
+				if (playersInProvisionalGroup.Count == 0)
 				{
-					list5.AddRange(value);
-					num2++;
+					if (Time.time > suppressPartyCreationUntilTimestamp && playEffectsAfterTimestamp == 0f)
+					{
+						audioSource.GTStop();
+						audioSource.GTPlayOneShot(fistBumpInterruptedAudio);
+					}
+					particleSystem.Stop();
+					playEffectsAfterTimestamp = 0f;
+				}
+				else
+				{
+					playEffectsAfterTimestamp = Time.time + playEffectsDelay;
 				}
 			}
-			list5.Sort();
-			int[] memberIDs = list5.Distinct().ToArray();
-			myBraceletColor = GTColor.RandomHSV(braceletRandomColorHSVRanges);
-			SendPartyFormedRPC(PackColor(myBraceletColor), memberIDs, forceDebug: false);
-			groupCreateAfterTimestamp = Time.time + cooldownAfterCreatingGroup;
-		}
-		if (myPartyMemberIDs != null)
-		{
-			UpdateWarningSigns();
+			else if (playEffectsAfterTimestamp > 0f && Time.time > playEffectsAfterTimestamp)
+			{
+				audioSource.time = 0f;
+				audioSource.GTPlay();
+				particleSystem.Play();
+				playEffectsAfterTimestamp = 0f;
+			}
+			else if (playersInProvisionalGroup.Count > 0 && Time.time > groupCreateAfterTimestamp && amFirstProvisionalPlayer)
+			{
+				List<int> list5 = tempIntList;
+				list5.Clear();
+				list5.AddRange(playersInProvisionalGroup);
+				int num = 0;
+				if (IsInParty)
+				{
+					foreach (VRRig vrrig2 in GorillaParent.instance.vrrigs)
+					{
+						if (vrrig2.IsLocalPartyMember)
+						{
+							list5.Add(vrrig2.creator.ActorNumber);
+							num++;
+						}
+					}
+				}
+				int num2 = 0;
+				foreach (int item in playersInProvisionalGroup)
+				{
+					if (partyMergeIDs.TryGetValue(item, out var value))
+					{
+						list5.AddRange(value);
+						num2++;
+					}
+				}
+				list5.Sort();
+				int[] memberIDs = list5.Distinct().ToArray();
+				myBraceletColor = GTColor.RandomHSV(braceletRandomColorHSVRanges);
+				SendPartyFormedRPC(PackColor(myBraceletColor), memberIDs, forceDebug: false);
+				groupCreateAfterTimestamp = Time.time + cooldownAfterCreatingGroup;
+			}
+			if (myPartyMemberIDs != null)
+			{
+				UpdateWarningSigns();
+			}
 		}
 	}
 
 	private void UpdateProvisionalGroup(out Vector3 midpoint)
 	{
-		playersInProvisionalGroup.Clear();
-		bool isLeftHand;
-		VRMap makingFist = VRRig.LocalRig.GetMakingFist(debug, out isLeftHand);
-		if (makingFist == null || !NetworkSystem.Instance.InRoom || VRRig.LocalRig.leftHandLink.IsLinkActive() || VRRig.LocalRig.rightHandLink.IsLinkActive() || GorillaParent.instance.vrrigs.Count == 0 || Time.time < suppressPartyCreationUntilTimestamp || (GorillaGameModes.GameMode.ActiveGameMode != null && !GorillaGameModes.GameMode.ActiveGameMode.CanJoinFrienship(NetworkSystem.Instance.LocalPlayer)))
-		{
-			midpoint = Vector3.zero;
-			return;
-		}
-		WillJoinLeftHanded = isLeftHand;
-		playersToPropagateFrom.Clear();
-		provisionalGroupUsingLeftHands.Clear();
-		playersMakingFists.Clear();
-		int actorNumber = NetworkSystem.Instance.LocalPlayer.ActorNumber;
-		int num = -1;
-		foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
-		{
-			bool isLeftHand2;
-			VRMap makingFist2 = vrrig.GetMakingFist(debug, out isLeftHand2);
-			if (makingFist2 != null && !vrrig.leftHandLink.IsLinkActive() && !vrrig.rightHandLink.IsLinkActive() && (!(GorillaGameModes.GameMode.ActiveGameMode != null) || GorillaGameModes.GameMode.ActiveGameMode.CanJoinFrienship(vrrig.OwningNetPlayer)))
-			{
-				PlayerFist playerFist = default(PlayerFist);
-				playerFist.actorNumber = vrrig.creator.ActorNumber;
-				playerFist.position = makingFist2.rigTarget.position;
-				playerFist.isLeftHand = isLeftHand2;
-				PlayerFist item = playerFist;
-				if (vrrig.isOfflineVRRig)
-				{
-					num = playersMakingFists.Count;
-				}
-				playersMakingFists.Add(item);
-			}
-		}
-		if (playersMakingFists.Count <= 1 || num == -1)
-		{
-			midpoint = Vector3.zero;
-			return;
-		}
-		playersToPropagateFrom.Enqueue(playersMakingFists[num]);
-		playersInProvisionalGroup.Add(actorNumber);
-		midpoint = makingFist.rigTarget.position;
-		int num2 = 1 << num;
-		PlayerFist result;
-		while (playersToPropagateFrom.TryDequeue(out result))
-		{
-			for (int i = 0; i < playersMakingFists.Count; i++)
-			{
-				if ((num2 & (1 << i)) != 0)
-				{
-					continue;
-				}
-				PlayerFist item2 = playersMakingFists[i];
-				if ((result.position - item2.position).IsShorterThan(detectionRadius))
-				{
-					int index = ~playersInProvisionalGroup.BinarySearch(item2.actorNumber);
-					num2 |= 1 << i;
-					playersInProvisionalGroup.Insert(index, item2.actorNumber);
-					if (item2.isLeftHand)
-					{
-						provisionalGroupUsingLeftHands.Add(item2.actorNumber);
-					}
-					playersToPropagateFrom.Enqueue(item2);
-					midpoint += item2.position;
-				}
-			}
-		}
-		if (playersInProvisionalGroup.Count == 1)
+		using (profiler_updateProvisionalGroup.Auto())
 		{
 			playersInProvisionalGroup.Clear();
-		}
-		if (playersInProvisionalGroup.Count > 0)
-		{
-			midpoint /= (float)playersInProvisionalGroup.Count;
+			bool isLeftHand;
+			VRMap makingFist = VRRig.LocalRig.GetMakingFist(debug, out isLeftHand);
+			if (makingFist == null || !NetworkSystem.Instance.InRoom || VRRig.LocalRig.leftHandLink.IsLinkActive() || VRRig.LocalRig.rightHandLink.IsLinkActive() || GorillaParent.instance.vrrigs.Count == 0 || Time.time < suppressPartyCreationUntilTimestamp || (GorillaGameModes.GameMode.ActiveGameMode != null && !GorillaGameModes.GameMode.ActiveGameMode.CanJoinFrienship(NetworkSystem.Instance.LocalPlayer)))
+			{
+				midpoint = Vector3.zero;
+				return;
+			}
+			WillJoinLeftHanded = isLeftHand;
+			playersToPropagateFrom.Clear();
+			provisionalGroupUsingLeftHands.Clear();
+			playersMakingFists.Clear();
+			int actorNumber = NetworkSystem.Instance.LocalPlayer.ActorNumber;
+			int num = -1;
+			foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+			{
+				bool isLeftHand2;
+				VRMap makingFist2 = vrrig.GetMakingFist(debug, out isLeftHand2);
+				if (makingFist2 != null && !vrrig.leftHandLink.IsLinkActive() && !vrrig.rightHandLink.IsLinkActive() && (!(GorillaGameModes.GameMode.ActiveGameMode != null) || GorillaGameModes.GameMode.ActiveGameMode.CanJoinFrienship(vrrig.OwningNetPlayer)))
+				{
+					PlayerFist playerFist = default(PlayerFist);
+					playerFist.actorNumber = vrrig.creator.ActorNumber;
+					playerFist.position = makingFist2.rigTarget.position;
+					playerFist.isLeftHand = isLeftHand2;
+					PlayerFist item = playerFist;
+					if (vrrig.isOfflineVRRig)
+					{
+						num = playersMakingFists.Count;
+					}
+					playersMakingFists.Add(item);
+				}
+			}
+			if (playersMakingFists.Count <= 1 || num == -1)
+			{
+				midpoint = Vector3.zero;
+				return;
+			}
+			playersToPropagateFrom.Enqueue(playersMakingFists[num]);
+			playersInProvisionalGroup.Add(actorNumber);
+			midpoint = makingFist.rigTarget.position;
+			int num2 = 1 << num;
+			PlayerFist result;
+			while (playersToPropagateFrom.TryDequeue(out result))
+			{
+				for (int i = 0; i < playersMakingFists.Count; i++)
+				{
+					if ((num2 & (1 << i)) != 0)
+					{
+						continue;
+					}
+					PlayerFist item2 = playersMakingFists[i];
+					if ((result.position - item2.position).IsShorterThan(detectionRadius))
+					{
+						int index = ~playersInProvisionalGroup.BinarySearch(item2.actorNumber);
+						num2 |= 1 << i;
+						playersInProvisionalGroup.Insert(index, item2.actorNumber);
+						if (item2.isLeftHand)
+						{
+							provisionalGroupUsingLeftHands.Add(item2.actorNumber);
+						}
+						playersToPropagateFrom.Enqueue(item2);
+						midpoint += item2.position;
+					}
+				}
+			}
+			if (playersInProvisionalGroup.Count == 1)
+			{
+				playersInProvisionalGroup.Clear();
+			}
+			if (playersInProvisionalGroup.Count > 0)
+			{
+				midpoint /= (float)playersInProvisionalGroup.Count;
+			}
 		}
 	}
 

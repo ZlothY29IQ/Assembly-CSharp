@@ -310,11 +310,12 @@ public class CosmeticWardrobe : MonoBehaviour
 		for (int i = 0; i < cosmeticCollectionDisplays.Length; i++)
 		{
 			CosmeticsController.CosmeticItem cosmetic = CosmeticsController.instance.GetCosmetic(selectedCategory, startingDisplayIndex + i);
-			cosmeticCollectionDisplays[i].currentCosmeticItem = cosmetic;
-			cosmeticCollectionDisplays[i].displayHead.SetCosmeticActive(cosmetic.displayName);
-			cosmeticCollectionDisplays[i].selectButton.enabled = !cosmetic.isNullItem;
-			cosmeticCollectionDisplays[i].selectButton.isOn = !cosmetic.isNullItem && CosmeticsController.instance.IsCosmeticEquipped(cosmetic, m_useTemporarySet);
-			cosmeticCollectionDisplays[i].selectButton.UpdateColor();
+			CosmeticWardrobeSelection obj = cosmeticCollectionDisplays[i];
+			obj.currentCosmeticItem = cosmetic;
+			obj.displayHead.SetCosmeticActive(cosmetic.displayName);
+			obj.selectButton.enabled = !cosmetic.isNullItem;
+			obj.selectButton.isOn = !cosmetic.isNullItem && CosmeticsController.instance.IsCosmeticEquipped(cosmetic, m_useTemporarySet);
+			obj.selectButton.UpdateColor();
 		}
 		int categorySize = CosmeticsController.instance.GetCategorySize(selectedCategory);
 		nextSelection.enabled = categorySize > cosmeticCollectionDisplays.Length;

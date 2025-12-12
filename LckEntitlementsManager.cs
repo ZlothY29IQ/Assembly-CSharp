@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,6 +17,8 @@ public class LckEntitlementsManager : MonoBehaviour
 		public int AttemptCount;
 
 		public float TimeoutUntilTimestamp;
+
+		public float LastSeenTimestamp;
 	}
 
 	private enum FeatureState
@@ -39,6 +42,8 @@ public class LckEntitlementsManager : MonoBehaviour
 
 	private const float BATCH_GET_ENTITLEMENTS_INTERVAL_SECONDS = 15f;
 
+	private const float STALE_PLAYER_TIMEOUT_MINUTES = 5f;
+
 	private const string DEFAULT_SESSION_ID = "DefaultSessionId";
 
 	private FeatureState _currentState;
@@ -51,6 +56,8 @@ public class LckEntitlementsManager : MonoBehaviour
 
 	private Coroutine _cleanupProcessedPlayersCoroutine;
 
+	private bool _isProcessingBatch;
+
 	public static bool LckEntitlementsEnabled { get; private set; }
 
 	public static LckEntitlementsManager Instance { get; private set; }
@@ -59,7 +66,7 @@ public class LckEntitlementsManager : MonoBehaviour
 	{
 		if (Instance != null && Instance != this)
 		{
-			Object.Destroy(base.gameObject);
+			UnityEngine.Object.Destroy(base.gameObject);
 		}
 		else
 		{
@@ -139,6 +146,7 @@ public class LckEntitlementsManager : MonoBehaviour
 			value = new PlayerProcessRecord();
 			_processedPlayers[userId] = value;
 		}
+		value.LastSeenTimestamp = Time.time;
 		if (Time.time < value.TimeoutUntilTimestamp)
 		{
 			Debug.LogWarning("LCK: Player " + userId + " is on a timeout. Entitlements Manager will ignore spawn event.");
@@ -164,6 +172,10 @@ public class LckEntitlementsManager : MonoBehaviour
 		while (true)
 		{
 			yield return new WaitForSeconds(15f);
+			if (_isProcessingBatch)
+			{
+				continue;
+			}
 			List<string> list;
 			lock (_remotePlayersToGetEntitlementsFor)
 			{
@@ -173,13 +185,13 @@ public class LckEntitlementsManager : MonoBehaviour
 				}
 				list = _remotePlayersToGetEntitlementsFor.ToList();
 				_remotePlayersToGetEntitlementsFor.Clear();
-				goto IL_0083;
+				goto IL_008b;
 			}
-			IL_0083:
+			IL_008b:
 			if (list.Count > 0)
 			{
-				Debug.Log($"LCK: Processing a batch of {list.Count} remote player(s).");
-				StartCoroutine(GetCosmeticsForPlayersCoroutine(list, "ProcessBatchedRemotePlayersCoroutine"));
+				_isProcessingBatch = true;
+				GetCosmeticsForPlayersAsync(list, "ProcessBatchedRemotePlayers");
 			}
 		}
 	}
@@ -209,49 +221,67 @@ public class LckEntitlementsManager : MonoBehaviour
 		Debug.LogError("LCK: All attempts to set session entitlement failed.");
 	}
 
-	private IEnumerator GetCosmeticsForPlayersCoroutine(IEnumerable<string> playerUserIds, string methodNameForLogging)
+	private async Task GetCosmeticsForPlayersAsync(List<string> userIdList, string methodNameForLogging)
 	{
-		List<string> userIdList = playerUserIds?.ToList() ?? new List<string>();
-		if (userIdList.Count == 0)
+		try
 		{
-			yield break;
-		}
-		if (PhotonNetwork.CurrentRoom == null)
-		{
-			Debug.LogError("LCK: Called " + methodNameForLogging + " but no room was found.");
-			yield break;
-		}
-		string sessionId = "DefaultSessionId";
-		Debug.Log("LCK: Calling " + methodNameForLogging + " for session: " + sessionId + " for players: " + string.Join(", ", userIdList) + ".");
-		for (int attempt = 1; attempt <= 2; attempt++)
-		{
-			Task<Result<bool>> getUserCosmeticsTask = _lckCosmeticsCoordinator.GetUserCosmeticsForSessionAsync(userIdList, sessionId);
-			yield return new WaitUntil(() => getUserCosmeticsTask.IsCompleted);
-			if (getUserCosmeticsTask.IsFaulted || !getUserCosmeticsTask.Result.IsOk)
+			if (userIdList == null || userIdList.Count == 0)
 			{
-				string text = (getUserCosmeticsTask.IsFaulted ? getUserCosmeticsTask.Exception.ToString() : getUserCosmeticsTask.Result.Message.ToString());
-				Debug.LogError($"LCK: Error in {methodNameForLogging} (Attempt {attempt}/{2}): {text}");
-				continue;
+				return;
 			}
-			Debug.Log("LCK: Successfully called " + methodNameForLogging + " endpoint.");
-			yield break;
+			if (PhotonNetwork.CurrentRoom == null)
+			{
+				Debug.LogError("LCK: Called " + methodNameForLogging + " but no room was found.");
+				return;
+			}
+			string sessionId = "DefaultSessionId";
+			await Task.Run(async delegate
+			{
+				Debug.Log($"LCK: Calling {methodNameForLogging} for session: {sessionId} for {userIdList.Count} players.");
+				for (int attempt = 1; attempt <= 2; attempt++)
+				{
+					Result<bool> result = await _lckCosmeticsCoordinator.GetUserCosmeticsForSessionAsync(userIdList, sessionId);
+					if (result.IsOk)
+					{
+						Debug.Log("LCK: Successfully called " + methodNameForLogging + " endpoint.");
+						return;
+					}
+					Debug.LogError($"LCK: Error in {methodNameForLogging} (Attempt {attempt}/{2}): {result.Message}");
+				}
+				Debug.LogError("LCK: All attempts to call " + methodNameForLogging + " failed.");
+			});
 		}
-		Debug.LogError("LCK: All attempts to call " + methodNameForLogging + " failed.");
+		catch (Exception arg)
+		{
+			Debug.LogError($"LCK: An exception occurred in GetCosmeticsForPlayersAsync: {arg}");
+		}
+		finally
+		{
+			_isProcessingBatch = false;
+		}
 	}
 
 	private IEnumerator CleanupProcessedPlayersCoroutine()
 	{
+		List<string> playersToRemove = new List<string>();
 		while (true)
 		{
 			yield return new WaitForSeconds(60f);
-			List<string> list = (from pair in _processedPlayers
-				where pair.Value.TimeoutUntilTimestamp > 0f && Time.time > pair.Value.TimeoutUntilTimestamp
-				select pair.Key).ToList();
-			if (!list.Any())
+			playersToRemove.Clear();
+			float time = Time.time;
+			foreach (KeyValuePair<string, PlayerProcessRecord> processedPlayer in _processedPlayers)
+			{
+				if (time > processedPlayer.Value.LastSeenTimestamp + 300f)
+				{
+					playersToRemove.Add(processedPlayer.Key);
+				}
+			}
+			if (playersToRemove.Count <= 0)
 			{
 				continue;
 			}
-			foreach (string item in list)
+			Debug.Log($"LCK: Cleaning up {playersToRemove.Count} stale player records.");
+			foreach (string item in playersToRemove)
 			{
 				_processedPlayers.Remove(item);
 			}

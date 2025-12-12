@@ -290,6 +290,8 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 
 	private const string VISUALS_SCREEN_OPTIONS_KEY = "VISUALS_SCREEN_OPTIONS";
 
+	private const string VISUALS_SCREEN_PERF_KEY = "VISUALS_SCREEN_PERF";
+
 	private const string VISUALS_SCREEN_CURRENT_KEY = "VISUALS_SCREEN_CURRENT";
 
 	private const string VISUALS_SCREEN_VOLUME_KEY = "VISUALS_SCREEN_VOLUME";
@@ -874,7 +876,7 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		{
 			UnityEngine.Object.Destroy(base.gameObject);
 		}
-		Debug.Log("==== GORILLA TAG - VERSION: " + version + ", BUILD NUMBER: " + buildCode + ", BUILD DATE: " + buildDate + " ====\r\n\r\n      ___   ___\r\n     /   ---   \\\r\n    C|  @   @  |D\r\n      \\  . .  /\r\n       |     |\r\n       | _._ |\r\n       \\_____/\r\n\r\n\r\n");
+		Debug.Log("==== GORILLA TAG - VERSION: " + version + ", BUILD NUMBER: " + buildCode + ", BUILD DATE: " + buildDate + " ====\r\n\r\n               _______\r\n              /       \\\r\n             /  _____  \\\r\n            / / _   _ \\ \\\r\n           [ | (O) (O) | ]\r\n            | \\  . .  / |\r\n     _______|  | _._ |  |_______\r\n    /        \\  \\___/  /        \\\r\n\r\n\r\n");
 		_activeOrderList = OrderList;
 		defaultUpdateCooldown = updateCooldown;
 	}
@@ -1217,7 +1219,7 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 	{
 		if (!didInitializeGameMode)
 		{
-			string text = PlayerPrefs.GetString("currentGameModePostSI", GameModeType.SuperInfect.ToString());
+			string text = PlayerPrefs.GetString("currentGameModePostSI", GameModeType.Infection.ToString());
 			GameModeType gameModeType;
 			try
 			{

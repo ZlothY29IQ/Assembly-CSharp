@@ -28,6 +28,10 @@ public class GRAbilityDie : GRAbilityBase
 
 	public GRBreakableItemSpawnConfig lootTable;
 
+	public bool spawnOnGround;
+
+	public LayerMask groundLayerMask;
+
 	public Transform lootSpawnMarker;
 
 	public List<AnimationData> animData;
@@ -35,6 +39,8 @@ public class GRAbilityDie : GRAbilityBase
 	private int instigatingActorNumber;
 
 	private bool isDead;
+
+	private float totalDeathDelay;
 
 	public GRAbilityInterpolatedMovement staggerMovement;
 
@@ -53,14 +59,14 @@ public class GRAbilityDie : GRAbilityBase
 		staggerMovement.Setup(root);
 	}
 
-	public override void Start()
+	protected override void OnStart()
 	{
-		base.Start();
+		totalDeathDelay = delayDeath;
 		if (animData.Count > 0)
 		{
 			int index = UnityEngine.Random.Range(0, animData.Count);
-			delayDeath = animData[index].duration;
-			staggerMovement.InitFromVelocityAndDuration(staggerMovement.velocity, delayDeath);
+			totalDeathDelay += animData[index].duration;
+			staggerMovement.InitFromVelocityAndDuration(staggerMovement.velocity, totalDeathDelay);
 			PlayAnim(animData[index].animName, 0.1f, animData[index].speed);
 		}
 		agent.SetIsPathing(isPathing: false, ignoreRigiBody: true);
@@ -74,9 +80,13 @@ public class GRAbilityDie : GRAbilityBase
 		soundOnHide.soundSelectMode = AbilitySound.SoundSelectMode.Random;
 		soundDeath.Play(null);
 		Disable(disableCollidersWhenDead, disable: true);
+		if (fxDeath != null)
+		{
+			fxDeath.SetActive(value: false);
+		}
 	}
 
-	public override void Stop()
+	protected override void OnStop()
 	{
 		staggerMovement.Stop();
 		agent.SetIsPathing(isPathing: true, ignoreRigiBody: true);
@@ -94,7 +104,7 @@ public class GRAbilityDie : GRAbilityBase
 			vector.y = 0f;
 			vel = vector * magnitude;
 		}
-		staggerMovement.InitFromVelocityAndDuration(vel, delayDeath);
+		staggerMovement.InitFromVelocityAndDuration(vel, totalDeathDelay);
 	}
 
 	public void SetInstigatingPlayerIndex(int actorNumber)
@@ -120,12 +130,21 @@ public class GRAbilityDie : GRAbilityBase
 			{
 				transform = agent.transform;
 			}
-			Vector3 position = transform.position;
+			Vector3 vector = transform.position;
 			if (transform == null)
 			{
-				position.y += 0.33f;
+				vector.y += 0.33f;
 			}
-			gameEntity.manager.RequestCreateItem(gameEntity2.gameObject.name.GetStaticHash(), position, transform.rotation, 0L);
+			if (spawnOnGround && Physics.Raycast(new Ray(vector + Vector3.up * 0.5f, -Vector3.up), out var hitInfo, 5f, groundLayerMask.value, QueryTriggerInteraction.Ignore))
+			{
+				vector = hitInfo.point;
+			}
+			gameEntity.manager.RequestCreateItem(gameEntity2.gameObject.name.GetStaticHash(), vector, transform.rotation, 0L);
+		}
+		GREnemy component = gameEntity.GetComponent<GREnemy>();
+		if (component != null && component.damageFlash != null)
+		{
+			component.damageFlash.Play();
 		}
 	}
 
@@ -137,12 +156,7 @@ public class GRAbilityDie : GRAbilityBase
 		{
 			gRPlayer.IncrementSynchronizedSessionStat(GRPlayer.SynchronizedSessionStat.Kills, 1f);
 		}
-		GREnemyType? enemyType = gameEntity.GetEnemyType();
-		if (enemyType.HasValue)
-		{
-			GREnemyType valueOrDefault = enemyType.GetValueOrDefault();
-			GhostReactor.instance.shiftManager.shiftStats.IncrementEnemyKills(valueOrDefault);
-		}
+		GhostReactor.instance.shiftManager.shiftStats.IncrementEnemyKills(gameEntity.GetEnemyType());
 		if (gameEntity.IsAuthority())
 		{
 			gameEntity.manager.RequestDestroyItem(gameEntity.id);
@@ -154,7 +168,7 @@ public class GRAbilityDie : GRAbilityBase
 		return false;
 	}
 
-	protected override void UpdateShared(float dt)
+	protected override void OnUpdateShared(float dt)
 	{
 		if (startTime >= 0.0)
 		{
@@ -163,12 +177,12 @@ public class GRAbilityDie : GRAbilityBase
 				staggerMovement.Update(dt);
 			}
 			double num = Time.timeAsDouble - startTime;
-			if (!isDead && num > (double)delayDeath)
+			if (!isDead && num > (double)totalDeathDelay)
 			{
 				isDead = true;
 				Die();
 			}
-			else if (isDead && num > (double)(delayDeath + destroyDelay))
+			else if (isDead && num > (double)(totalDeathDelay + destroyDelay))
 			{
 				GhostReactorManager.Get(entity).OnAbilityDie(entity);
 				DestroySelf();

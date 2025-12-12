@@ -34,8 +34,14 @@ public class PoseableMannequin : MonoBehaviour
 
 	public void Start()
 	{
-		skinnedMeshRenderer.gameObject.SetActive(value: false);
-		staticGorillaMesh.gameObject.SetActive(value: true);
+		if ((bool)skinnedMeshRenderer)
+		{
+			skinnedMeshRenderer.gameObject.SetActive(value: false);
+		}
+		if ((bool)staticGorillaMesh)
+		{
+			staticGorillaMesh.gameObject.SetActive(value: true);
+		}
 	}
 
 	private string GetPrefabPathFromCurrentPrefabStage()

@@ -118,66 +118,33 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 
 	public void WriteDataPUN(PhotonStream stream, PhotonMessageInfo info)
 	{
-		if (zoneSuperInfection == null || !gameEntityManager.IsAuthority())
+		if (!(zoneSuperInfection == null) && gameEntityManager.IsAuthority())
 		{
-			return;
-		}
-		for (int i = 0; i < zoneSuperInfection.siTerminals.Length; i++)
-		{
-			zoneSuperInfection.siTerminals[i].WriteDataPUN(stream, info);
-		}
-		for (int j = 0; j < zoneSuperInfection.siDeposits.Length; j++)
-		{
-			zoneSuperInfection.siDeposits[j].WriteDataPUN(stream, info);
-		}
-		zoneSuperInfection.questBoard.WriteDataPUN(stream, info);
-		tempRigs.Clear();
-		VRRigCache.Instance.GetActiveRigs(tempRigs);
-		tempRigs2.Clear();
-		for (int k = 0; k < tempRigs.Count; k++)
-		{
-			if (tempRigs[k].OwningNetPlayer != null)
+			for (int i = 0; i < zoneSuperInfection.siTerminals.Length; i++)
 			{
-				tempRigs2.Add(tempRigs[k]);
+				zoneSuperInfection.siTerminals[i].WriteDataPUN(stream, info);
 			}
-		}
-		int count = tempRigs2.Count;
-		stream.SendNext(count);
-		for (int l = 0; l < count; l++)
-		{
-			SIPlayer sIPlayer = SIPlayer.Get(tempRigs2[l].OwningNetPlayer.ActorNumber);
-			stream.SendNext(sIPlayer.ActorNr);
-			sIPlayer.WriteDataPUN(stream, info);
+			for (int j = 0; j < zoneSuperInfection.siDeposits.Length; j++)
+			{
+				zoneSuperInfection.siDeposits[j].WriteDataPUN(stream, info);
+			}
+			zoneSuperInfection.questBoard.WriteDataPUN(stream, info);
 		}
 	}
 
 	public void ReadDataPUN(PhotonStream stream, PhotonMessageInfo info)
 	{
-		if (zoneSuperInfection == null || !gameEntityManager.IsAuthorityPlayer(info.Sender))
+		if (!(zoneSuperInfection == null) && gameEntityManager.IsAuthorityPlayer(info.Sender))
 		{
-			return;
-		}
-		for (int i = 0; i < zoneSuperInfection.siTerminals.Length; i++)
-		{
-			zoneSuperInfection.siTerminals[i].ReadDataPUN(stream, info);
-		}
-		for (int j = 0; j < zoneSuperInfection.siDeposits.Length; j++)
-		{
-			zoneSuperInfection.siDeposits[j].ReadDataPUN(stream, info);
-		}
-		zoneSuperInfection.questBoard.ReadDataPUN(stream, info);
-		int num = (int)stream.ReceiveNext();
-		if (num < 0 || num > 10)
-		{
-			return;
-		}
-		for (int k = 0; k < num; k++)
-		{
-			SIPlayer sIPlayer = SIPlayer.Get((int)stream.ReceiveNext());
-			if (sIPlayer == null || !sIPlayer.ReadDataPUN(stream, info))
+			for (int i = 0; i < zoneSuperInfection.siTerminals.Length; i++)
 			{
-				break;
+				zoneSuperInfection.siTerminals[i].ReadDataPUN(stream, info);
 			}
+			for (int j = 0; j < zoneSuperInfection.siDeposits.Length; j++)
+			{
+				zoneSuperInfection.siDeposits[j].ReadDataPUN(stream, info);
+			}
+			zoneSuperInfection.questBoard.ReadDataPUN(stream, info);
 		}
 	}
 

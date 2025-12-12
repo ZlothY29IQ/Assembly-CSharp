@@ -102,6 +102,8 @@ public class PhotonNetworkController : MonoBehaviour
 
 	public string autoJoinRoom;
 
+	public int autoJoinRoomCap = 8;
+
 	public string autoJoinGameMode;
 
 	private bool deferredJoin;
@@ -113,6 +115,10 @@ public class PhotonNetworkController : MonoBehaviour
 	[NetworkPrefab]
 	[SerializeField]
 	private NetworkObject testPlayerPrefab;
+
+	private string roomToJoin = "";
+
+	private string LastRoomToJoin = "";
 
 	private List<GorillaNetworkJoinTrigger> allJoinTriggers = new List<GorillaNetworkJoinTrigger>();
 
@@ -232,14 +238,21 @@ public class PhotonNetworkController : MonoBehaviour
 			partyJoinDeferredUntilTimestamp = 0f;
 			if (currentJoinTrigger == privateTrigger)
 			{
-				AttemptToJoinSpecificRoom(customRoomID, FriendshipGroupDetection.Instance.IsInParty ? JoinType.JoinWithParty : JoinType.Solo);
+				if (customRoomID == roomToJoin || customRoomID == autoJoinRoom || customRoomID == LastRoomToJoin)
+				{
+					AttemptToAutoJoinSpecificRoom(customRoomID, FriendshipGroupDetection.Instance.IsInParty ? JoinType.JoinWithParty : JoinType.Solo);
+				}
+				else
+				{
+					AttemptToJoinSpecificRoom(customRoomID, FriendshipGroupDetection.Instance.IsInParty ? JoinType.JoinWithParty : JoinType.Solo);
+				}
 			}
 			else
 			{
 				AttemptToJoinPublicRoom(currentJoinTrigger, currentJoinType);
 			}
 		}
-		else if (NetworkSystem.Instance.netState != NetSystemState.PingRecon && NetworkSystem.Instance.netState != 0)
+		else if (NetworkSystem.Instance.netState != NetSystemState.PingRecon && NetworkSystem.Instance.netState != 0 && NetworkSystem.Instance.netState != NetSystemState.Disconnecting)
 		{
 			deferredJoin = false;
 			partyJoinDeferredUntilTimestamp = 0f;
@@ -290,7 +303,7 @@ public class PhotonNetworkController : MonoBehaviour
 			{
 				_ = roomJoinType;
 				_ = 3;
-				if (NetworkSystem.Instance.GameModeString.StartsWith(desiredGameMode))
+				if (NetworkSystem.Instance.GameModeString.StartsWith(desiredGameMode) || triggeredTrigger.SameZoneAsOverride())
 				{
 					return;
 				}
@@ -392,6 +405,28 @@ public class PhotonNetworkController : MonoBehaviour
 		RoomSystem.SendPartyFollowCommand(Instance.shuffler, Instance.keyStr);
 		PhotonNetwork.SendAllOutgoingCommands();
 		await Task.Delay(200);
+	}
+
+	private void AttemptToAutoJoinRoomCallback(NetJoinResult obj)
+	{
+		LastRoomToJoin = roomToJoin;
+		switch (obj)
+		{
+		case NetJoinResult.AlreadyInRoom:
+			break;
+		case NetJoinResult.Failed_Full:
+			break;
+		case NetJoinResult.Success:
+			break;
+		case NetJoinResult.FallbackCreated:
+			break;
+		}
+	}
+
+	public void AttemptToAutoJoinSpecificRoom(string roomID, JoinType roomJoinType)
+	{
+		roomToJoin = roomID;
+		AttemptToJoinSpecificRoomAsync(roomID, roomJoinType, AttemptToAutoJoinRoomCallback);
 	}
 
 	public void AttemptToJoinSpecificRoom(string roomID, JoinType roomJoinType)

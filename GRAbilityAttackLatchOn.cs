@@ -32,11 +32,10 @@ public class GRAbilityAttackLatchOn : GRAbilityBase
 		}
 	}
 
-	public override void Start()
+	protected override void OnStart()
 	{
-		base.Start();
 		PlayAnim(animName, 0.1f, animSpeed);
-		agent.navAgent.speed = tellMoveSpeed;
+		agent.SetSpeed(tellMoveSpeed);
 		startTime = Time.timeAsDouble;
 		if (damageTrigger != null)
 		{
@@ -44,7 +43,7 @@ public class GRAbilityAttackLatchOn : GRAbilityBase
 		}
 	}
 
-	public override void Stop()
+	protected override void OnStop()
 	{
 		agent.transform.SetParent(null);
 		agent.SetIsPathing(isPathing: true, ignoreRigiBody: true);
@@ -59,13 +58,13 @@ public class GRAbilityAttackLatchOn : GRAbilityBase
 		return Time.timeAsDouble - startTime >= (double)duration;
 	}
 
-	public override void Update(float dt)
+	protected override void OnUpdateAuthority(float dt)
 	{
 		UpdateNavSpeed();
 		GameAgent.UpdateFacingTarget(root, agent.navAgent, target, maxTurnSpeed);
 	}
 
-	public override void UpdateRemote(float dt)
+	protected override void OnUpdateRemote(float dt)
 	{
 		UpdateNavSpeed();
 	}
@@ -74,8 +73,8 @@ public class GRAbilityAttackLatchOn : GRAbilityBase
 	{
 		if (Time.timeAsDouble - startTime > (double)tellDuration)
 		{
-			agent.navAgent.velocity = agent.navAgent.velocity.normalized * attackMoveSpeed;
-			agent.navAgent.speed = attackMoveSpeed;
+			agent.SetSpeed(attackMoveSpeed);
+			agent.SetVelocity(agent.navAgent.velocity.normalized * attackMoveSpeed);
 			if (damageTrigger != null)
 			{
 				damageTrigger.SetActive(value: true);

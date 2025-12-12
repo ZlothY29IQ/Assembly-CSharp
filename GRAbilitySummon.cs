@@ -54,9 +54,8 @@ public class GRAbilitySummon : GRAbilityBase
 		base.Setup(agent, anim, audioSource, root, head, lineOfSight);
 	}
 
-	public override void Start()
+	protected override void OnStart()
 	{
-		base.Start();
 		lastAnimIndex = AbilityHelperFunctions.RandomRangeUnique(0, animData.Count, lastAnimIndex);
 		duration = animData[lastAnimIndex].duration;
 		chargeTime = animData[lastAnimIndex].eventTime;
@@ -64,8 +63,8 @@ public class GRAbilitySummon : GRAbilityBase
 		state = State.Charge;
 		summonSound.Play(audioSource);
 		spawnedCount = 0;
-		agent.navAgent.isStopped = true;
-		agent.navAgent.speed = 1f;
+		agent.SetStopped(stopMovement: true);
+		agent.SetSpeed(1f);
 		if (fxStartSummon != null)
 		{
 			fxStartSummon.SetActive(value: false);
@@ -73,10 +72,10 @@ public class GRAbilitySummon : GRAbilityBase
 		}
 	}
 
-	public override void Stop()
+	protected override void OnStop()
 	{
 		lookAtTarget = null;
-		agent.navAgent.isStopped = false;
+		agent.SetStopped(stopMovement: false);
 	}
 
 	public void SetLookAtTarget(Transform transform)
@@ -84,12 +83,12 @@ public class GRAbilitySummon : GRAbilityBase
 		lookAtTarget = transform;
 	}
 
-	public override void Think(float dt)
+	protected override void OnThink(float dt)
 	{
 		UpdateState(dt);
 	}
 
-	protected override void UpdateShared(float dt)
+	protected override void OnUpdateShared(float dt)
 	{
 		if (lookAtTarget != null)
 		{

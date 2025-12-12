@@ -364,31 +364,6 @@ public class GorillaPlayerScoreboardLine : MonoBehaviour
 		NetworkSystemRaiseEvent.RaiseEvent(code, data, options, reliable: true);
 	}
 
-	public static void MutePlayer(string PlayerID, string OtherPlayerNickName, int muting)
-	{
-		if (OtherPlayerNickName.Length > 12)
-		{
-			OtherPlayerNickName.Remove(12);
-		}
-		WebFlags flags = new WebFlags(3);
-		NetEventOptions options = new NetEventOptions
-		{
-			Flags = flags,
-			TargetActors = targetActors
-		};
-		byte code = 51;
-		object[] data = new object[6]
-		{
-			PlayerID,
-			muting,
-			OtherPlayerNickName,
-			NetworkSystem.Instance.LocalPlayer.NickName,
-			!NetworkSystem.Instance.SessionIsPrivate,
-			NetworkSystem.Instance.RoomStringStripped()
-		};
-		NetworkSystemRaiseEvent.RaiseEvent(code, data, options, reliable: true);
-	}
-
 	public string NormalizeName(bool doIt, string text)
 	{
 		if (doIt)

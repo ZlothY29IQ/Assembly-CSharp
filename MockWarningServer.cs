@@ -258,6 +258,7 @@ internal class MockWarningServer : WarningsServer
 			else
 			{
 				value2 = CreateWarningStatus("", "", null, null, EImageVisibility.None, null, null);
+				value2.noWarningResult = WarningButtonResult.Continue;
 			}
 			break;
 		}
@@ -330,6 +331,7 @@ internal class MockWarningServer : WarningsServer
 			return inOptInCohort;
 		case 3:
 		case 4:
+		case 5:
 			return true;
 		}
 	}

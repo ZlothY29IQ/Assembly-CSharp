@@ -41,7 +41,7 @@ public class CosmeticTryOnNotifier : MonoBehaviour
 			PlayerCosmeticsSystem.SetRigTryOn(inTryon: true, playerRig);
 			break;
 		case Mode.ENABLE_LIST:
-			PlayerCosmeticsSystem.UnlockTemporaryCosmeticsForPlayer(playerRig, unlockList.Strings);
+			PlayerCosmeticsSystem.SetRigTemporarySpace(enteringSpace: true, playerRig, unlockList.Strings);
 			break;
 		}
 	}
@@ -54,7 +54,7 @@ public class CosmeticTryOnNotifier : MonoBehaviour
 			PlayerCosmeticsSystem.SetRigTryOn(inTryon: false, playerRig);
 			break;
 		case Mode.ENABLE_LIST:
-			PlayerCosmeticsSystem.LockTemporaryCosmeticsForPlayer(playerRig, unlockList.Strings);
+			PlayerCosmeticsSystem.SetRigTemporarySpace(enteringSpace: false, playerRig, unlockList.Strings);
 			break;
 		}
 	}

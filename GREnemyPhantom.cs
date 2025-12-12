@@ -484,17 +484,17 @@ public class GREnemyPhantom : MonoBehaviour, IGameEntityComponent, IGameEntitySe
 		switch (currBehavior)
 		{
 		case Behavior.Idle:
-			abilityIdle.Update(dt);
+			abilityIdle.UpdateAuthority(dt);
 			break;
 		case Behavior.Mine:
-			abilityMine.Update(dt);
+			abilityMine.UpdateAuthority(dt);
 			if (idleLocation != null)
 			{
 				GameAgent.UpdateFacingDir(base.transform, agent.navAgent, idleLocation.forward, 180f);
 			}
 			break;
 		case Behavior.Rage:
-			abilityRage.Update(dt);
+			abilityRage.UpdateAuthority(dt);
 			if (abilityRage.IsDone())
 			{
 				SetBehavior(Behavior.Chase);
@@ -504,7 +504,7 @@ public class GREnemyPhantom : MonoBehaviour, IGameEntityComponent, IGameEntitySe
 			UpdateAlert(dt);
 			break;
 		case Behavior.Return:
-			abilityReturn.Update(dt);
+			abilityReturn.UpdateAuthority(dt);
 			if (abilityReturn.IsDone())
 			{
 				SetBehavior(Behavior.Mine);
@@ -512,7 +512,7 @@ public class GREnemyPhantom : MonoBehaviour, IGameEntityComponent, IGameEntitySe
 			break;
 		case Behavior.Chase:
 		{
-			abilityChase.Update(dt);
+			abilityChase.UpdateAuthority(dt);
 			if (abilityChase.IsDone())
 			{
 				SetBehavior(Behavior.Return);
@@ -530,17 +530,17 @@ public class GREnemyPhantom : MonoBehaviour, IGameEntityComponent, IGameEntitySe
 			break;
 		}
 		case Behavior.Attack:
-			abilityAttack.Update(dt);
+			abilityAttack.UpdateAuthority(dt);
 			if (abilityAttack.IsDone())
 			{
 				SetBehavior(Behavior.Chase);
 			}
 			break;
 		case Behavior.Investigate:
-			abilityInvestigate.Update(dt);
+			abilityInvestigate.UpdateAuthority(dt);
 			break;
 		case Behavior.Jump:
-			abilityJump.Update(dt);
+			abilityJump.UpdateAuthority(dt);
 			if (abilityJump.IsDone())
 			{
 				ChooseNewBehavior();
@@ -576,7 +576,7 @@ public class GREnemyPhantom : MonoBehaviour, IGameEntityComponent, IGameEntitySe
 	public void UpdateAlert(float dt)
 	{
 		abilityAlert.SetTargetPlayer(agent.targetPlayer);
-		abilityAlert.Update(dt);
+		abilityAlert.UpdateAuthority(dt);
 		_ = Time.timeAsDouble;
 		float outDistanceSq;
 		if (!senseNearby.IsAnyoneNearby())

@@ -126,6 +126,8 @@ public class RCRemoteHoldable : TransferrableObject, ISnapTurnOverride
 		if (_events.IsNotNull())
 		{
 			_events.Activate -= new Action<int, int, object[], PhotonMessageInfoWrapped>(OnStartConnectionEvent);
+			_events.Dispose();
+			_events = null;
 		}
 	}
 

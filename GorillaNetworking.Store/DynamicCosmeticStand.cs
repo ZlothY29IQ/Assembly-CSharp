@@ -61,6 +61,12 @@ public class DynamicCosmeticStand : MonoBehaviour, iFlagForBaking
 
 	private Scene customMapScene;
 
+	[HideInInspector]
+	public StoreDisplay parentDisplay;
+
+	[HideInInspector]
+	public StoreDepartment parentDepartment;
+
 	private int searchIndex;
 
 	public string thisCosmeticName
@@ -90,18 +96,66 @@ public class DynamicCosmeticStand : MonoBehaviour, iFlagForBaking
 	{
 		addToCartTextTMP.gameObject.SetActive(value: true);
 		slotPriceTextTMP.gameObject.SetActive(value: true);
+		AddStandToStoreController();
 	}
 
 	public void OnDisable()
 	{
 		addToCartTextTMP.gameObject.SetActive(value: false);
 		slotPriceTextTMP.gameObject.SetActive(value: false);
+		RemoveStandFromStoreController();
+	}
+
+	public void AddStandToStoreController()
+	{
+		if (!StoreController.instance.cosmeticsInitialized)
+		{
+			AsyncAddStandToStoreController();
+		}
+		else
+		{
+			_AddStandToStoreController();
+		}
+	}
+
+	public async void AsyncAddStandToStoreController()
+	{
+		while (!StoreController.instance.cosmeticsInitialized)
+		{
+			await Awaitable.NextFrameAsync();
+		}
+		_AddStandToStoreController();
+	}
+
+	public void _AddStandToStoreController()
+	{
+		StoreController.instance.AddStandToCosmeticStandsDictionary(this);
+		StoreController.instance.AddStandToPlayfabIDDictionary(this);
+		if (StoreController.instance.LoadFromTitleData)
+		{
+			StoreController.instance.InitializeStandFromTitleData(this);
+		}
+		else
+		{
+			InitializeCosmetic();
+		}
+	}
+
+	public void RemoveStandFromStoreController()
+	{
+		if (!(StoreController.instance == null) && StoreController.instance.cosmeticsInitialized)
+		{
+			StoreController.instance.RemoveStandFromDynamicCosmeticStandsDictionary(this);
+			StoreController.instance.RemoveStandFromPlayFabIDDictionary(this);
+		}
 	}
 
 	public virtual void SetForGame()
 	{
 		DisplayHeadModel.gameObject.SetActive(value: true);
 		SetStandType(DisplayHeadModel.bustType);
+		parentDisplay = GetComponentInParent<StoreDisplay>();
+		parentDepartment = GetComponentInParent<StoreDepartment>();
 	}
 
 	public void InitializeCosmetic()

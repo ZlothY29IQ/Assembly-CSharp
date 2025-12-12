@@ -27,9 +27,8 @@ public class GRAbilityMoveToTarget : GRAbilityBase
 		targetPos = agent.transform.position;
 	}
 
-	public override void Start()
+	protected override void OnStart()
 	{
-		base.Start();
 		PlayAnim(animName, 0.3f, animSpeed);
 		if ((bool)attributes && moveSpeed == 0f)
 		{
@@ -40,9 +39,8 @@ public class GRAbilityMoveToTarget : GRAbilityBase
 		movementSound.Play(null);
 	}
 
-	public override void Stop()
+	protected override void OnStop()
 	{
-		base.Stop();
 		movementSound.Stop();
 	}
 
@@ -51,7 +49,7 @@ public class GRAbilityMoveToTarget : GRAbilityBase
 		return (targetPos - root.position).sqrMagnitude < 0.25f;
 	}
 
-	protected override void UpdateShared(float dt)
+	protected override void OnUpdateShared(float dt)
 	{
 		if (target != null)
 		{

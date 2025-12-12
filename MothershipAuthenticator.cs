@@ -21,7 +21,7 @@ public class MothershipAuthenticator : MonoBehaviour, IGorillaSliceableSimple
 
 	public Action OnLoginSuccess;
 
-	public Action<string> OnLoginFailure;
+	public Action<string, string, string> OnLoginFailure;
 
 	public Action<int> OnLoginAttemptFailure;
 
@@ -74,9 +74,9 @@ public class MothershipAuthenticator : MonoBehaviour, IGorillaSliceableSimple
 			OnLoginSuccess?.Invoke();
 		}, delegate(MothershipError MothershipError, int errorCode)
 		{
-			Debug.Log($"Failed to log in, error {MothershipError.Message} trace ID: {MothershipError.TraceId} status: {errorCode} Mothership error code: {MothershipError.MothershipErrorCode}");
+			Debug.LogError($"Failed to log in, error {MothershipError.Message} trace ID: {MothershipError.TraceId} status: {errorCode} Mothership error code: {MothershipError.MothershipErrorCode}");
 			OnLoginAttemptFailure?.Invoke(1);
-			OnLoginFailure?.Invoke(MothershipError.Message);
+			OnLoginFailure?.Invoke(MothershipError.Message, MothershipError.MothershipErrorCode, MothershipError.TraceId);
 		});
 	}
 
@@ -97,21 +97,22 @@ public class MothershipAuthenticator : MonoBehaviour, IGorillaSliceableSimple
 				}, delegate(MothershipError MothershipError, int errorCode)
 				{
 					ticketHandle.Dispose();
-					Debug.Log($"Couldn't log into Mothership with Steam error {MothershipError.Message} trace ID: {MothershipError.TraceId} status: {errorCode} Mothership error code: {MothershipError.MothershipErrorCode}");
+					Debug.LogError($"Couldn't log into Mothership with Steam error {MothershipError.Message} trace ID: {MothershipError.TraceId} status: {errorCode} Mothership error code: {MothershipError.MothershipErrorCode}");
 					OnLoginAttemptFailure?.Invoke(1);
-					OnLoginFailure?.Invoke(MothershipError.Message);
+					OnLoginFailure?.Invoke(MothershipError.Message, MothershipError.MothershipErrorCode, MothershipError.TraceId);
 				});
 			}, delegate(EResult error)
 			{
-				Debug.Log($"Couldn't get an auth ticket for logging into Mothership with Steam {error}");
+				string text = $"Couldn't get an auth ticket for logging into Mothership with Steam: {error}";
+				Debug.LogError(text);
 				OnLoginAttemptFailure?.Invoke(1);
-				OnLoginFailure?.Invoke(error.ToString());
+				OnLoginFailure?.Invoke(text, "", "");
 			});
 		}, delegate(MothershipError MothershipError, int errorCode)
 		{
-			Debug.Log($"Couldn't start Mothership auth for Steam error {MothershipError.Message} trace ID: {MothershipError.TraceId} status: {errorCode} Mothership error code: {MothershipError.MothershipErrorCode}");
+			Debug.LogError($"Couldn't start Mothership auth for Steam error {MothershipError.Message} trace ID: {MothershipError.TraceId} status: {errorCode} Mothership error code: {MothershipError.MothershipErrorCode}");
 			OnLoginAttemptFailure?.Invoke(1);
-			OnLoginFailure?.Invoke(MothershipError.Message);
+			OnLoginFailure?.Invoke(MothershipError.Message, MothershipError.MothershipErrorCode, MothershipError.TraceId);
 		});
 	}
 

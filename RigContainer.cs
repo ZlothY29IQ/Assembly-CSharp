@@ -270,7 +270,7 @@ public class RigContainer : MonoBehaviour
 				GorillaGameManager.instance.NewVRRig(netView.Owner, netView.ViewID, playerTutorialCompletion);
 			}
 			_ = vrrig.OwningNetPlayer.IsLocal;
-			if (vrrig.InitializedCosmetics)
+			if (!vrrig.isOfflineVRRig && vrrig.InitializedCosmetics)
 			{
 				netView.SendRPC("RPC_RequestCosmetics", netView.Owner);
 			}

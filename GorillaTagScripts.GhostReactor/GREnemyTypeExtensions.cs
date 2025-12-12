@@ -1,34 +1,18 @@
-using System;
-using UnityEngine;
-
 namespace GorillaTagScripts.GhostReactor;
 
 public static class GREnemyTypeExtensions
 {
-	public static Type GetComponentType(this GREnemyType enemyType)
+	public static GREnemyType GetEnemyType(this GameEntity entity)
 	{
-		return enemyType switch
+		if (entity == null)
 		{
-			GREnemyType.Chaser => typeof(GREnemyChaser), 
-			GREnemyType.Pest => typeof(GREnemyPest), 
-			GREnemyType.Phantom => typeof(GREnemyPhantom), 
-			GREnemyType.Ranged => typeof(GREnemyRanged), 
-			GREnemyType.Summoner => typeof(GREnemySummoner), 
-			_ => null, 
-		};
-	}
-
-	public static GREnemyType? GetEnemyType(this GameEntity entity)
-	{
-		GameObject gameObject = entity.gameObject;
-		foreach (GREnemyType value in Enum.GetValues(typeof(GREnemyType)))
-		{
-			Type componentType = value.GetComponentType();
-			if ((object)componentType != null && (object)gameObject.GetComponent(componentType) != null)
-			{
-				return value;
-			}
+			return GREnemyType.None;
 		}
-		return null;
+		GREnemy component = entity.GetComponent<GREnemy>();
+		if (component == null)
+		{
+			return GREnemyType.None;
+		}
+		return component.enemyType;
 	}
 }

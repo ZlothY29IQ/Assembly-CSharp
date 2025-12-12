@@ -47,7 +47,7 @@ public class Projectile : MonoBehaviour, IProjectile
 
 	protected void Awake()
 	{
-		rigidbody = GetComponentInChildren<Rigidbody>();
+		rigidbody = GetComponent<Rigidbody>();
 		impactEffectSpawned = false;
 		forceComponent = GetComponent<ConstantForce>();
 	}
@@ -63,6 +63,9 @@ public class Projectile : MonoBehaviour, IProjectile
 		obj.localScale = Vector3.one * ownerRig.scaleFactor;
 		if (rigidbody != null)
 		{
+			rigidbody.isKinematic = false;
+			rigidbody.position = startPosition;
+			rigidbody.rotation = startRotation;
 			rigidbody.linearVelocity = velocity;
 		}
 		if ((bool)audioSource && (bool)launchAudio)

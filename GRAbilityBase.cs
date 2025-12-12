@@ -10,6 +10,8 @@ public class GRAbilityBase
 
 	protected Animation anim;
 
+	protected Animator animator;
+
 	protected Transform root;
 
 	protected Transform head;
@@ -25,12 +27,48 @@ public class GRAbilityBase
 	[ReadOnly]
 	public double startTime;
 
+	[ReadOnly]
+	public double stopTime;
+
 	protected int walkableArea = -1;
+
+	protected virtual void OnStart()
+	{
+	}
+
+	protected virtual void OnStop()
+	{
+	}
+
+	protected virtual void OnThink(float dt)
+	{
+	}
+
+	protected virtual void OnUpdateShared(float dt)
+	{
+	}
+
+	protected virtual void OnUpdateRemote(float dt)
+	{
+	}
+
+	protected virtual void OnUpdateAuthority(float dt)
+	{
+	}
+
+	public virtual bool IsCoolDownOver()
+	{
+		return true;
+	}
 
 	public virtual void Setup(GameAgent agent, Animation anim, AudioSource audioSource, Transform root, Transform head, GRSenseLineOfSight lineOfSight)
 	{
 		this.root = root;
 		this.anim = anim;
+		if (anim == null)
+		{
+			animator = null;
+		}
 		this.agent = agent;
 		this.head = head;
 		this.audioSource = audioSource;
@@ -41,13 +79,16 @@ public class GRAbilityBase
 		walkableArea = NavMesh.GetAreaFromName("walkable");
 	}
 
-	public virtual void Start()
+	public void Start()
 	{
 		startTime = Time.timeAsDouble;
+		OnStart();
 	}
 
-	public virtual void Stop()
+	public void Stop()
 	{
+		stopTime = Time.timeAsDouble;
+		OnStop();
 	}
 
 	public virtual bool IsDone()
@@ -55,30 +96,46 @@ public class GRAbilityBase
 		return false;
 	}
 
-	public virtual void Think(float dt)
+	public void Think(float dt)
 	{
+		OnThink(dt);
 	}
 
-	public virtual void Update(float dt)
+	public void UpdateAuthority(float dt)
 	{
-		UpdateShared(dt);
+		OnUpdateShared(dt);
+		OnUpdateAuthority(dt);
 	}
 
-	public virtual void UpdateRemote(float dt)
+	public void UpdateRemote(float dt)
 	{
-		UpdateShared(dt);
-	}
-
-	protected virtual void UpdateShared(float dt)
-	{
+		OnUpdateShared(dt);
+		OnUpdateRemote(dt);
 	}
 
 	protected virtual void PlayAnim(string animName, float blendTime, float speed)
 	{
 		if (anim != null && !string.IsNullOrEmpty(animName))
 		{
-			anim[animName].speed = speed;
-			anim.CrossFade(animName, blendTime);
+			if (anim.GetClip(animName) == null)
+			{
+				Debug.LogErrorFormat("Anim Clip {0} does not exist in (1)", animName, anim);
+			}
+			else
+			{
+				anim[animName].speed = speed;
+				anim.CrossFade(animName, blendTime);
+			}
 		}
+	}
+
+	public bool IsCoolDownOver(float coolDown)
+	{
+		return (float)(Time.timeAsDouble - stopTime) > coolDown;
+	}
+
+	public virtual float GetRange()
+	{
+		return 0f;
 	}
 }

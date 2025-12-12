@@ -31,5 +31,6 @@ public enum GTZone
 	monkeBlocksShared,
 	ghostReactorTunnel,
 	ranked,
-	ghostReactorDrill
+	ghostReactorDrill,
+	forestWithCity
 }

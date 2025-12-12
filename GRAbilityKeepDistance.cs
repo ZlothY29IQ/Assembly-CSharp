@@ -47,15 +47,14 @@ public class GRAbilityKeepDistance : GRAbilityBase
 		}
 	}
 
-	public override void Start()
+	protected override void OnStart()
 	{
-		base.Start();
 		if (target != null)
 		{
 			Vector3 vector = agent.transform.position - target.position;
 			if (maxDistanceFromTarget > 0f && vector.magnitude > maxDistanceFromTarget)
 			{
-				navMeshAgent.isStopped = true;
+				agent.SetStopped(stopMovement: true);
 				PlayAnim(idleAnimName, 0.5f, 1f);
 				idleSound.Play(null);
 			}
@@ -71,16 +70,22 @@ public class GRAbilityKeepDistance : GRAbilityBase
 		agent.SetIsPathing(isPathing: true, ignoreRigiBody: true);
 		Vector3 targetPos = PickBackupDestination();
 		moveAbility.SetTargetPos(targetPos);
-		defaultUpdateRotation = navMeshAgent.updateRotation;
-		navMeshAgent.updateRotation = false;
+		if (navMeshAgent != null)
+		{
+			defaultUpdateRotation = navMeshAgent.updateRotation;
+			navMeshAgent.updateRotation = false;
+		}
 	}
 
-	public override void Stop()
+	protected override void OnStop()
 	{
 		moveAbility.Stop();
 		idleSound.Stop();
-		navMeshAgent.updateRotation = defaultUpdateRotation;
-		navMeshAgent.isStopped = false;
+		if (navMeshAgent != null)
+		{
+			navMeshAgent.updateRotation = defaultUpdateRotation;
+		}
+		agent.SetStopped(stopMovement: false);
 	}
 
 	public override bool IsDone()
@@ -102,14 +107,14 @@ public class GRAbilityKeepDistance : GRAbilityBase
 		}
 	}
 
-	public override void Think(float dt)
+	protected override void OnThink(float dt)
 	{
 		Vector3 vector = agent.transform.position - target.position;
 		if (moveAbility.IsDone())
 		{
 			if (maxDistanceFromTarget < 0f || vector.magnitude < maxDistanceFromTarget)
 			{
-				if (navMeshAgent.isOnNavMesh && navMeshAgent.isStopped)
+				if (navMeshAgent != null && navMeshAgent.isOnNavMesh && navMeshAgent.isStopped)
 				{
 					idleSound.Stop();
 					moveAbility.Start();
@@ -122,7 +127,7 @@ public class GRAbilityKeepDistance : GRAbilityBase
 		{
 			moveAbility.SetTargetPos(root.position);
 			moveAbility.Stop();
-			navMeshAgent.isStopped = true;
+			agent.SetStopped(stopMovement: true);
 			PlayAnim(idleAnimName, 0.5f, 1f);
 			idleSound.Play(null);
 		}
@@ -169,12 +174,21 @@ public class GRAbilityKeepDistance : GRAbilityBase
 		return position;
 	}
 
-	protected override void UpdateShared(float dt)
+	protected override void OnUpdateShared(float dt)
 	{
-		moveAbility.Update(dt);
 		if (GhostReactorManager.entityDebugEnabled)
 		{
 			DebugUtil.DrawLine(root.position, moveAbility.GetTargetPos(), Color.magenta);
 		}
+	}
+
+	protected override void OnUpdateAuthority(float dt)
+	{
+		moveAbility.UpdateAuthority(dt);
+	}
+
+	protected override void OnUpdateRemote(float dt)
+	{
+		moveAbility.UpdateRemote(dt);
 	}
 }

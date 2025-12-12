@@ -22,19 +22,17 @@ public class GRAbilityIdle : GRAbilityBase
 		animLoops = 0;
 	}
 
-	public override void Start()
+	protected override void OnStart()
 	{
-		base.Start();
-		agent.navAgent.isStopped = true;
+		agent.SetStopped(stopMovement: true);
 		PlayAnim(animName, 0.3f, animSpeed);
 		animLoops = 0;
 		events.Reset();
 	}
 
-	public override void Stop()
+	protected override void OnStop()
 	{
-		base.Stop();
-		agent.navAgent.isStopped = false;
+		agent.SetStopped(stopMovement: false);
 	}
 
 	public override bool IsDone()
@@ -46,7 +44,7 @@ public class GRAbilityIdle : GRAbilityBase
 		return false;
 	}
 
-	protected override void UpdateShared(float dt)
+	protected override void OnUpdateShared(float dt)
 	{
 		float abilityTime = (float)(Time.timeAsDouble - startTime);
 		if (anim != null && anim[animName] != null)

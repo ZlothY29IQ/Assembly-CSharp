@@ -35,6 +35,8 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 
 	public GameAgent agent;
 
+	public GREnemy enemy;
+
 	public GRArmorEnemy armor;
 
 	public GameHittable hittable;
@@ -117,9 +119,6 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 	public Behavior currBehavior;
 
 	[ReadOnly]
-	public double behaviorEndTime;
-
-	[ReadOnly]
 	public BodyState currBodyState;
 
 	[ReadOnly]
@@ -134,11 +133,6 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 	[ReadOnly]
 	public Vector3 searchPosition;
 
-	[ReadOnly]
-	public double behaviorStartTime;
-
-	private double lastJumpEndtime;
-
 	public bool canChaseJump = true;
 
 	public float chaseJumpDistance = 5f;
@@ -148,8 +142,6 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 	public float minChaseJumpDistance = 2f;
 
 	public static RaycastHit[] visibilityHits = new RaycastHit[16];
-
-	private LayerMask visibilityLayerMask;
 
 	private Rigidbody rigidBody;
 
@@ -174,9 +166,7 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 		{
 			armor.SetHp(0);
 		}
-		visibilityLayerMask = LayerMask.GetMask("Default");
 		navAgent.updateRotation = false;
-		behaviorStartTime = -1.0;
 		agent.onBodyStateChanged += OnNetworkBodyStateChange;
 		agent.onBehaviorStateChanged += OnNetworkBehaviorStateChange;
 	}
@@ -194,7 +184,6 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 		abilityFlashed.Setup(agent, anim, audioSource, base.transform, null, null);
 		abilityJump.Setup(agent, anim, audioSource, base.transform, null, null);
 		senseNearby.Setup(headTransform);
-		InitializeRandoms();
 		Setup(entity.createData);
 		if ((bool)entity && (bool)entity.manager && (bool)entity.manager.ghostReactorManager && (bool)entity.manager.ghostReactorManager.reactor)
 		{
@@ -212,10 +201,6 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 	}
 
 	public void OnEntityStateChange(long prevState, long nextState)
-	{
-	}
-
-	private void InitializeRandoms()
 	{
 	}
 
@@ -307,7 +292,6 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 		switch (currBehavior)
 		{
 		case Behavior.Dying:
-			behaviorEndTime = 1.0;
 			abilityDie.Stop();
 			break;
 		case Behavior.Stagger:
@@ -336,16 +320,12 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 			break;
 		case Behavior.Jump:
 			abilityJump.Stop();
-			lastJumpEndtime = Time.timeAsDouble;
 			break;
 		}
 		currBehavior = newBehavior;
-		behaviorStartTime = Time.timeAsDouble;
 		switch (currBehavior)
 		{
 		case Behavior.Dying:
-			PlayAnim("GREnemyChaserIdle", 0.1f, 1f);
-			behaviorEndTime = 1.0;
 			if (entity.IsAuthority())
 			{
 				entity.manager.RequestCreateItem(corePrefab.gameObject.name.GetStaticHash(), coreMarker.position, coreMarker.rotation, 0L);
@@ -514,7 +494,7 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 				{
 					SetBehavior(Behavior.Attack);
 				}
-				else if (canChaseJump && Time.timeAsDouble - lastJumpEndtime > (double)chaseJumpMinInterval && magnitude > attackRange + minChaseJumpDistance && GRSenseLineOfSight.HasNavmeshLineOfSight(base.transform.position, position, 10f))
+				else if (canChaseJump && abilityJump.IsCoolDownOver(chaseJumpMinInterval) && magnitude > attackRange + minChaseJumpDistance && GRSenseLineOfSight.HasNavmeshLineOfSight(base.transform.position, position, 10f))
 				{
 					Vector3 vector2 = vector / magnitude;
 					float num = Mathf.Clamp(chaseJumpDistance, minChaseJumpDistance, magnitude - attackRange * 0.5f);
@@ -563,20 +543,20 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 		switch (currBehavior)
 		{
 		case Behavior.Idle:
-			abilityIdle.Update(dt);
+			abilityIdle.UpdateAuthority(dt);
 			break;
 		case Behavior.Patrol:
-			abilityPatrol.Update(dt);
+			abilityPatrol.UpdateAuthority(dt);
 			break;
 		case Behavior.Search:
-			abilitySearch.Update(dt);
+			abilitySearch.UpdateAuthority(dt);
 			if (abilitySearch.IsDone())
 			{
 				ChooseNewBehavior();
 			}
 			break;
 		case Behavior.Stagger:
-			abilityStagger.Update(dt);
+			abilityStagger.UpdateAuthority(dt);
 			if (abilityStagger.IsDone())
 			{
 				if (agent.targetPlayer == null)
@@ -590,7 +570,7 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 			}
 			break;
 		case Behavior.Flashed:
-			abilityFlashed.Update(dt);
+			abilityFlashed.UpdateAuthority(dt);
 			if (abilityFlashed.IsDone())
 			{
 				if (targetPlayer == null)
@@ -605,7 +585,7 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 			break;
 		case Behavior.Chase:
 		{
-			abilityChase.Update(dt);
+			abilityChase.UpdateAuthority(dt);
 			if (abilityChase.IsDone())
 			{
 				SetBehavior(Behavior.Search);
@@ -623,17 +603,17 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 			break;
 		}
 		case Behavior.Attack:
-			abilityAttackSwipe.Update(dt);
+			abilityAttackSwipe.UpdateAuthority(dt);
 			if (abilityAttackSwipe.IsDone())
 			{
 				SetBehavior(Behavior.Chase);
 			}
 			break;
 		case Behavior.Dying:
-			abilityDie.Update(dt);
+			abilityDie.UpdateAuthority(dt);
 			break;
 		case Behavior.Investigate:
-			abilityInvestigate.Update(dt);
+			abilityInvestigate.UpdateAuthority(dt);
 			if (abilityInvestigate.IsDone())
 			{
 				investigateLocation = null;
@@ -644,7 +624,7 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 			}
 			break;
 		case Behavior.Jump:
-			abilityJump.Update(dt);
+			abilityJump.UpdateAuthority(dt);
 			if (abilityJump.IsDone())
 			{
 				ChooseNewBehavior();

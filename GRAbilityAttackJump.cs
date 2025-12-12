@@ -56,9 +56,8 @@ public class GRAbilityAttackJump : GRAbilityBase
 		}
 	}
 
-	public override void Start()
+	protected override void OnStart()
 	{
-		base.Start();
 		PlayAnim(animName, 0.1f, animSpeed);
 		startTime = Time.timeAsDouble;
 		if (damageTrigger != null)
@@ -70,7 +69,7 @@ public class GRAbilityAttackJump : GRAbilityBase
 		state = State.Tell;
 	}
 
-	public override void Stop()
+	protected override void OnStop()
 	{
 		agent.SetIsPathing(isPathing: true, ignoreRigiBody: true);
 		agent.SetDisableNetworkSync(disable: false);
@@ -85,7 +84,7 @@ public class GRAbilityAttackJump : GRAbilityBase
 		return Time.timeAsDouble - startTime >= (double)duration;
 	}
 
-	protected override void UpdateShared(float dt)
+	protected override void OnUpdateShared(float dt)
 	{
 		double num = (double)(float)Time.timeAsDouble - startTime;
 		switch (state)

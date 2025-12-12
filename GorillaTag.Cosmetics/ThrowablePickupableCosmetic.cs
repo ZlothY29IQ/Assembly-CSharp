@@ -133,7 +133,8 @@ public class ThrowablePickupableCosmetic : TransferrableObject
 		{
 			if (flag && _events.Activate != null)
 			{
-				_events.Activate.RaiseAll(true, position, averageVelocity, scale);
+				_events.Activate.RaiseOthers(true, position, averageVelocity, scale);
+				OnReleaseEventLocal(position, averageVelocity, scale);
 			}
 			else if (!flag && _events.Deactivate != null)
 			{

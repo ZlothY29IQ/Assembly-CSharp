@@ -57,11 +57,14 @@ public class GRShiftStat
 
 	public void IncrementEnemyKills(GREnemyType type)
 	{
-		if (!enemyKills.TryAdd(type, 1))
+		if (type != 0)
 		{
-			enemyKills[type]++;
+			if (!enemyKills.TryAdd(type, 1))
+			{
+				enemyKills[type]++;
+			}
+			GhostReactor.instance.shiftManager.RefreshDepthDisplay();
 		}
-		GhostReactor.instance.shiftManager.RefreshDepthDisplay();
 	}
 
 	public void ResetShiftStats()

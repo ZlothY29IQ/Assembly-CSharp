@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using GorillaExtensions;
 using GorillaLocomotion;
 using GorillaTag.Shared.Scripts;
@@ -25,6 +26,9 @@ public class ThrowableHoldableCosmetic : TransferrableObject
 
 	private CallLimiter firecrackerCallLimiter = new CallLimiter(10, 3f);
 
+	[SerializeField]
+	private float respawnCooldown = 1f;
+
 	private CosmeticEffectsOnPlayers playersEffect;
 
 	private int projectileHash;
@@ -32,6 +36,10 @@ public class ThrowableHoldableCosmetic : TransferrableObject
 	private int alternativeProjectileHash;
 
 	private int currentProjectileHash;
+
+	private bool forceBackToDock;
+
+	private WaitForSeconds respawnWait;
 
 	private RubberDuckEvents _events;
 
@@ -51,6 +59,7 @@ public class ThrowableHoldableCosmetic : TransferrableObject
 		{
 			_events.Activate += new Action<int, int, object[], PhotonMessageInfoWrapped>(OnThrowEvent);
 		}
+		forceBackToDock = false;
 	}
 
 	protected override void Awake()
@@ -63,6 +72,7 @@ public class ThrowableHoldableCosmetic : TransferrableObject
 		}
 		currentProjectileHash = projectileHash;
 		playersEffect = GetComponentInChildren<CosmeticEffectsOnPlayers>();
+		respawnWait = new WaitForSeconds(respawnCooldown);
 	}
 
 	public override void OnGrab(InteractionPoint pointGrabbed, GameObject grabbingHand)
@@ -115,6 +125,17 @@ public class ThrowableHoldableCosmetic : TransferrableObject
 		}
 	}
 
+	public void ForceBackToDock()
+	{
+		forceBackToDock = true;
+	}
+
+	private IEnumerator ReEnableAfterDelay(GameObject obj)
+	{
+		yield return respawnWait;
+		obj.SetActive(value: true);
+	}
+
 	private void OnThrowEvent(int sender, int target, object[] args, PhotonMessageInfoWrapped info)
 	{
 		if (sender != target || args.Length != 4 || info.senderID != ownerRig.creator.ActorNumber)
@@ -136,6 +157,12 @@ public class ThrowableHoldableCosmetic : TransferrableObject
 	private void OnThrowLocal(Vector3 startPos, Quaternion rotation, Vector3 velocity, VRRig ownerRig)
 	{
 		disableWhenThrown.SetActive(value: false);
+		if (forceBackToDock)
+		{
+			forceBackToDock = false;
+			StartCoroutine(ReEnableAfterDelay(disableWhenThrown));
+			return;
+		}
 		IProjectile component = ObjectPools.instance.Instantiate(currentProjectileHash).GetComponent<IProjectile>();
 		if (component is FirecrackerProjectile firecrackerProjectile)
 		{
@@ -182,7 +209,6 @@ public class ThrowableHoldableCosmetic : TransferrableObject
 				break;
 			}
 		}
-		disableWhenThrown.SetActive(value: true);
 		if (projectile is FirecrackerProjectile firecrackerProjectile)
 		{
 			firecrackerProjectile.OnDetonationStart.RemoveListener(HitStart);
@@ -194,5 +220,6 @@ public class ThrowableHoldableCosmetic : TransferrableObject
 			fartBagThrowable.OnDeflated -= HitComplete;
 			ObjectPools.instance.Destroy(fartBagThrowable.gameObject);
 		}
+		StartCoroutine(ReEnableAfterDelay(disableWhenThrown));
 	}
 }

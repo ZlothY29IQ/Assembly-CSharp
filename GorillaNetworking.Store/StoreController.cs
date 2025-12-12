@@ -9,6 +9,7 @@ namespace GorillaNetworking.Store;
 
 public class StoreController : MonoBehaviour
 {
+	[OnEnterPlay_Clear]
 	public static volatile StoreController instance;
 
 	public List<StoreDepartment> Departments;
@@ -19,9 +20,13 @@ public class StoreController : MonoBehaviour
 
 	public AllCosmeticsArraySO AllCosmeticsArraySO;
 
+	public bool cosmeticsInitialized;
+
 	public bool LoadFromTitleData;
 
 	private string exportHeader = "Department ID\tDisplay ID\tStand ID\tStand Type\tPlayFab ID";
+
+	private StandImport standImport;
 
 	public void Awake()
 	{
@@ -32,19 +37,17 @@ public class StoreController : MonoBehaviour
 		else if (instance != this)
 		{
 			Object.Destroy(base.gameObject);
+			return;
 		}
-	}
-
-	public void Start()
-	{
-	}
-
-	public void CreateDynamicCosmeticStandsDictionatary()
-	{
 		CosmeticStandsDict = new Dictionary<string, DynamicCosmeticStand>();
+		StandsByPlayfabID = new Dictionary<string, List<DynamicCosmeticStand>>();
+	}
+
+	public void RefreshCosmeticStandsDictionaryFromDepartments()
+	{
 		foreach (StoreDepartment department in Departments)
 		{
-			if (department.departmentName.IsNullOrEmpty())
+			if (department == null || department.departmentName.IsNullOrEmpty())
 			{
 				continue;
 			}
@@ -60,13 +63,14 @@ public class StoreController : MonoBehaviour
 				{
 					if (!dynamicCosmeticStand.StandName.IsNullOrEmpty())
 					{
-						if (!CosmeticStandsDict.ContainsKey(department.departmentName + "|" + storeDisplay.displayName + "|" + dynamicCosmeticStand.StandName))
+						string text = department.departmentName + "|" + storeDisplay.displayName + "|" + dynamicCosmeticStand.StandName;
+						if (CosmeticStandsDict.ContainsKey(text))
 						{
-							CosmeticStandsDict.Add(department.departmentName + "|" + storeDisplay.displayName + "|" + dynamicCosmeticStand.StandName, dynamicCosmeticStand);
+							Debug.LogError("StoreStuff: Duplicate Stand Name: " + text + " Please Fix Gameobject : " + dynamicCosmeticStand.gameObject.GetPath() + dynamicCosmeticStand.gameObject.name, base.gameObject);
 						}
 						else
 						{
-							Debug.LogError("StoreStuff: Duplicate Stand Name: " + department.departmentName + "|" + storeDisplay.displayName + "|" + dynamicCosmeticStand.StandName + " Please Fix Gameobject : " + dynamicCosmeticStand.gameObject.GetPath() + dynamicCosmeticStand.gameObject.name);
+							CosmeticStandsDict.Add(text, dynamicCosmeticStand);
 						}
 					}
 				}
@@ -74,9 +78,40 @@ public class StoreController : MonoBehaviour
 		}
 	}
 
+	public void AddStandToCosmeticStandsDictionary(DynamicCosmeticStand stand)
+	{
+		if (!(stand.parentDepartment == null) && !stand.parentDepartment.departmentName.IsNullOrEmpty() && !(stand.parentDisplay == null) && !stand.parentDisplay.displayName.IsNullOrEmpty() && !stand.StandName.IsNullOrEmpty() && CosmeticStandsDict != null)
+		{
+			string text = stand.parentDepartment.departmentName + "|" + stand.parentDisplay.displayName + "|" + stand.StandName;
+			if (CosmeticStandsDict.ContainsKey(text))
+			{
+				Debug.LogError("StoreStuff: Duplicate Stand Name: " + text + " Please Fix Gameobject : " + stand.gameObject.GetPath() + stand.gameObject.name, base.gameObject);
+			}
+			else
+			{
+				CosmeticStandsDict.Add(text, stand);
+			}
+		}
+	}
+
+	public void RemoveStandFromDynamicCosmeticStandsDictionary(DynamicCosmeticStand stand)
+	{
+		if (!(stand.parentDepartment == null) && !stand.parentDepartment.departmentName.IsNullOrEmpty() && !(stand.parentDisplay == null) && !stand.parentDisplay.displayName.IsNullOrEmpty() && !stand.StandName.IsNullOrEmpty() && CosmeticStandsDict != null)
+		{
+			string text = stand.parentDepartment.departmentName + "|" + stand.parentDisplay.displayName + "|" + stand.StandName;
+			if (!CosmeticStandsDict.ContainsKey(text))
+			{
+				Debug.LogError("StoreStuff: StoreController doesn't have stand in its dict. that's weird!: " + text + " Please Fix Gameobject : " + stand.gameObject.GetPath() + stand.gameObject.name, base.gameObject);
+			}
+			else
+			{
+				CosmeticStandsDict.Remove(text);
+			}
+		}
+	}
+
 	private void Create_StandsByPlayfabIDDictionary()
 	{
-		StandsByPlayfabID = new Dictionary<string, List<DynamicCosmeticStand>>();
 		foreach (DynamicCosmeticStand value in CosmeticStandsDict.Values)
 		{
 			AddStandToPlayfabIDDictionary(value);
@@ -129,30 +164,42 @@ public class StoreController : MonoBehaviour
 
 	private void ImportCosmeticStandLayoutFromTitleData(string TSVData)
 	{
-		StandImport standImport = new StandImport();
+		standImport = new StandImport();
 		standImport.DecomposeFromTitleDataString(TSVData);
 		foreach (StandTypeData standDatum in standImport.standData)
 		{
-			string text = standDatum.departmentID + "|" + standDatum.displayID + "|" + standDatum.standID;
-			if (CosmeticStandsDict.ContainsKey(text))
+			string key = standDatum.departmentID + "|" + standDatum.displayID + "|" + standDatum.standID;
+			standImport.standKeyToDataDict.Add(key, standDatum);
+			if (CosmeticStandsDict.ContainsKey(key))
 			{
-				Debug.Log("StoreStuff: Stand Updated: " + standDatum.departmentID + "|" + standDatum.displayID + "|" + standDatum.standID + "|" + standDatum.bustType + "|" + standDatum.playFabID + "|");
-				CosmeticStandsDict[text].SetStandTypeString(standDatum.bustType);
-				Debug.Log("Manually Initializing Stand: " + text + " |||| " + standDatum.playFabID);
-				CosmeticStandsDict[text].SpawnItemOntoStand(standDatum.playFabID);
-				CosmeticStandsDict[text].InitializeCosmetic();
+				CosmeticStandsDict[key].SetStandTypeString(standDatum.bustType);
+				CosmeticStandsDict[key].SpawnItemOntoStand(standDatum.playFabID);
+				CosmeticStandsDict[key].InitializeCosmetic();
 			}
+		}
+	}
+
+	public void InitializeStandFromTitleData(DynamicCosmeticStand stand)
+	{
+		if (stand.parentDepartment == null || stand.parentDepartment.departmentName.IsNullOrEmpty() || stand.parentDisplay == null || stand.parentDisplay.displayName.IsNullOrEmpty() || stand.StandName.IsNullOrEmpty() || CosmeticStandsDict == null)
+		{
+			Debug.LogError("Stand " + stand.name + " is missing important setup data somehow, please fix!", stand.gameObject);
+			return;
+		}
+		string key = stand.parentDepartment.departmentName + "|" + stand.parentDisplay.displayName + "|" + stand.StandName;
+		if (CosmeticStandsDict.ContainsKey(key) && standImport.standKeyToDataDict.ContainsKey(key))
+		{
+			StandTypeData standTypeData = standImport.standKeyToDataDict[key];
+			CosmeticStandsDict[key].SetStandTypeString(standTypeData.bustType);
+			CosmeticStandsDict[key].SpawnItemOntoStand(standTypeData.playFabID);
+			CosmeticStandsDict[key].InitializeCosmetic();
 		}
 	}
 
 	public void InitalizeCosmeticStands()
 	{
-		CreateDynamicCosmeticStandsDictionatary();
-		foreach (DynamicCosmeticStand value in CosmeticStandsDict.Values)
-		{
-			value.InitializeCosmetic();
-		}
-		Create_StandsByPlayfabIDDictionary();
+		cosmeticsInitialized = true;
+		RefreshCosmeticStandsDictionaryFromDepartments();
 		if (LoadFromTitleData)
 		{
 			InitializeFromTitleData();
@@ -233,7 +280,7 @@ public class StoreController : MonoBehaviour
 		{
 			instance = Object.FindAnyObjectByType<StoreController>();
 		}
-		instance.CreateDynamicCosmeticStandsDictionatary();
+		instance.RefreshCosmeticStandsDictionaryFromDepartments();
 		foreach (DynamicCosmeticStand value in instance.CosmeticStandsDict.Values)
 		{
 			value.SetStandType(value.DisplayHeadModel.bustType);

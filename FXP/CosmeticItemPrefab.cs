@@ -27,6 +27,8 @@ public class CosmeticItemPrefab : MonoBehaviour
 
 	public HeadModel HeadModel;
 
+	public bool AffectedByStoreUpdateEvents = true;
+
 	[SerializeField]
 	private Guid? itemGUID;
 
@@ -400,7 +402,7 @@ public class CosmeticItemPrefab : MonoBehaviour
 
 	public void SetStoreUpdateEvent(StoreUpdateEvent storeUpdateEvent, bool playFX)
 	{
-		if (isValid)
+		if (isValid && AffectedByStoreUpdateEvents)
 		{
 			if (playFX)
 			{

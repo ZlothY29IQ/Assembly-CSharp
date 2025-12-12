@@ -12,10 +12,28 @@ public class FittingRoom : MonoBehaviour
 
 	private int iterator;
 
+	public bool addOnEnable;
+
 	public void InitializeForCustomMap(bool useCustomConsoleMesh = true)
 	{
 		consoleMesh?.SetActive(!useCustomConsoleMesh);
 		CosmeticsController.instance.AddFittingRoom(this);
+	}
+
+	private void OnEnable()
+	{
+		if (addOnEnable)
+		{
+			CosmeticsController.instance.AddFittingRoom(this);
+		}
+	}
+
+	private void OnDisable()
+	{
+		if (addOnEnable)
+		{
+			CosmeticsController.instance.RemoveFittingRoom(this);
+		}
 	}
 
 	public void UpdateFromCart(List<CosmeticsController.CosmeticItem> currentCart, CosmeticsController.CosmeticSet tryOnSet)

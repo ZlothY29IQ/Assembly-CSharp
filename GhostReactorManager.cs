@@ -538,28 +538,33 @@ public class GhostReactorManager : NetworkComponent, IGameEntityZoneComponent
 
 	public void RequestEnemyHitPlayer(GhostReactor.EnemyType type, GameEntityId hitByEntityId, GRPlayer player, Vector3 hitPosition)
 	{
-		photonView.RPC("ApplyEnemyHitPlayerRPC", RpcTarget.All, type, gameEntityManager.GetNetIdFromEntityId(hitByEntityId), hitPosition);
+		photonView.RPC("ApplyEnemyHitPlayerRPC", RpcTarget.All, type, gameEntityManager.GetNetIdFromEntityId(hitByEntityId), hitPosition, Vector3.zero);
+	}
+
+	public void RequestEnemyHitPlayer(GhostReactor.EnemyType type, GameEntityId hitByEntityId, GRPlayer player, Vector3 hitPosition, Vector3 hitImpulse)
+	{
+		photonView.RPC("ApplyEnemyHitPlayerRPC", RpcTarget.All, type, gameEntityManager.GetNetIdFromEntityId(hitByEntityId), hitPosition, hitImpulse);
 	}
 
 	[PunRPC]
-	private void ApplyEnemyHitPlayerRPC(GhostReactor.EnemyType type, int entityNetId, Vector3 hitPosition, PhotonMessageInfo info)
+	private void ApplyEnemyHitPlayerRPC(GhostReactor.EnemyType type, int entityNetId, Vector3 hitPosition, Vector3 hitImpulse, PhotonMessageInfo info)
 	{
-		if (gameEntityManager.IsValidNetId(entityNetId))
+		if (gameEntityManager.IsValidNetId(entityNetId) && hitPosition.IsValid(10000f) && hitImpulse.IsValid(10000f) && !(hitImpulse.magnitude > 20f))
 		{
 			GameEntityId entityIdFromNetId = gameEntityManager.GetEntityIdFromNetId(entityNetId);
 			GRPlayer gRPlayer = GRPlayer.Get(info.Sender.ActorNumber);
 			if (!(gRPlayer == null) && gRPlayer.applyEnemyHitLimiter.CheckCallTime(Time.unscaledTime))
 			{
-				OnEnemyHitPlayerInternal(type, entityIdFromNetId, gRPlayer, hitPosition);
+				OnEnemyHitPlayerInternal(type, entityIdFromNetId, gRPlayer, hitPosition, hitImpulse);
 			}
 		}
 	}
 
-	private void OnEnemyHitPlayerInternal(GhostReactor.EnemyType type, GameEntityId entityId, GRPlayer player, Vector3 hitPosition)
+	private void OnEnemyHitPlayerInternal(GhostReactor.EnemyType type, GameEntityId entityId, GRPlayer player, Vector3 hitPosition, Vector3 hitImpulse)
 	{
 		if (type == GhostReactor.EnemyType.Chaser || type == GhostReactor.EnemyType.Phantom || type == GhostReactor.EnemyType.Ranged || type == GhostReactor.EnemyType.CustomMapsEnemy)
 		{
-			player.OnPlayerHit(hitPosition, this, entityId);
+			player.OnPlayerHit(hitPosition, hitImpulse, this, entityId);
 			GameHitter component = gameEntityManager.GetGameEntity(entityId).GetComponent<GameHitter>();
 			if (component != null)
 			{

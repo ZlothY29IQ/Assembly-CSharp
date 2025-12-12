@@ -1,3 +1,6 @@
+using System;
+using System.Threading.Tasks;
+using GorillaNetworking;
 using TMPro;
 using UnityEngine;
 
@@ -19,6 +22,8 @@ public class CreatorCodeTerminal : MonoBehaviour, ICreatorCodeProvider, IBuildVa
 	public NexusGroupId[] NexusGroups => nexusGroups;
 
 	public string TerminalId => termId;
+
+	GameObject ICreatorCodeProvider.GameObject => base.gameObject;
 
 	public void Awake()
 	{
@@ -44,6 +49,20 @@ public class CreatorCodeTerminal : MonoBehaviour, ICreatorCodeProvider, IBuildVa
 		{
 			OnCreatorCodesInitialized();
 		}
+		CosmeticsController.PushTerminalMessage = (Action<string, string>)Delegate.Combine(CosmeticsController.PushTerminalMessage, new Action<string, string>(OnTerminalMessage));
+	}
+
+	private async void OnTerminalMessage(string termId, string msg)
+	{
+		if (!(termId != this.termId))
+		{
+			creatorCodeTitle.text = msg;
+			while (Application.isPlaying && (VRRig.LocalRig.transform.position - base.transform.position).sqrMagnitude < 4f)
+			{
+				await Task.Yield();
+			}
+			creatorCodeTitle.text = "CREATOR CODE: VALID";
+		}
 	}
 
 	public void UnhookFromCreatorCodes()
@@ -51,6 +70,7 @@ public class CreatorCodeTerminal : MonoBehaviour, ICreatorCodeProvider, IBuildVa
 		CreatorCodes.InitializedEvent -= OnCreatorCodesInitialized;
 		CreatorCodes.OnCreatorCodeChangedEvent -= OnCreatorCodeChanged;
 		CreatorCodes.OnCreatorCodeFailureEvent -= OnCreatorCodeFailure;
+		CosmeticsController.PushTerminalMessage = (Action<string, string>)Delegate.Remove(CosmeticsController.PushTerminalMessage, new Action<string, string>(OnTerminalMessage));
 	}
 
 	private void OnCreatorCodesInitialized()
