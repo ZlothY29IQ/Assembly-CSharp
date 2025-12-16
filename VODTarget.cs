@@ -73,4 +73,28 @@ public class VODTarget : ObservableBehavior, IBuildValidation
 		}
 		return true;
 	}
+
+	protected override void UnityOnEnable()
+	{
+		VODPlayer.OnCrash = (Action)Delegate.Combine(VODPlayer.OnCrash, new Action(VODPlayer_OnCrash));
+		if (VODPlayer.state == VODPlayer.State.CRASHED)
+		{
+			base.gameObject.SetActive(value: false);
+		}
+	}
+
+	protected override void UnityOnDisable()
+	{
+		VODPlayer.OnCrash = (Action)Delegate.Remove(VODPlayer.OnCrash, new Action(VODPlayer_OnCrash));
+	}
+
+	private void OnDestroy()
+	{
+		VODPlayer.OnCrash = (Action)Delegate.Remove(VODPlayer.OnCrash, new Action(VODPlayer_OnCrash));
+	}
+
+	private void VODPlayer_OnCrash()
+	{
+		base.gameObject.SetActive(value: false);
+	}
 }

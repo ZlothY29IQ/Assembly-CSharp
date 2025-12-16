@@ -504,21 +504,7 @@ public class GorillaTagger : MonoBehaviour, IGuidedRefReceiverMono, IGuidedRefMo
 		_forcedRefreshRate = Mathf.Clamp(newRefreshRate, 32f, 144f);
 		_performanceOn = newRefreshRate <= 72f;
 		Debug.Log($"GorillaTagger - SetForcedRefreshRate - New refresh {_forcedRefreshRate} with perf {_performanceOn}");
-		float num = 1f;
-		if (_performanceOn)
-		{
-			num = 0.95f;
-			if (Application.platform == RuntimePlatform.Android && OVRPlugin.GetSystemHeadsetType() == OVRPlugin.SystemHeadset.Oculus_Quest_2)
-			{
-				num = 0.875f;
-			}
-		}
-		else if (Application.platform == RuntimePlatform.Android && OVRPlugin.GetSystemHeadsetType() == OVRPlugin.SystemHeadset.Oculus_Quest_2)
-		{
-			num = 0.925f;
-		}
-		XRSettings.eyeTextureResolutionScale = num;
-		XRSettings.renderViewportScale = num;
+		UpdateResolutionScale(_performanceOn);
 		if (forceChange)
 		{
 			DebugHudStats.FPS_THRESHOLD = (int)_forcedRefreshRate - 1;
@@ -527,6 +513,34 @@ public class GorillaTagger : MonoBehaviour, IGuidedRefReceiverMono, IGuidedRefMo
 		{
 			DebugHudStats.FPS_THRESHOLD = (int)_defaultRefreshRate - 1;
 		}
+	}
+
+	private void UpdateResolutionScale(bool performanceMode)
+	{
+		float num = 1f;
+		if (performanceMode)
+		{
+			num = 0.975f;
+			if (Application.platform == RuntimePlatform.Android)
+			{
+				num = 0.95f;
+				if (OVRPlugin.GetSystemHeadsetType() == OVRPlugin.SystemHeadset.Oculus_Quest_2)
+				{
+					num = 0.9f;
+				}
+			}
+		}
+		else if (Application.platform == RuntimePlatform.Android)
+		{
+			num = 0.975f;
+			if (OVRPlugin.GetSystemHeadsetType() == OVRPlugin.SystemHeadset.Oculus_Quest_2)
+			{
+				num = 0.925f;
+			}
+		}
+		XRSettings.eyeTextureResolutionScale = num;
+		XRSettings.renderViewportScale = num;
+		Debug.Log($"GorillaTagger - UpdateResolutionScale - {num}");
 	}
 
 	protected void LateUpdate()
@@ -565,6 +579,7 @@ public class GorillaTagger : MonoBehaviour, IGuidedRefReceiverMono, IGuidedRefMo
 				Debug.Log(" fixedDeltaTime before:\t" + Time.fixedDeltaTime);
 				Debug.Log(" Refresh rate         :\t" + num);
 				Time.fixedDeltaTime = num2;
+				UpdateResolutionScale(num < _defaultRefreshRate);
 				Debug.Log(" fixedDeltaTime after :\t" + Time.fixedDeltaTime);
 				Debug.Log(" History size before  :\t" + GTPlayer.Instance.velocityHistorySize);
 				GTPlayer.Instance.velocityHistorySize = Mathf.Max(Mathf.Min(Mathf.FloorToInt(num * (1f / 12f)), 10), 6);
@@ -631,6 +646,7 @@ public class GorillaTagger : MonoBehaviour, IGuidedRefReceiverMono, IGuidedRefMo
 				Application.targetFrameRate = (int)num4;
 				Time.fixedDeltaTime = num6 * num5;
 				OVRPlugin.systemDisplayFrequency = num4;
+				UpdateResolutionScale(num4 <= 72f);
 				GTPlayer.Instance.velocityHistorySize = Mathf.FloorToInt(num4 * (1f / 12f));
 				if (GTPlayer.Instance.velocityHistorySize > 9)
 				{
@@ -657,6 +673,7 @@ public class GorillaTagger : MonoBehaviour, IGuidedRefReceiverMono, IGuidedRefMo
 				Debug.Log($"Updating delta time. Was: {Time.fixedDeltaTime}. Now it's {num9} at framerate {num8}.");
 				Application.targetFrameRate = num8;
 				Time.fixedDeltaTime = num9;
+				UpdateResolutionScale((float)num8 < _defaultRefreshRate);
 				GTPlayer.Instance.velocityHistorySize = Mathf.Min(Mathf.FloorToInt((float)num8 * (1f / 12f)), 10);
 				if (GTPlayer.Instance.velocityHistorySize > 9)
 				{

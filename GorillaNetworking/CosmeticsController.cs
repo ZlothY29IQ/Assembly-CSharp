@@ -1017,6 +1017,8 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 
 	public int CurrencyBalance => currencyBalance;
 
+	public CosmeticSO EarlyAccessSupporterPackCosmeticSO => m_earlyAccessSupporterPackCosmeticSO;
+
 	public static int SelectedOutfit => selectedOutfit;
 
 	private void V2Awake()
@@ -2451,25 +2453,28 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		{
 			return set.IsActive(item.displayName);
 		}
-		if (item.bundledItems.Length == 1)
+		if (item.itemCategory == CosmeticCategory.Set && item.bundledItems != null)
 		{
-			return AnyMatch(set, GetItemFromDict(item.bundledItems[0]));
-		}
-		if (item.bundledItems.Length == 2)
-		{
-			if (!AnyMatch(set, GetItemFromDict(item.bundledItems[0])))
+			if (item.bundledItems.Length == 1)
 			{
-				return AnyMatch(set, GetItemFromDict(item.bundledItems[1]));
+				return AnyMatch(set, GetItemFromDict(item.bundledItems[0]));
 			}
-			return true;
-		}
-		if (item.bundledItems.Length >= 3)
-		{
-			if (!AnyMatch(set, GetItemFromDict(item.bundledItems[0])) && !AnyMatch(set, GetItemFromDict(item.bundledItems[1])))
+			if (item.bundledItems.Length == 2)
 			{
-				return AnyMatch(set, GetItemFromDict(item.bundledItems[2]));
+				if (!AnyMatch(set, GetItemFromDict(item.bundledItems[0])))
+				{
+					return AnyMatch(set, GetItemFromDict(item.bundledItems[1]));
+				}
+				return true;
 			}
-			return true;
+			if (item.bundledItems.Length >= 3)
+			{
+				if (!AnyMatch(set, GetItemFromDict(item.bundledItems[0])) && !AnyMatch(set, GetItemFromDict(item.bundledItems[1])))
+				{
+					return AnyMatch(set, GetItemFromDict(item.bundledItems[2]));
+				}
+				return true;
+			}
 		}
 		return false;
 	}

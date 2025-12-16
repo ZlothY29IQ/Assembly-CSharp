@@ -1340,6 +1340,7 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 		}
 		gameEntity.transform.SetParent(handTransform);
 		gameEntity.transform.SetLocalPositionAndRotation(localPosition, localRotation);
+		gameEntity.transform.localScale = Vector3.one;
 		gameEntity.heldByActorNumber = grabbedByPlayer.ActorNumber;
 		gameEntity.heldByHandIndex = handIndex;
 		gameEntity.lastHeldByActorNumber = gameEntity.heldByActorNumber;
@@ -1838,6 +1839,7 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 		superInfectionSnapPoint.Snapped(gameEntity);
 		gameEntity.transform.SetParent(superInfectionSnapPoint.transform);
 		gameEntity.transform.SetLocalPositionAndRotation(position, rotation);
+		gameEntity.transform.localScale = Vector3.one;
 		Rigidbody component2 = gameEntity.GetComponent<Rigidbody>();
 		if (component2 != null)
 		{

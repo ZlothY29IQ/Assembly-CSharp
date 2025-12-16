@@ -425,9 +425,11 @@ public class GTPlayer : MonoBehaviour
 		public bool applyRotation;
 	}
 
+	public static LayerMask LocomotionEnabledLayers = 201327105;
+
 	private static GTPlayer _instance;
 
-	public static bool hasInstance;
+	public static bool hasInstance = false;
 
 	public Camera mainCamera;
 

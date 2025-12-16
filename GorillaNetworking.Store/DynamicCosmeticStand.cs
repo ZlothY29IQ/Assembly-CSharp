@@ -309,6 +309,10 @@ public class DynamicCosmeticStand : MonoBehaviour, iFlagForBaking
 
 	public void PressCosmeticStandButton()
 	{
+		if (!StoreController.instance.StandsByPlayfabID.ContainsKey(thisCosmeticName) || CosmeticsController.instance.GetCosmeticSOFromDisplayName(thisCosmeticName) == null)
+		{
+			return;
+		}
 		searchIndex = CosmeticsController.instance.currentCart.IndexOf(thisCosmeticItem);
 		if (searchIndex != -1)
 		{

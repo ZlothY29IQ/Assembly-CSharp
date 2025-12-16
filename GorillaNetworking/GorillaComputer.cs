@@ -2645,7 +2645,6 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 			return;
 		}
 		float num = Mathf.Sqrt(speakerLoudness.LoudnessNormalized);
-		Debug.Log("Loudness: " + num);
 		if (num <= 0.01f)
 		{
 			micInputTestTimer += deltaTime;

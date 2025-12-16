@@ -1594,7 +1594,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 							Array.Resize(ref voiceSampleBuffer, num);
 						}
 						float[] array = voiceSampleBuffer;
-						if (micWrapper != null && micWrapper.Mic != null && micWrapper.Mic.samples >= num && micWrapper.Mic.GetData(array, micWrapper.Mic.samples - num))
+						if (micWrapper.Mic != null && micWrapper.Mic.samples >= num && micWrapper.Mic.GetData(array, micWrapper.Mic.samples - num))
 						{
 							float num2 = 0f;
 							for (int i = 0; i < num; i++)
@@ -2926,7 +2926,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	private void CheckForEarlyAccess()
 	{
-		if (concatStringOfCosmeticsAllowed.Contains("Early Access Supporter Pack"))
+		if (concatStringOfCosmeticsAllowed.Contains(CosmeticsController.instance.EarlyAccessSupporterPackCosmeticSO.info.playFabID))
 		{
 			concatStringOfCosmeticsAllowed += "LBAAE.LFAAM.LFAAN.LHAAA.LHAAK.LHAAL.LHAAM.LHAAN.LHAAO.LHAAP.LHABA.LHABB.";
 		}

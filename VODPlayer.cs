@@ -9,7 +9,7 @@ using UnityEngine.Video;
 
 public class VODPlayer : MonoBehaviour, IGorillaSliceableSimple
 {
-	private enum State
+	public enum State
 	{
 		INITIALIZING,
 		IDLE,
@@ -108,6 +108,10 @@ public class VODPlayer : MonoBehaviour, IGorillaSliceableSimple
 		}
 	}
 
+	public static Action OnCrash;
+
+	public static State state;
+
 	private VideoPlayer player;
 
 	private AudioSource audioSource;
@@ -136,14 +140,13 @@ public class VODPlayer : MonoBehaviour, IGorillaSliceableSimple
 
 	private int lastCheck;
 
-	private State state;
-
 	private bool playerBusy;
 
 	private int currentStreamPrio;
 
 	public async void OnEnable()
 	{
+		state = State.INITIALIZING;
 		GorillaSlicerSimpleManager.RegisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
 		VODTarget.AlertEnabled = (Action<VODTarget>)Delegate.Combine(VODTarget.AlertEnabled, new Action<VODTarget>(VODTarget_AlertEnabled));
 		VODTarget.AlertDisabled = (Action<VODTarget>)Delegate.Combine(VODTarget.AlertDisabled, new Action<VODTarget>(VODTarget_AlertDisabled));
@@ -565,6 +568,10 @@ public class VODPlayer : MonoBehaviour, IGorillaSliceableSimple
 	private void Crash(string msg)
 	{
 		state = State.CRASHED;
+		if (OnCrash != null)
+		{
+			OnCrash();
+		}
 		for (int i = 0; i < targets.Count; i++)
 		{
 			targets[i].gameObject.SetActive(value: false);

@@ -1,5 +1,6 @@
 using System;
 using GorillaExtensions;
+using GorillaLocomotion;
 using GorillaTag;
 using GorillaTag.CosmeticSystem;
 using JetBrains.Annotations;
@@ -2497,6 +2498,15 @@ public class TransferrableObject : HoldableObject, ISelfValidator, IRequestableO
 		{
 			Debug.LogError("transferrableitem is starting with multiple storedzones: " + base.transform.parent.name, base.gameObject);
 			return false;
+		}
+		Collider[] componentsInChildren = GetComponentsInChildren<Collider>();
+		for (int i = 0; i < componentsInChildren.Length; i++)
+		{
+			if (((int)GTPlayer.LocomotionEnabledLayers & (1 << componentsInChildren[i].gameObject.layer)) != 0)
+			{
+				Debug.LogError("Holdable cosmetic " + base.transform.name + " has a collider on a player movement layer! Players will fly around! Dear god, please fix! It's on the " + componentsInChildren[i].name + " collider", base.gameObject);
+				return false;
+			}
 		}
 		return true;
 	}

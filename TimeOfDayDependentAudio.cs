@@ -50,6 +50,10 @@ public class TimeOfDayDependentAudio : MonoBehaviour, IGorillaSliceableSimple, I
 		{
 			positionMultiplier = 1f;
 		}
+		if (volumes == null)
+		{
+			volumes = new float[10];
+		}
 	}
 
 	public void OnEnable()
@@ -157,6 +161,11 @@ public class TimeOfDayDependentAudio : MonoBehaviour, IGorillaSliceableSimple, I
 				Debug.LogError("audio source array contains null references", this);
 				return false;
 			}
+		}
+		if (volumes.Length != 10)
+		{
+			Debug.LogError("volumes array is the wrong length! you'll pay for this!", this);
+			return false;
 		}
 		return true;
 	}

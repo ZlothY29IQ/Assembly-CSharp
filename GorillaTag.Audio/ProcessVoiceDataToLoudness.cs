@@ -20,7 +20,7 @@ internal class ProcessVoiceDataToLoudness : IProcessor<float>, IDisposable
 		{
 			num += Mathf.Abs(buf[i]);
 		}
-		_voiceToLoudness.loudness = num / (float)buf.Length;
+		_voiceToLoudness.Loudness = num / (float)buf.Length;
 		return buf;
 	}
 

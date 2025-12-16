@@ -145,9 +145,20 @@ public class PerSceneRenderData : MonoBehaviour
 		lastLightmapIndex = representativeRenderer.lightmapIndex;
 		for (int i = 0; i < mRendererIndex; i++)
 		{
-			if (i < mRenderers.Length && mRenderers[i] != null)
+			if (i < mRenderers.Length && gO[i] != null)
 			{
-				mRenderers[i].lightmapIndex = lastLightmapIndex;
+				if (mRenderers[i] == null)
+				{
+					mRenderers[i] = gO[i].GetComponent<MeshRenderer>();
+				}
+				if (mRenderers[i] == null)
+				{
+					gO[i] = null;
+				}
+				else
+				{
+					mRenderers[i].lightmapIndex = lastLightmapIndex;
+				}
 			}
 		}
 	}

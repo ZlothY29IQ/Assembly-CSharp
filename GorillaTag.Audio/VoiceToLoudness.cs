@@ -9,9 +9,13 @@ namespace GorillaTag.Audio;
 public class VoiceToLoudness : MonoBehaviour
 {
 	[NonSerialized]
-	public float loudness;
+	public float Loudness;
 
 	private Recorder _recorder;
+
+	private bool _photonVoiceCreated;
+
+	private float _checkVoice;
 
 	protected void Awake()
 	{
@@ -20,10 +24,23 @@ public class VoiceToLoudness : MonoBehaviour
 
 	protected void PhotonVoiceCreated(PhotonVoiceCreatedParams photonVoiceCreatedParams)
 	{
-		_ = photonVoiceCreatedParams.Voice.Info;
-		if (photonVoiceCreatedParams.Voice is LocalVoiceAudioFloat localVoiceAudioFloat)
+		CreateProcessVoiceData(photonVoiceCreatedParams.Voice);
+	}
+
+	private void CreateProcessVoiceData(LocalVoice voice)
+	{
+		if (voice is LocalVoiceAudioFloat localVoiceAudioFloat)
 		{
+			_photonVoiceCreated = true;
 			localVoiceAudioFloat.AddPostProcessor(new ProcessVoiceDataToLoudness(this));
+		}
+	}
+
+	private void Update()
+	{
+		if (!_photonVoiceCreated && _recorder != null && _recorder.Voice != null)
+		{
+			CreateProcessVoiceData(_recorder.Voice);
 		}
 	}
 }
