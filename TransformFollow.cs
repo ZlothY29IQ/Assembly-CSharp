@@ -1,5 +1,6 @@
 using UnityEngine;
 
+[DefaultExecutionOrder(100)]
 public class TransformFollow : MonoBehaviour
 {
 	public Transform transformToFollow;

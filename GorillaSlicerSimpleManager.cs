@@ -27,7 +27,11 @@ public class GorillaSlicerSimpleManager : MonoBehaviour
 
 	public int updateIndex = -1;
 
+	public int startingIndex = -1;
+
 	public Stopwatch sW;
+
+	public Dictionary<IGorillaSliceableSimple, long> lastRunTicks = new Dictionary<IGorillaSliceableSimple, long>();
 
 	protected void Awake()
 	{
@@ -67,6 +71,7 @@ public class GorillaSlicerSimpleManager : MonoBehaviour
 		{
 			CreateManager();
 		}
+		instance.lastRunTicks.TryAdd(gSS, 0L);
 		switch (step)
 		{
 		case UpdateStep.FixedUpdate:
@@ -121,6 +126,7 @@ public class GorillaSlicerSimpleManager : MonoBehaviour
 
 	public void FixedUpdate()
 	{
+		startingIndex = updateIndex;
 		if (updateIndex < 0 || updateIndex >= fixedUpdateSlice.Count + updateSlice.Count + lateUpdateSlice.Count)
 		{
 			updateIndex = 0;
@@ -129,10 +135,17 @@ public class GorillaSlicerSimpleManager : MonoBehaviour
 		while (ticksThisFrame + sW.ElapsedTicks < ticksPerFrame && updateIndex < fixedUpdateSlice.Count)
 		{
 			IGorillaSliceableSimple gorillaSliceableSimple = fixedUpdateSlice[updateIndex];
+			if (startingIndex != updateIndex && ticksThisFrame + sW.ElapsedTicks + lastRunTicks[gorillaSliceableSimple] >= ticksPerFrame)
+			{
+				ticksThisFrame = ticksPerFrame;
+				break;
+			}
+			long elapsedTicks = sW.ElapsedTicks;
 			if (0 <= updateIndex && updateIndex < fixedUpdateSlice.Count && !(gorillaSliceableSimple is MonoBehaviour { isActiveAndEnabled: false }))
 			{
 				gorillaSliceableSimple.SliceUpdate();
 			}
+			lastRunTicks[gorillaSliceableSimple] = sW.ElapsedTicks - elapsedTicks;
 			updateIndex++;
 		}
 		ticksThisFrame += sW.ElapsedTicks;
@@ -148,10 +161,17 @@ public class GorillaSlicerSimpleManager : MonoBehaviour
 		while (ticksThisFrame + sW.ElapsedTicks < ticksPerFrame && count <= updateIndex && updateIndex < num)
 		{
 			IGorillaSliceableSimple gorillaSliceableSimple = updateSlice[updateIndex - count];
+			if (startingIndex != updateIndex && ticksThisFrame + sW.ElapsedTicks + lastRunTicks[gorillaSliceableSimple] >= ticksPerFrame)
+			{
+				ticksThisFrame = ticksPerFrame;
+				break;
+			}
+			long elapsedTicks = sW.ElapsedTicks;
 			if (0 <= updateIndex - count && updateIndex - count < updateSlice.Count && !(gorillaSliceableSimple is MonoBehaviour { isActiveAndEnabled: false }))
 			{
 				gorillaSliceableSimple.SliceUpdate();
 			}
+			lastRunTicks[gorillaSliceableSimple] = sW.ElapsedTicks - elapsedTicks;
 			updateIndex++;
 		}
 		ticksThisFrame += sW.ElapsedTicks;
@@ -169,10 +189,17 @@ public class GorillaSlicerSimpleManager : MonoBehaviour
 		while (ticksThisFrame + sW.ElapsedTicks < ticksPerFrame && num <= updateIndex && updateIndex < num2)
 		{
 			IGorillaSliceableSimple gorillaSliceableSimple = lateUpdateSlice[updateIndex - num];
+			if (startingIndex != updateIndex && ticksThisFrame + sW.ElapsedTicks + lastRunTicks[gorillaSliceableSimple] >= ticksPerFrame)
+			{
+				ticksThisFrame = ticksPerFrame;
+				break;
+			}
+			long elapsedTicks = sW.ElapsedTicks;
 			if (0 <= updateIndex - num && updateIndex - num < lateUpdateSlice.Count && !(gorillaSliceableSimple is MonoBehaviour { isActiveAndEnabled: false }))
 			{
 				gorillaSliceableSimple.SliceUpdate();
 			}
+			lastRunTicks[gorillaSliceableSimple] = sW.ElapsedTicks - elapsedTicks;
 			updateIndex++;
 		}
 		sW.Stop();

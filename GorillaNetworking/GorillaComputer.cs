@@ -492,7 +492,7 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 	public static volatile GorillaComputer instance;
 
 	[OnEnterPlay_Set(false)]
-	public static bool hasInstance;
+	public static bool hasInstance = false;
 
 	[OnEnterPlay_SetNull]
 	private static Action<bool> onNametagSettingChangedAction;
@@ -733,6 +733,20 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 
 	private bool didInitializeGameMode;
 
+	private static int sessionCount = -1;
+
+	private const bool k_debug_shouldResetSessionCount = false;
+
+	private const bool k_debug_shouldResetGameMode = false;
+
+	private const string k_sessionCountKey = "sessionCount";
+
+	private const GameModeType k_defaultGameMode = GameModeType.SuperInfect;
+
+	private const GameModeType k_noobGameMode = GameModeType.Infection;
+
+	private const int k_noobSessionCountThreshold = 4;
+
 	private float troopPopulationCheckCooldown = 3f;
 
 	private float nextPopulationCheckTime;
@@ -952,6 +966,7 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 	private void Initialise()
 	{
 		GameEvents.OnGorrillaKeyboardButtonPressedEvent.AddListener(PressButton);
+		RoomSystem.JoinedRoomEvent += new Action(OnFirstJoinedRoom_IncrementSessionCount);
 		RoomSystem.JoinedRoomEvent += new Action(UpdateScreen);
 		RoomSystem.LeftRoomEvent += new Action(UpdateScreen);
 		RoomSystem.PlayerJoinedEvent += new Action<NetPlayer>(PlayerCountChangedCallback);
@@ -1219,7 +1234,18 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 	{
 		if (!didInitializeGameMode)
 		{
-			string text = PlayerPrefs.GetString("currentGameModePostSI", GameModeType.Infection.ToString());
+			sessionCount = PlayerPrefs.GetInt("sessionCount", -1);
+			string text = PlayerPrefs.GetString("currentGameModePostSI");
+			if (sessionCount == -1)
+			{
+				sessionCount = ((text.Length != 0) ? 100 : 0);
+				PlayerPrefs.SetInt("sessionCount", sessionCount);
+				PlayerPrefs.Save();
+			}
+			if (sessionCount < 4)
+			{
+				text = GameModeType.Infection.ToString();
+			}
 			GameModeType gameModeType;
 			try
 			{
@@ -1452,7 +1478,10 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 	public void OnModeSelectButtonPress(string gameMode, bool leftHand)
 	{
 		lastPressedGameMode = gameMode;
-		PlayerPrefs.SetString("currentGameModePostSI", gameMode);
+		if (sessionCount >= 4)
+		{
+			PlayerPrefs.SetString("currentGameModePostSI", gameMode);
+		}
 		if (leftHand != leftHanded)
 		{
 			PlayerPrefs.SetInt("leftHanded", leftHand ? 1 : 0);
@@ -2330,9 +2359,9 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 
 	private void LoadingScreen()
 	{
-		string tmp = "LOADING";
-		LocalisationManager.TryGetKeyForCurrentLocale("LOADING_SCREEN", out var result, tmp);
-		screenText.Text = result;
+		string defaultResult = "LOADING";
+		LocalisationManager.TryGetKeyForCurrentLocale("LOADING_SCREEN", out var result, defaultResult);
+		screenText.Set(result);
 		LoadingRoutine = StartCoroutine(LoadingScreenLocal());
 		IEnumerator LoadingScreenLocal()
 		{
@@ -2342,14 +2371,12 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 				dotsCount++;
 				if (dotsCount == 3)
 				{
+					screenText.Set(result);
 					dotsCount = 0;
 				}
-				tmp = "LOADING";
-				LocalisationManager.TryGetKeyForCurrentLocale("LOADING_SCREEN", out var result2, tmp);
-				screenText.Text = result2;
 				for (int i = 0; i < dotsCount; i++)
 				{
-					screenText.Text += ". ";
+					screenText.Append(". ");
 				}
 				yield return waitOneSecond;
 			}
@@ -2360,25 +2387,25 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 	{
 		string defaultResult = "<color=red>WARNING: PLEASE CHOOSE A BETTER NAME\n\nENTERING ANOTHER BAD NAME WILL RESULT IN A BAN</color>";
 		LocalisationManager.TryGetKeyForCurrentLocale("WARNING_SCREEN", out var result, defaultResult);
-		screenText.Text = result;
+		screenText.Set(result);
 		if (warningConfirmationInputString.ToLower() == "yes")
 		{
 			defaultResult = "\n\nPRESS ANY KEY TO CONTINUE";
 			LocalisationManager.TryGetKeyForCurrentLocale("WARNING_SCREEN_CONFIRMATION", out result, defaultResult);
-			screenText.Text += result;
+			screenText.Append(result);
 		}
 		else
 		{
 			defaultResult = "\n\nTYPE 'YES' TO CONFIRM:";
 			LocalisationManager.TryGetKeyForCurrentLocale("WARNING_SCREEN_TYPE_YES", out result, defaultResult);
-			screenText.Text += result.TrailingSpace();
-			screenText.Text += warningConfirmationInputString;
+			screenText.Append(result.TrailingSpace());
+			screenText.Append(warningConfirmationInputString);
 		}
 	}
 
 	private void SupportScreen()
 	{
-		screenText.Text = "";
+		screenText.Set("");
 		if (displaySupport)
 		{
 			string text = PlayFabAuthenticator.instance.platform.ToString().ToUpper();
@@ -2397,46 +2424,42 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 			text = result;
 			string defaultResult = "SUPPORT";
 			LocalisationManager.TryGetKeyForCurrentLocale("SUPPORT_SCREEN_INTRO", out result, defaultResult);
-			screenText.Text += result;
+			screenText.Append(result);
 			defaultResult = "\n\nPLAYERID";
 			LocalisationManager.TryGetKeyForCurrentLocale("SUPPORT_SCREEN_DETAILS_PLAYERID", out result, defaultResult);
-			GorillaText gorillaText = screenText;
-			gorillaText.Text = gorillaText.Text + result + "   ";
-			screenText.Text += PlayFabAuthenticator.instance.GetPlayFabPlayerId();
+			screenText.Append(result + "   ");
+			screenText.Append(PlayFabAuthenticator.instance.GetPlayFabPlayerId());
 			defaultResult = "\nVERSION";
 			LocalisationManager.TryGetKeyForCurrentLocale("SUPPORT_SCREEN_DETAILS_VERSION", out result, defaultResult);
-			GorillaText gorillaText2 = screenText;
-			gorillaText2.Text = gorillaText2.Text + result + "    ";
-			screenText.Text += version.ToUpper();
+			screenText.Append(result + "    ");
+			screenText.Append(version.ToUpper());
 			defaultResult = "\nPLATFORM";
 			LocalisationManager.TryGetKeyForCurrentLocale("SUPPORT_SCREEN_DETAILS_PLATFORM", out result, defaultResult);
-			GorillaText gorillaText3 = screenText;
-			gorillaText3.Text = gorillaText3.Text + result + "   ";
-			screenText.Text += text;
+			screenText.Append(result + "   ");
+			screenText.Append(text);
 			defaultResult = "\nBUILD DATE";
 			LocalisationManager.TryGetKeyForCurrentLocale("SUPPORT_SCREEN_DETAILS_BUILD_DATE", out result, defaultResult);
-			GorillaText gorillaText4 = screenText;
-			gorillaText4.Text = gorillaText4.Text + result + " ";
-			screenText.Text += buildDate;
+			screenText.Append(result + " ");
+			screenText.Append(buildDate);
 			if (KIDManager.KidEnabled)
 			{
 				defaultResult = "\nk-ID ACCOUNT TYPE:";
 				LocalisationManager.TryGetKeyForCurrentLocale("SUPPORT_KID_ACCOUNT_TYPE", out result, defaultResult);
-				screenText.Text += result.TrailingSpace();
-				screenText.Text += KIDManager.GetActiveAccountStatusNiceString().ToUpper();
+				screenText.Append(result.TrailingSpace());
+				screenText.Append(KIDManager.GetActiveAccountStatusNiceString().ToUpper());
 			}
 		}
 		else
 		{
 			string defaultResult2 = "SUPPORT";
 			LocalisationManager.TryGetKeyForCurrentLocale("SUPPORT_SCREEN_INTRO", out var result2, defaultResult2);
-			screenText.Text += result2;
+			screenText.Append(result2);
 			defaultResult2 = "\n\nPRESS ENTER TO DISPLAY SUPPORT AND ACCOUNT INFORMATION";
 			LocalisationManager.TryGetKeyForCurrentLocale("SUPPORT_SCREEN_INITIAL", out result2, defaultResult2);
-			screenText.Text += result2;
+			screenText.Append(result2);
 			defaultResult2 = "\n\n\n\n<color=red>DO NOT SHARE ACCOUNT INFORMATION WITH ANYONE OTHER THAN ANOTHER AXIOM</color>";
 			LocalisationManager.TryGetKeyForCurrentLocale("SUPPORT_SCREEN_INITIAL_WARNING", out result2, defaultResult2);
-			screenText.Text += result2;
+			screenText.Append(result2);
 		}
 	}
 
@@ -2445,32 +2468,32 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		string defaultResult = "UPDATE TIME SETTINGS. (LOCALLY ONLY). \nPRESS OPTION 1 FOR NORMAL MODE. \nPRESS OPTION 2 FOR STATIC MODE. \nPRESS 1-10 TO CHANGE TIME OF DAY. \nCURRENT MODE: {currentSetting}.\nTIME OF DAY: {currentTimeOfDay}.\n";
 		LocalisationManager.TryGetKeyForCurrentLocale("TIME_SCREEN", out var result, defaultResult);
 		result = result.Replace("{currentSetting}", BetterDayNightManager.instance.currentSetting.ToString().ToUpper()).Replace("{currentTimeOfDay}", BetterDayNightManager.instance.currentTimeOfDay.ToUpper());
-		screenText.Text = result;
+		screenText.Set(result);
 	}
 
 	private void CreditsScreen()
 	{
-		screenText.Text = creditsView.GetScreenText();
+		screenText.Set(creditsView.GetScreenText());
 	}
 
 	private void VisualsScreen()
 	{
 		string defaultResult = "UPDATE ITEMS SETTINGS.";
 		LocalisationManager.TryGetKeyForCurrentLocale("VISUALS_SCREEN_INTRO", out var result, defaultResult);
-		screenText.Text = result.TrailingSpace();
+		screenText.Set(result.TrailingSpace());
 		defaultResult = "PRESS OPTION 1 TO ENABLE ITEM PARTICLES. PRESS OPTION 2 TO DISABLE ITEM PARTICLES. PRESS 1-10 TO CHANGE INSTRUMENT VOLUME FOR OTHER PLAYERS.";
 		LocalisationManager.TryGetKeyForCurrentLocale("VISUALS_SCREEN_OPTIONS", out result, defaultResult);
-		screenText.Text += result;
+		screenText.Append(result);
 		defaultResult = "\n\nITEM PARTICLES ON:";
 		LocalisationManager.TryGetKeyForCurrentLocale("VISUALS_SCREEN_CURRENT", out result, defaultResult);
-		screenText.Text += result.TrailingSpace();
+		screenText.Append(result.TrailingSpace());
 		string text = (disableParticles ? "FALSE" : "TRUE");
 		LocalisationManager.TryGetKeyForCurrentLocale(text, out result, text);
-		screenText.Text += result;
+		screenText.Append(result);
 		defaultResult = "\nINSTRUMENT VOLUME:";
 		LocalisationManager.TryGetKeyForCurrentLocale("VISUALS_SCREEN_VOLUME", out result, defaultResult);
-		screenText.Text += result.TrailingSpace();
-		screenText.Text += Mathf.CeilToInt(instrumentVolume * 50f);
+		screenText.Append(result.TrailingSpace());
+		screenText.Append(Mathf.CeilToInt(instrumentVolume * 50f).ToString());
 	}
 
 	private void VoiceScreen()
@@ -2480,17 +2503,17 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		{
 			string defaultResult = "CHOOSE WHICH TYPE OF VOICE YOU WANT TO HEAR AND SPEAK.";
 			LocalisationManager.TryGetKeyForCurrentLocale("VOICE_CHAT_SCREEN_INTRO", out var result, defaultResult);
-			screenText.Text = result;
+			screenText.Set(result);
 			defaultResult = "\nPRESS OPTION 1 = HUMAN VOICES.\nPRESS OPTION 2 = MONKE VOICES.";
 			LocalisationManager.TryGetKeyForCurrentLocale("VOICE_CHAT_SCREEN_OPTIONS", out result, defaultResult);
-			screenText.Text += result;
+			screenText.Append(result);
 			defaultResult = "\n\nVOICE TYPE:";
 			LocalisationManager.TryGetKeyForCurrentLocale("VOICE_CHAT_SCREEN_CURRENT", out result, defaultResult);
-			screenText.Text += result.TrailingSpace();
+			screenText.Append(result.TrailingSpace());
 			string key = ((voiceChatOn == "TRUE") ? "VOICE_OPTION_HUMAN" : ((voiceChatOn == "FALSE") ? "VOICE_OPTION_MONKE" : "VOICE_OPTION_OFF"));
 			defaultResult = ((voiceChatOn == "TRUE") ? "HUMAN" : ((voiceChatOn == "FALSE") ? "MONKE" : "OFF"));
 			LocalisationManager.TryGetKeyForCurrentLocale(key, out result, defaultResult);
-			screenText.Text += result;
+			screenText.Append(result);
 		}
 		else if (permissionDataByFeature.ManagedBy == Permission.ManagedByEnum.PROHIBITED)
 		{
@@ -2506,13 +2529,13 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 	{
 		string defaultResult = "AUTOMOD AUTOMATICALLY MUTES PLAYERS WHEN THEY JOIN YOUR ROOM IF A LOT OF OTHER PLAYERS HAVE MUTED THEM";
 		LocalisationManager.TryGetKeyForCurrentLocale("AUTOMOD_SCREEN_INTRO", out var result, defaultResult);
-		screenText.Text = result;
+		screenText.Set(result);
 		defaultResult = "\nPRESS OPTION 1 FOR AGGRESSIVE MUTING\nPRESS OPTION 2 FOR MODERATE MUTING\nPRESS OPTION 3 TO TURN AUTOMOD OFF";
 		LocalisationManager.TryGetKeyForCurrentLocale("AUTOMOD_SCREEN_OPTIONS", out result, defaultResult);
-		screenText.Text += result;
+		screenText.Append(result);
 		defaultResult = "\n\nCURRENT AUTOMOD LEVEL: ";
 		LocalisationManager.TryGetKeyForCurrentLocale("AUTOMOD_SCREEN_CURRENT", out result, defaultResult);
-		screenText.Text += result.TrailingSpace();
+		screenText.Append(result.TrailingSpace());
 		string key = "AUTOMOD_OFF";
 		switch (autoMuteType)
 		{
@@ -2527,7 +2550,7 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 			break;
 		}
 		LocalisationManager.TryGetKeyForCurrentLocale(key, out result, autoMuteType);
-		screenText.Text += result;
+		screenText.Append(result);
 	}
 
 	private void GroupScreen()
@@ -2563,16 +2586,16 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 			}
 			text = "PRESS ENTER TO JOIN A PUBLIC GAME WITH YOUR FRIENDSHIP GROUP.";
 			LocalisationManager.TryGetKeyForCurrentLocale("GROUP_SCREEN_ENTER_PARTY", out result, text);
-			screenText.Text = result;
+			screenText.Set(result);
 			text4 += text5;
-			screenText.Text += text4;
+			screenText.Append(text4);
 		}
 		else
 		{
 			text = "PRESS ENTER TO JOIN A PUBLIC GAME AND BRING EVERYONE IN THIS ROOM WITH YOU.";
 			LocalisationManager.TryGetKeyForCurrentLocale("GROUP_SCREEN_ENTER_NOPARTY", out result, text);
-			screenText.Text = result;
-			screenText.Text += text4;
+			screenText.Set(result);
+			screenText.Append(text4);
 		}
 	}
 
@@ -2593,15 +2616,15 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		if (flag)
 		{
 			LocalisationManager.TryGetKeyForCurrentLocale("MIC_SCREEN_MIC_DISABLED", out var result, "MIC DISABLED: ");
-			screenText.Text = result + text;
+			screenText.Set(result + text);
 			return;
 		}
 		string defaultResult = "PRESS OPTION 1 = ALL CHAT.\nPRESS OPTION 2 = PUSH TO TALK.\nPRESS OPTION 3 = PUSH TO MUTE.";
 		LocalisationManager.TryGetKeyForCurrentLocale("MIC_SCREEN_OPTIONS", out var result2, defaultResult);
-		screenText.Text = result2;
+		screenText.Set(result2);
 		defaultResult = "\n\nCURRENT MIC SETTING:";
 		LocalisationManager.TryGetKeyForCurrentLocale("MIC_SCREEN_CURRENT", out result2, defaultResult);
-		screenText.Text += result2.TrailingSpace();
+		screenText.Append(result2.TrailingSpace());
 		string key = "";
 		switch (pttType)
 		{
@@ -2619,22 +2642,22 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 			break;
 		}
 		LocalisationManager.TryGetKeyForCurrentLocale(key, out result2, pttType);
-		screenText.Text += result2;
+		screenText.Append(result2);
 		if (pttType == "PUSH TO MUTE")
 		{
 			defaultResult = "- MIC IS OPEN.\n- HOLD ANY FACE BUTTON TO MUTE.\n\n";
 			LocalisationManager.TryGetKeyForCurrentLocale("MIC_SCREEN_PUSH_TO_MUTE_TOOLTIP", out result2, defaultResult);
-			screenText.Text += result2;
+			screenText.Append(result2);
 		}
 		else if (pttType == "PUSH TO TALK")
 		{
 			defaultResult = "- MIC IS MUTED.\n- HOLD ANY FACE BUTTON TO TALK.\n\n";
 			LocalisationManager.TryGetKeyForCurrentLocale("MIC_SCREEN_PUSH_TO_TALK_TOOLTIP", out result2, defaultResult);
-			screenText.Text += result2;
+			screenText.Append(result2);
 		}
 		else
 		{
-			screenText.Text += "\n\n\n";
+			screenText.Append("\n\n\n");
 		}
 		if (speakerLoudness == null)
 		{
@@ -2667,14 +2690,14 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 			{
 				defaultResult = "INPUT TEST: ";
 				LocalisationManager.TryGetKeyForCurrentLocale("MIC_SCREEN_INPUT_TEST_LABEL", out result2, defaultResult);
-				screenText.Text += result2;
+				screenText.Append(result2);
 				return;
 			}
 			if (!flag5 && pttType == "PUSH TO TALK")
 			{
 				defaultResult = "INPUT TEST: ";
 				LocalisationManager.TryGetKeyForCurrentLocale("MIC_SCREEN_INPUT_TEST_LABEL", out result2, defaultResult);
-				screenText.Text += result2;
+				screenText.Append(result2);
 				return;
 			}
 		}
@@ -2682,15 +2705,15 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		{
 			defaultResult = "NO MIC INPUT DETECTED. CHECK MIC SETTINGS IN THE OPERATING SYSTEM.";
 			LocalisationManager.TryGetKeyForCurrentLocale("MIC_SCREEN_INPUT_TEST_NO_MIC", out result2, defaultResult);
-			screenText.Text += result2;
+			screenText.Append(result2);
 			return;
 		}
 		defaultResult = "INPUT TEST: ";
 		LocalisationManager.TryGetKeyForCurrentLocale("MIC_SCREEN_INPUT_TEST_LABEL", out result2, defaultResult);
-		screenText.Text += result2;
+		screenText.Append(result2);
 		for (int i = 0; i < Mathf.FloorToInt(num * 50f); i++)
 		{
-			screenText.Text += "|";
+			screenText.Append("|");
 		}
 	}
 
@@ -2703,28 +2726,28 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		}
 		string defaultResult = "THIS OPTION AFFECTS WHO YOU PLAY WITH. DEFAULT IS FOR ANYONE TO PLAY NORMALLY. MINIGAMES IS FOR PEOPLE LOOKING TO PLAY WITH THEIR OWN MADE UP RULES.";
 		LocalisationManager.TryGetKeyForCurrentLocale("QUEUE_SCREEN", out var result, defaultResult);
-		screenText.Text = result.TrailingSpace();
+		screenText.Set(result.TrailingSpace());
 		if (allowedInCompetitive)
 		{
 			defaultResult = "COMPETITIVE IS FOR PLAYERS WHO WANT TO PLAY THE GAME AND TRY AS HARD AS THEY CAN.";
 			LocalisationManager.TryGetKeyForCurrentLocale("COMPETITIVE_DESC", out result, defaultResult);
-			screenText.Text += result.TrailingSpace();
+			screenText.Append(result.TrailingSpace());
 			defaultResult = "PRESS OPTION 1 FOR DEFAULT, OPTION 2 FOR MINIGAMES, OR OPTION 3 FOR COMPETITIVE.";
 			LocalisationManager.TryGetKeyForCurrentLocale("QUEUE_SCREEN_ALL_QUEUES", out result, defaultResult);
-			screenText.Text += result;
+			screenText.Append(result);
 		}
 		else
 		{
 			defaultResult = "BEAT THE OBSTACLE COURSE IN CITY TO ALLOW COMPETITIVE PLAY.";
 			LocalisationManager.TryGetKeyForCurrentLocale("BEAT_OBSTACLE_COURSE", out result, defaultResult);
-			screenText.Text += result.TrailingSpace();
+			screenText.Append(result.TrailingSpace());
 			defaultResult = "PRESS OPTION 1 FOR DEFAULT, OR OPTION 2 FOR MINIGAMES.";
 			LocalisationManager.TryGetKeyForCurrentLocale("QUEUE_SCREEN_DEFAULT_QUEUES", out result, defaultResult);
-			screenText.Text += result;
+			screenText.Append(result);
 		}
 		defaultResult = "\n\nCURRENT QUEUE:";
 		LocalisationManager.TryGetKeyForCurrentLocale("CURRENT_QUEUE", out result, defaultResult);
-		screenText.Text += result.TrailingSpace();
+		screenText.Append(result.TrailingSpace());
 		string text = "DEFAULT_QUEUE";
 		text = currentQueue switch
 		{
@@ -2734,7 +2757,7 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		};
 		defaultResult = currentQueue;
 		LocalisationManager.TryGetKeyForCurrentLocale(text, out result, defaultResult);
-		screenText.Text += result;
+		screenText.Append(result);
 	}
 
 	private void TroopScreen()
@@ -2748,27 +2771,27 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		Permission permissionDataByFeature2 = KIDManager.GetPermissionDataByFeature(EKIDFeatures.Multiplayer);
 		bool flag = KIDManager.HasPermissionToUseFeature(EKIDFeatures.Groups) && KIDManager.HasPermissionToUseFeature(EKIDFeatures.Multiplayer);
 		bool flag2 = IsValidTroopName(troopName);
-		screenText.Text = string.Empty;
+		screenText.Set(string.Empty);
 		string text = "";
 		string result = "";
 		if (flag)
 		{
 			text = "PLAY WITH A PERSISTENT GROUP ACROSS MULTIPLE ROOMS.";
 			LocalisationManager.TryGetKeyForCurrentLocale("TROOP_SCREEN_INTRO", out result, text);
-			screenText.Text = result;
+			screenText.Set(result);
 			if (!flag2)
 			{
 				text = " PRESS ENTER TO JOIN OR CREATE A TROOP.";
 				LocalisationManager.TryGetKeyForCurrentLocale("TROOP_SCREEN_INSTRUCTIONS", out result, text);
-				screenText.Text += result;
+				screenText.Append(result);
 			}
 		}
 		text = "\n\nCURRENT TROOP: ";
 		LocalisationManager.TryGetKeyForCurrentLocale("TROOP_SCREEN_CURRENT_TROOP", out result, text);
-		screenText.Text += result.TrailingSpace();
+		screenText.Append(result.TrailingSpace());
 		if (flag2)
 		{
-			screenText.Text += troopName;
+			screenText.Append(troopName ?? "");
 			if (flag)
 			{
 				bool flag3 = currentTroopPopulation > -1;
@@ -2776,17 +2799,17 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 				{
 					text = "\n  -IN TROOP QUEUE-";
 					LocalisationManager.TryGetKeyForCurrentLocale("TROOP_SCREEN_IN_QUEUE", out result, text);
-					screenText.Text += result;
+					screenText.Append(result);
 					if (flag3)
 					{
 						text = "\n\nPLAYERS IN TROOP: ";
 						LocalisationManager.TryGetKeyForCurrentLocale("TROOP_SCREEN_PLAYERS_IN_TROOP", out result, text);
-						screenText.Text += result.TrailingSpace();
-						screenText.Text += Mathf.Max(1, currentTroopPopulation);
+						screenText.Append(result.TrailingSpace());
+						screenText.Append(Mathf.Max(1, currentTroopPopulation).ToString());
 					}
 					text = "\n\nPRESS OPTION 2 FOR DEFAULT QUEUE.";
 					LocalisationManager.TryGetKeyForCurrentLocale("TROOP_SCREEN_DEFAULT_QUEUE", out result, text);
-					screenText.Text += result;
+					screenText.Append(result);
 				}
 				else
 				{
@@ -2802,28 +2825,28 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 					text = currentQueue;
 					LocalisationManager.TryGetKeyForCurrentLocale(text2, out var result2, text);
 					result = result.Replace("{currentQueue}", result2);
-					screenText.Text += result;
+					screenText.Append(result);
 					if (flag3)
 					{
 						text = "\n\nPLAYERS IN TROOP: ";
 						LocalisationManager.TryGetKeyForCurrentLocale("TROOP_SCREEN_PLAYERS_IN_TROOP", out result, text);
-						screenText.Text += result.TrailingSpace();
-						screenText.Text += Mathf.Max(1, currentTroopPopulation);
+						screenText.Append(result.TrailingSpace());
+						screenText.Append(Mathf.Max(1, currentTroopPopulation).ToString());
 					}
 					text = "\n\nPRESS OPTION 1 FOR TROOP QUEUE.";
 					LocalisationManager.TryGetKeyForCurrentLocale("TROOP_SCREEN_TROOP_QUEUE", out result, text);
-					screenText.Text += result;
+					screenText.Append(result);
 				}
 				text = "\nPRESS OPTION 3 TO LEAVE YOUR TROOP.";
 				LocalisationManager.TryGetKeyForCurrentLocale("TROOP_SCREEN_LEAVE", out result, text);
-				screenText.Text += result;
+				screenText.Append(result);
 			}
 		}
 		else
 		{
 			text = "-NOT IN TROOP-";
 			LocalisationManager.TryGetKeyForCurrentLocale("TROOP_SCREEN_NOT_IN_TROOP", out result, text);
-			screenText.Text += result;
+			screenText.Append(result);
 		}
 		if (flag)
 		{
@@ -2831,8 +2854,8 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 			{
 				text = "\n\nTROOP TO JOIN: ";
 				LocalisationManager.TryGetKeyForCurrentLocale("TROOP_SCREEN_JOIN_TROOP", out result, text);
-				screenText.Text += result.TrailingSpace();
-				screenText.Text += troopToJoin;
+				screenText.Append(result.TrailingSpace());
+				screenText.Append(troopToJoin);
 			}
 		}
 		else if (permissionDataByFeature.ManagedBy == Permission.ManagedByEnum.PROHIBITED || permissionDataByFeature2.ManagedBy == Permission.ManagedByEnum.PROHIBITED)
@@ -2879,7 +2902,7 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		LocalisationManager.TryGetKeyForCurrentLocale("TURN_SCREEN_TURN_SPEED", out result, defaultResult);
 		text += result;
 		text += GorillaSnapTurn.CachedSnapTurnRef.turnFactor;
-		screenText.Text = text;
+		screenText.Set(text);
 	}
 
 	private void NameScreen()
@@ -2889,25 +2912,25 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		{
 			string defaultResult = "PRESS ENTER TO CHANGE YOUR NAME TO THE ENTERED NEW NAME.\n\n";
 			LocalisationManager.TryGetKeyForCurrentLocale("NAME_SCREEN", out var result, defaultResult);
-			screenText.Text = result;
+			screenText.Set(result);
 			defaultResult = "CURRENT NAME: ";
 			LocalisationManager.TryGetKeyForCurrentLocale("CURRENT_NAME", out result, defaultResult);
-			screenText.Text += result.TrailingSpace();
-			screenText.Text += savedName;
+			screenText.Append(result.TrailingSpace());
+			screenText.Append(savedName);
 			if (NametagsEnabled)
 			{
 				defaultResult = "NEW NAME: ";
 				LocalisationManager.TryGetKeyForCurrentLocale("NEW_NAME", out result, defaultResult);
-				screenText.Text += result.TrailingSpace();
-				screenText.Text += currentName;
+				screenText.Append(result.TrailingSpace());
+				screenText.Append(currentName);
 			}
 			defaultResult = "PRESS OPTION 1 TO TOGGLE NAMETAGS.\nCURRENTLY NAMETAGS ARE: ";
 			LocalisationManager.TryGetKeyForCurrentLocale("NAME_SCREEN_TOGGLE_NAMETAGS", out result, defaultResult);
 			string key = (NametagsEnabled ? "ON_KEY" : "OFF_KEY");
-			screenText.Text += result.TrailingSpace();
+			screenText.Append(result.TrailingSpace());
 			defaultResult = (NametagsEnabled ? "ON" : "OFF");
 			LocalisationManager.TryGetKeyForCurrentLocale(key, out result, defaultResult);
-			screenText.Text += result;
+			screenText.Append(result);
 		}
 		else if (permissionDataByFeature.ManagedBy == Permission.ManagedByEnum.PROHIBITED)
 		{
@@ -2932,36 +2955,32 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		}
 		_ = string.Empty;
 		LocalisationManager.TryGetKeyForCurrentLocale("STARTUP_INTRO", out var result2, "GORILLA OS\n\n");
-		screenText.Text = result2;
-		screenText.Text += text;
+		screenText.Set(result2);
+		screenText.Append(text);
 		LocalisationManager.TryGetKeyForCurrentLocale("STARTUP_PLAYERS_ONLINE", out result2, "{playersOnline} PLAYERS ONLINE\n\n");
-		screenText.Text += result2.Replace("{playersOnline}", HowManyMonke.ThisMany.ToString());
+		screenText.Append(result2.Replace("{playersOnline}", HowManyMonke.ThisMany.ToString()));
 		LocalisationManager.TryGetKeyForCurrentLocale("STARTUP_USERS_BANNED", out result2, "{usersBanned} USERS BANNED YESTERDAY\n\n");
-		screenText.Text += result2.Replace("{usersBanned}", usersBanned.ToString());
+		screenText.Append(result2.Replace("{usersBanned}", usersBanned.ToString()));
 		LocalisationManager.TryGetKeyForCurrentLocale("STARTUP_PRESS_KEY", out result2, "PRESS ANY KEY TO BEGIN");
-		screenText.Text += result2;
+		screenText.Append(result2);
 	}
 
 	private void ColourScreen()
 	{
-		screenText.Text = "USE THE OPTIONS BUTTONS TO SELECT THE COLOR TO UPDATE, THEN PRESS 0-9 TO SET A NEW VALUE.";
-		LocalisationManager.TryGetKeyForCurrentLocale("COLOR_SELECT_INTRO", out var result, screenText.Text);
-		screenText.Text += result;
-		LocalisationManager.TryGetKeyForCurrentLocale("COLOR_RED", out result, screenText.Text);
-		screenText.Text += "\n\n";
-		screenText.Text += result;
-		GorillaText gorillaText = screenText;
-		gorillaText.Text = gorillaText.Text + Mathf.FloorToInt(redValue * 9f) + ((colorCursorLine == 0) ? "<--" : "");
-		LocalisationManager.TryGetKeyForCurrentLocale("COLOR_GREEN", out result, screenText.Text);
-		screenText.Text += "\n\n";
-		screenText.Text += result;
-		GorillaText gorillaText2 = screenText;
-		gorillaText2.Text = gorillaText2.Text + Mathf.FloorToInt(greenValue * 9f) + ((colorCursorLine == 1) ? "<--" : "");
-		LocalisationManager.TryGetKeyForCurrentLocale("COLOR_BLUE", out result, screenText.Text);
-		screenText.Text += "\n\n";
-		screenText.Text += result;
-		GorillaText gorillaText3 = screenText;
-		gorillaText3.Text = gorillaText3.Text + Mathf.FloorToInt(blueValue * 9f) + ((colorCursorLine == 2) ? "<--" : "");
+		LocalisationManager.TryGetKeyForCurrentLocale("COLOR_SELECT_INTRO", out var result, "USE THE OPTIONS BUTTONS TO SELECT THE COLOR TO UPDATE, THEN PRESS 0-9 TO SET A NEW VALUE.");
+		screenText.Set(result);
+		LocalisationManager.TryGetKeyForCurrentLocale("COLOR_RED", out result, "RED");
+		screenText.Append("\n\n");
+		screenText.Append(result);
+		screenText.Append(Mathf.FloorToInt(redValue * 9f) + ((colorCursorLine == 0) ? "<--" : ""));
+		LocalisationManager.TryGetKeyForCurrentLocale("COLOR_GREEN", out result, "GREEN");
+		screenText.Append("\n\n");
+		screenText.Append(result);
+		screenText.Append(Mathf.FloorToInt(greenValue * 9f) + ((colorCursorLine == 1) ? "<--" : ""));
+		LocalisationManager.TryGetKeyForCurrentLocale("COLOR_BLUE", out result, "BLUE");
+		screenText.Append("\n\n");
+		screenText.Append(result);
+		screenText.Append(Mathf.FloorToInt(blueValue * 9f) + ((colorCursorLine == 2) ? "<--" : ""));
 	}
 
 	private void RoomScreen()
@@ -2975,79 +2994,79 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		Permission permissionDataByFeature2 = KIDManager.GetPermissionDataByFeature(EKIDFeatures.Multiplayer);
 		bool item = KIDManager.CheckFeatureOptIn(EKIDFeatures.Multiplayer).hasOptedInPreviously;
 		bool num = KIDManager.HasPermissionToUseFeature(EKIDFeatures.Groups) && KIDManager.HasPermissionToUseFeature(EKIDFeatures.Multiplayer) && item;
-		screenText.Text = "";
+		screenText.Set("");
 		string result = "";
 		string text = "";
 		if (num)
 		{
 			text = "PRESS ENTER TO JOIN OR CREATE A CUSTOM ROOM WITH THE ENTERED CODE.";
 			LocalisationManager.TryGetKeyForCurrentLocale("ROOM_INTRO", out result, text);
-			screenText.Text += result.TrailingSpace();
+			screenText.Append(result.TrailingSpace());
 		}
 		text = "PRESS OPTION 1 TO DISCONNECT FROM THE CURRENT ROOM.";
 		LocalisationManager.TryGetKeyForCurrentLocale("ROOM_OPTION", out result, text);
-		screenText.Text += result.TrailingSpace();
+		screenText.Append(result.TrailingSpace());
 		if (FriendshipGroupDetection.Instance.IsInParty)
 		{
 			if (FriendshipGroupDetection.Instance.IsPartyWithinCollider(friendJoinCollider))
 			{
 				text = "YOUR GROUP WILL TRAVEL WITH YOU.";
 				LocalisationManager.TryGetKeyForCurrentLocale("ROOM_GROUP_TRAVEL", out result, text);
-				screenText.Text += result.TrailingSpace();
+				screenText.Append(result.TrailingSpace());
 			}
 			else
 			{
 				text = "<color=red>YOU WILL LEAVE YOUR PARTY UNLESS YOU GATHER THEM HERE FIRST!</color> ";
 				LocalisationManager.TryGetKeyForCurrentLocale("ROOM_PARTY_WARNING", out result, text);
-				screenText.Text += result;
+				screenText.Append(result);
 			}
 		}
 		text = "\n\nCURRENT ROOM:";
 		LocalisationManager.TryGetKeyForCurrentLocale("ROOM_TEXT_CURRENT_ROOM", out result, text);
-		screenText.Text += result.TrailingSpace();
+		screenText.Append(result.TrailingSpace());
 		if (NetworkSystem.Instance.InRoom)
 		{
-			screenText.Text += NetworkSystem.Instance.RoomName.TrailingSpace();
+			screenText.Append(NetworkSystem.Instance.RoomName.TrailingSpace());
 			if (NetworkSystem.Instance.SessionIsPrivate)
 			{
 				string text2 = GameMode.ActiveGameMode?.GameModeNameRoomLabel();
 				if (!string.IsNullOrEmpty(text2))
 				{
-					screenText.Text += text2;
+					screenText.Append(text2 ?? "");
 				}
 			}
 			text = "\n\nPLAYERS IN ROOM:";
 			LocalisationManager.TryGetKeyForCurrentLocale("PLAYERS_IN_ROOM", out result, text);
-			screenText.Text += result.TrailingSpace();
-			screenText.Text += NetworkSystem.Instance.RoomPlayerCount;
+			screenText.Append(result.TrailingSpace());
+			screenText.Append(NetworkSystem.Instance.RoomPlayerCount.ToString());
 		}
 		else
 		{
 			text = "-NOT IN ROOM-";
 			LocalisationManager.TryGetKeyForCurrentLocale("NOT_IN_ROOM", out result, text);
-			screenText.Text += result;
+			screenText.Append(result);
 			text = "\n\nPLAYERS ONLINE:";
 			LocalisationManager.TryGetKeyForCurrentLocale("PLAYERS_ONLINE", out result, text);
-			screenText.Text += result.TrailingSpace();
-			screenText.Text += HowManyMonke.ThisMany;
+			screenText.Append(result.TrailingSpace());
+			screenText.Append(HowManyMonke.ThisMany.ToString());
 		}
 		if (num)
 		{
 			text = "\n\nROOM TO JOIN:";
 			LocalisationManager.TryGetKeyForCurrentLocale("ROOM_TO_JOIN", out result, text);
-			screenText.Text += result.TrailingSpace();
-			screenText.Text += roomToJoin;
+			screenText.Append(result.TrailingSpace());
+			screenText.Append(roomToJoin);
 			if (roomFull)
 			{
 				text = "\n\nROOM FULL. JOIN ROOM FAILED.";
 				LocalisationManager.TryGetKeyForCurrentLocale("ROOM_FULL", out result, text);
-				screenText.Text += result;
+				screenText.Append(result);
 			}
 			else if (roomNotAllowed)
 			{
 				text = "\n\nCANNOT JOIN ROOM TYPE FROM HERE.";
 				LocalisationManager.TryGetKeyForCurrentLocale("ROOM_JOIN_NOT_ALLOWED", out result, text);
-				screenText.Text += result;
+				screenText.Append(result);
 			}
 		}
 		else if (permissionDataByFeature.ManagedBy == Permission.ManagedByEnum.PROHIBITED || permissionDataByFeature2.ManagedBy == Permission.ManagedByEnum.PROHIBITED)
@@ -3064,32 +3083,32 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 	{
 		string defaultResult = "TYPE REDEMPTION CODE AND PRESS ENTER";
 		LocalisationManager.TryGetKeyForCurrentLocale("REDEMPTION_INTRO", out var result, defaultResult);
-		screenText.Text = result;
+		screenText.Set(result);
 		defaultResult = "\n\nCODE: " + redemptionCode;
 		LocalisationManager.TryGetKeyForCurrentLocale("REDEMPTION_CODE_LABEL", out result, defaultResult);
-		screenText.Text += result.TrailingSpace();
-		screenText.Text += redemptionCode;
+		screenText.Append(result.TrailingSpace());
+		screenText.Append(redemptionCode);
 		switch (RedemptionStatus)
 		{
 		case RedemptionResult.Invalid:
 			defaultResult = "\n\nINVALID CODE";
 			LocalisationManager.TryGetKeyForCurrentLocale("REDEMPTION_CODE_INVALID", out result, defaultResult);
-			screenText.Text += result;
+			screenText.Append(result);
 			break;
 		case RedemptionResult.Checking:
 			defaultResult = "\n\nVALIDATING...";
 			LocalisationManager.TryGetKeyForCurrentLocale("REDEMPTION_CODE_VALIDATING", out result, defaultResult);
-			screenText.Text += result;
+			screenText.Append(result);
 			break;
 		case RedemptionResult.AlreadyUsed:
 			defaultResult = "\n\nCODE ALREADY CLAIMED";
 			LocalisationManager.TryGetKeyForCurrentLocale("REDEMPTION_CODE_ALREADY_USED", out result, defaultResult);
-			screenText.Text += result;
+			screenText.Append(result);
 			break;
 		case RedemptionResult.Success:
 			defaultResult = "\n\nSUCCESSFULLY CLAIMED!";
 			LocalisationManager.TryGetKeyForCurrentLocale("REDEMPTION_CODE_SUCCESS", out result, defaultResult);
-			screenText.Text += result;
+			screenText.Append(result);
 			break;
 		case RedemptionResult.Empty:
 			break;
@@ -3100,7 +3119,7 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 	{
 		string defaultResult = "NOT AVAILABLE IN RANKED PLAY";
 		LocalisationManager.TryGetKeyForCurrentLocale("LIMITED_ONLINE_FUNC", out var result, defaultResult);
-		screenText.Text = result;
+		screenText.Set(result);
 	}
 
 	private void UpdateGameModeText()
@@ -3123,7 +3142,7 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 
 	private void UpdateFunctionScreen()
 	{
-		functionSelectText.Text = GetOrderListForScreen(currentState);
+		functionSelectText.Set(GetOrderListForScreen(currentState));
 	}
 
 	private void CheckAutoBanListForRoomName(string nameToCheck)
@@ -3491,6 +3510,14 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		UpdateScreen();
 	}
 
+	private static void OnFirstJoinedRoom_IncrementSessionCount()
+	{
+		RoomSystem.JoinedRoomEvent -= new Action(OnFirstJoinedRoom_IncrementSessionCount);
+		sessionCount++;
+		PlayerPrefs.SetInt("sessionCount", sessionCount);
+		PlayerPrefs.Save();
+	}
+
 	public void SetNameBySafety(bool isSafety)
 	{
 		if (isSafety)
@@ -3815,28 +3842,27 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 	{
 		string defaultResult = "PARENT/GUARDIAN PERMISSION REQUIRED TO ";
 		LocalisationManager.TryGetKeyForCurrentLocale("KID_PERMISSION_NEEDED", out var result, defaultResult);
-		screenText.Text += result;
-		GorillaText gorillaText = screenText;
-		gorillaText.Text = gorillaText.Text + featureDescription + "!";
+		screenText.Append(result);
+		screenText.Append(featureDescription + "!");
 		if (_waitingForUpdatedSession)
 		{
 			defaultResult = "\n\nWAITING FOR PARENT/GUARDIAN CONSENT!";
 			LocalisationManager.TryGetKeyForCurrentLocale("KID_WAITING_PERMISSION", out result, defaultResult);
-			screenText.Text += result;
+			screenText.Append(result);
 			return true;
 		}
 		if (Time.time >= _nextUpdateAttemptTime)
 		{
 			defaultResult = "\n\nPRESS OPTION 2 TO REFRESH PERMISSIONS!";
 			LocalisationManager.TryGetKeyForCurrentLocale("KID_REFRESH_PERMISSIONS", out result, defaultResult);
-			screenText.Text += result;
+			screenText.Append(result);
 		}
 		else
 		{
 			defaultResult = "CHECK AGAIN IN {time} SECONDS!";
 			LocalisationManager.TryGetKeyForCurrentLocale("KID_CHECK_AGAIN_COOLDOWN", out result, defaultResult);
 			result = result.Replace("{time}", ((int)(_nextUpdateAttemptTime - Time.time)).ToString());
-			screenText.Text += result;
+			screenText.Append(result);
 		}
 		return false;
 	}
@@ -3846,7 +3872,7 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		_ = "\n\nYOU ARE NOT ALLOWED TO " + verb + " IN YOUR JURISDICTION.";
 		LocalisationManager.TryGetKeyForCurrentLocale("KID_PROHIBITED_MESSAGE", out var result, "SET CUSTOM NICKNAMES");
 		result = result.Replace("{verb}", verb);
-		screenText.Text += result;
+		screenText.Append(result);
 	}
 
 	private void RoomScreen_Permission()
@@ -3855,11 +3881,11 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		{
 			string defaultResult = "YOU CANNOT USE THE PRIVATE ROOM FEATURE RIGHT NOW";
 			LocalisationManager.TryGetKeyForCurrentLocale("ROOM_SCREEN_DISABLED", out var result, defaultResult);
-			screenText.Text = result;
+			screenText.Set(result);
 		}
 		else
 		{
-			screenText.Text = "";
+			screenText.Set("");
 			string defaultResult2 = "CREATE OR JOIN PRIVATE ROOMS";
 			LocalisationManager.TryGetKeyForCurrentLocale("ROOM_SCREEN_KID_PROHIBITED_VERB", out var result2, defaultResult2);
 			GuardianConsentMessage("OPTION 3", result2);
@@ -3877,12 +3903,12 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 	{
 		string defaultResult = "VOICE TYPE: \"MONKE\"\n\n";
 		LocalisationManager.TryGetKeyForCurrentLocale("VOICE_SCREEN_KID_CURRENT_VOICE", out var result, defaultResult);
-		screenText.Text = result;
+		screenText.Set(result);
 		if (!KIDManager.KidEnabled)
 		{
 			defaultResult = "YOU CANNOT USE THE HUMAN VOICE TYPE FEATURE RIGHT NOW";
 			LocalisationManager.TryGetKeyForCurrentLocale("VOICE_SCREEN_DISABLED", out result, defaultResult);
-			screenText.Text += result;
+			screenText.Append(result);
 		}
 		else
 		{
@@ -3901,7 +3927,7 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 
 	private void MicScreen_Permission()
 	{
-		screenText.Text = "";
+		screenText.Set("");
 		string defaultResult = "ENABLE HUMAN VOICE CHAT";
 		LocalisationManager.TryGetKeyForCurrentLocale("VOICE_SCREEN_GUARDIAN_FEATURE_DESC", out var result, defaultResult);
 		GuardianConsentMessage("OPTION 3", result);
@@ -3918,11 +3944,11 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		{
 			string defaultResult = "YOU CANNOT USE THE CUSTOM NICKNAME FEATURE RIGHT NOW";
 			LocalisationManager.TryGetKeyForCurrentLocale("NAME_SCREEN_DISABLED", out var result, defaultResult);
-			screenText.Text += result;
+			screenText.Append(result);
 		}
 		else
 		{
-			screenText.Text = "";
+			screenText.Set("");
 			LocalisationManager.TryGetKeyForCurrentLocale("NAME_SCREEN_KID_PROHIBITED_VERB", out var result2, "SET CUSTOM NICKNAMES");
 			GuardianConsentMessage("OPTION 3", result2);
 		}
@@ -3968,11 +3994,11 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 
 	private void TroopScreen_Permission()
 	{
-		screenText.Text = "";
+		screenText.Set("");
 		if (!KIDManager.KidEnabled)
 		{
 			LocalisationManager.TryGetKeyForCurrentLocale("TROOP_SCREEN_DISABLED", out var result, "YOU CANNOT USE THE TROOPS FEATURE RIGHT NOW");
-			screenText.Text += result;
+			screenText.Append(result);
 		}
 		else
 		{
@@ -4019,13 +4045,13 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		if (activeAccountStatus == (AgeStatusType)0)
 		{
 			stringBuilder.AppendLine("\nPress 'OPTION 1' to get permissions!");
-			screenText.Text = stringBuilder.ToString();
+			screenText.Set(stringBuilder.ToString());
 			return;
 		}
 		if (_waitingForUpdatedSession)
 		{
 			stringBuilder.AppendLine("\nWAITING FOR PARENT/GUARDIAN CONSENT!");
-			screenText.Text = stringBuilder.ToString();
+			screenText.Set(stringBuilder.ToString());
 			return;
 		}
 		stringBuilder.AppendLine("\nPermissions:");
@@ -4042,7 +4068,7 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 			}
 		}
 		stringBuilder.AppendLine("\nTO REFRESH PERMISSIONS PRESS OPTION 1!");
-		screenText.Text = stringBuilder.ToString();
+		screenText.Set(stringBuilder.ToString());
 	}
 
 	private string GetLocalisedLanguageScreen()
@@ -4106,7 +4132,7 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 
 	private void LanguageScreen()
 	{
-		screenText.Text = GetLocalisedLanguageScreen();
+		screenText.Set(GetLocalisedLanguageScreen());
 	}
 
 	private void ProcessLanguageState(GorillaKeyboardBindings buttonPressed)

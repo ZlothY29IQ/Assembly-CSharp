@@ -1515,7 +1515,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 
 	public void PressFittingRoomButton(FittingRoomButton pressedFittingRoomButton, bool isLeftHand)
 	{
-		BundleManager.instance._tryOnBundlesStand.ClearSelectedBundle();
+		BundleManager.instance._tryOnBundlesStand?.ClearSelectedBundle();
 		ApplyCosmeticItemToSet(tryOnSet, pressedFittingRoomButton.currentCosmeticItem, isLeftHand, applyToPlayerPrefs: false);
 		UpdateShoppingCart();
 		UpdateWornCosmetics(sync: true);

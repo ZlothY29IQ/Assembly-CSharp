@@ -97,4 +97,8 @@ public class VODTarget : ObservableBehavior, IBuildValidation
 	{
 		base.gameObject.SetActive(value: false);
 	}
+
+	protected override void ObservableSliceUpdate()
+	{
+	}
 }

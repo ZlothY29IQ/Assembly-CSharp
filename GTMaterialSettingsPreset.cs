@@ -2,5 +2,7 @@ public enum GTMaterialSettingsPreset
 {
 	Default,
 	Environment,
-	Glass
+	Glass,
+	ReflectiveDark,
+	Reflective
 }

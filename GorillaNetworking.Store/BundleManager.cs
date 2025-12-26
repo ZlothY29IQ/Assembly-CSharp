@@ -336,13 +336,13 @@ public class BundleManager : MonoBehaviour
 	{
 		if (_tryOnBundlesStand.IsNotNull())
 		{
-			_tryOnBundlesStand.PressTryOnBundleButton(pressedTryOnBundleButton, isLeftHand);
+			_tryOnBundlesStand?.PressTryOnBundleButton(pressedTryOnBundleButton, isLeftHand);
 		}
 	}
 
 	public void PressPurchaseTryOnBundleButton()
 	{
-		_tryOnBundlesStand.PurchaseButtonPressed();
+		_tryOnBundlesStand?.PurchaseButtonPressed();
 	}
 
 	public void UpdateBundlePrice(string productSku, string productFormattedPrice)

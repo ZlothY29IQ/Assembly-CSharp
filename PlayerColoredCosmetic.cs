@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using GorillaExtensions;
 using UnityEngine;
 using UnityEngine.Pool;
 
@@ -26,11 +27,23 @@ public class PlayerColoredCosmetic : MonoBehaviour
 		public void Init()
 		{
 			hashId = Shader.PropertyToID(shaderColorProperty);
+			if (meshRenderer == null)
+			{
+				Debug.LogError("ERROR!!!  ColoringRule.Init: Default meshRenderer cannot be null! Path=" + meshRenderer.transform.GetPathQ());
+			}
 			List<Material> value;
 			using (CollectionPool<List<Material>, Material>.Get(out value))
 			{
 				meshRenderer.GetSharedMaterials(value);
+				if (materialIndex < 0 || materialIndex >= value.Count)
+				{
+					Debug.LogError("ERROR!!!  " + $"ColoringRule.Init: Material index {materialIndex} is out of range! Path=" + meshRenderer.transform.GetPathQ(), meshRenderer);
+				}
 				defaultMaterial = value[materialIndex];
+				if (defaultMaterial == null)
+				{
+					Debug.LogError("ERROR!!!  ColoringRule.Init: Default material cannot be null! Path=" + meshRenderer.transform.GetPathQ(), meshRenderer);
+				}
 				instancedMaterial = new Material(value[materialIndex]);
 				value[materialIndex] = instancedMaterial;
 				meshRenderer.SetSharedMaterials(value);
@@ -42,6 +55,10 @@ public class PlayerColoredCosmetic : MonoBehaviour
 			instancedMaterial.SetColor(hashId, color);
 		}
 	}
+
+	private const string preLog = "[GT/PlayerColoredCosmetic]  ";
+
+	private const string preErr = "ERROR!!!  ";
 
 	private bool didInit;
 

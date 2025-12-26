@@ -235,8 +235,6 @@ public class ProgressionManager : MonoBehaviour
 
 		public string MothershipEnvId;
 
-		public string MothershipTitleId;
-
 		public string MothershipDeploymentId;
 	}
 
@@ -579,7 +577,6 @@ public class ProgressionManager : MonoBehaviour
 		StartCoroutine(DoGetProgression(new GetProgressionRequest
 		{
 			MothershipId = MothershipClientContext.MothershipId,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
 			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
 			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
 			MothershipToken = MothershipClientContext.Token,
@@ -593,7 +590,6 @@ public class ProgressionManager : MonoBehaviour
 		StartCoroutine(DoSetProgression(new SetProgressionRequest
 		{
 			MothershipId = MothershipClientContext.MothershipId,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
 			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
 			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
 			MothershipToken = MothershipClientContext.Token,
@@ -608,7 +604,6 @@ public class ProgressionManager : MonoBehaviour
 		StartCoroutine(DoUnlockNode(new UnlockNodeRequest
 		{
 			MothershipId = MothershipClientContext.MothershipId,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
 			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
 			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
 			MothershipToken = MothershipClientContext.Token,
@@ -624,8 +619,8 @@ public class ProgressionManager : MonoBehaviour
 		{
 			MothershipId = MothershipClientContext.MothershipId,
 			MothershipToken = MothershipClientContext.Token,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
 			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
+			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
 			ResourceType = resourceName
 		}, OnSuccess, OnFailure));
 	}
@@ -637,8 +632,8 @@ public class ProgressionManager : MonoBehaviour
 		{
 			MothershipId = MothershipClientContext.MothershipId,
 			MothershipToken = MothershipClientContext.Token,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
 			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
+			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
 			QuestID = questID
 		}, OnSuccess, OnFailure));
 	}
@@ -650,8 +645,8 @@ public class ProgressionManager : MonoBehaviour
 		{
 			MothershipId = MothershipClientContext.MothershipId,
 			MothershipToken = MothershipClientContext.Token,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
-			MothershipEnvId = MothershipClientApiUnity.EnvironmentId
+			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
+			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId
 		}, OnSuccess, OnFailure));
 	}
 
@@ -662,8 +657,8 @@ public class ProgressionManager : MonoBehaviour
 		{
 			MothershipId = MothershipClientContext.MothershipId,
 			MothershipToken = MothershipClientContext.Token,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
-			MothershipEnvId = MothershipClientApiUnity.EnvironmentId
+			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
+			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId
 		}, OnSuccess, OnFailure));
 	}
 
@@ -674,8 +669,8 @@ public class ProgressionManager : MonoBehaviour
 		{
 			MothershipId = MothershipClientContext.MothershipId,
 			MothershipToken = MothershipClientContext.Token,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
-			MothershipEnvId = MothershipClientApiUnity.EnvironmentId
+			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
+			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId
 		}, OnSuccess, OnFailure));
 	}
 
@@ -686,8 +681,8 @@ public class ProgressionManager : MonoBehaviour
 		{
 			MothershipId = MothershipClientContext.MothershipId,
 			MothershipToken = MothershipClientContext.Token,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
-			MothershipEnvId = MothershipClientApiUnity.EnvironmentId
+			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
+			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId
 		}, OnSuccess, OnFailure));
 	}
 
@@ -698,8 +693,8 @@ public class ProgressionManager : MonoBehaviour
 		{
 			MothershipId = MothershipClientContext.MothershipId,
 			MothershipToken = MothershipClientContext.Token,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
 			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
+			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
 			TechPointsAmount = amount
 		}, OnSuccess, OnFailure));
 	}
@@ -711,8 +706,8 @@ public class ProgressionManager : MonoBehaviour
 		{
 			MothershipId = MothershipClientContext.MothershipId,
 			MothershipToken = MothershipClientContext.Token,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
-			MothershipEnvId = MothershipClientApiUnity.EnvironmentId
+			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
+			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId
 		}, OnSuccess, OnFailure));
 	}
 
@@ -726,7 +721,6 @@ public class ProgressionManager : MonoBehaviour
 		StartCoroutine(DoPurchaseShiftCreditCapIncrease(new PurchaseShiftCreditCapIncreaseRequest
 		{
 			MothershipId = MothershipClientContext.MothershipId,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
 			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
 			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
 			MothershipToken = MothershipClientContext.Token,
@@ -744,7 +738,6 @@ public class ProgressionManager : MonoBehaviour
 		StartCoroutine(DoPurchaseShiftCredit(new PurchaseShiftCreditRequest
 		{
 			MothershipId = MothershipClientContext.MothershipId,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
 			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
 			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
 			MothershipToken = MothershipClientContext.Token,
@@ -757,7 +750,6 @@ public class ProgressionManager : MonoBehaviour
 		StartCoroutine(DoGetShiftCredit(new GetShiftCreditRequest
 		{
 			MothershipId = MothershipClientContext.MothershipId,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
 			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
 			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
 			MothershipToken = MothershipClientContext.Token,
@@ -775,7 +767,6 @@ public class ProgressionManager : MonoBehaviour
 		StartCoroutine(DoGetJuicerStatus(new GetJuicerStatusRequest
 		{
 			MothershipId = MothershipClientContext.MothershipId,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
 			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
 			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
 			MothershipToken = MothershipClientContext.Token,
@@ -793,7 +784,6 @@ public class ProgressionManager : MonoBehaviour
 		StartCoroutine(DoDepositCore(new DepositCoreRequest
 		{
 			MothershipId = MothershipClientContext.MothershipId,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
 			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
 			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
 			MothershipToken = MothershipClientContext.Token,
@@ -812,7 +802,6 @@ public class ProgressionManager : MonoBehaviour
 		StartCoroutine(DoPurchaseOverdrive(new PurchaseOverdriveRequest
 		{
 			MothershipId = MothershipClientContext.MothershipId,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
 			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
 			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
 			MothershipToken = MothershipClientContext.Token,
@@ -830,7 +819,6 @@ public class ProgressionManager : MonoBehaviour
 		StartCoroutine(DoSubtractShiftCredit(new SubtractShiftCreditRequest
 		{
 			MothershipId = MothershipClientContext.MothershipId,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
 			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
 			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
 			MothershipToken = MothershipClientContext.Token,
@@ -849,7 +837,6 @@ public class ProgressionManager : MonoBehaviour
 		StartCoroutine(DoAdvanceDockWristUpgradeLevel(new AdvanceDockWristUpgradeRequest
 		{
 			MothershipId = MothershipClientContext.MothershipId,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
 			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
 			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
 			MothershipToken = MothershipClientContext.Token,
@@ -863,7 +850,6 @@ public class ProgressionManager : MonoBehaviour
 		StartCoroutine(DoGetDockWristUpgradeStatus(new DockWristUpgradeStatusRequest
 		{
 			MothershipId = MothershipClientContext.MothershipId,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
 			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
 			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
 			MothershipToken = MothershipClientContext.Token
@@ -875,7 +861,6 @@ public class ProgressionManager : MonoBehaviour
 		StartCoroutine(DoPurchaseDrillUpgrade(new PurchaseDrillUpgradeRequest
 		{
 			MothershipId = MothershipClientContext.MothershipId,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
 			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
 			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
 			MothershipToken = MothershipClientContext.Token,
@@ -888,7 +873,6 @@ public class ProgressionManager : MonoBehaviour
 		StartCoroutine(DoRecycleTool(new RecycleToolRequest
 		{
 			MothershipId = MothershipClientContext.MothershipId,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
 			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
 			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
 			MothershipToken = MothershipClientContext.Token,
@@ -902,7 +886,6 @@ public class ProgressionManager : MonoBehaviour
 		StartCoroutine(DoStartOfShift(new StartOfShiftRequest
 		{
 			MothershipId = MothershipClientContext.MothershipId,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
 			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
 			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
 			MothershipToken = MothershipClientContext.Token,
@@ -923,7 +906,6 @@ public class ProgressionManager : MonoBehaviour
 		StartCoroutine(DoEndOfShiftReward(new EndOfShiftRewardRequest
 		{
 			MothershipId = MothershipClientContext.MothershipId,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
 			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
 			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
 			MothershipToken = MothershipClientContext.Token,
@@ -937,7 +919,6 @@ public class ProgressionManager : MonoBehaviour
 		StartCoroutine(DoGetGhostReactorStats(new GhostReactorStatsRequest
 		{
 			MothershipId = MothershipClientContext.MothershipId,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
 			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
 			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
 			MothershipToken = MothershipClientContext.Token
@@ -949,7 +930,6 @@ public class ProgressionManager : MonoBehaviour
 		StartCoroutine(DoGetGhostReactorInventory(new GhostReactorInventoryRequest
 		{
 			MothershipId = MothershipClientContext.MothershipId,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
 			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
 			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
 			MothershipToken = MothershipClientContext.Token
@@ -966,7 +946,6 @@ public class ProgressionManager : MonoBehaviour
 		StartCoroutine(DoSetGhostReactorInventory(new SetGhostReactorInventoryRequest
 		{
 			MothershipId = MothershipClientContext.MothershipId,
-			MothershipTitleId = MothershipClientApiUnity.TitleId,
 			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
 			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
 			MothershipToken = MothershipClientContext.Token,

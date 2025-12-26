@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using GorillaTag;
 using UnityEngine;
 
+[DefaultExecutionOrder(0)]
 internal abstract class TickSystem<T> : MonoBehaviour
 {
 	private abstract class TickCallbackWrapper<U> : ObjectPoolEvents, ICallBack where U : class

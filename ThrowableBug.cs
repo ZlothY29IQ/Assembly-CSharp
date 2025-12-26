@@ -104,6 +104,10 @@ public class ThrowableBug : TransferrableObject, ITickSystemTick
 	[SerializeField]
 	private AudioSource audioSource;
 
+	public GTZone startZone;
+
+	private GTZone currentZone;
+
 	private float bobbingDefaultFrequency = 1f;
 
 	public int updateMultiplier;
@@ -134,6 +138,7 @@ public class ThrowableBug : TransferrableObject, ITickSystemTick
 		rayCastNonAllocColliders = new RaycastHit[5];
 		rayCastNonAllocColliders2 = new RaycastHit[5];
 		velocityEstimator = GetComponent<GorillaVelocityEstimator>();
+		currentZone = startZone;
 	}
 
 	internal override void OnEnable()
@@ -228,6 +233,7 @@ public class ThrowableBug : TransferrableObject, ITickSystemTick
 		{
 			animator.SetBool(_g_IsHeld, flag);
 		}
+		animator.enabled = GorillaTagger.Instance.offlineVRRig.zoneEntity.currentZone == currentZone;
 		if (!audioSource)
 		{
 			return;

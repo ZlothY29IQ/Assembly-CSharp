@@ -40,6 +40,8 @@ public class GorillaMetaReport : MonoBehaviour
 
 	private int savedCullingLayers;
 
+	private bool hasSavedCullingMask;
+
 	public bool testPress;
 
 	public bool isMoving;
@@ -192,10 +194,18 @@ public class GorillaMetaReport : MonoBehaviour
 		Camera component = GorillaTagger.Instance.mainCamera.GetComponent<Camera>();
 		if (state)
 		{
-			component.cullingMask = savedCullingLayers;
+			if (hasSavedCullingMask)
+			{
+				component.cullingMask = savedCullingLayers;
+				hasSavedCullingMask = false;
+			}
 			return;
 		}
-		savedCullingLayers = component.cullingMask;
+		if (!hasSavedCullingMask)
+		{
+			savedCullingLayers = component.cullingMask;
+			hasSavedCullingMask = true;
+		}
 		component.cullingMask = visibleLayers;
 	}
 
@@ -246,13 +256,17 @@ public class GorillaMetaReport : MonoBehaviour
 
 	private void StartOverlay(bool isSanction = false)
 	{
+		if (localPlayer.InReportMenu)
+		{
+			return;
+		}
 		GetIdealScreenPositionRotation(out var position, out var rotation, out var scale);
 		currentScoreboard.transform.localScale = scale * 2f;
 		reportScoreboard.transform.localScale = scale;
 		leftHandObject.transform.localScale = scale;
 		rightHandObject.transform.localScale = scale;
 		occluder.transform.localScale = scale;
-		if (!localPlayer.InReportMenu || PhotonNetwork.InRoom)
+		if (PhotonNetwork.InRoom)
 		{
 			localPlayer.InReportMenu = true;
 			localPlayer.disableMovement = true;
