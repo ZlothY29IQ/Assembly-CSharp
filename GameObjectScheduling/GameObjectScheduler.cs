@@ -1,12 +1,12 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using GorillaNetworking;
 using UnityEngine;
 
 namespace GameObjectScheduling;
 
-public class GameObjectScheduler : MonoBehaviour
+public class GameObjectScheduler : MonoBehaviour, IGorillaSliceableSimple
 {
 	[SerializeField]
 	private GameObjectSchedule schedule;
@@ -17,9 +17,17 @@ public class GameObjectScheduler : MonoBehaviour
 
 	private int currentNodeIndex = -1;
 
-	private Coroutine monitor;
+	private bool ready;
 
-	private void Start()
+	private bool previousState;
+
+	private int lastMinuteCheck = -1;
+
+	public bool useSecondsFidelity;
+
+	public bool debugTime;
+
+	private async void Start()
 	{
 		schedule.Validate();
 		List<GameObject> list = new List<GameObject>();
@@ -33,62 +41,66 @@ public class GameObjectScheduler : MonoBehaviour
 			scheduledGameObject[j].SetActive(value: false);
 		}
 		dispatcher = GetComponent<GameObjectSchedulerEventDispatcher>();
-		monitor = StartCoroutine(MonitorTime());
-	}
-
-	private void OnEnable()
-	{
-		if (monitor == null && scheduledGameObject != null)
-		{
-			monitor = StartCoroutine(MonitorTime());
-		}
-	}
-
-	private void OnDisable()
-	{
-		if (monitor != null)
-		{
-			StopCoroutine(monitor);
-		}
-		monitor = null;
-	}
-
-	private IEnumerator MonitorTime()
-	{
 		while (GorillaComputer.instance == null || GorillaComputer.instance.startupMillis == 0L)
 		{
-			yield return null;
+			await Task.Yield();
 		}
-		bool previousState = getActiveState();
+		SetInitialState();
+		ready = true;
+	}
+
+	private void SetInitialState()
+	{
+		getActiveState(out previousState, out var totalSeconds);
 		for (int i = 0; i < scheduledGameObject.Length; i++)
 		{
 			scheduledGameObject[i].SetActive(previousState);
-		}
-		while (true)
-		{
-			yield return new WaitForSeconds(60f);
-			bool activeState = getActiveState();
-			if (previousState != activeState)
+			if (totalSeconds > 0.0)
 			{
-				changeActiveState(activeState);
-				previousState = activeState;
+				Animator[] componentsInChildren = scheduledGameObject[i].GetComponentsInChildren<Animator>();
+				for (int j = 0; j < componentsInChildren.Length; j++)
+				{
+					int fullPathHash = componentsInChildren[j].GetCurrentAnimatorStateInfo(0).fullPathHash;
+					componentsInChildren[j].PlayInFixedTime(fullPathHash, 0, (float)totalSeconds);
+				}
 			}
+		}
+		lastMinuteCheck = getServerTime().Minute;
+	}
+
+	public void OnEnable()
+	{
+		GorillaSlicerSimpleManager.RegisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
+		if (ready)
+		{
+			SetInitialState();
 		}
 	}
 
-	private bool getActiveState()
+	public void OnDisable()
 	{
-		bool flag = false;
-		currentNodeIndex = schedule.GetCurrentNodeIndex(getServerTime());
+		GorillaSlicerSimpleManager.UnregisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
+	}
+
+	private void getActiveState(out bool state, out double totalSeconds)
+	{
+		DateTime serverTime = getServerTime();
+		currentNodeIndex = schedule.GetCurrentNodeIndex(serverTime, out var _);
 		if (currentNodeIndex == -1)
 		{
-			return schedule.InitialState;
+			state = schedule.InitialState;
+			totalSeconds = 0.0;
 		}
-		if (currentNodeIndex < schedule.Nodes.Length)
+		else if (currentNodeIndex < schedule.Nodes.Length)
 		{
-			return schedule.Nodes[currentNodeIndex].ActiveState;
+			state = schedule.Nodes[currentNodeIndex].ActiveState;
+			totalSeconds = (serverTime - schedule.Nodes[currentNodeIndex].DateTime).TotalSeconds;
 		}
-		return schedule.Nodes[schedule.Nodes.Length - 1].ActiveState;
+		else
+		{
+			state = schedule.Nodes[schedule.Nodes.Length - 1].ActiveState;
+			totalSeconds = (serverTime - schedule.Nodes[schedule.Nodes.Length - 1].DateTime).TotalSeconds;
+		}
 	}
 
 	private DateTime getServerTime()
@@ -119,6 +131,20 @@ public class GameObjectScheduler : MonoBehaviour
 			{
 				scheduledGameObject[j].SetActive(value: false);
 			}
+		}
+	}
+
+	public void SliceUpdate()
+	{
+		if (ready && (useSecondsFidelity || getServerTime().Minute != lastMinuteCheck))
+		{
+			getActiveState(out var state, out var _);
+			if (previousState != state)
+			{
+				changeActiveState(state);
+				previousState = state;
+			}
+			lastMinuteCheck = getServerTime().Minute;
 		}
 	}
 }

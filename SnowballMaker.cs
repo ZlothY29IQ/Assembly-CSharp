@@ -84,8 +84,9 @@ public class SnowballMaker : MonoBehaviourPostTick
 		EquipmentInteractor instance = EquipmentInteractor.instance;
 		bool flag = (isLeftHand ? instance.leftHandHeldEquipment : instance.rightHandHeldEquipment) != null;
 		bool num = (isLeftHand ? instance.isLeftGrabbing : instance.isRightGrabbing);
-		bool flag2 = false;
-		if (!num || requiresFreshMaterialContact)
+		bool flag2 = (isLeftHand ? instance.disableLeftGrab : instance.disableRightGrab);
+		bool flag3 = false;
+		if (!num || flag2 || requiresFreshMaterialContact)
 		{
 			return;
 		}
@@ -100,9 +101,9 @@ public class SnowballMaker : MonoBehaviourPostTick
 		}
 		SnowballThrowable snowballThrowable = ((num2 > -1) ? snowballs[num2] : null);
 		GrowingSnowballThrowable growingSnowballThrowable = snowballThrowable as GrowingSnowballThrowable;
-		bool flag3 = (isLeftHand ? (!ConnectedControllerHandler.Instance.RightValid) : (!ConnectedControllerHandler.Instance.LeftValid));
+		bool flag4 = (isLeftHand ? (!ConnectedControllerHandler.Instance.RightValid) : (!ConnectedControllerHandler.Instance.LeftValid));
 		SnowballThrowable value;
-		if (growingSnowballThrowable != null && (!GrowingSnowballThrowable.twoHandedSnowballGrowing || flag3 || flag2))
+		if (growingSnowballThrowable != null && (!GrowingSnowballThrowable.twoHandedSnowballGrowing || flag4 || flag3))
 		{
 			if (snowballThrowable.matDataIndexes.Contains(materialTouchIndex))
 			{
@@ -127,6 +128,12 @@ public class SnowballMaker : MonoBehaviourPostTick
 
 	public bool TryCreateSnowball(int materialIndex, out SnowballThrowable result)
 	{
+		EquipmentInteractor instance = EquipmentInteractor.instance;
+		if (isLeftHand ? instance.disableLeftGrab : instance.disableRightGrab)
+		{
+			result = null;
+			return false;
+		}
 		SnowballThrowable[] array = snowballs;
 		foreach (SnowballThrowable snowballThrowable in array)
 		{

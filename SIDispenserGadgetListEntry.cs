@@ -20,6 +20,8 @@ public class SIDispenserGadgetListEntry : MonoBehaviour
 
 	public ObjectHierarchyFlattener text2;
 
+	public SITouchscreenButtonContainer DispenseButton => dispenseButton;
+
 	public void SetStation(ITouchScreenStation station, Transform imageTarget, Transform textTarget)
 	{
 		dispenseButton.button.buttonPressed.RemoveAllListeners();

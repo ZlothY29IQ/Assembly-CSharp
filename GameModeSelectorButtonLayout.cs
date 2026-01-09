@@ -50,7 +50,7 @@ public class GameModeSelectorButtonLayout : MonoBehaviour
 			modeSelectButton.SetInfo(item.ToString(), GameMode.GameModeZoneMapping.GetModeName(item), GameMode.GameModeZoneMapping.IsNew(item), GameMode.GameModeZoneMapping.GetCountdown(item));
 			modeSelectButton.gameObject.SetActive(value: true);
 			count++;
-			flag |= GorillaComputer.instance.currentGameMode.Value.ToUpper() == item.ToString().ToUpper();
+			flag |= string.Equals(GorillaComputer.instance.currentGameMode.Value, item.ToString(), StringComparison.CurrentCultureIgnoreCase);
 		}
 		for (int i = count; i < currentButtons.Count; i++)
 		{

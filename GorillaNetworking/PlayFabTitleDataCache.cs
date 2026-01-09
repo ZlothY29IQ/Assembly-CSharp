@@ -156,9 +156,12 @@ public class PlayFabTitleDataCache : MonoBehaviour
 			Stopwatch sw = Stopwatch.StartNew();
 			UnityEngine.Debug.Log("[PlayFabTitleDataCache::UpdateDataCo] Starting Mothership API call");
 			StringVector stringVector = new StringVector();
-			foreach (DataRequest request in requests)
+			if (!isFirstLoad)
 			{
-				stringVector.Add(request.Name);
+				foreach (DataRequest request in requests)
+				{
+					stringVector.Add(request.Name);
+				}
 			}
 			bool finished = false;
 			UnityEngine.Debug.Log("[PlayFabTitleDataCache::UpdateDataCo] Keys to fetch: " + string.Join(", ", stringVector));

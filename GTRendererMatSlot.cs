@@ -23,7 +23,7 @@ public struct GTRendererMatSlot
 		using (ListPool<Material>.Get(out value))
 		{
 			renderer.GetSharedMaterials(value);
-			isValid = slot > 0 && slot < value.Count && value[slot] != null;
+			isValid = slot >= 0 && slot < value.Count && value[slot] != null;
 			return isValid;
 		}
 	}

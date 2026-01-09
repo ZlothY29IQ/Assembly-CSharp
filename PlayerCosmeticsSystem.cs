@@ -436,7 +436,7 @@ internal class PlayerCosmeticsSystem : MonoBehaviour, ITickSystemPre
 		VRRig rig = rigRef.Rig;
 		foreach (string cosmeticId in cosmeticIds)
 		{
-			if (rig.TemporaryCosmetics.Add(cosmeticId) && rig.isOfflineVRRig && !rig.concatStringOfCosmeticsAllowed.Contains(cosmeticId))
+			if (rig.TemporaryCosmetics.Add(cosmeticId) && rig.isOfflineVRRig && !rig.HasCosmetic(cosmeticId))
 			{
 				CosmeticsController.instance.AddTempUnlockToWardrobe(cosmeticId);
 			}
@@ -466,7 +466,7 @@ internal class PlayerCosmeticsSystem : MonoBehaviour, ITickSystemPre
 		VRRig rig = rigRef.Rig;
 		foreach (string cosmeticId in cosmeticIds)
 		{
-			if (rig.TemporaryCosmetics.Remove(cosmeticId) && rig.isOfflineVRRig && !rig.concatStringOfCosmeticsAllowed.Contains(cosmeticId))
+			if (rig.TemporaryCosmetics.Remove(cosmeticId) && rig.isOfflineVRRig && !rig.HasCosmetic(cosmeticId))
 			{
 				CosmeticsController.instance.RemoveTempUnlockFromWardrobe(cosmeticId);
 			}
@@ -538,7 +538,7 @@ internal class PlayerCosmeticsSystem : MonoBehaviour, ITickSystemPre
 	public static bool LocalIsTemporaryCosmetic(string cosmeticId)
 	{
 		VRRig rig = VRRigCache.Instance.localRig.Rig;
-		if (!rig.concatStringOfCosmeticsAllowed.Contains(cosmeticId))
+		if (!rig.HasCosmetic(cosmeticId))
 		{
 			return IsTemporaryCosmeticAllowed(rig, cosmeticId);
 		}

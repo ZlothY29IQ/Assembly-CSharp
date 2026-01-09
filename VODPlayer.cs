@@ -1,10 +1,13 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using GorillaNetworking;
 using Newtonsoft.Json;
 using PlayFab;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.Video;
 
 public class VODPlayer : MonoBehaviour, IGorillaSliceableSimple
@@ -20,22 +23,22 @@ public class VODPlayer : MonoBehaviour, IGorillaSliceableSimple
 	[Serializable]
 	public class VODNextStream : IComparable<VODNextStream>
 	{
-		public int Prio;
-
 		public string Title;
 
 		public DateTime StartTime;
 
-		public VODNextStream(int prio, string name, DateTime startTime)
+		public string Url;
+
+		public VODNextStream(string name, DateTime startTime, string url)
 		{
-			Prio = prio;
 			Title = name;
 			StartTime = startTime;
+			Url = url;
 		}
 
 		int IComparable<VODNextStream>.CompareTo(VODNextStream other)
 		{
-			return (int)(StartTime - other.StartTime).TotalSeconds - (Prio - other.Prio);
+			return (int)(StartTime - other.StartTime).TotalSeconds;
 		}
 	}
 
@@ -98,14 +101,28 @@ public class VODPlayer : MonoBehaviour, IGorillaSliceableSimple
 
 		internal bool IsDateInRange(DateTime serverTime)
 		{
-			ValidateDate();
 			if (serverTime >= startDT)
 			{
 				return serverTime <= endDT;
 			}
 			return false;
 		}
+
+		internal DateTime ClampedDateTime(DateTime dateTime)
+		{
+			if (dateTime < startDT)
+			{
+				return startDT;
+			}
+			if (dateTime > endDT)
+			{
+				return endDT;
+			}
+			return dateTime;
+		}
 	}
+
+	private const string PlayerPrefKey_Cache = "_VODCache_";
 
 	public static Action OnCrash;
 
@@ -138,6 +155,10 @@ public class VODPlayer : MonoBehaviour, IGorillaSliceableSimple
 	private List<VODTarget> targets = new List<VODTarget>();
 
 	private int lastCheck;
+
+	private List<string> cache = new List<string>();
+
+	private Coroutine _cr_cacheVOD;
 
 	private bool playerBusy;
 
@@ -298,21 +319,80 @@ public class VODPlayer : MonoBehaviour, IGorillaSliceableSimple
 		List<VODNextStream> list = new List<VODNextStream>();
 		for (int i = 0; i < schedule.hourly.Length; i++)
 		{
-			if (i == 0)
-			{
-				list.Add(new VODNextStream(2, schedule.hourly[i].stream.name, new DateTime(serverTime.Year, serverTime.Month, serverTime.Day, serverTime.Hour + 1, schedule.hourly[i].minute, 0)));
-			}
-			list.Add(new VODNextStream(2, schedule.hourly[i].stream.name, new DateTime(serverTime.Year, serverTime.Month, serverTime.Day, serverTime.Hour, schedule.hourly[i].minute, 0)));
+			DateTime dateTime = new DateTime(serverTime.Year, serverTime.Month, serverTime.Day, serverTime.Hour, schedule.hourly[i].minute, 0);
+			list.Add(new VODNextStream(schedule.hourly[i].stream.name, schedule.hourly[i].ClampedDateTime(dateTime), schedule.hourly[i].stream.url));
+			list.Add(new VODNextStream(schedule.hourly[i].stream.name, schedule.hourly[i].ClampedDateTime(dateTime.AddHours(1.0)), schedule.hourly[i].stream.url));
 		}
 		list.Sort();
 		for (int j = 0; j < list.Count; j++)
 		{
 			if (list[j].StartTime > serverTime)
 			{
+				cacheVOD(list[j].Url);
 				return list[j];
 			}
 		}
 		return null;
+	}
+
+	private void cacheVOD(string url)
+	{
+		string text = UrlToCachePath(url);
+		if (!File.Exists(text) && _cr_cacheVOD == null)
+		{
+			_cr_cacheVOD = StartCoroutine(cr_cacheVOD(text, url));
+		}
+	}
+
+	private string UrlToCachePath(string url)
+	{
+		return Application.persistentDataPath + Path.DirectorySeparatorChar + $"V{url.GetHashCode():X}.mp4";
+	}
+
+	private IEnumerator cr_cacheVOD(string file, string url)
+	{
+		UnityWebRequest www = new UnityWebRequest(url)
+		{
+			downloadHandler = new DownloadHandlerBuffer()
+		};
+		yield return www.SendWebRequest();
+		if (www.result != UnityWebRequest.Result.Success)
+		{
+			Debug.LogError("VOD :: error :: " + www.error);
+		}
+		else
+		{
+			File.WriteAllBytes(file, www.downloadHandler.data);
+			cache.Add(file);
+			PlayerPrefs.SetString("_VODCache_", JsonConvert.SerializeObject(cache));
+		}
+		_cr_cacheVOD = null;
+	}
+
+	private void Start()
+	{
+		cache = new List<string>();
+		string @string = PlayerPrefs.GetString("_VODCache_");
+		if (@string.IsNullOrEmpty())
+		{
+			return;
+		}
+		List<string> list = JsonConvert.DeserializeObject<List<string>>(@string);
+		for (int i = 0; i < list.Count; i++)
+		{
+			if (File.Exists(list[i]))
+			{
+				if ((DateTime.Now - File.GetCreationTime(list[i])).TotalDays > 30.0)
+				{
+					File.Delete(list[i]);
+				}
+				else
+				{
+					cache.Add(list[i]);
+				}
+			}
+		}
+		PlayerPrefs.SetString("_VODCache_", JsonConvert.SerializeObject(cache));
 	}
 
 	private void PositionAudio()
@@ -385,7 +465,15 @@ public class VODPlayer : MonoBehaviour, IGorillaSliceableSimple
 		}
 		try
 		{
-			player.url = url;
+			string text = UrlToCachePath(url);
+			if (File.Exists(text))
+			{
+				player.url = text;
+			}
+			else
+			{
+				player.url = url;
+			}
 			player.Prepare();
 			while (!player.isPrepared && Application.isPlaying)
 			{
@@ -428,6 +516,10 @@ public class VODPlayer : MonoBehaviour, IGorillaSliceableSimple
 		try
 		{
 			schedule = JsonConvert.DeserializeObject<VODStreamSchedule>(s);
+			for (int i = 0; i < schedule.hourly.Length; i++)
+			{
+				schedule.hourly[i].ValidateDate();
+			}
 		}
 		catch (Exception)
 		{

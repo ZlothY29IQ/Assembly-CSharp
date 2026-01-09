@@ -18,5 +18,6 @@ public enum SceneIndex
 	GhostReactor,
 	MonkeBlocksShared,
 	Ranked,
-	GhostReactorDrill
+	GhostReactorDrill,
+	City
 }

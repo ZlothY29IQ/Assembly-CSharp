@@ -1,10 +1,18 @@
 using System;
 using System.Collections.Generic;
 using GorillaTag;
+using Unity.Collections;
 using UnityEngine;
 
 public class GameEntity : MonoBehaviour
 {
+	public class RendererSet
+	{
+		public List<(MeshFilter filter, MeshRenderer renderer)> renderers = new List<(MeshFilter, MeshRenderer)>();
+
+		public List<SkinnedMeshRenderer> skinnedRenderers = new List<SkinnedMeshRenderer>();
+	}
+
 	public delegate void StateChangedEvent(long prevState, long nextState);
 
 	public delegate void EntityDestroyedEvent(GameEntity entity);
@@ -14,6 +22,9 @@ public class GameEntity : MonoBehaviour
 	public bool pickupable = true;
 
 	public float pickupRangeFromSurface;
+
+	[Tooltip("Renderers on these objects are ignored when determining grab bounds")]
+	public GameObject[] ignoreObjectGrabRenderers;
 
 	public bool canHoldingPlayerUpdateState;
 
@@ -64,6 +75,10 @@ public class GameEntity : MonoBehaviour
 	private List<IGameEntityComponent> entityComponents;
 
 	public List<IGameEntitySerialize> entitySerialize;
+
+	private RendererSet _grabbableRenderers;
+
+	private List<MeshFilter> _meshFilters;
 
 	[DebugReadout]
 	public GameEntityId id { get; internal set; }
@@ -154,6 +169,57 @@ public class GameEntity : MonoBehaviour
 				entityComponents[i].OnEntityDestroy();
 			}
 			this.onEntityDestroyed?.Invoke(this);
+		}
+	}
+
+	public RendererSet GetGrabbableRenderers()
+	{
+		if (_grabbableRenderers == null)
+		{
+			_grabbableRenderers = new RendererSet();
+			_meshFilters = new List<MeshFilter>();
+			GetComponentsInChildren(includeInactive: true, _meshFilters);
+			GetComponentsInChildren(includeInactive: true, _grabbableRenderers.skinnedRenderers);
+			List<SkinnedMeshRenderer> skinnedRenderers = _grabbableRenderers.skinnedRenderers;
+			RemoveNotOwnedComponents<MeshFilter>(_meshFilters);
+			RemoveNotOwnedComponents<SkinnedMeshRenderer>(skinnedRenderers);
+			GameObject[] array = ignoreObjectGrabRenderers;
+			foreach (GameObject gameObject in array)
+			{
+				for (int j = 0; j < _meshFilters.Count; j++)
+				{
+					if (_meshFilters[j].gameObject == gameObject)
+					{
+						_meshFilters.RemoveAtSwapBack(j--);
+					}
+				}
+				for (int k = 0; k < skinnedRenderers.Count; k++)
+				{
+					if (skinnedRenderers[k].gameObject == gameObject)
+					{
+						skinnedRenderers.RemoveAtSwapBack(k--);
+					}
+				}
+			}
+			foreach (MeshFilter meshFilter in _meshFilters)
+			{
+				MeshRenderer component = meshFilter.GetComponent<MeshRenderer>();
+				if ((object)component != null)
+				{
+					_grabbableRenderers.renderers.Add((meshFilter, component));
+				}
+			}
+		}
+		return _grabbableRenderers;
+		void RemoveNotOwnedComponents<T>(List<T> components) where T : Component
+		{
+			for (int l = 0; l < components.Count; l++)
+			{
+				if (manager.GetParentEntity<GameEntity>(components[l].transform) != this)
+				{
+					components.RemoveAtSwapBack(l--);
+				}
+			}
 		}
 	}
 

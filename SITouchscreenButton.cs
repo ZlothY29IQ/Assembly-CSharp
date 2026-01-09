@@ -1,3 +1,4 @@
+using System;
 using GorillaTag.Audio;
 using UnityEngine;
 using UnityEngine.Events;
@@ -41,7 +42,10 @@ public class SITouchscreenButton : MonoBehaviour, IClickable
 
 	private float _enableTime;
 
-	private bool IsUsable
+	[NonSerialized]
+	public bool isUsable = true;
+
+	private bool IsReady
 	{
 		get
 		{
@@ -79,7 +83,7 @@ public class SITouchscreenButton : MonoBehaviour, IClickable
 
 	public void PressButton()
 	{
-		if (IsUsable)
+		if (IsReady && isUsable)
 		{
 			if ((bool)_screenRegion)
 			{

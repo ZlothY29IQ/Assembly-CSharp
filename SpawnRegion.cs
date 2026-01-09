@@ -16,6 +16,7 @@ public class SpawnRegion<TItem, TRegion> : MonoBehaviour where TItem : Object wh
 	[Tooltip("If set, spawn points will be created via raycasts from one of these points.")]
 	private Transform[] spawnOrigins;
 
+	[SerializeField]
 	[Tooltip("If set, all spawn points will be tested against this transform to see if they're inside geo.  Ignored if spawn origins are configured.")]
 	private Transform geoTestPoint;
 

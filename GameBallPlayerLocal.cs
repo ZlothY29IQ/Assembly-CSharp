@@ -130,9 +130,10 @@ public class GameBallPlayerLocal : MonoBehaviour
 		{
 			inputData[i] = new InputData(32);
 		}
+		Application.quitting += _OnApplicationQuit;
 	}
 
-	private void OnApplicationQuit()
+	private static void _OnApplicationQuit()
 	{
 		MonkeBallGame.Instance.OnPlayerDestroy();
 	}
@@ -147,7 +148,10 @@ public class GameBallPlayerLocal : MonoBehaviour
 
 	private void OnDestroy()
 	{
-		MonkeBallGame.Instance.OnPlayerDestroy();
+		if (!ApplicationQuittingState.IsQuitting)
+		{
+			MonkeBallGame.Instance.OnPlayerDestroy();
+		}
 	}
 
 	public void OnUpdateInteract()

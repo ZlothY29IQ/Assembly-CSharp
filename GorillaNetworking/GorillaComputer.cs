@@ -879,6 +879,11 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		return startupTime + TimeSpan.FromSeconds(Time.realtimeSinceStartup);
 	}
 
+	public void AddSeverTime(int m)
+	{
+		startupTime = startupTime.AddMinutes(m);
+	}
+
 	private void Awake()
 	{
 		if (instance == null)
@@ -1256,7 +1261,7 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 				gameModeType = GameModeType.SuperInfect;
 				text = GameModeType.SuperInfect.ToString();
 			}
-			if (gameModeType != 0 && gameModeType != GameModeType.Infection && gameModeType != GameModeType.HuntDown && gameModeType != GameModeType.Paintbrawl && gameModeType != GameModeType.Ambush && gameModeType != GameModeType.PropHunt && gameModeType != GameModeType.SuperInfect)
+			if (gameModeType != 0 && gameModeType != GameModeType.Infection && gameModeType != GameModeType.HuntDown && gameModeType != GameModeType.Paintbrawl && gameModeType != GameModeType.Ambush && gameModeType != GameModeType.SuperInfect && gameModeType != GameModeType.SuperCasual)
 			{
 				PlayerPrefs.SetString("currentGameModePostSI", GameModeType.SuperInfect.ToString());
 				PlayerPrefs.Save();

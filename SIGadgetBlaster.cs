@@ -51,13 +51,13 @@ public class SIGadgetBlaster : SIGadget, ITickSystemTick
 	private int projectileId;
 
 	[NonSerialized]
-	public static List<SIGadgetBlasterProjectile> activeProjectiles = new List<SIGadgetBlasterProjectile>();
+	public List<SIGadgetBlasterProjectile> activeProjectiles = new List<SIGadgetBlasterProjectile>();
 
 	[NonSerialized]
-	public static Queue<SIGadgetBlasterProjectile> projectilesToDespawn = new Queue<SIGadgetBlasterProjectile>();
+	public Queue<SIGadgetBlasterProjectile> projectilesToDespawn = new Queue<SIGadgetBlasterProjectile>();
 
 	[NonSerialized]
-	public static Queue<float> projectilesToDespawnTimes = new Queue<float>();
+	public Queue<float> projectilesToDespawnTimes = new Queue<float>();
 
 	public Transform firingPosition;
 
@@ -273,5 +273,15 @@ public class SIGadgetBlaster : SIGadget, ITickSystemTick
 	public void FireProjectileHaptics(float strength, float duration)
 	{
 		GorillaTagger.Instance.StartVibration(gameEntity.EquippedHandedness == EHandedness.Left, strength, duration);
+	}
+
+	public float CurrentFireRate()
+	{
+		int count = activeProjectiles.Count;
+		if (count <= 1)
+		{
+			return 0f;
+		}
+		return (float)(count - 1) / (activeProjectiles[count - 1].timeSpawned - activeProjectiles[0].timeSpawned);
 	}
 }

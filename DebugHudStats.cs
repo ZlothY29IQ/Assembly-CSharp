@@ -19,7 +19,8 @@ public class DebugHudStats : MonoBehaviour
 		ShowLog,
 		ShowError,
 		ShowStats,
-		ShowRBs
+		ShowRBs,
+		timeAdjust
 	}
 
 	public static int FPS_THRESHOLD = 89;
@@ -81,6 +82,12 @@ public class DebugHudStats : MonoBehaviour
 
 	private string pLog;
 
+	private bool button1Down;
+
+	private bool button2Down;
+
+	private bool button3Down;
+
 	public static DebugHudStats Instance => _instance;
 
 	private void Awake()
@@ -115,8 +122,30 @@ public class DebugHudStats : MonoBehaviour
 	private void LateUpdate()
 	{
 		base.transform.LookAt(Camera.main.transform.position, Vector3.up);
-		bool flag = ControllerInputPoller.SecondaryButtonPress(XRNode.LeftHand);
-		if (buttonDown && !flag)
+		if (currentState == State.timeAdjust)
+		{
+			bool flag = ControllerInputPoller.PrimaryButtonPress(XRNode.RightHand);
+			bool flag2 = ControllerInputPoller.SecondaryButtonPress(XRNode.RightHand);
+			bool flag3 = ControllerInputPoller.TriggerFloat(XRNode.RightHand) > 0.5f;
+			bool flag4 = ControllerInputPoller.GripFloat(XRNode.RightHand) > 0.5f;
+			if (button1Down && !flag)
+			{
+				GorillaComputer.instance.AddSeverTime(flag4 ? (-60) : 60);
+			}
+			if (button2Down && !flag2)
+			{
+				GorillaComputer.instance.AddSeverTime(flag4 ? (-1) : 5);
+			}
+			if (button3Down && !flag3)
+			{
+				GorillaComputer.instance.AddSeverTime(flag4 ? (-1440) : 1440);
+			}
+			button1Down = flag;
+			button2Down = flag2;
+			button3Down = flag3;
+		}
+		bool flag5 = ControllerInputPoller.SecondaryButtonPress(XRNode.LeftHand);
+		if (buttonDown && !flag5)
 		{
 			Application.logMessageReceived -= LogMessageReceived;
 			PlayerGameEvents.OnPlayerMoved -= OnPlayerMoved;
@@ -139,6 +168,9 @@ public class DebugHudStats : MonoBehaviour
 				currentState = State.ShowRBs;
 				break;
 			case State.ShowRBs:
+				currentState = State.timeAdjust;
+				break;
+			case State.timeAdjust:
 				currentState = State.Inactive;
 				break;
 			}
@@ -163,7 +195,7 @@ public class DebugHudStats : MonoBehaviour
 				RigidbodyHighlighter.Instance.Active = currentState == State.ShowRBs;
 			}
 		}
-		buttonDown = flag;
+		buttonDown = flag5;
 		if (firstAwake == 0f)
 		{
 			firstAwake = Time.time;
@@ -283,6 +315,13 @@ public class DebugHudStats : MonoBehaviour
 				{
 					builder.AppendLine(logError[num3]);
 				}
+			}
+			else if (currentState == State.timeAdjust)
+			{
+				builder.AppendLine();
+				builder.AppendLine("Press A to advance one hour [+ R Grip to go back one hour]");
+				builder.AppendLine("Press B to advance five minutes [+ R Grip to go back one minute]");
+				builder.AppendLine("Press R Trigger to advance one day [+ R Grip to go back one day]");
 			}
 			text.text = builder.ToString();
 		}

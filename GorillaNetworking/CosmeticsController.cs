@@ -1949,14 +1949,14 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		case PurchaseItemStages.Success:
 		{
 			FormattedPurchaseText("SUCCESS! ENJOY YOUR NEW ITEM!", "-", "-", leftButtonOn: true, rightButtonOn: true);
-			GorillaTagger.Instance.offlineVRRig.concatStringOfCosmeticsAllowed += itemToBuy.itemName;
+			GorillaTagger.Instance.offlineVRRig.AddCosmetic(itemToBuy.itemName);
 			CosmeticItem itemFromDict = GetItemFromDict(itemToBuy.itemName);
 			if (itemFromDict.bundledItems != null)
 			{
 				string[] bundledItems = itemFromDict.bundledItems;
-				foreach (string text in bundledItems)
+				foreach (string cosmeticId in bundledItems)
 				{
-					GorillaTagger.Instance.offlineVRRig.concatStringOfCosmeticsAllowed += text;
+					GorillaTagger.Instance.offlineVRRig.AddCosmetic(cosmeticId);
 				}
 			}
 			tryOnSet.ClearSet(nullItem);
@@ -3315,7 +3315,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 	public void ProcessExternalUnlock(string itemID, bool autoEquip, bool isLeftHand)
 	{
 		UnlockItem(itemID);
-		GorillaTagger.Instance.offlineVRRig.concatStringOfCosmeticsAllowed += itemID;
+		GorillaTagger.Instance.offlineVRRig.AddCosmetic(itemID);
 		UpdateMyCosmetics();
 		if (!autoEquip)
 		{

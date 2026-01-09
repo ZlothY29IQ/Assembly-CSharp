@@ -216,7 +216,7 @@ public class GRKiosk : MonoBehaviour
 			{
 				_purchaseParticles.Play();
 			}
-			GorillaTagger.Instance.offlineVRRig.concatStringOfCosmeticsAllowed += _cosmeticForPurchase.itemName;
+			GorillaTagger.Instance.offlineVRRig.AddCosmetic(_cosmeticForPurchase.itemName);
 			ProcessPurchaseItemState(null);
 		}, delegate(PlayFabError error)
 		{

@@ -9,6 +9,7 @@ using GorillaLocomotion.Climbing;
 using GorillaLocomotion.Gameplay;
 using GorillaNetworking;
 using GorillaTag.Cosmetics;
+using GorillaTag.CosmeticSystem;
 using GorillaTagScripts;
 using KID.Model;
 using Photon.Pun;
@@ -257,7 +258,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	private int taggedById;
 
-	public string concatStringOfCosmeticsAllowed = "";
+	private readonly HashSet<string> _playerOwnedCosmetics = new HashSet<string>(50);
 
 	private bool initializedCosmetics;
 
@@ -326,9 +327,9 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	public GorillaClimbable rightHandHoldsPlayer;
 
-	public HandLink leftHandLink;
+	public TakeMyHand_HandLink leftHandLink;
 
-	public HandLink rightHandLink;
+	public TakeMyHand_HandLink rightHandLink;
 
 	public GameObject nameTagAnchor;
 
@@ -638,6 +639,10 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 	private const int isLeftHandGrabbable_BIT = 262144;
 
 	private const int isRightHandGrabbable_BIT = 524288;
+
+	private const int isLeftHandTentacleHoldingHand_BIT = 1048576;
+
+	private const int isRightHandTentacleHoldingHand_BIT = 2097152;
 
 	private const int speakingLoudnessVal_BITSHIFT = 24;
 
@@ -1056,9 +1061,9 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	public bool IsInHandHoldChainWithOtherPlayer(int otherPlayer)
 	{
-		if (!HandLink.IsHandInChainWithOtherPlayer(leftHandLink, otherPlayer))
+		if (!TakeMyHand_HandLink.IsHandInChainWithOtherPlayer(leftHandLink, otherPlayer))
 		{
-			return HandLink.IsHandInChainWithOtherPlayer(rightHandLink, otherPlayer);
+			return TakeMyHand_HandLink.IsHandInChainWithOtherPlayer(rightHandLink, otherPlayer);
 		}
 		return true;
 	}
@@ -1253,7 +1258,6 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		isInitialized = true;
 		myBodyDockPositions = GetComponent<BodyDockPositions>();
 		reliableState.SharedStart(isOfflineVRRig, myBodyDockPositions);
-		concatStringOfCosmeticsAllowed = "";
 		bodyRenderer.SharedStart();
 		initialized = false;
 		if (isOfflineVRRig)
@@ -1326,11 +1330,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		{
 			return true;
 		}
-		if (concatStringOfCosmeticsAllowed == null)
-		{
-			return false;
-		}
-		if (concatStringOfCosmeticsAllowed.Contains(itemName) || PlayerCosmeticsSystem.IsTemporaryCosmeticAllowed(this, itemName))
+		if (_playerOwnedCosmetics.Contains(itemName) || PlayerCosmeticsSystem.IsTemporaryCosmeticAllowed(this, itemName))
 		{
 			return true;
 		}
@@ -1568,13 +1568,13 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 			bool isGroundedHand = instance.IsGroundedHand || instance.IsThrusterActive;
 			bool isGroundedButt = instance.IsGroundedButt;
 			bool isLeftGrabbing = EquipmentInteractor.instance.isLeftGrabbing;
-			bool canBeGrabbed = isLeftGrabbing && EquipmentInteractor.instance.CanGrabLeft();
+			bool isReadyForGrabbing = isLeftGrabbing && EquipmentInteractor.instance.CanGrabLeft();
 			bool isRightGrabbing = EquipmentInteractor.instance.isRightGrabbing;
-			bool canBeGrabbed2 = isRightGrabbing && EquipmentInteractor.instance.CanGrabRight();
+			bool isReadyForGrabbing2 = isRightGrabbing && EquipmentInteractor.instance.CanGrabRight();
 			LastTouchedGroundAtNetworkTime = instance.LastTouchedGroundAtNetworkTime;
 			LastHandTouchedGroundAtNetworkTime = instance.LastHandTouchedGroundAtNetworkTime;
-			leftHandLink?.LocalUpdate(isGroundedHand, isGroundedButt, isLeftGrabbing, canBeGrabbed);
-			rightHandLink?.LocalUpdate(isGroundedHand, isGroundedButt, isRightGrabbing, canBeGrabbed2);
+			leftHandLink?.LocalUpdate(isGroundedHand, isGroundedButt, isLeftGrabbing, isReadyForGrabbing);
+			rightHandLink?.LocalUpdate(isGroundedHand, isGroundedButt, isRightGrabbing, isReadyForGrabbing2);
 			if (GorillaTagger.Instance.loadedDeviceName == "Oculus")
 			{
 				mainSkin.enabled = (OVRManager.hasInputFocus ? true : false);
@@ -1626,7 +1626,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 			}
 			else
 			{
-				leftHandLink.SnapHandsTogether();
+				leftHandLink.VisuallySnapHandsTogether();
 			}
 		}
 		if (rightHandLink.IsLinkActive())
@@ -1638,7 +1638,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 			}
 			else
 			{
-				rightHandLink.SnapHandsTogether();
+				rightHandLink.VisuallySnapHandsTogether();
 			}
 		}
 		if (creator != null)
@@ -1859,7 +1859,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		bool flag = leftHandLink.IsLinkActive() || rightHandLink.IsLinkActive();
 		GorillaGameManager activeGameMode = GorillaGameModes.GameMode.ActiveGameMode;
 		bool flag2 = (object)activeGameMode != null && activeGameMode.GameType() == GameModeType.PropHunt;
-		int packedFields = num + (remoteUseReplacementVoice ? 512 : 0) + ((grabbedRopeIndex != -1) ? 1024 : 0) + (grabbedRopeIsPhotonView ? 2048 : 0) + (flag ? 4096 : 0) + (hoverboardVisual.IsHeld ? 8192 : 0) + (hoverboardVisual.IsLeftHanded ? 16384 : 0) + ((mountedMovingSurfaceId != -1) ? 32768 : 0) + (flag2 ? 65536 : 0) + (propHuntHandFollower.IsLeftHand ? 131072 : 0) + (leftHandLink.CanBeGrabbed() ? 262144 : 0) + (rightHandLink.CanBeGrabbed() ? 524288 : 0) + (num2 << 24);
+		int packedFields = num + (remoteUseReplacementVoice ? 512 : 0) + ((grabbedRopeIndex != -1) ? 1024 : 0) + (grabbedRopeIsPhotonView ? 2048 : 0) + (flag ? 4096 : 0) + (hoverboardVisual.IsHeld ? 8192 : 0) + (hoverboardVisual.IsLeftHanded ? 16384 : 0) + ((mountedMovingSurfaceId != -1) ? 32768 : 0) + (flag2 ? 65536 : 0) + (propHuntHandFollower.IsLeftHand ? 131072 : 0) + (leftHandLink.CanBeGrabbed() ? 262144 : 0) + (rightHandLink.CanBeGrabbed() ? 524288 : 0) + (leftHandLink.IsTentacleGrab ? 1048576 : 0) + (rightHandLink.IsTentacleGrab ? 2097152 : 0) + (num2 << 24);
 		result.packedFields = packedFields;
 		result.packedCompetitiveData = PackCompetitiveData();
 		if (grabbedRopeIndex != -1)
@@ -1969,8 +1969,8 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 			localGrabOverrideBlend = -1f;
 		}
 		Vector3 position = base.transform.position;
-		leftHandLink.Read(leftHand.syncPos, syncRotation, position, data.isGroundedHand, data.isGroundedButt, (packedFields & 0x40000) != 0, data.leftHandGrabbedActorNumber, data.leftGrabbedHandIsLeft);
-		rightHandLink.Read(rightHand.syncPos, syncRotation, position, data.isGroundedHand, data.isGroundedButt, (packedFields & 0x80000) != 0, data.rightHandGrabbedActorNumber, data.rightGrabbedHandIsLeft);
+		leftHandLink.Read(leftHand.syncPos, syncRotation, position, data.isGroundedHand, data.isGroundedButt, (packedFields & 0x40000) != 0, (packedFields & 0x100000) != 0, data.leftHandGrabbedActorNumber, data.leftGrabbedHandIsLeft);
+		rightHandLink.Read(rightHand.syncPos, syncRotation, position, data.isGroundedHand, data.isGroundedButt, (packedFields & 0x80000) != 0, (packedFields & 0x200000) != 0, data.rightHandGrabbedActorNumber, data.rightGrabbedHandIsLeft);
 		LastTouchedGroundAtNetworkTime = data.lastTouchedGroundAtTime;
 		LastHandTouchedGroundAtNetworkTime = data.lastHandTouchedGroundAtTime;
 		UpdateRopeData();
@@ -2926,9 +2926,15 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	private void CheckForEarlyAccess()
 	{
-		if (concatStringOfCosmeticsAllowed.Contains(CosmeticsController.instance.EarlyAccessSupporterPackCosmeticSO.info.playFabID))
+		CosmeticInfoV2 info = CosmeticsController.instance.EarlyAccessSupporterPackCosmeticSO.info;
+		if (_playerOwnedCosmetics.Contains(info.playFabID))
 		{
-			concatStringOfCosmeticsAllowed += "LBAAE.LFAAM.LFAAN.LHAAA.LHAAK.LHAAL.LHAAM.LHAAN.LHAAO.LHAAP.LHABA.LHABB.";
+			CosmeticSO[] setCosmetics = info.setCosmetics;
+			for (int i = 0; i < setCosmetics.Length; i++)
+			{
+				CosmeticInfoV2 info2 = setCosmetics[i].info;
+				_playerOwnedCosmetics.Add(info2.playFabID);
+			}
 		}
 		InitializedCosmetics = true;
 	}
@@ -2976,7 +2982,8 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 						dictionary[item.ItemId] = item.ItemId;
 						if (item.CatalogVersion == CosmeticsController.instance.catalog)
 						{
-							concatStringOfCosmeticsAllowed += item.ItemId;
+							_playerOwnedCosmetics.Add(item.ItemId);
+							rawCosmeticString += item.ItemId;
 						}
 					}
 				}
@@ -2993,8 +3000,13 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 				}
 			});
 		}
-		concatStringOfCosmeticsAllowed += "Slingshot";
-		concatStringOfCosmeticsAllowed += BuilderSetManager.instance.GetStarterSetsConcat();
+		rawCosmeticString += "Slingshot";
+		_playerOwnedCosmetics.Add("Slingshot");
+		foreach (BuilderPieceSet startPieceSet in BuilderSetManager.instance.StartPieceSets)
+		{
+			_playerOwnedCosmetics.Add(startPieceSet.playfabID);
+		}
+		rawCosmeticString += BuilderSetManager.instance.GetStarterSetsConcat();
 	}
 
 	public void GenerateFingerAngleLookupTables()
@@ -3358,8 +3370,8 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 			EnablePaintbrawlCosmetics(on: false);
 			EnableSuperInfectionHands(on: false);
 			ClearPartyMemberStatus();
-			concatStringOfCosmeticsAllowed = "";
 			rawCosmeticString = "";
+			_playerOwnedCosmetics.Clear();
 			if (cosmeticSet != null)
 			{
 				mergedSet.DeactivateAllCosmetcs(myBodyDockPositions, CosmeticsController.instance.nullItem, cosmeticsObjectRegistry);
@@ -3906,14 +3918,37 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 			return false;
 		}
 		rawCosmeticString = cosmetics ?? "";
-		concatStringOfCosmeticsAllowed = rawCosmeticString;
-		InitializedCosmetics = true;
 		currentCosmeticTries = 0;
-		CheckForEarlyAccess();
+		SaveOwnedCosmetics(rawCosmeticString);
+		InitializedCosmetics = true;
 		SetCosmeticsActive(playfx: false);
 		myBodyDockPositions.RefreshTransferrableItems();
 		netView?.SendRPC("RPC_RequestCosmetics", creator);
 		return true;
+	}
+
+	private void SaveOwnedCosmetics(string cosmetics)
+	{
+		if (!string.IsNullOrEmpty(cosmetics))
+		{
+			_playerOwnedCosmetics.Clear();
+			string[] ts = cosmetics.Split(',');
+			_playerOwnedCosmetics.AddAll(ts);
+			CheckForEarlyAccess();
+		}
+	}
+
+	internal void AddCosmetic(string cosmeticId)
+	{
+		if (_playerOwnedCosmetics.Add(cosmeticId))
+		{
+			rawCosmeticString += cosmeticId;
+		}
+	}
+
+	internal bool HasCosmetic(string cosmeticId)
+	{
+		return _playerOwnedCosmetics.Contains(cosmeticId);
 	}
 
 	private short PackCompetitiveData()

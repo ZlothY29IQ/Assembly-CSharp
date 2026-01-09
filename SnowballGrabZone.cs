@@ -15,6 +15,10 @@ public class SnowballGrabZone : HoldableObject
 
 	public override void OnGrab(InteractionPoint pointGrabbed, GameObject grabbingHand)
 	{
-		((grabbingHand == EquipmentInteractor.instance.leftHand) ? SnowballMaker.leftHandInstance : SnowballMaker.rightHandInstance).TryCreateSnowball(materialIndex, out var _);
+		bool flag = grabbingHand == EquipmentInteractor.instance.leftHand;
+		if (!(flag ? EquipmentInteractor.instance.disableLeftGrab : EquipmentInteractor.instance.disableRightGrab))
+		{
+			(flag ? SnowballMaker.leftHandInstance : SnowballMaker.rightHandInstance).TryCreateSnowball(materialIndex, out var _);
+		}
 	}
 }

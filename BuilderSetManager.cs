@@ -126,6 +126,8 @@ public class BuilderSetManager : MonoBehaviour
 
 	private bool hasPieceDictionary;
 
+	internal List<BuilderPieceSet> StartPieceSets => _starterPieceSets;
+
 	public static bool hasInstance { get; private set; }
 
 	public string GetStarterSetsConcat()

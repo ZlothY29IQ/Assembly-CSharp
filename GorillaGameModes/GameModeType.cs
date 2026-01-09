@@ -17,6 +17,7 @@ public enum GameModeType
 	PropHunt = 9,
 	InfectionCompetitive = 10,
 	SuperInfect = 11,
-	Count = 12,
+	SuperCasual = 12,
+	Count = 13,
 	None = -1
 }

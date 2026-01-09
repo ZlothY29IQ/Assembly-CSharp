@@ -131,6 +131,12 @@ public class SIPlayer : MonoBehaviour
 
 	public ProgressionData CurrentProgression => currentProgression;
 
+	public event Action<Vector3> OnKnockback;
+
+	public event Action OnBlasterHit;
+
+	public event Action OnBlasterSplashHit;
+
 	private void Awake()
 	{
 		activePlayerGadgets = new List<int>();
@@ -624,10 +630,21 @@ public class SIPlayer : MonoBehaviour
 		}
 	}
 
+	public void NotifyBlasterHit()
+	{
+		this.OnBlasterHit?.Invoke();
+	}
+
+	public void NotifyBlasterSplashHit()
+	{
+		this.OnBlasterSplashHit?.Invoke();
+	}
+
 	public void PlayerKnockback(Vector3 directionAndMagnitude, bool forceOffGround = true, bool applyExclusionZone = true)
 	{
 		if (!applyExclusionZone || exclusionZoneCount <= 0)
 		{
+			this.OnKnockback?.Invoke(directionAndMagnitude);
 			GTPlayer.Instance.ApplyClampedKnockback(directionAndMagnitude.normalized, directionAndMagnitude.magnitude, 1.5f, forceOffGround);
 		}
 	}

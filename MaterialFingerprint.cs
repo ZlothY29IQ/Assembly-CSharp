@@ -556,10 +556,6 @@ public struct MaterialFingerprint
 
 	private static int _Round(float f, int mul, int usedCount)
 	{
-		if (usedCount <= 0)
-		{
-			return 0;
-		}
 		return Mathf.RoundToInt(f * (float)mul);
 	}
 

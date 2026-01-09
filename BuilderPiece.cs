@@ -1016,7 +1016,7 @@ public class BuilderPiece : MonoBehaviour
 	{
 		if (!isArmShelf && heldByPlayerActorNumber != NetworkSystem.Instance.LocalPlayer.ActorNumber && !listeningToHandLinks)
 		{
-			HandLink.OnHandLinkChanged = (Action)Delegate.Combine(HandLink.OnHandLinkChanged, new Action(UpdateGrabbedPieceCollisionLayer));
+			TakeMyHand_HandLink.OnHandLinkChanged = (Action)Delegate.Combine(TakeMyHand_HandLink.OnHandLinkChanged, new Action(UpdateGrabbedPieceCollisionLayer));
 			listeningToHandLinks = true;
 		}
 	}
@@ -1025,7 +1025,7 @@ public class BuilderPiece : MonoBehaviour
 	{
 		if (!isArmShelf && listeningToHandLinks)
 		{
-			HandLink.OnHandLinkChanged = (Action)Delegate.Remove(HandLink.OnHandLinkChanged, new Action(UpdateGrabbedPieceCollisionLayer));
+			TakeMyHand_HandLink.OnHandLinkChanged = (Action)Delegate.Remove(TakeMyHand_HandLink.OnHandLinkChanged, new Action(UpdateGrabbedPieceCollisionLayer));
 			listeningToHandLinks = false;
 		}
 	}

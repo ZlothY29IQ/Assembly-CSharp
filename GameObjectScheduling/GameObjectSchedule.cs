@@ -52,16 +52,18 @@ public class GameObjectSchedule : ScriptableObject
 
 	public bool InitialState => initialState;
 
-	public int GetCurrentNodeIndex(DateTime currentDate, int startFrom = 0)
+	public int GetCurrentNodeIndex(DateTime currentDate, out DateTime startDate)
 	{
-		if (startFrom >= nodes.Length)
-		{
-			return int.MaxValue;
-		}
-		for (int i = -1; i < nodes.Length - 1; i++)
+		int i = -1;
+		startDate = default(DateTime);
+		for (; i < nodes.Length - 1; i++)
 		{
 			if (currentDate < nodes[i + 1].DateTime)
 			{
+				if (i >= 0)
+				{
+					startDate = nodes[i].DateTime;
+				}
 				return i;
 			}
 		}

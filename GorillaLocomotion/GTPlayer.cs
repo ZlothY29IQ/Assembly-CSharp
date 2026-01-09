@@ -1066,9 +1066,17 @@ public class GTPlayer : MonoBehaviour
 
 	public bool IsGroundedButt => BodyOnGround;
 
+	public int TentacleActiveAtFrame { get; set; }
+
+	public bool IsTentacleActive => TentacleActiveAtFrame >= Time.frameCount;
+
+	public int LaserZiplineActiveAtFrame { get; set; }
+
+	public bool IsLaserZiplineActive => LaserZiplineActiveAtFrame >= Time.frameCount;
+
 	public int ThrusterActiveAtFrame { get; set; }
 
-	public bool IsThrusterActive => ThrusterActiveAtFrame == Time.frameCount;
+	public bool IsThrusterActive => ThrusterActiveAtFrame >= Time.frameCount;
 
 	public Quaternion PlayerRotationOverride
 	{
@@ -2196,7 +2204,7 @@ public class GTPlayer : MonoBehaviour
 		}
 		lastHeadPosition = headCollider.transform.position;
 		areBothTouching = (!leftHand.isColliding && !leftHand.wasColliding) || (!rightHand.isColliding && !rightHand.wasColliding);
-		HandleHandLink();
+		TakeMyHand_ProcessMovement();
 		HandleTentacleMovement();
 		anyHandIsColliding = false;
 		anyHandIsSliding = false;
@@ -2530,12 +2538,12 @@ public class GTPlayer : MonoBehaviour
 		}
 		if (PhotonNetwork.InRoom)
 		{
-			if (IsGroundedHand || IsThrusterActive)
+			if (IsGroundedHand || IsTentacleActive || IsThrusterActive)
 			{
 				LastHandTouchedGroundAtNetworkTime = (float)PhotonNetwork.Time;
 				LastTouchedGroundAtNetworkTime = (float)PhotonNetwork.Time;
 			}
-			else if (IsGroundedButt)
+			else if (IsGroundedButt || IsLaserZiplineActive)
 			{
 				LastTouchedGroundAtNetworkTime = (float)PhotonNetwork.Time;
 			}
@@ -2701,7 +2709,7 @@ public class GTPlayer : MonoBehaviour
 				SetNativeScale(null);
 			}
 		}
-		HandLink grabbedLink = VRRig.LocalRig.leftHandLink.grabbedLink;
+		TakeMyHand_HandLink grabbedLink = VRRig.LocalRig.leftHandLink.grabbedLink;
 		if (grabbedLink != null)
 		{
 			_ = PhotonNetwork.Time;
@@ -2842,7 +2850,7 @@ public class GTPlayer : MonoBehaviour
 		playerRigidBody.linearVelocity = Vector3.zero;
 	}
 
-	public HandLinkAuthorityStatus GetSelfHandLinkAuthority()
+	public HandLinkAuthorityStatus TakeMyHand_GetSelfHandLinkAuthority()
 	{
 		int actorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
 		if (IsGroundedHand)
@@ -2860,17 +2868,17 @@ public class GTPlayer : MonoBehaviour
 		return new HandLinkAuthorityStatus(HandLinkAuthorityType.None, LastTouchedGroundAtNetworkTime, actorNumber);
 	}
 
-	private void HandleHandLink()
+	private void TakeMyHand_ProcessMovement()
 	{
-		HandLink leftHandLink = VRRig.LocalRig.leftHandLink;
-		HandLink rightHandLink = VRRig.LocalRig.rightHandLink;
+		TakeMyHand_HandLink leftHandLink = VRRig.LocalRig.leftHandLink;
+		TakeMyHand_HandLink rightHandLink = VRRig.LocalRig.rightHandLink;
 		bool flag = leftHandLink.grabbedLink != null;
 		bool flag2 = rightHandLink.grabbedLink != null;
 		if (!flag && !flag2)
 		{
 			return;
 		}
-		HandLinkAuthorityStatus selfHandLinkAuthority = GetSelfHandLinkAuthority();
+		HandLinkAuthorityStatus handLinkAuthorityStatus = TakeMyHand_GetSelfHandLinkAuthority();
 		int stepsToAuth = -1;
 		HandLinkAuthorityStatus b = new HandLinkAuthorityStatus(HandLinkAuthorityType.None);
 		if (flag)
@@ -2887,114 +2895,114 @@ public class GTPlayer : MonoBehaviour
 		{
 			if (leftHandLink.grabbedPlayer == rightHandLink.grabbedPlayer)
 			{
-				switch (selfHandLinkAuthority.CompareTo(b))
+				switch (handLinkAuthorityStatus.CompareTo(b))
 				{
 				case 1:
-					HandLink_PositionChild_RemotePlayer_BothHands(leftHandLink, rightHandLink);
+					TakeMyHand_PositionChild_RemotePlayer_BothHands(leftHandLink, rightHandLink);
 					break;
 				case -1:
-					HandLink_PositionChild_LocalPlayer(leftHandLink, rightHandLink);
+					TakeMyHand_PositionChild_LocalPlayer(leftHandLink, rightHandLink);
 					break;
 				case 0:
-					HandLink_PositionBoth_BothHands(leftHandLink, rightHandLink);
+					TakeMyHand_PositionBoth_BothHands(leftHandLink, rightHandLink);
 					break;
 				}
 				return;
 			}
-			int num = selfHandLinkAuthority.CompareTo(b);
-			int num2 = selfHandLinkAuthority.CompareTo(b2);
+			int num = handLinkAuthorityStatus.CompareTo(b);
+			int num2 = handLinkAuthorityStatus.CompareTo(b2);
 			switch (num * 3 + num2)
 			{
 			case 4:
-				HandLink_PositionChild_RemotePlayer(leftHandLink);
-				HandLink_PositionChild_RemotePlayer(rightHandLink);
+				TakeMyHand_PositionChild_RemotePlayer(leftHandLink);
+				TakeMyHand_PositionChild_RemotePlayer(rightHandLink);
 				return;
 			case 3:
-				HandLink_PositionBoth(rightHandLink);
-				HandLink_PositionChild_RemotePlayer(leftHandLink);
+				TakeMyHand_PositionBoth(rightHandLink);
+				TakeMyHand_PositionChild_RemotePlayer(leftHandLink);
 				return;
 			case 1:
-				HandLink_PositionBoth(leftHandLink);
-				HandLink_PositionChild_RemotePlayer(rightHandLink);
+				TakeMyHand_PositionBoth(leftHandLink);
+				TakeMyHand_PositionChild_RemotePlayer(rightHandLink);
 				return;
 			case 0:
-				HandLink_PositionTriple(leftHandLink, rightHandLink);
+				TakeMyHand_PositionTriple(leftHandLink, rightHandLink);
 				return;
 			case -1:
 			case 2:
-				HandLink_PositionChild_LocalPlayer(rightHandLink);
-				HandLink_PositionChild_RemotePlayer(leftHandLink);
+				TakeMyHand_PositionChild_LocalPlayer(rightHandLink);
+				TakeMyHand_PositionChild_RemotePlayer(leftHandLink);
 				return;
 			case -3:
 			case -2:
-				HandLink_PositionChild_LocalPlayer(leftHandLink);
-				HandLink_PositionChild_RemotePlayer(rightHandLink);
+				TakeMyHand_PositionChild_LocalPlayer(leftHandLink);
+				TakeMyHand_PositionChild_RemotePlayer(rightHandLink);
 				return;
 			}
 			switch (b.CompareTo(b2))
 			{
 			case 1:
-				HandLink_PositionChild_LocalPlayer(leftHandLink);
-				HandLink_PositionChild_RemotePlayer(rightHandLink);
+				TakeMyHand_PositionChild_LocalPlayer(leftHandLink);
+				TakeMyHand_PositionChild_RemotePlayer(rightHandLink);
 				break;
 			case -1:
-				HandLink_PositionChild_LocalPlayer(rightHandLink);
-				HandLink_PositionChild_RemotePlayer(leftHandLink);
+				TakeMyHand_PositionChild_LocalPlayer(rightHandLink);
+				TakeMyHand_PositionChild_RemotePlayer(leftHandLink);
 				break;
 			case 0:
 				if (stepsToAuth > stepsToAuth2)
 				{
-					HandLink_PositionChild_LocalPlayer(rightHandLink);
-					HandLink_PositionChild_RemotePlayer(leftHandLink);
+					TakeMyHand_PositionChild_LocalPlayer(rightHandLink);
+					TakeMyHand_PositionChild_RemotePlayer(leftHandLink);
 				}
 				else if (stepsToAuth < stepsToAuth2)
 				{
-					HandLink_PositionChild_LocalPlayer(leftHandLink);
-					HandLink_PositionChild_RemotePlayer(rightHandLink);
+					TakeMyHand_PositionChild_LocalPlayer(leftHandLink);
+					TakeMyHand_PositionChild_RemotePlayer(rightHandLink);
 				}
 				else
 				{
-					HandLink_PositionChild_LocalPlayer(leftHandLink, rightHandLink);
+					TakeMyHand_PositionChild_LocalPlayer(leftHandLink, rightHandLink);
 				}
 				break;
 			}
 		}
 		else if (flag)
 		{
-			switch (selfHandLinkAuthority.CompareTo(b))
+			switch (handLinkAuthorityStatus.CompareTo(b))
 			{
 			case 1:
-				HandLink_PositionChild_RemotePlayer(leftHandLink);
+				TakeMyHand_PositionChild_RemotePlayer(leftHandLink);
 				break;
 			case -1:
-				HandLink_PositionChild_LocalPlayer(leftHandLink);
+				TakeMyHand_PositionChild_LocalPlayer(leftHandLink);
 				break;
 			case 0:
-				HandLink_PositionBoth(leftHandLink);
+				TakeMyHand_PositionBoth(leftHandLink);
 				break;
 			}
 		}
 		else
 		{
-			switch (selfHandLinkAuthority.CompareTo(b2))
+			switch (handLinkAuthorityStatus.CompareTo(b2))
 			{
 			case 1:
-				HandLink_PositionChild_RemotePlayer(rightHandLink);
+				TakeMyHand_PositionChild_RemotePlayer(rightHandLink);
 				break;
 			case -1:
-				HandLink_PositionChild_LocalPlayer(rightHandLink);
+				TakeMyHand_PositionChild_LocalPlayer(rightHandLink);
 				break;
 			case 0:
-				HandLink_PositionBoth(rightHandLink);
+				TakeMyHand_PositionBoth(rightHandLink);
 				break;
 			}
 		}
 	}
 
-	private void HandLink_PositionTriple(HandLink linkA, HandLink linkB)
+	private void TakeMyHand_PositionTriple(TakeMyHand_HandLink linkA, TakeMyHand_HandLink linkB)
 	{
-		Vector3 vector = linkA.transform.position - linkA.grabbedLink.transform.position;
-		Vector3 vector2 = linkB.transform.position - linkB.grabbedLink.transform.position;
+		Vector3 vector = linkA.LinkPosition - linkA.grabbedLink.LinkPosition;
+		Vector3 vector2 = linkB.LinkPosition - linkB.grabbedLink.LinkPosition;
 		Vector3 vector3 = (vector + vector2) * 0.33f;
 		linkA.grabbedLink.myRig.TrySweptOffsetMove(vector - vector3, out var _, out var _);
 		linkB.grabbedLink.myRig.TrySweptOffsetMove(vector2 - vector3, out var _, out var _);
@@ -3002,13 +3010,13 @@ public class GTPlayer : MonoBehaviour
 		playerRigidBody.linearVelocity = Vector3.zero;
 	}
 
-	private void HandLink_PositionBoth(HandLink link)
+	private void TakeMyHand_PositionBoth(TakeMyHand_HandLink link)
 	{
-		Vector3 vector = (link.grabbedLink.transform.position - link.transform.position) * 0.5f;
+		Vector3 vector = (link.grabbedLink.LinkPosition - link.LinkPosition) * 0.5f;
 		link.grabbedLink.myRig.TrySweptOffsetMove(-vector, out var handCollided, out var buttCollided);
 		if (handCollided || buttCollided)
 		{
-			HandLink_PositionChild_LocalPlayer(link);
+			TakeMyHand_PositionChild_LocalPlayer(link);
 		}
 		else
 		{
@@ -3017,15 +3025,15 @@ public class GTPlayer : MonoBehaviour
 		playerRigidBody.linearVelocity = Vector3.zero;
 	}
 
-	private void HandLink_PositionBoth_BothHands(HandLink link1, HandLink link2)
+	private void TakeMyHand_PositionBoth_BothHands(TakeMyHand_HandLink link1, TakeMyHand_HandLink link2)
 	{
-		Vector3 vector = (link1.grabbedLink.transform.position - link1.transform.position) * 0.5f;
-		Vector3 vector2 = (link2.grabbedLink.transform.position - link2.transform.position) * 0.5f;
+		Vector3 vector = (link1.grabbedLink.LinkPosition - link1.LinkPosition) * 0.5f;
+		Vector3 vector2 = (link2.grabbedLink.LinkPosition - link2.LinkPosition) * 0.5f;
 		Vector3 vector3 = (vector + vector2) * 0.5f;
 		link1.grabbedLink.myRig.TrySweptOffsetMove(-vector3, out var handCollided, out var buttCollided);
 		if (handCollided || buttCollided)
 		{
-			HandLink_PositionChild_LocalPlayer(link1, link2);
+			TakeMyHand_PositionChild_LocalPlayer(link1, link2);
 		}
 		else
 		{
@@ -3034,40 +3042,40 @@ public class GTPlayer : MonoBehaviour
 		playerRigidBody.linearVelocity = Vector3.zero;
 	}
 
-	private void HandLink_PositionChild_LocalPlayer(HandLink parentLink)
+	private void TakeMyHand_PositionChild_LocalPlayer(TakeMyHand_HandLink parentLink)
 	{
-		Vector3 vector = parentLink.grabbedLink.transform.position - parentLink.transform.position;
+		Vector3 vector = parentLink.grabbedLink.LinkPosition - parentLink.LinkPosition;
 		playerRigidBody.transform.position += vector;
 		playerRigidBody.linearVelocity = Vector3.zero;
 	}
 
-	private void HandLink_PositionChild_LocalPlayer(HandLink linkA, HandLink linkB)
+	private void TakeMyHand_PositionChild_LocalPlayer(TakeMyHand_HandLink linkA, TakeMyHand_HandLink linkB)
 	{
-		Vector3 vector = linkA.grabbedLink.transform.position - linkA.transform.position;
-		Vector3 vector2 = linkB.grabbedLink.transform.position - linkB.transform.position;
+		Vector3 vector = linkA.grabbedLink.LinkPosition - linkA.LinkPosition;
+		Vector3 vector2 = linkB.grabbedLink.LinkPosition - linkB.LinkPosition;
 		playerRigidBody.transform.position += (vector + vector2) * 0.5f;
 		playerRigidBody.linearVelocity = Vector3.zero;
 	}
 
-	private void HandLink_PositionChild_RemotePlayer(HandLink childLink)
+	private void TakeMyHand_PositionChild_RemotePlayer(TakeMyHand_HandLink childLink)
 	{
-		Vector3 movement = childLink.transform.position - childLink.grabbedLink.transform.position;
+		Vector3 movement = childLink.LinkPosition - childLink.grabbedLink.LinkPosition;
 		childLink.grabbedLink.myRig.TrySweptOffsetMove(movement, out var handCollided, out var buttCollided);
 		if (handCollided || buttCollided)
 		{
-			HandLink_PositionChild_LocalPlayer(childLink);
+			TakeMyHand_PositionChild_LocalPlayer(childLink);
 		}
 	}
 
-	private void HandLink_PositionChild_RemotePlayer_BothHands(HandLink childLink1, HandLink childLink2)
+	private void TakeMyHand_PositionChild_RemotePlayer_BothHands(TakeMyHand_HandLink childLink1, TakeMyHand_HandLink childLink2)
 	{
-		Vector3 vector = childLink1.transform.position - childLink1.grabbedLink.transform.position;
-		Vector3 vector2 = childLink2.transform.position - childLink2.grabbedLink.transform.position;
+		Vector3 vector = childLink1.LinkPosition - childLink1.grabbedLink.LinkPosition;
+		Vector3 vector2 = childLink2.LinkPosition - childLink2.grabbedLink.LinkPosition;
 		Vector3 movement = (vector + vector2) * 0.5f;
 		childLink1.grabbedLink.myRig.TrySweptOffsetMove(movement, out var handCollided, out var buttCollided);
 		if (handCollided || buttCollided)
 		{
-			HandLink_PositionChild_LocalPlayer(childLink1, childLink2);
+			TakeMyHand_PositionChild_LocalPlayer(childLink1, childLink2);
 		}
 	}
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using GorillaGameModes;
 using Newtonsoft.Json;
 using UnityEngine;
 
@@ -476,6 +477,20 @@ public class SIProgression : MonoBehaviour, IGorillaSliceableSimple, GorillaQues
 				else
 				{
 					StartCoroutine(TryClaimNewPlayerPackage());
+				}
+			}
+		}
+		GTDev.Log("[SIProgression] Updating local tech tree costs from remote tree");
+		foreach (GraphNode<SITechTreeNode> allNode in techTreeSO.AllNodes)
+		{
+			SITechTreeNode value = allNode.Value;
+			if (siNodes.TryGetValue(value.upgradeType, out var value2))
+			{
+				SIResource.ResourceCost[] array = SIResource.GenerateCostsFrom(value2.costs);
+				if (array.IsValid_AllowZero() && !SIResource.CostsAreEqual(value.nodeCost, array))
+				{
+					GTDev.Log($"[SIProgression] Changing {value.upgradeType} costs from {SIResource.PrintCost(value.nodeCost)} to {SIResource.PrintCost(array)}");
+					value.nodeCost = array;
 				}
 			}
 		}
@@ -1231,12 +1246,17 @@ public class SIProgression : MonoBehaviour, IGorillaSliceableSimple, GorillaQues
 
 	public void CheckTelemetry()
 	{
-		SuperInfectionGame instance = SuperInfectionGame.instance;
-		if (instance == null)
+		GorillaGameManager activeGameMode = GameMode.ActiveGameMode;
+		if (activeGameMode == null)
 		{
 			return;
 		}
-		if (!instance.ValidGameMode())
+		GameModeType gameModeType = activeGameMode.GameType();
+		if (gameModeType != GameModeType.SuperInfect && gameModeType != GameModeType.SuperCasual)
+		{
+			return;
+		}
+		if (!activeGameMode.ValidGameMode())
 		{
 			timeTelemetryLastChecked = Time.time;
 			return;

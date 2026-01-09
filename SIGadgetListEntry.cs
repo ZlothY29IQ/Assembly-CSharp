@@ -15,6 +15,8 @@ public class SIGadgetListEntry : MonoBehaviour
 
 	public GameObject selectionIndicator;
 
+	public SITouchscreenButtonContainer ButtonContainer => buttonContainer;
+
 	public int Id { get; private set; } = -1;
 
 	public void Configure(ITouchScreenStation station, SITechTreePage page, Transform imageTarget, Transform textTarget, SITouchscreenButton.SITouchscreenButtonType buttonType = SITouchscreenButton.SITouchscreenButtonType.Select, int index = 0, float verticalOffset = 0f)
@@ -32,5 +34,6 @@ public class SIGadgetListEntry : MonoBehaviour
 		textFlattener.overrideParentTransform = textTarget;
 		imageFlattener.enabled = true;
 		textFlattener.enabled = true;
+		buttonContainer.SetUsable(page.IsAllowed);
 	}
 }

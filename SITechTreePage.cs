@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using GorillaGameModes;
 using UnityEngine;
 
 [Serializable]
@@ -13,8 +14,12 @@ public class SITechTreePage
 
 	public SITechTreePageId pageId;
 
+	public ESuperGameModes excludedGameModes;
+
 	[SerializeField]
 	private SITechTreeNode[] treeNodes;
+
+	public float costMultiplier = 1f;
 
 	public EAssetReleaseTier EdReleaseTier
 	{
@@ -46,6 +51,8 @@ public class SITechTreePage
 		}
 	}
 
+	public bool IsAllowed => ((uint)excludedGameModes & (uint)GameMode.CurrentGameModeFlag) == 0;
+
 	public List<GraphNode<SITechTreeNode>> Roots { get; private set; }
 
 	public List<GraphNode<SITechTreeNode>> AllNodes { get; private set; }
@@ -73,7 +80,7 @@ public class SITechTreePage
 		{
 			if (sITechTreeNode.IsValid && (sITechTreeNode.parentUpgrades == null || sITechTreeNode.parentUpgrades.Length == 0))
 			{
-				Roots.Add(PopulateGraph(sITechTreeNode));
+				Roots.Add(PopulateGraph(sITechTreeNode, excludedGameModes));
 			}
 		}
 		foreach (GraphNode<SITechTreeNode> allNode in AllNodes)
@@ -83,8 +90,9 @@ public class SITechTreePage
 				DispensableGadgets.Add(allNode.Value);
 			}
 		}
-		GraphNode<SITechTreeNode> PopulateGraph(SITechTreeNode node)
+		GraphNode<SITechTreeNode> PopulateGraph(SITechTreeNode node, ESuperGameModes parentExcludedGameModes)
 		{
+			node.excludedGameModes |= parentExcludedGameModes;
 			if (!nodeLookup.TryGetValue(node.upgradeType, out var value))
 			{
 				value = new GraphNode<SITechTreeNode>(node);
@@ -102,7 +110,7 @@ public class SITechTreePage
 					{
 						if (parentUpgrades[k] == upgradeType)
 						{
-							GraphNode<SITechTreeNode> graphNode = PopulateGraph(sITechTreeNode2);
+							GraphNode<SITechTreeNode> graphNode = PopulateGraph(sITechTreeNode2, node.excludedGameModes);
 							if (!value.Children.Contains(graphNode))
 							{
 								value.AddChild(graphNode);

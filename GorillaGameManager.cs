@@ -26,6 +26,8 @@ public abstract class GorillaGameManager : MonoBehaviourPunCallbacks, ITickSyste
 
 	protected const string GAME_MODE_SUPER_INFECTION_ROOM_LABEL_KEY = "GAME_MODE_SUPER_INFECTION_ROOM_LABEL";
 
+	protected const string GAME_MODE_SUPER_CASUAL_ROOM_LABEL_KEY = "GAME_MODE_SUPER_CASUAL_ROOM_LABEL";
+
 	protected const string GAME_MODE_NONE_ROOM_LABEL_KEY = "GAME_MODE_NONE_ROOM_LABEL";
 
 	protected const string GAME_MODE_CUSTOM_ROOM_LABEL_KEY = "GAME_MODE_CUSTOM_ROOM_LABEL";

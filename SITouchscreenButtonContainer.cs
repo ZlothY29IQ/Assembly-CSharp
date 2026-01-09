@@ -1,3 +1,4 @@
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -24,4 +25,20 @@ public class SITouchscreenButtonContainer : MonoBehaviour
 
 	[SerializeField]
 	private bool autoConfigure = true;
+
+	[NonSerialized]
+	private Color _cachedForegroundColor = new Color(-1f, -1f, -1f);
+
+	public bool isUsable { get; private set; }
+
+	public void SetUsable(bool newIsUsable)
+	{
+		if (_cachedForegroundColor.r < 0f)
+		{
+			_cachedForegroundColor = foreGround.color;
+		}
+		isUsable = newIsUsable;
+		foreGround.color = (newIsUsable ? _cachedForegroundColor : Color.gray);
+		button.isUsable = newIsUsable;
+	}
 }

@@ -74,6 +74,10 @@ public class LocalizedText : LocalizeStringEvent
 		{
 			await Task.Yield();
 		}
+		if (ApplicationQuittingState.IsQuitting)
+		{
+			return;
+		}
 		if (GetLocalizedFonts(out var fontData))
 		{
 			if (fontData.fontAsset == null)

@@ -599,7 +599,7 @@ public class BuilderKiosk : MonoBehaviour
 			FormattedPurchaseText(7);
 			audioSource.GTPlayOneShot(purchaseSetAudioClip);
 			purchaseParticles.Play();
-			GorillaTagger.Instance.offlineVRRig.concatStringOfCosmeticsAllowed += itemToBuy.playfabID;
+			GorillaTagger.Instance.offlineVRRig.AddCosmetic(itemToBuy.playfabID);
 			leftPurchaseButton.myTmpText.text = "-";
 			rightPurchaseButton.myTmpText.text = "-";
 			leftPurchaseButton.buttonRenderer.material = leftPurchaseButton.pressedMaterial;

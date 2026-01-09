@@ -8,6 +8,12 @@ public class ZoneManagement : MonoBehaviour
 {
 	public delegate void ZoneChangeEvent(ZoneData[] zones);
 
+	private const string preLog = "[GT/ZoneManagement]  ";
+
+	private const string preErr = "ERROR!!!  ";
+
+	private const string preErrBeta = "(beta only log)  ";
+
 	public static ZoneManagement instance;
 
 	[SerializeField]
@@ -264,16 +270,32 @@ public class ZoneManagement : MonoBehaviour
 
 	private void HandleOnSceneLoadCompleted(AsyncOperation thisLoadOp)
 	{
-		foreach (AsyncOperation value in _scenes_to_loadOps.Values)
+		string key;
+		AsyncOperation value;
+		foreach (KeyValuePair<string, AsyncOperation> scenes_to_loadOp in _scenes_to_loadOps)
 		{
-			if (!value.isDone)
+			scenes_to_loadOp.Deconstruct(out key, out value);
+			string text = key;
+			AsyncOperation asyncOperation = value;
+			if (asyncOperation == null)
+			{
+				Debug.LogError("ERROR!!!  HandleOnSceneLoadCompleted: Why is `loadOp` null in `_scenes_to_loadOps` for scene \"" + text + "\"?????");
+			}
+			else if (!asyncOperation.isDone)
 			{
 				return;
 			}
 		}
-		foreach (AsyncOperation value2 in _scenes_to_unloadOps.Values)
+		foreach (KeyValuePair<string, AsyncOperation> scenes_to_unloadOp in _scenes_to_unloadOps)
 		{
-			if (!value2.isDone)
+			scenes_to_unloadOp.Deconstruct(out key, out value);
+			string text2 = key;
+			AsyncOperation asyncOperation2 = value;
+			if (asyncOperation2 == null)
+			{
+				Debug.LogError("ERROR!!!  HandleOnSceneLoadCompleted: Why is `unloadOps` null in `_scenes_to_unloadOps` for scene \"" + text2 + "\"?????");
+			}
+			else if (!asyncOperation2.isDone)
 			{
 				return;
 			}

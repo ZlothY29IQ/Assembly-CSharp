@@ -33,6 +33,8 @@ public class SIGadgetChargeBlaster : MonoBehaviour, SIGadgetBlasterType
 	[SerializeField]
 	private float chargeRatePerSecond = 20f;
 
+	public float fireRateGracePercentage = 0.25f;
+
 	public float maxChargeDiff = 5f;
 
 	private float currentCharge;
@@ -197,7 +199,7 @@ public class SIGadgetChargeBlaster : MonoBehaviour, SIGadgetBlasterType
 
 	public void NetworkFireProjectile(object[] data)
 	{
-		if (data != null && data.Length == 4 && GameEntityManager.ValidateDataType<float>(data[0], out var dataAsType) && !float.IsNaN(dataAsType) && !float.IsInfinity(dataAsType) && GameEntityManager.ValidateDataType<int>(data[1], out var dataAsType2) && GameEntityManager.ValidateDataType<Vector3>(data[2], out var dataAsType3) && dataAsType3.IsFinite() && GameEntityManager.ValidateDataType<Quaternion>(data[3], out var dataAsType4) && !((dataAsType3 - blaster.firingPosition.position).magnitude > blaster.maxLagDistance))
+		if (data != null && data.Length == 4 && GameEntityManager.ValidateDataType<float>(data[0], out var dataAsType) && !float.IsNaN(dataAsType) && !float.IsInfinity(dataAsType) && GameEntityManager.ValidateDataType<int>(data[1], out var dataAsType2) && GameEntityManager.ValidateDataType<Vector3>(data[2], out var dataAsType3) && dataAsType3.IsFinite() && GameEntityManager.ValidateDataType<Quaternion>(data[3], out var dataAsType4) && !((dataAsType3 - blaster.firingPosition.position).magnitude > blaster.maxLagDistance) && !(blaster.CurrentFireRate() > 1f / fireCooldown * (1f + fireRateGracePercentage)))
 		{
 			FireProjectile(dataAsType, dataAsType2, dataAsType3, dataAsType4);
 		}

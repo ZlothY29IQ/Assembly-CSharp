@@ -2,7 +2,6 @@ using System;
 using TMPro;
 using UnityEngine;
 
-[RequireComponent(typeof(Renderer))]
 public class VODTarget : ObservableBehavior, IBuildValidation
 {
 	[Serializable]

@@ -6,6 +6,8 @@ public class SIGadgetCooldownBlaster : MonoBehaviour, SIGadgetBlasterType
 
 	public float fireCooldown = 0.5f;
 
+	public float fireRateGracePercentage = 0.25f;
+
 	public float availableToFireHapticStrength = 0.1f;
 
 	public float availableToFireHapticDuration = 0.01f;
@@ -122,7 +124,7 @@ public class SIGadgetCooldownBlaster : MonoBehaviour, SIGadgetBlasterType
 
 	public void NetworkFireProjectile(object[] data)
 	{
-		if (data != null && data.Length == 3 && GameEntityManager.ValidateDataType<int>(data[0], out var dataAsType) && GameEntityManager.ValidateDataType<Vector3>(data[1], out var dataAsType2) && dataAsType2.IsFinite() && GameEntityManager.ValidateDataType<Quaternion>(data[2], out var dataAsType3) && !((dataAsType2 - blaster.firingPosition.position).magnitude > blaster.maxLagDistance))
+		if (data != null && data.Length == 3 && GameEntityManager.ValidateDataType<int>(data[0], out var dataAsType) && GameEntityManager.ValidateDataType<Vector3>(data[1], out var dataAsType2) && dataAsType2.IsFinite() && GameEntityManager.ValidateDataType<Quaternion>(data[2], out var dataAsType3) && !((dataAsType2 - blaster.firingPosition.position).magnitude > blaster.maxLagDistance) && !(blaster.CurrentFireRate() > 1f / fireCooldown * (1f + fireRateGracePercentage)))
 		{
 			FireProjectile(dataAsType, dataAsType2, dataAsType3);
 		}

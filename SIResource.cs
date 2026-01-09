@@ -366,4 +366,20 @@ public class SIResource : MonoBehaviour, IGorillaSliceableSimple
 		}
 		return true;
 	}
+
+	public static ResourceCost[] GenerateCostsFrom(Dictionary<ResourceType, int> costDictionary)
+	{
+		List<ResourceCost> list = new List<ResourceCost>();
+		foreach (KeyValuePair<ResourceType, int> item in costDictionary)
+		{
+			list.Add(new ResourceCost(item.Key, item.Value));
+		}
+		list.Sort();
+		return list.ToArray();
+	}
+
+	public static string PrintCost(IEnumerable<ResourceCost> costs)
+	{
+		return "[" + string.Join(", ", costs) + "]";
+	}
 }

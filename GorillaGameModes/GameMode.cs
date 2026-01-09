@@ -62,6 +62,8 @@ public class GameMode : MonoBehaviour
 
 	public static GameModeType CurrentGameModeType { get; private set; }
 
+	public static int CurrentGameModeFlag => 1 << (int)CurrentGameModeType;
+
 	public static List<NetPlayer> ParticipatingPlayers => _participatingPlayers;
 
 	public static event OnStartGameModeAction OnStartGameMode;
@@ -110,7 +112,7 @@ public class GameMode : MonoBehaviour
 		fusionTypeTable = new Dictionary<int, FusionGameModeData>();
 		gameModes = new List<GorillaGameManager>(10);
 		gameModeNames = new List<string>(10);
-		activatedGameModes = new List<GorillaGameManager>(12);
+		activatedGameModes = new List<GorillaGameManager>(13);
 		activeGameMode = null;
 		activeNetworkHandler = null;
 		CurrentGameModeType = GameModeType.None;
@@ -189,9 +191,13 @@ public class GameMode : MonoBehaviour
 		for (int i = 0; i < gameModes.Count; i++)
 		{
 			string text = gameModes[i].GameTypeName();
-			if (gmString.EndsWith(text))
+			if (gmString.Length > text.Length)
 			{
-				return text;
+				int num = text.Length + 1;
+				if (gmString[gmString.Length - num] == '|' && gmString.EndsWith(text))
+				{
+					return text;
+				}
 			}
 		}
 		return null;
@@ -268,6 +274,7 @@ public class GameMode : MonoBehaviour
 		StopGameModeSafe(activeGameMode);
 		activeGameMode = null;
 		activeNetworkHandler = null;
+		CurrentGameModeType = GameModeType.None;
 		return LoadGameMode(key);
 	}
 

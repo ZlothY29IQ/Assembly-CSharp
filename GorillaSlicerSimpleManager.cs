@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using UnityEngine;
@@ -37,7 +38,7 @@ public class GorillaSlicerSimpleManager : MonoBehaviour
 	{
 		if (hasInstance && instance != this)
 		{
-			Object.Destroy(this);
+			UnityEngine.Object.Destroy(this);
 		}
 		else
 		{
@@ -61,7 +62,7 @@ public class GorillaSlicerSimpleManager : MonoBehaviour
 		hasInstance = true;
 		if (Application.isPlaying)
 		{
-			Object.DontDestroyOnLoad(manager);
+			UnityEngine.Object.DontDestroyOnLoad(manager);
 		}
 	}
 
@@ -143,7 +144,14 @@ public class GorillaSlicerSimpleManager : MonoBehaviour
 			long elapsedTicks = sW.ElapsedTicks;
 			if (0 <= updateIndex && updateIndex < fixedUpdateSlice.Count && !(gorillaSliceableSimple is MonoBehaviour { isActiveAndEnabled: false }))
 			{
-				gorillaSliceableSimple.SliceUpdate();
+				try
+				{
+					gorillaSliceableSimple.SliceUpdate();
+				}
+				catch (Exception exception)
+				{
+					UnityEngine.Debug.LogException(exception);
+				}
 			}
 			lastRunTicks[gorillaSliceableSimple] = sW.ElapsedTicks - elapsedTicks;
 			updateIndex++;
@@ -169,7 +177,14 @@ public class GorillaSlicerSimpleManager : MonoBehaviour
 			long elapsedTicks = sW.ElapsedTicks;
 			if (0 <= updateIndex - count && updateIndex - count < updateSlice.Count && !(gorillaSliceableSimple is MonoBehaviour { isActiveAndEnabled: false }))
 			{
-				gorillaSliceableSimple.SliceUpdate();
+				try
+				{
+					gorillaSliceableSimple.SliceUpdate();
+				}
+				catch (Exception exception)
+				{
+					UnityEngine.Debug.LogException(exception);
+				}
 			}
 			lastRunTicks[gorillaSliceableSimple] = sW.ElapsedTicks - elapsedTicks;
 			updateIndex++;
@@ -197,7 +212,14 @@ public class GorillaSlicerSimpleManager : MonoBehaviour
 			long elapsedTicks = sW.ElapsedTicks;
 			if (0 <= updateIndex - num && updateIndex - num < lateUpdateSlice.Count && !(gorillaSliceableSimple is MonoBehaviour { isActiveAndEnabled: false }))
 			{
-				gorillaSliceableSimple.SliceUpdate();
+				try
+				{
+					gorillaSliceableSimple.SliceUpdate();
+				}
+				catch (Exception exception)
+				{
+					UnityEngine.Debug.LogException(exception);
+				}
 			}
 			lastRunTicks[gorillaSliceableSimple] = sW.ElapsedTicks - elapsedTicks;
 			updateIndex++;

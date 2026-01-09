@@ -442,11 +442,11 @@ internal class VRRigSerializer : GorillaWrappedSerializer, IFXContextParems<Hand
 		{
 			return;
 		}
-		HandLink handLink = (isLeftHand ? vrrig.rightHandLink : vrrig.leftHandLink);
-		NetPlayer grabbedPlayer = handLink.grabbedPlayer;
+		TakeMyHand_HandLink takeMyHand_HandLink = (isLeftHand ? vrrig.rightHandLink : vrrig.leftHandLink);
+		NetPlayer grabbedPlayer = takeMyHand_HandLink.grabbedPlayer;
 		if (grabbedPlayer != null && grabbedPlayer.IsLocal)
 		{
-			(handLink.grabbedHandIsLeft ? VRRig.LocalRig.leftHandLink : VRRig.LocalRig.rightHandLink).PlayVicariousTapHaptic();
+			(takeMyHand_HandLink.grabbedHandIsLeft ? VRRig.LocalRig.leftHandLink : VRRig.LocalRig.rightHandLink).PlayVicariousTapHaptic();
 		}
 		Vector3 tapDir = Utils.UnpackVector3FromLong(packedDirFromHitToHand);
 		if (!Mathf.Approximately(tapDir.sqrMagnitude, 1f))

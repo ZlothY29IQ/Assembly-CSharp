@@ -6,7 +6,7 @@ using UnityEngine.Events;
 
 namespace GorillaTag.Cosmetics;
 
-public class DistanceCheckerCosmetic : MonoBehaviour, ISpawnable
+public class DistanceCheckerCosmetic : MonoBehaviour, ISpawnable, IGorillaSliceableSimple
 {
 	private enum State
 	{
@@ -71,10 +71,24 @@ public class DistanceCheckerCosmetic : MonoBehaviour, ISpawnable
 		{
 			ownerRig = transferableObject.ownerRig;
 		}
+		else
+		{
+			ownerRig = GetComponentInParent<VRRig>();
+		}
+		if (ownerRig == null)
+		{
+			ownerRig = GorillaTagger.Instance.offlineVRRig;
+		}
 		ResetClosestPlayer();
+		GorillaSlicerSimpleManager.RegisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
 	}
 
-	private void Update()
+	private void OnDisable()
+	{
+		GorillaSlicerSimpleManager.UnregisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
+	}
+
+	public void SliceUpdate()
 	{
 		UpdateDistance();
 	}

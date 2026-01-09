@@ -62,7 +62,7 @@ public class LCKSocialCameraFollower : MonoBehaviour, ITickSystemTick
 		base.transform.parent = m_rigContainer.transform;
 		base.transform.localPosition = new Vector3(0f, -0.2f, 0.132f);
 		base.transform.localRotation = Quaternion.identity;
-		TryAddTick();
+		TickSystem<object>.AddTickCallback(this);
 	}
 
 	public void SetParentNull()
@@ -92,7 +92,7 @@ public class LCKSocialCameraFollower : MonoBehaviour, ITickSystemTick
 		}
 		m_networkController = networkController;
 		m_transformToFollow = m_networkController.transform;
-		TryAddTick();
+		TickSystem<object>.AddTickCallback(this);
 	}
 
 	public void RemoveNetworkController(LckSocialCamera networkController)
@@ -105,17 +105,12 @@ public class LCKSocialCameraFollower : MonoBehaviour, ITickSystemTick
 		}
 	}
 
-	private void TryAddTick()
-	{
-		if (isParentedToRig && m_transformToFollow != null)
-		{
-			TickSystem<object>.AddTickCallback(this);
-		}
-	}
-
 	void ITickSystemTick.Tick()
 	{
-		base.transform.position = m_transformToFollow.position;
-		base.transform.root.rotation = m_transformToFollow.rotation;
+		if (!isParentedToRig && !(m_transformToFollow == null))
+		{
+			base.transform.position = m_transformToFollow.position;
+			base.transform.root.rotation = m_transformToFollow.rotation;
+		}
 	}
 }

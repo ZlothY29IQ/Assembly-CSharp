@@ -64,13 +64,8 @@ public class StoreUpdater : MonoBehaviour
 		Debug.Log("StoreUpdater - Starting");
 		if (bLoadFromJSON)
 		{
-			StartCoroutine(InitializeTitleData());
+			GetEventsFromTitleData();
 		}
-	}
-
-	private void ServerTimeUpdater()
-	{
-		StartCoroutine(InitializeTitleData());
 	}
 
 	public void OnDestroy()
@@ -253,14 +248,6 @@ public class StoreUpdater : MonoBehaviour
 		}
 	}
 
-	private IEnumerator InitializeTitleData()
-	{
-		yield return new WaitForSeconds(1f);
-		PlayFabTitleDataCache.Instance.UpdateData();
-		yield return new WaitForSeconds(1f);
-		GetEventsFromTitleData();
-	}
-
 	private void GetEventsFromTitleData()
 	{
 		Debug.Log("StoreUpdater - GetEventsFromTitleData");
@@ -289,7 +276,7 @@ public class StoreUpdater : MonoBehaviour
 		if (CosmeticsController.instance.GetItemFromDict("LBAEY.").isNullItem)
 		{
 			Debug.LogWarning("StoreUpdater - CosmeticsController is not initialized.  Reinitializing TitleData");
-			StartCoroutine(InitializeTitleData());
+			GetEventsFromTitleData();
 			return;
 		}
 		foreach (StoreUpdateEvent updateEvent in updateEvents)
