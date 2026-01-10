@@ -215,7 +215,7 @@ public class GreyZoneManager : MonoBehaviourPun, IPunObservable, IInRoomCallback
 	public void LocalSimpleActivation(bool onOff, float gravityFactor)
 	{
 		GTPlayer instance = GTPlayer.Instance;
-		if (!(instance == null))
+		if (!(instance == null) && PlayerPrefs.GetString("didTutorial", "nope") == "done")
 		{
 			simpleGravityFactor = Mathf.Clamp(gravityFactor, 0f, 5f);
 			Shader.SetGlobalInt(_GreyZoneActive, onOff ? 1 : 0);

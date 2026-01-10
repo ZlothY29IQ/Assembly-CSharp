@@ -191,13 +191,21 @@ public class GameMode : MonoBehaviour
 		for (int i = 0; i < gameModes.Count; i++)
 		{
 			string text = gameModes[i].GameTypeName();
-			if (gmString.Length > text.Length)
+			if (gmString.Length <= text.Length)
+			{
+				continue;
+			}
+			if (gmString.Contains('|'))
 			{
 				int num = text.Length + 1;
-				if (gmString[gmString.Length - num] == '|' && gmString.EndsWith(text))
+				if (gmString[gmString.Length - num] != '|')
 				{
-					return text;
+					continue;
 				}
+			}
+			if (gmString.EndsWith(text))
+			{
+				return text;
 			}
 		}
 		return null;
