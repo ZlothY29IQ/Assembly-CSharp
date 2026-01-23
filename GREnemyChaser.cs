@@ -12,6 +12,7 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 	{
 		Idle,
 		Patrol,
+		Wander,
 		Stagger,
 		Dying,
 		Chase,
@@ -65,6 +66,8 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 	public GRAbilityMoveToTarget abilityInvestigate;
 
 	public GRAbilityPatrol abilityPatrol;
+
+	public GRAbilityWander abilityWander;
 
 	public GRAbilityFlashed abilityFlashed;
 
@@ -179,11 +182,12 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 		abilityAttackSwipe.Setup(agent, anim, audioSource, base.transform, null, null);
 		abilityInvestigate.Setup(agent, anim, audioSource, base.transform, null, null);
 		abilityPatrol.Setup(agent, anim, audioSource, base.transform, null, null);
+		abilityWander.Setup(agent, anim, audioSource, base.transform, null, null);
 		abilityStagger.Setup(agent, anim, audioSource, base.transform, null, null);
 		abilityDie.Setup(agent, anim, audioSource, base.transform, null, null);
 		abilityFlashed.Setup(agent, anim, audioSource, base.transform, null, null);
 		abilityJump.Setup(agent, anim, audioSource, base.transform, null, null);
-		senseNearby.Setup(headTransform);
+		senseNearby.Setup(headTransform, entity);
 		Setup(entity.createData);
 		if ((bool)entity && (bool)entity.manager && (bool)entity.manager.ghostReactorManager && (bool)entity.manager.ghostReactorManager.reactor)
 		{
@@ -210,7 +214,7 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 		agent.onBehaviorStateChanged -= OnNetworkBehaviorStateChange;
 	}
 
-	public void Setup(long entityCreateData)
+	private void Setup(long entityCreateData)
 	{
 		SetPatrolPath(entityCreateData);
 		if (abilityPatrol.HasValidPatrolPath())
@@ -219,7 +223,7 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 		}
 		else
 		{
-			SetBehavior(Behavior.Idle, force: true);
+			SetBehavior(Behavior.Wander, force: true);
 		}
 		if (attributes.CalculateFinalValueForAttribute(GRAttributeType.ArmorMax) > 0)
 		{
@@ -237,15 +241,15 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 		SetBehavior(Behavior.Jump);
 	}
 
-	public void OnNetworkBehaviorStateChange(byte newState)
+	private void OnNetworkBehaviorStateChange(byte newState)
 	{
-		if (newState >= 0 && newState < 10)
+		if (newState >= 0 && newState < 11)
 		{
 			SetBehavior((Behavior)newState);
 		}
 	}
 
-	public void OnNetworkBodyStateChange(byte newState)
+	private void OnNetworkBodyStateChange(byte newState)
 	{
 		if (newState >= 0 && newState < 3)
 		{
@@ -253,13 +257,13 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 		}
 	}
 
-	public void SetPatrolPath(long entityCreateData)
+	private void SetPatrolPath(long entityCreateData)
 	{
 		GRPatrolPath gRPatrolPath = GhostReactorManager.Get(entity).reactor.GetPatrolPath(entityCreateData);
 		abilityPatrol.SetPatrolPath(gRPatrolPath);
 	}
 
-	public void SetNextPatrolNode(int nextPatrolNode)
+	private void SetNextPatrolNode(int nextPatrolNode)
 	{
 		abilityPatrol.SetNextPatrolNode(nextPatrolNode);
 	}
@@ -269,7 +273,7 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 		this.hp = hp;
 	}
 
-	public bool TrySetBehavior(Behavior newBehavior)
+	private bool TrySetBehavior(Behavior newBehavior)
 	{
 		if (currBehavior == Behavior.Jump && newBehavior == Behavior.Stagger)
 		{
@@ -283,7 +287,7 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 		return true;
 	}
 
-	public void SetBehavior(Behavior newBehavior, bool force = false)
+	private void SetBehavior(Behavior newBehavior, bool force = false)
 	{
 		if (currBehavior == newBehavior && !force)
 		{
@@ -318,6 +322,9 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 		case Behavior.Patrol:
 			abilityPatrol.Stop();
 			break;
+		case Behavior.Wander:
+			abilityWander.Stop();
+			break;
 		case Behavior.Jump:
 			abilityJump.Stop();
 			break;
@@ -341,6 +348,9 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 			break;
 		case Behavior.Patrol:
 			abilityPatrol.Start();
+			break;
+		case Behavior.Wander:
+			abilityWander.Start();
 			break;
 		case Behavior.Search:
 			abilitySearch.Start();
@@ -381,7 +391,7 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 		}
 	}
 
-	public void SetBodyState(BodyState newBodyState, bool force = false)
+	private void SetBodyState(BodyState newBodyState, bool force = false)
 	{
 		if (currBodyState != newBodyState || force)
 		{
@@ -465,6 +475,10 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 		case Behavior.Search:
 			ChooseNewBehavior();
 			break;
+		case Behavior.Wander:
+			abilityWander.Think(dt);
+			ChooseNewBehavior();
+			break;
 		case Behavior.Chase:
 			if (agent.targetPlayer != null)
 			{
@@ -521,12 +535,12 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 			}
 			else
 			{
-				SetBehavior(Behavior.Idle);
+				SetBehavior(Behavior.Wander);
 			}
 		}
 	}
 
-	public void OnUpdate(float dt)
+	private void OnUpdate(float dt)
 	{
 		if (entity.IsAuthority())
 		{
@@ -538,7 +552,7 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 		}
 	}
 
-	public void OnUpdateAuthority(float dt)
+	private void OnUpdateAuthority(float dt)
 	{
 		switch (currBehavior)
 		{
@@ -547,6 +561,9 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 			break;
 		case Behavior.Patrol:
 			abilityPatrol.UpdateAuthority(dt);
+			break;
+		case Behavior.Wander:
+			abilityWander.UpdateAuthority(dt);
 			break;
 		case Behavior.Search:
 			abilitySearch.UpdateAuthority(dt);
@@ -633,7 +650,7 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 		}
 	}
 
-	public void OnUpdateRemote(float dt)
+	private void OnUpdateRemote(float dt)
 	{
 		switch (currBehavior)
 		{
@@ -645,6 +662,9 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 			break;
 		case Behavior.Patrol:
 			abilityPatrol.UpdateRemote(dt);
+			break;
+		case Behavior.Wander:
+			abilityWander.UpdateRemote(dt);
 			break;
 		case Behavior.Attack:
 			abilityAttackSwipe.UpdateRemote(dt);
@@ -704,6 +724,13 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 		{
 			armor.PlayBlockFx(hit.hitEntityPosition);
 		}
+	}
+
+	public void InstantDeath()
+	{
+		hp = 0;
+		SetBodyState(BodyState.Destroyed);
+		SetBehavior(Behavior.Dying);
 	}
 
 	public void OnHitByFlash(GRTool grTool, GameHitData hit)
@@ -805,6 +832,7 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 			gameHitData.hitEntityPosition = component4.transform.position;
 			gameHitData.hitImpulse = Vector3.zero;
 			gameHitData.hitPosition = component4.transform.position;
+			gameHitData.hittablePoint = component5.FindHittablePoint(collider);
 			GameHitData hitData = gameHitData;
 			component5.RequestHit(hitData);
 		}
@@ -825,6 +853,7 @@ public class GREnemyChaser : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 		strings = new List<string>();
 		strings.Add($"State: <color=\"yellow\">{currBehavior.ToString()}<color=\"white\"> HP: <color=\"yellow\">{hp}<color=\"white\">");
 		strings.Add($"speed: <color=\"yellow\">{navAgent.speed}<color=\"white\"> patrol node:<color=\"yellow\">{abilityPatrol.nextPatrolNode}/{((abilityPatrol.GetPatrolPath() != null) ? abilityPatrol.GetPatrolPath().patrolNodes.Count : 0)}<color=\"white\">");
+		strings.Add($"Dest: <color=\"yellow\">{agent.navAgent.destination}<color=\"white\"> Pos: <color=\"yellow\">{agent.transform.position}<color=\"white\">");
 	}
 
 	public void OnGameEntitySerialize(BinaryWriter writer)

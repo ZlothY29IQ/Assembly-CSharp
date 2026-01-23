@@ -27,11 +27,15 @@ public struct UberShaderMatUsedProps
 
 	public int _AChannelColor;
 
-	public int _TexMipBias;
-
 	public int _BaseMap;
 
 	public int _BaseMap_ST;
+
+	public int _SettingsPreset;
+
+	public int _AdvancedOptions;
+
+	public int _TexMipBias;
 
 	public int _BaseMap_WH;
 
@@ -371,9 +375,11 @@ public struct UberShaderMatUsedProps
 		_GChannelColor = 0;
 		_BChannelColor = 0;
 		_AChannelColor = 0;
-		_TexMipBias = 0;
 		_BaseMap = 0;
 		_BaseMap_ST = 0;
+		_SettingsPreset = 0;
+		_AdvancedOptions = 0;
+		_TexMipBias = 0;
 		_BaseMap_WH = 0;
 		_TexelSnapToggle = 0;
 		_TexelSnap_Factor = 0;
@@ -717,7 +723,7 @@ public struct UberShaderMatUsedProps
 				_UvShiftSteps++;
 				_UvShiftOffset++;
 			}
-			_BaseMap++;
+			_g_Macro_TRANSFORM_TEX(in kw, ref _BaseMap, ref _BaseMap_ST);
 			_ = kw._GT_BASE_MAP_ATLAS_SLICE_SOURCE__UV1_Z;
 			if (kw._EYECOMP)
 			{
@@ -752,7 +758,7 @@ public struct UberShaderMatUsedProps
 		}
 		if (kw._MOUTHCOMP)
 		{
-			_MouthMap++;
+			_g_Macro_TRANSFORM_TEX(in kw, ref _MouthMap, ref _MouthMap_ST);
 		}
 		if (!kw._PARALLAX)
 		{
@@ -1010,7 +1016,7 @@ public struct UberShaderMatUsedProps
 
 	public override string ToString()
 	{
-		string[] array = new string[176];
+		string[] array = new string[178];
 		array[0] = "---- MaterialFingerprint of ";
 		array[1] = material?.name;
 		array[2] = " ----\n";
@@ -1061,8 +1067,7 @@ public struct UberShaderMatUsedProps
 			obj4 = "_AChannelColor = " + baseColor.ToString() + "\n";
 		}
 		array[9] = (string)obj4;
-		array[10] = ((_TexMipBias > 0) ? ("_TexMipBias = " + fingerprint._TexMipBias + "\n") : "");
-		array[11] = ((_BaseMap > 0) ? ("_BaseMap = " + fingerprint._BaseMap + "\n") : "");
+		array[10] = ((_BaseMap > 0) ? ("_BaseMap = " + fingerprint._BaseMap + "\n") : "");
 		object obj5;
 		if (_BaseMap_ST <= 0)
 		{
@@ -1073,7 +1078,10 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._BaseMap_ST;
 			obj5 = "_BaseMap_ST = " + baseColor.ToString() + "\n";
 		}
-		array[12] = (string)obj5;
+		array[11] = (string)obj5;
+		array[12] = ((_SettingsPreset > 0) ? ("_SettingsPreset = " + fingerprint._SettingsPreset + "\n") : "");
+		array[13] = ((_AdvancedOptions > 0) ? ("_AdvancedOptions = " + fingerprint._AdvancedOptions + "\n") : "");
+		array[14] = ((_TexMipBias > 0) ? ("_TexMipBias = " + fingerprint._TexMipBias + "\n") : "");
 		object obj6;
 		if (_BaseMap_WH <= 0)
 		{
@@ -1084,11 +1092,11 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._BaseMap_WH;
 			obj6 = "_BaseMap_WH = " + baseColor.ToString() + "\n";
 		}
-		array[13] = (string)obj6;
-		array[14] = ((_TexelSnapToggle > 0) ? ("_TexelSnapToggle = " + fingerprint._TexelSnapToggle + "\n") : "");
-		array[15] = ((_TexelSnap_Factor > 0) ? ("_TexelSnap_Factor = " + fingerprint._TexelSnap_Factor + "\n") : "");
-		array[16] = ((_UVSource > 0) ? ("_UVSource = " + fingerprint._UVSource + "\n") : "");
-		array[17] = ((_AlphaDetailToggle > 0) ? ("_AlphaDetailToggle = " + fingerprint._AlphaDetailToggle + "\n") : "");
+		array[15] = (string)obj6;
+		array[16] = ((_TexelSnapToggle > 0) ? ("_TexelSnapToggle = " + fingerprint._TexelSnapToggle + "\n") : "");
+		array[17] = ((_TexelSnap_Factor > 0) ? ("_TexelSnap_Factor = " + fingerprint._TexelSnap_Factor + "\n") : "");
+		array[18] = ((_UVSource > 0) ? ("_UVSource = " + fingerprint._UVSource + "\n") : "");
+		array[19] = ((_AlphaDetailToggle > 0) ? ("_AlphaDetailToggle = " + fingerprint._AlphaDetailToggle + "\n") : "");
 		object obj7;
 		if (_AlphaDetail_ST <= 0)
 		{
@@ -1099,11 +1107,11 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._AlphaDetail_ST;
 			obj7 = "_AlphaDetail_ST = " + baseColor.ToString() + "\n";
 		}
-		array[18] = (string)obj7;
-		array[19] = ((_AlphaDetail_Opacity > 0) ? ("_AlphaDetail_Opacity = " + fingerprint._AlphaDetail_Opacity + "\n") : "");
-		array[20] = ((_AlphaDetail_WorldSpace > 0) ? ("_AlphaDetail_WorldSpace = " + fingerprint._AlphaDetail_WorldSpace + "\n") : "");
-		array[21] = ((_MaskMapToggle > 0) ? ("_MaskMapToggle = " + fingerprint._MaskMapToggle + "\n") : "");
-		array[22] = ((_MaskMap > 0) ? ("_MaskMap = " + fingerprint._MaskMap + "\n") : "");
+		array[20] = (string)obj7;
+		array[21] = ((_AlphaDetail_Opacity > 0) ? ("_AlphaDetail_Opacity = " + fingerprint._AlphaDetail_Opacity + "\n") : "");
+		array[22] = ((_AlphaDetail_WorldSpace > 0) ? ("_AlphaDetail_WorldSpace = " + fingerprint._AlphaDetail_WorldSpace + "\n") : "");
+		array[23] = ((_MaskMapToggle > 0) ? ("_MaskMapToggle = " + fingerprint._MaskMapToggle + "\n") : "");
+		array[24] = ((_MaskMap > 0) ? ("_MaskMap = " + fingerprint._MaskMap + "\n") : "");
 		object obj8;
 		if (_MaskMap_ST <= 0)
 		{
@@ -1114,7 +1122,7 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._MaskMap_ST;
 			obj8 = "_MaskMap_ST = " + baseColor.ToString() + "\n";
 		}
-		array[23] = (string)obj8;
+		array[25] = (string)obj8;
 		object obj9;
 		if (_MaskMap_WH <= 0)
 		{
@@ -1125,23 +1133,23 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._MaskMap_WH;
 			obj9 = "_MaskMap_WH = " + baseColor.ToString() + "\n";
 		}
-		array[24] = (string)obj9;
-		array[25] = ((_LavaLampToggle > 0) ? ("_LavaLampToggle = " + fingerprint._LavaLampToggle + "\n") : "");
-		array[26] = ((_GradientMapToggle > 0) ? ("_GradientMapToggle = " + fingerprint._GradientMapToggle + "\n") : "");
-		array[27] = ((_GradientMap > 0) ? ("_GradientMap = " + fingerprint._GradientMap + "\n") : "");
-		array[28] = ((_DoTextureRotation > 0) ? ("_DoTextureRotation = " + fingerprint._DoTextureRotation + "\n") : "");
-		array[29] = ((_RotateAngle > 0) ? ("_RotateAngle = " + fingerprint._RotateAngle + "\n") : "");
-		array[30] = ((_RotateAnim > 0) ? ("_RotateAnim = " + fingerprint._RotateAnim + "\n") : "");
-		array[31] = ((_UseWaveWarp > 0) ? ("_UseWaveWarp = " + fingerprint._UseWaveWarp + "\n") : "");
-		array[32] = ((_WaveAmplitude > 0) ? ("_WaveAmplitude = " + fingerprint._WaveAmplitude + "\n") : "");
-		array[33] = ((_WaveFrequency > 0) ? ("_WaveFrequency = " + fingerprint._WaveFrequency + "\n") : "");
-		array[34] = ((_WaveScale > 0) ? ("_WaveScale = " + fingerprint._WaveScale + "\n") : "");
-		array[35] = ((_WaveTimeScale > 0) ? ("_WaveTimeScale = " + fingerprint._WaveTimeScale + "\n") : "");
-		array[36] = ((_UseWeatherMap > 0) ? ("_UseWeatherMap = " + fingerprint._UseWeatherMap + "\n") : "");
-		array[37] = ((_WeatherMap > 0) ? ("_WeatherMap = " + fingerprint._WeatherMap + "\n") : "");
-		array[38] = ((_WeatherMapDissolveEdgeSize > 0) ? ("_WeatherMapDissolveEdgeSize = " + fingerprint._WeatherMapDissolveEdgeSize + "\n") : "");
-		array[39] = ((_ReflectToggle > 0) ? ("_ReflectToggle = " + fingerprint._ReflectToggle + "\n") : "");
-		array[40] = ((_ReflectBoxProjectToggle > 0) ? ("_ReflectBoxProjectToggle = " + fingerprint._ReflectBoxProjectToggle + "\n") : "");
+		array[26] = (string)obj9;
+		array[27] = ((_LavaLampToggle > 0) ? ("_LavaLampToggle = " + fingerprint._LavaLampToggle + "\n") : "");
+		array[28] = ((_GradientMapToggle > 0) ? ("_GradientMapToggle = " + fingerprint._GradientMapToggle + "\n") : "");
+		array[29] = ((_GradientMap > 0) ? ("_GradientMap = " + fingerprint._GradientMap + "\n") : "");
+		array[30] = ((_DoTextureRotation > 0) ? ("_DoTextureRotation = " + fingerprint._DoTextureRotation + "\n") : "");
+		array[31] = ((_RotateAngle > 0) ? ("_RotateAngle = " + fingerprint._RotateAngle + "\n") : "");
+		array[32] = ((_RotateAnim > 0) ? ("_RotateAnim = " + fingerprint._RotateAnim + "\n") : "");
+		array[33] = ((_UseWaveWarp > 0) ? ("_UseWaveWarp = " + fingerprint._UseWaveWarp + "\n") : "");
+		array[34] = ((_WaveAmplitude > 0) ? ("_WaveAmplitude = " + fingerprint._WaveAmplitude + "\n") : "");
+		array[35] = ((_WaveFrequency > 0) ? ("_WaveFrequency = " + fingerprint._WaveFrequency + "\n") : "");
+		array[36] = ((_WaveScale > 0) ? ("_WaveScale = " + fingerprint._WaveScale + "\n") : "");
+		array[37] = ((_WaveTimeScale > 0) ? ("_WaveTimeScale = " + fingerprint._WaveTimeScale + "\n") : "");
+		array[38] = ((_UseWeatherMap > 0) ? ("_UseWeatherMap = " + fingerprint._UseWeatherMap + "\n") : "");
+		array[39] = ((_WeatherMap > 0) ? ("_WeatherMap = " + fingerprint._WeatherMap + "\n") : "");
+		array[40] = ((_WeatherMapDissolveEdgeSize > 0) ? ("_WeatherMapDissolveEdgeSize = " + fingerprint._WeatherMapDissolveEdgeSize + "\n") : "");
+		array[41] = ((_ReflectToggle > 0) ? ("_ReflectToggle = " + fingerprint._ReflectToggle + "\n") : "");
+		array[42] = ((_ReflectBoxProjectToggle > 0) ? ("_ReflectBoxProjectToggle = " + fingerprint._ReflectBoxProjectToggle + "\n") : "");
 		object obj10;
 		if (_ReflectBoxCubePos <= 0)
 		{
@@ -1152,7 +1160,7 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._ReflectBoxCubePos;
 			obj10 = "_ReflectBoxCubePos = " + baseColor.ToString() + "\n";
 		}
-		array[41] = (string)obj10;
+		array[43] = (string)obj10;
 		object obj11;
 		if (_ReflectBoxSize <= 0)
 		{
@@ -1163,7 +1171,7 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._ReflectBoxSize;
 			obj11 = "_ReflectBoxSize = " + baseColor.ToString() + "\n";
 		}
-		array[42] = (string)obj11;
+		array[44] = (string)obj11;
 		object obj12;
 		if (_ReflectBoxRotation <= 0)
 		{
@@ -1174,13 +1182,13 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._ReflectBoxRotation;
 			obj12 = "_ReflectBoxRotation = " + baseColor.ToString() + "\n";
 		}
-		array[43] = (string)obj12;
-		array[44] = ((_ReflectMatcapToggle > 0) ? ("_ReflectMatcapToggle = " + fingerprint._ReflectMatcapToggle + "\n") : "");
-		array[45] = ((_ReflectMatcapPerspToggle > 0) ? ("_ReflectMatcapPerspToggle = " + fingerprint._ReflectMatcapPerspToggle + "\n") : "");
-		array[46] = ((_ReflectNormalToggle > 0) ? ("_ReflectNormalToggle = " + fingerprint._ReflectNormalToggle + "\n") : "");
-		array[47] = ((_ReflectTex > 0) ? ("_ReflectTex = " + fingerprint._ReflectTex + "\n") : "");
-		array[48] = ((_ReflectNormalTex > 0) ? ("_ReflectNormalTex = " + fingerprint._ReflectNormalTex + "\n") : "");
-		array[49] = ((_ReflectAlbedoTint > 0) ? ("_ReflectAlbedoTint = " + fingerprint._ReflectAlbedoTint + "\n") : "");
+		array[45] = (string)obj12;
+		array[46] = ((_ReflectMatcapToggle > 0) ? ("_ReflectMatcapToggle = " + fingerprint._ReflectMatcapToggle + "\n") : "");
+		array[47] = ((_ReflectMatcapPerspToggle > 0) ? ("_ReflectMatcapPerspToggle = " + fingerprint._ReflectMatcapPerspToggle + "\n") : "");
+		array[48] = ((_ReflectNormalToggle > 0) ? ("_ReflectNormalToggle = " + fingerprint._ReflectNormalToggle + "\n") : "");
+		array[49] = ((_ReflectTex > 0) ? ("_ReflectTex = " + fingerprint._ReflectTex + "\n") : "");
+		array[50] = ((_ReflectNormalTex > 0) ? ("_ReflectNormalTex = " + fingerprint._ReflectNormalTex + "\n") : "");
+		array[51] = ((_ReflectAlbedoTint > 0) ? ("_ReflectAlbedoTint = " + fingerprint._ReflectAlbedoTint + "\n") : "");
 		object obj13;
 		if (_ReflectTint <= 0)
 		{
@@ -1191,9 +1199,9 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._ReflectTint;
 			obj13 = "_ReflectTint = " + baseColor.ToString() + "\n";
 		}
-		array[50] = (string)obj13;
-		array[51] = ((_ReflectOpacity > 0) ? ("_ReflectOpacity = " + fingerprint._ReflectOpacity + "\n") : "");
-		array[52] = ((_ReflectExposure > 0) ? ("_ReflectExposure = " + fingerprint._ReflectExposure + "\n") : "");
+		array[52] = (string)obj13;
+		array[53] = ((_ReflectOpacity > 0) ? ("_ReflectOpacity = " + fingerprint._ReflectOpacity + "\n") : "");
+		array[54] = ((_ReflectExposure > 0) ? ("_ReflectExposure = " + fingerprint._ReflectExposure + "\n") : "");
 		object obj14;
 		if (_ReflectOffset <= 0)
 		{
@@ -1204,7 +1212,7 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._ReflectOffset;
 			obj14 = "_ReflectOffset = " + baseColor.ToString() + "\n";
 		}
-		array[53] = (string)obj14;
+		array[55] = (string)obj14;
 		object obj15;
 		if (_ReflectScale <= 0)
 		{
@@ -1215,15 +1223,15 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._ReflectScale;
 			obj15 = "_ReflectScale = " + baseColor.ToString() + "\n";
 		}
-		array[54] = (string)obj15;
-		array[55] = ((_ReflectRotate > 0) ? ("_ReflectRotate = " + fingerprint._ReflectRotate + "\n") : "");
-		array[56] = ((_HalfLambertToggle > 0) ? ("_HalfLambertToggle = " + fingerprint._HalfLambertToggle + "\n") : "");
-		array[57] = ((_ParallaxPlanarToggle > 0) ? ("_ParallaxPlanarToggle = " + fingerprint._ParallaxPlanarToggle + "\n") : "");
-		array[58] = ((_ParallaxToggle > 0) ? ("_ParallaxToggle = " + fingerprint._ParallaxToggle + "\n") : "");
-		array[59] = ((_ParallaxAAToggle > 0) ? ("_ParallaxAAToggle = " + fingerprint._ParallaxAAToggle + "\n") : "");
-		array[60] = ((_ParallaxAABias > 0) ? ("_ParallaxAABias = " + fingerprint._ParallaxAABias + "\n") : "");
-		array[61] = ((_DepthMap > 0) ? ("_DepthMap = " + fingerprint._DepthMap + "\n") : "");
-		array[62] = ((_ParallaxAmplitude > 0) ? ("_ParallaxAmplitude = " + fingerprint._ParallaxAmplitude + "\n") : "");
+		array[56] = (string)obj15;
+		array[57] = ((_ReflectRotate > 0) ? ("_ReflectRotate = " + fingerprint._ReflectRotate + "\n") : "");
+		array[58] = ((_HalfLambertToggle > 0) ? ("_HalfLambertToggle = " + fingerprint._HalfLambertToggle + "\n") : "");
+		array[59] = ((_ParallaxPlanarToggle > 0) ? ("_ParallaxPlanarToggle = " + fingerprint._ParallaxPlanarToggle + "\n") : "");
+		array[60] = ((_ParallaxToggle > 0) ? ("_ParallaxToggle = " + fingerprint._ParallaxToggle + "\n") : "");
+		array[61] = ((_ParallaxAAToggle > 0) ? ("_ParallaxAAToggle = " + fingerprint._ParallaxAAToggle + "\n") : "");
+		array[62] = ((_ParallaxAABias > 0) ? ("_ParallaxAABias = " + fingerprint._ParallaxAABias + "\n") : "");
+		array[63] = ((_DepthMap > 0) ? ("_DepthMap = " + fingerprint._DepthMap + "\n") : "");
+		array[64] = ((_ParallaxAmplitude > 0) ? ("_ParallaxAmplitude = " + fingerprint._ParallaxAmplitude + "\n") : "");
 		object obj16;
 		if (_ParallaxSamplesMinMax <= 0)
 		{
@@ -1234,8 +1242,8 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._ParallaxSamplesMinMax;
 			obj16 = "_ParallaxSamplesMinMax = " + baseColor.ToString() + "\n";
 		}
-		array[63] = (string)obj16;
-		array[64] = ((_UvShiftToggle > 0) ? ("_UvShiftToggle = " + fingerprint._UvShiftToggle + "\n") : "");
+		array[65] = (string)obj16;
+		array[66] = ((_UvShiftToggle > 0) ? ("_UvShiftToggle = " + fingerprint._UvShiftToggle + "\n") : "");
 		object obj17;
 		if (_UvShiftSteps <= 0)
 		{
@@ -1246,7 +1254,7 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._UvShiftSteps;
 			obj17 = "_UvShiftSteps = " + baseColor.ToString() + "\n";
 		}
-		array[65] = (string)obj17;
+		array[67] = (string)obj17;
 		object obj18;
 		if (_UvShiftRate <= 0)
 		{
@@ -1257,7 +1265,7 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._UvShiftRate;
 			obj18 = "_UvShiftRate = " + baseColor.ToString() + "\n";
 		}
-		array[66] = (string)obj18;
+		array[68] = (string)obj18;
 		object obj19;
 		if (_UvShiftOffset <= 0)
 		{
@@ -1268,10 +1276,10 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._UvShiftOffset;
 			obj19 = "_UvShiftOffset = " + baseColor.ToString() + "\n";
 		}
-		array[67] = (string)obj19;
-		array[68] = ((_UseGridEffect > 0) ? ("_UseGridEffect = " + fingerprint._UseGridEffect + "\n") : "");
-		array[69] = ((_UseCrystalEffect > 0) ? ("_UseCrystalEffect = " + fingerprint._UseCrystalEffect + "\n") : "");
-		array[70] = ((_CrystalPower > 0) ? ("_CrystalPower = " + fingerprint._CrystalPower + "\n") : "");
+		array[69] = (string)obj19;
+		array[70] = ((_UseGridEffect > 0) ? ("_UseGridEffect = " + fingerprint._UseGridEffect + "\n") : "");
+		array[71] = ((_UseCrystalEffect > 0) ? ("_UseCrystalEffect = " + fingerprint._UseCrystalEffect + "\n") : "");
+		array[72] = ((_CrystalPower > 0) ? ("_CrystalPower = " + fingerprint._CrystalPower + "\n") : "");
 		object obj20;
 		if (_CrystalRimColor <= 0)
 		{
@@ -1282,9 +1290,9 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._CrystalRimColor;
 			obj20 = "_CrystalRimColor = " + baseColor.ToString() + "\n";
 		}
-		array[71] = (string)obj20;
-		array[72] = ((_LiquidVolume > 0) ? ("_LiquidVolume = " + fingerprint._LiquidVolume + "\n") : "");
-		array[73] = ((_LiquidFill > 0) ? ("_LiquidFill = " + fingerprint._LiquidFill + "\n") : "");
+		array[73] = (string)obj20;
+		array[74] = ((_LiquidVolume > 0) ? ("_LiquidVolume = " + fingerprint._LiquidVolume + "\n") : "");
+		array[75] = ((_LiquidFill > 0) ? ("_LiquidFill = " + fingerprint._LiquidFill + "\n") : "");
 		object obj21;
 		if (_LiquidFillNormal <= 0)
 		{
@@ -1295,7 +1303,7 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._LiquidFillNormal;
 			obj21 = "_LiquidFillNormal = " + baseColor.ToString() + "\n";
 		}
-		array[74] = (string)obj21;
+		array[76] = (string)obj21;
 		object obj22;
 		if (_LiquidSurfaceColor <= 0)
 		{
@@ -1306,10 +1314,10 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._LiquidSurfaceColor;
 			obj22 = "_LiquidSurfaceColor = " + baseColor.ToString() + "\n";
 		}
-		array[75] = (string)obj22;
-		array[76] = ((_LiquidSwayX > 0) ? ("_LiquidSwayX = " + fingerprint._LiquidSwayX + "\n") : "");
-		array[77] = ((_LiquidSwayY > 0) ? ("_LiquidSwayY = " + fingerprint._LiquidSwayY + "\n") : "");
-		array[78] = ((_LiquidContainer > 0) ? ("_LiquidContainer = " + fingerprint._LiquidContainer + "\n") : "");
+		array[77] = (string)obj22;
+		array[78] = ((_LiquidSwayX > 0) ? ("_LiquidSwayX = " + fingerprint._LiquidSwayX + "\n") : "");
+		array[79] = ((_LiquidSwayY > 0) ? ("_LiquidSwayY = " + fingerprint._LiquidSwayY + "\n") : "");
+		array[80] = ((_LiquidContainer > 0) ? ("_LiquidContainer = " + fingerprint._LiquidContainer + "\n") : "");
 		object obj23;
 		if (_LiquidPlanePosition <= 0)
 		{
@@ -1320,7 +1328,7 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._LiquidPlanePosition;
 			obj23 = "_LiquidPlanePosition = " + baseColor.ToString() + "\n";
 		}
-		array[79] = (string)obj23;
+		array[81] = (string)obj23;
 		object obj24;
 		if (_LiquidPlaneNormal <= 0)
 		{
@@ -1331,8 +1339,8 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._LiquidPlaneNormal;
 			obj24 = "_LiquidPlaneNormal = " + baseColor.ToString() + "\n";
 		}
-		array[80] = (string)obj24;
-		array[81] = ((_VertexFlapToggle > 0) ? ("_VertexFlapToggle = " + fingerprint._VertexFlapToggle + "\n") : "");
+		array[82] = (string)obj24;
+		array[83] = ((_VertexFlapToggle > 0) ? ("_VertexFlapToggle = " + fingerprint._VertexFlapToggle + "\n") : "");
 		object obj25;
 		if (_VertexFlapAxis <= 0)
 		{
@@ -1343,7 +1351,7 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._VertexFlapAxis;
 			obj25 = "_VertexFlapAxis = " + baseColor.ToString() + "\n";
 		}
-		array[82] = (string)obj25;
+		array[84] = (string)obj25;
 		object obj26;
 		if (_VertexFlapDegreesMinMax <= 0)
 		{
@@ -1354,11 +1362,11 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._VertexFlapDegreesMinMax;
 			obj26 = "_VertexFlapDegreesMinMax = " + baseColor.ToString() + "\n";
 		}
-		array[83] = (string)obj26;
-		array[84] = ((_VertexFlapSpeed > 0) ? ("_VertexFlapSpeed = " + fingerprint._VertexFlapSpeed + "\n") : "");
-		array[85] = ((_VertexFlapPhaseOffset > 0) ? ("_VertexFlapPhaseOffset = " + fingerprint._VertexFlapPhaseOffset + "\n") : "");
-		array[86] = ((_VertexWaveToggle > 0) ? ("_VertexWaveToggle = " + fingerprint._VertexWaveToggle + "\n") : "");
-		array[87] = ((_VertexWaveDebug > 0) ? ("_VertexWaveDebug = " + fingerprint._VertexWaveDebug + "\n") : "");
+		array[85] = (string)obj26;
+		array[86] = ((_VertexFlapSpeed > 0) ? ("_VertexFlapSpeed = " + fingerprint._VertexFlapSpeed + "\n") : "");
+		array[87] = ((_VertexFlapPhaseOffset > 0) ? ("_VertexFlapPhaseOffset = " + fingerprint._VertexFlapPhaseOffset + "\n") : "");
+		array[88] = ((_VertexWaveToggle > 0) ? ("_VertexWaveToggle = " + fingerprint._VertexWaveToggle + "\n") : "");
+		array[89] = ((_VertexWaveDebug > 0) ? ("_VertexWaveDebug = " + fingerprint._VertexWaveDebug + "\n") : "");
 		object obj27;
 		if (_VertexWaveEnd <= 0)
 		{
@@ -1369,7 +1377,7 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._VertexWaveEnd;
 			obj27 = "_VertexWaveEnd = " + baseColor.ToString() + "\n";
 		}
-		array[88] = (string)obj27;
+		array[90] = (string)obj27;
 		object obj28;
 		if (_VertexWaveParams <= 0)
 		{
@@ -1380,7 +1388,7 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._VertexWaveParams;
 			obj28 = "_VertexWaveParams = " + baseColor.ToString() + "\n";
 		}
-		array[89] = (string)obj28;
+		array[91] = (string)obj28;
 		object obj29;
 		if (_VertexWaveFalloff <= 0)
 		{
@@ -1391,7 +1399,7 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._VertexWaveFalloff;
 			obj29 = "_VertexWaveFalloff = " + baseColor.ToString() + "\n";
 		}
-		array[90] = (string)obj29;
+		array[92] = (string)obj29;
 		object obj30;
 		if (_VertexWaveSphereMask <= 0)
 		{
@@ -1402,8 +1410,8 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._VertexWaveSphereMask;
 			obj30 = "_VertexWaveSphereMask = " + baseColor.ToString() + "\n";
 		}
-		array[91] = (string)obj30;
-		array[92] = ((_VertexWavePhaseOffset > 0) ? ("_VertexWavePhaseOffset = " + fingerprint._VertexWavePhaseOffset + "\n") : "");
+		array[93] = (string)obj30;
+		array[94] = ((_VertexWavePhaseOffset > 0) ? ("_VertexWavePhaseOffset = " + fingerprint._VertexWavePhaseOffset + "\n") : "");
 		object obj31;
 		if (_VertexWaveAxes <= 0)
 		{
@@ -1414,8 +1422,8 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._VertexWaveAxes;
 			obj31 = "_VertexWaveAxes = " + baseColor.ToString() + "\n";
 		}
-		array[93] = (string)obj31;
-		array[94] = ((_VertexRotateToggle > 0) ? ("_VertexRotateToggle = " + fingerprint._VertexRotateToggle + "\n") : "");
+		array[95] = (string)obj31;
+		array[96] = ((_VertexRotateToggle > 0) ? ("_VertexRotateToggle = " + fingerprint._VertexRotateToggle + "\n") : "");
 		object obj32;
 		if (_VertexRotateAngles <= 0)
 		{
@@ -1426,10 +1434,10 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._VertexRotateAngles;
 			obj32 = "_VertexRotateAngles = " + baseColor.ToString() + "\n";
 		}
-		array[95] = (string)obj32;
-		array[96] = ((_VertexRotateAnim > 0) ? ("_VertexRotateAnim = " + fingerprint._VertexRotateAnim + "\n") : "");
-		array[97] = ((_VertexLightToggle > 0) ? ("_VertexLightToggle = " + fingerprint._VertexLightToggle + "\n") : "");
-		array[98] = ((_InnerGlowOn > 0) ? ("_InnerGlowOn = " + fingerprint._InnerGlowOn + "\n") : "");
+		array[97] = (string)obj32;
+		array[98] = ((_VertexRotateAnim > 0) ? ("_VertexRotateAnim = " + fingerprint._VertexRotateAnim + "\n") : "");
+		array[99] = ((_VertexLightToggle > 0) ? ("_VertexLightToggle = " + fingerprint._VertexLightToggle + "\n") : "");
+		array[100] = ((_InnerGlowOn > 0) ? ("_InnerGlowOn = " + fingerprint._InnerGlowOn + "\n") : "");
 		object obj33;
 		if (_InnerGlowColor <= 0)
 		{
@@ -1440,7 +1448,7 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._InnerGlowColor;
 			obj33 = "_InnerGlowColor = " + baseColor.ToString() + "\n";
 		}
-		array[99] = (string)obj33;
+		array[101] = (string)obj33;
 		object obj34;
 		if (_InnerGlowParams <= 0)
 		{
@@ -1451,13 +1459,13 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._InnerGlowParams;
 			obj34 = "_InnerGlowParams = " + baseColor.ToString() + "\n";
 		}
-		array[100] = (string)obj34;
-		array[101] = ((_InnerGlowTap > 0) ? ("_InnerGlowTap = " + fingerprint._InnerGlowTap + "\n") : "");
-		array[102] = ((_InnerGlowSine > 0) ? ("_InnerGlowSine = " + fingerprint._InnerGlowSine + "\n") : "");
-		array[103] = ((_InnerGlowSinePeriod > 0) ? ("_InnerGlowSinePeriod = " + fingerprint._InnerGlowSinePeriod + "\n") : "");
-		array[104] = ((_InnerGlowSinePhaseShift > 0) ? ("_InnerGlowSinePhaseShift = " + fingerprint._InnerGlowSinePhaseShift + "\n") : "");
-		array[105] = ((_StealthEffectOn > 0) ? ("_StealthEffectOn = " + fingerprint._StealthEffectOn + "\n") : "");
-		array[106] = ((_UseEyeTracking > 0) ? ("_UseEyeTracking = " + fingerprint._UseEyeTracking + "\n") : "");
+		array[102] = (string)obj34;
+		array[103] = ((_InnerGlowTap > 0) ? ("_InnerGlowTap = " + fingerprint._InnerGlowTap + "\n") : "");
+		array[104] = ((_InnerGlowSine > 0) ? ("_InnerGlowSine = " + fingerprint._InnerGlowSine + "\n") : "");
+		array[105] = ((_InnerGlowSinePeriod > 0) ? ("_InnerGlowSinePeriod = " + fingerprint._InnerGlowSinePeriod + "\n") : "");
+		array[106] = ((_InnerGlowSinePhaseShift > 0) ? ("_InnerGlowSinePhaseShift = " + fingerprint._InnerGlowSinePhaseShift + "\n") : "");
+		array[107] = ((_StealthEffectOn > 0) ? ("_StealthEffectOn = " + fingerprint._StealthEffectOn + "\n") : "");
+		array[108] = ((_UseEyeTracking > 0) ? ("_UseEyeTracking = " + fingerprint._UseEyeTracking + "\n") : "");
 		object obj35;
 		if (_EyeTileOffsetUV <= 0)
 		{
@@ -1468,8 +1476,8 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._EyeTileOffsetUV;
 			obj35 = "_EyeTileOffsetUV = " + baseColor.ToString() + "\n";
 		}
-		array[107] = (string)obj35;
-		array[108] = ((_EyeOverrideUV > 0) ? ("_EyeOverrideUV = " + fingerprint._EyeOverrideUV + "\n") : "");
+		array[109] = (string)obj35;
+		array[110] = ((_EyeOverrideUV > 0) ? ("_EyeOverrideUV = " + fingerprint._EyeOverrideUV + "\n") : "");
 		object obj36;
 		if (_EyeOverrideUVTransform <= 0)
 		{
@@ -1480,9 +1488,9 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._EyeOverrideUVTransform;
 			obj36 = "_EyeOverrideUVTransform = " + baseColor.ToString() + "\n";
 		}
-		array[109] = (string)obj36;
-		array[110] = ((_UseMouthFlap > 0) ? ("_UseMouthFlap = " + fingerprint._UseMouthFlap + "\n") : "");
-		array[111] = ((_MouthMap > 0) ? ("_MouthMap = " + fingerprint._MouthMap + "\n") : "");
+		array[111] = (string)obj36;
+		array[112] = ((_UseMouthFlap > 0) ? ("_UseMouthFlap = " + fingerprint._UseMouthFlap + "\n") : "");
+		array[113] = ((_MouthMap > 0) ? ("_MouthMap = " + fingerprint._MouthMap + "\n") : "");
 		object obj37;
 		if (_MouthMap_ST <= 0)
 		{
@@ -1493,16 +1501,16 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._MouthMap_ST;
 			obj37 = "_MouthMap_ST = " + baseColor.ToString() + "\n";
 		}
-		array[112] = (string)obj37;
-		array[113] = ((_UseVertexColor > 0) ? ("_UseVertexColor = " + fingerprint._UseVertexColor + "\n") : "");
-		array[114] = ((_WaterEffect > 0) ? ("_WaterEffect = " + fingerprint._WaterEffect + "\n") : "");
-		array[115] = ((_HeightBasedWaterEffect > 0) ? ("_HeightBasedWaterEffect = " + fingerprint._HeightBasedWaterEffect + "\n") : "");
-		array[116] = ((_WaterCaustics > 0) ? ("_WaterCaustics = " + fingerprint._WaterCaustics + "\n") : "");
-		array[117] = ((_UseDayNightLightmap > 0) ? ("_UseDayNightLightmap = " + fingerprint._UseDayNightLightmap + "\n") : "");
-		array[118] = ((_UseSpecular > 0) ? ("_UseSpecular = " + fingerprint._UseSpecular + "\n") : "");
-		array[119] = ((_UseSpecularAlphaChannel > 0) ? ("_UseSpecularAlphaChannel = " + fingerprint._UseSpecularAlphaChannel + "\n") : "");
-		array[120] = ((_Smoothness > 0) ? ("_Smoothness = " + fingerprint._Smoothness + "\n") : "");
-		array[121] = ((_UseSpecHighlight > 0) ? ("_UseSpecHighlight = " + fingerprint._UseSpecHighlight + "\n") : "");
+		array[114] = (string)obj37;
+		array[115] = ((_UseVertexColor > 0) ? ("_UseVertexColor = " + fingerprint._UseVertexColor + "\n") : "");
+		array[116] = ((_WaterEffect > 0) ? ("_WaterEffect = " + fingerprint._WaterEffect + "\n") : "");
+		array[117] = ((_HeightBasedWaterEffect > 0) ? ("_HeightBasedWaterEffect = " + fingerprint._HeightBasedWaterEffect + "\n") : "");
+		array[118] = ((_WaterCaustics > 0) ? ("_WaterCaustics = " + fingerprint._WaterCaustics + "\n") : "");
+		array[119] = ((_UseDayNightLightmap > 0) ? ("_UseDayNightLightmap = " + fingerprint._UseDayNightLightmap + "\n") : "");
+		array[120] = ((_UseSpecular > 0) ? ("_UseSpecular = " + fingerprint._UseSpecular + "\n") : "");
+		array[121] = ((_UseSpecularAlphaChannel > 0) ? ("_UseSpecularAlphaChannel = " + fingerprint._UseSpecularAlphaChannel + "\n") : "");
+		array[122] = ((_Smoothness > 0) ? ("_Smoothness = " + fingerprint._Smoothness + "\n") : "");
+		array[123] = ((_UseSpecHighlight > 0) ? ("_UseSpecHighlight = " + fingerprint._UseSpecHighlight + "\n") : "");
 		object obj38;
 		if (_SpecularDir <= 0)
 		{
@@ -1513,7 +1521,7 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._SpecularDir;
 			obj38 = "_SpecularDir = " + baseColor.ToString() + "\n";
 		}
-		array[122] = (string)obj38;
+		array[124] = (string)obj38;
 		object obj39;
 		if (_SpecularPowerIntensity <= 0)
 		{
@@ -1524,7 +1532,7 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._SpecularPowerIntensity;
 			obj39 = "_SpecularPowerIntensity = " + baseColor.ToString() + "\n";
 		}
-		array[123] = (string)obj39;
+		array[125] = (string)obj39;
 		object obj40;
 		if (_SpecularColor <= 0)
 		{
@@ -1535,9 +1543,9 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._SpecularColor;
 			obj40 = "_SpecularColor = " + baseColor.ToString() + "\n";
 		}
-		array[124] = (string)obj40;
-		array[125] = ((_SpecularUseDiffuseColor > 0) ? ("_SpecularUseDiffuseColor = " + fingerprint._SpecularUseDiffuseColor + "\n") : "");
-		array[126] = ((_EmissionToggle > 0) ? ("_EmissionToggle = " + fingerprint._EmissionToggle + "\n") : "");
+		array[126] = (string)obj40;
+		array[127] = ((_SpecularUseDiffuseColor > 0) ? ("_SpecularUseDiffuseColor = " + fingerprint._SpecularUseDiffuseColor + "\n") : "");
+		array[128] = ((_EmissionToggle > 0) ? ("_EmissionToggle = " + fingerprint._EmissionToggle + "\n") : "");
 		object obj41;
 		if (_EmissionColor <= 0)
 		{
@@ -1548,9 +1556,9 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._EmissionColor;
 			obj41 = "_EmissionColor = " + baseColor.ToString() + "\n";
 		}
-		array[127] = (string)obj41;
-		array[128] = ((_EmissionMap > 0) ? ("_EmissionMap = " + fingerprint._EmissionMap + "\n") : "");
-		array[129] = ((_EmissionMaskByBaseMapAlpha > 0) ? ("_EmissionMaskByBaseMapAlpha = " + fingerprint._EmissionMaskByBaseMapAlpha + "\n") : "");
+		array[129] = (string)obj41;
+		array[130] = ((_EmissionMap > 0) ? ("_EmissionMap = " + fingerprint._EmissionMap + "\n") : "");
+		array[131] = ((_EmissionMaskByBaseMapAlpha > 0) ? ("_EmissionMaskByBaseMapAlpha = " + fingerprint._EmissionMaskByBaseMapAlpha + "\n") : "");
 		object obj42;
 		if (_EmissionUVScrollSpeed <= 0)
 		{
@@ -1561,8 +1569,8 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._EmissionUVScrollSpeed;
 			obj42 = "_EmissionUVScrollSpeed = " + baseColor.ToString() + "\n";
 		}
-		array[130] = (string)obj42;
-		array[131] = ((_EmissionDissolveProgress > 0) ? ("_EmissionDissolveProgress = " + fingerprint._EmissionDissolveProgress + "\n") : "");
+		array[132] = (string)obj42;
+		array[133] = ((_EmissionDissolveProgress > 0) ? ("_EmissionDissolveProgress = " + fingerprint._EmissionDissolveProgress + "\n") : "");
 		object obj43;
 		if (_EmissionDissolveAnimation <= 0)
 		{
@@ -1573,19 +1581,19 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._EmissionDissolveAnimation;
 			obj43 = "_EmissionDissolveAnimation = " + baseColor.ToString() + "\n";
 		}
-		array[132] = (string)obj43;
-		array[133] = ((_EmissionDissolveEdgeSize > 0) ? ("_EmissionDissolveEdgeSize = " + fingerprint._EmissionDissolveEdgeSize + "\n") : "");
-		array[134] = ((_EmissionIntensityInDynamic > 0) ? ("_EmissionIntensityInDynamic = " + fingerprint._EmissionIntensityInDynamic + "\n") : "");
-		array[135] = ((_EmissionUseUVWaveWarp > 0) ? ("_EmissionUseUVWaveWarp = " + fingerprint._EmissionUseUVWaveWarp + "\n") : "");
-		array[136] = ((_GreyZoneException > 0) ? ("_GreyZoneException = " + fingerprint._GreyZoneException + "\n") : "");
-		array[137] = ((_Cull > 0) ? ("_Cull = " + fingerprint._Cull + "\n") : "");
-		array[138] = ((_StencilReference > 0) ? ("_StencilReference = " + fingerprint._StencilReference + "\n") : "");
-		array[139] = ((_StencilComparison > 0) ? ("_StencilComparison = " + fingerprint._StencilComparison + "\n") : "");
-		array[140] = ((_StencilPassFront > 0) ? ("_StencilPassFront = " + fingerprint._StencilPassFront + "\n") : "");
-		array[141] = ((_USE_DEFORM_MAP > 0) ? ("_USE_DEFORM_MAP = " + fingerprint._USE_DEFORM_MAP + "\n") : "");
-		array[142] = ((_DeformMap > 0) ? ("_DeformMap = " + fingerprint._DeformMap + "\n") : "");
-		array[143] = ((_DeformMapIntensity > 0) ? ("_DeformMapIntensity = " + fingerprint._DeformMapIntensity + "\n") : "");
-		array[144] = ((_DeformMapMaskByVertColorRAmount > 0) ? ("_DeformMapMaskByVertColorRAmount = " + fingerprint._DeformMapMaskByVertColorRAmount + "\n") : "");
+		array[134] = (string)obj43;
+		array[135] = ((_EmissionDissolveEdgeSize > 0) ? ("_EmissionDissolveEdgeSize = " + fingerprint._EmissionDissolveEdgeSize + "\n") : "");
+		array[136] = ((_EmissionIntensityInDynamic > 0) ? ("_EmissionIntensityInDynamic = " + fingerprint._EmissionIntensityInDynamic + "\n") : "");
+		array[137] = ((_EmissionUseUVWaveWarp > 0) ? ("_EmissionUseUVWaveWarp = " + fingerprint._EmissionUseUVWaveWarp + "\n") : "");
+		array[138] = ((_GreyZoneException > 0) ? ("_GreyZoneException = " + fingerprint._GreyZoneException + "\n") : "");
+		array[139] = ((_Cull > 0) ? ("_Cull = " + fingerprint._Cull + "\n") : "");
+		array[140] = ((_StencilReference > 0) ? ("_StencilReference = " + fingerprint._StencilReference + "\n") : "");
+		array[141] = ((_StencilComparison > 0) ? ("_StencilComparison = " + fingerprint._StencilComparison + "\n") : "");
+		array[142] = ((_StencilPassFront > 0) ? ("_StencilPassFront = " + fingerprint._StencilPassFront + "\n") : "");
+		array[143] = ((_USE_DEFORM_MAP > 0) ? ("_USE_DEFORM_MAP = " + fingerprint._USE_DEFORM_MAP + "\n") : "");
+		array[144] = ((_DeformMap > 0) ? ("_DeformMap = " + fingerprint._DeformMap + "\n") : "");
+		array[145] = ((_DeformMapIntensity > 0) ? ("_DeformMapIntensity = " + fingerprint._DeformMapIntensity + "\n") : "");
+		array[146] = ((_DeformMapMaskByVertColorRAmount > 0) ? ("_DeformMapMaskByVertColorRAmount = " + fingerprint._DeformMapMaskByVertColorRAmount + "\n") : "");
 		object obj44;
 		if (_DeformMapScrollSpeed <= 0)
 		{
@@ -1596,7 +1604,7 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._DeformMapScrollSpeed;
 			obj44 = "_DeformMapScrollSpeed = " + baseColor.ToString() + "\n";
 		}
-		array[145] = (string)obj44;
+		array[147] = (string)obj44;
 		object obj45;
 		if (_DeformMapUV0Influence <= 0)
 		{
@@ -1607,7 +1615,7 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._DeformMapUV0Influence;
 			obj45 = "_DeformMapUV0Influence = " + baseColor.ToString() + "\n";
 		}
-		array[146] = (string)obj45;
+		array[148] = (string)obj45;
 		object obj46;
 		if (_DeformMapObjectSpaceOffsetsU <= 0)
 		{
@@ -1618,7 +1626,7 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._DeformMapObjectSpaceOffsetsU;
 			obj46 = "_DeformMapObjectSpaceOffsetsU = " + baseColor.ToString() + "\n";
 		}
-		array[147] = (string)obj46;
+		array[149] = (string)obj46;
 		object obj47;
 		if (_DeformMapObjectSpaceOffsetsV <= 0)
 		{
@@ -1629,7 +1637,7 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._DeformMapObjectSpaceOffsetsV;
 			obj47 = "_DeformMapObjectSpaceOffsetsV = " + baseColor.ToString() + "\n";
 		}
-		array[148] = (string)obj47;
+		array[150] = (string)obj47;
 		object obj48;
 		if (_DeformMapWorldSpaceOffsetsU <= 0)
 		{
@@ -1640,7 +1648,7 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._DeformMapWorldSpaceOffsetsU;
 			obj48 = "_DeformMapWorldSpaceOffsetsU = " + baseColor.ToString() + "\n";
 		}
-		array[149] = (string)obj48;
+		array[151] = (string)obj48;
 		object obj49;
 		if (_DeformMapWorldSpaceOffsetsV <= 0)
 		{
@@ -1651,7 +1659,7 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._DeformMapWorldSpaceOffsetsV;
 			obj49 = "_DeformMapWorldSpaceOffsetsV = " + baseColor.ToString() + "\n";
 		}
-		array[150] = (string)obj49;
+		array[152] = (string)obj49;
 		object obj50;
 		if (_RotateOnYAxisBySinTime <= 0)
 		{
@@ -1662,24 +1670,24 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._RotateOnYAxisBySinTime;
 			obj50 = "_RotateOnYAxisBySinTime = " + baseColor.ToString() + "\n";
 		}
-		array[151] = (string)obj50;
-		array[152] = ((_USE_TEX_ARRAY_ATLAS > 0) ? ("_USE_TEX_ARRAY_ATLAS = " + fingerprint._USE_TEX_ARRAY_ATLAS + "\n") : "");
-		array[153] = ((_BaseMap_Atlas > 0) ? ("_BaseMap_Atlas = " + fingerprint._BaseMap_Atlas + "\n") : "");
-		array[154] = ((_BaseMap_AtlasSlice > 0) ? ("_BaseMap_AtlasSlice = " + fingerprint._BaseMap_AtlasSlice + "\n") : "");
-		array[155] = ((_BaseMap_AtlasSliceSource > 0) ? ("_BaseMap_AtlasSliceSource = " + fingerprint._BaseMap_AtlasSliceSource + "\n") : "");
-		array[156] = ((_EmissionMap_Atlas > 0) ? ("_EmissionMap_Atlas = " + fingerprint._EmissionMap_Atlas + "\n") : "");
-		array[157] = ((_EmissionMap_AtlasSlice > 0) ? ("_EmissionMap_AtlasSlice = " + fingerprint._EmissionMap_AtlasSlice + "\n") : "");
-		array[158] = ((_DeformMap_Atlas > 0) ? ("_DeformMap_Atlas = " + fingerprint._DeformMap_Atlas + "\n") : "");
-		array[159] = ((_DeformMap_AtlasSlice > 0) ? ("_DeformMap_AtlasSlice = " + fingerprint._DeformMap_AtlasSlice + "\n") : "");
-		array[160] = ((_WeatherMap_Atlas > 0) ? ("_WeatherMap_Atlas = " + fingerprint._WeatherMap_Atlas + "\n") : "");
-		array[161] = ((_WeatherMap_AtlasSlice > 0) ? ("_WeatherMap_AtlasSlice = " + fingerprint._WeatherMap_AtlasSlice + "\n") : "");
-		array[162] = ((_DEBUG_PAWN_DATA > 0) ? ("_DEBUG_PAWN_DATA = " + fingerprint._DEBUG_PAWN_DATA + "\n") : "");
-		array[163] = ((_SrcBlend > 0) ? ("_SrcBlend = " + fingerprint._SrcBlend + "\n") : "");
-		array[164] = ((_DstBlend > 0) ? ("_DstBlend = " + fingerprint._DstBlend + "\n") : "");
-		array[165] = ((_SrcBlendAlpha > 0) ? ("_SrcBlendAlpha = " + fingerprint._SrcBlendAlpha + "\n") : "");
-		array[166] = ((_DstBlendAlpha > 0) ? ("_DstBlendAlpha = " + fingerprint._DstBlendAlpha + "\n") : "");
-		array[167] = ((_ZWrite > 0) ? ("_ZWrite = " + fingerprint._ZWrite + "\n") : "");
-		array[168] = ((_AlphaToMask > 0) ? ("_AlphaToMask = " + fingerprint._AlphaToMask + "\n") : "");
+		array[153] = (string)obj50;
+		array[154] = ((_USE_TEX_ARRAY_ATLAS > 0) ? ("_USE_TEX_ARRAY_ATLAS = " + fingerprint._USE_TEX_ARRAY_ATLAS + "\n") : "");
+		array[155] = ((_BaseMap_Atlas > 0) ? ("_BaseMap_Atlas = " + fingerprint._BaseMap_Atlas + "\n") : "");
+		array[156] = ((_BaseMap_AtlasSlice > 0) ? ("_BaseMap_AtlasSlice = " + fingerprint._BaseMap_AtlasSlice + "\n") : "");
+		array[157] = ((_BaseMap_AtlasSliceSource > 0) ? ("_BaseMap_AtlasSliceSource = " + fingerprint._BaseMap_AtlasSliceSource + "\n") : "");
+		array[158] = ((_EmissionMap_Atlas > 0) ? ("_EmissionMap_Atlas = " + fingerprint._EmissionMap_Atlas + "\n") : "");
+		array[159] = ((_EmissionMap_AtlasSlice > 0) ? ("_EmissionMap_AtlasSlice = " + fingerprint._EmissionMap_AtlasSlice + "\n") : "");
+		array[160] = ((_DeformMap_Atlas > 0) ? ("_DeformMap_Atlas = " + fingerprint._DeformMap_Atlas + "\n") : "");
+		array[161] = ((_DeformMap_AtlasSlice > 0) ? ("_DeformMap_AtlasSlice = " + fingerprint._DeformMap_AtlasSlice + "\n") : "");
+		array[162] = ((_WeatherMap_Atlas > 0) ? ("_WeatherMap_Atlas = " + fingerprint._WeatherMap_Atlas + "\n") : "");
+		array[163] = ((_WeatherMap_AtlasSlice > 0) ? ("_WeatherMap_AtlasSlice = " + fingerprint._WeatherMap_AtlasSlice + "\n") : "");
+		array[164] = ((_DEBUG_PAWN_DATA > 0) ? ("_DEBUG_PAWN_DATA = " + fingerprint._DEBUG_PAWN_DATA + "\n") : "");
+		array[165] = ((_SrcBlend > 0) ? ("_SrcBlend = " + fingerprint._SrcBlend + "\n") : "");
+		array[166] = ((_DstBlend > 0) ? ("_DstBlend = " + fingerprint._DstBlend + "\n") : "");
+		array[167] = ((_SrcBlendAlpha > 0) ? ("_SrcBlendAlpha = " + fingerprint._SrcBlendAlpha + "\n") : "");
+		array[168] = ((_DstBlendAlpha > 0) ? ("_DstBlendAlpha = " + fingerprint._DstBlendAlpha + "\n") : "");
+		array[169] = ((_ZWrite > 0) ? ("_ZWrite = " + fingerprint._ZWrite + "\n") : "");
+		array[170] = ((_AlphaToMask > 0) ? ("_AlphaToMask = " + fingerprint._AlphaToMask + "\n") : "");
 		object obj51;
 		if (_Color <= 0)
 		{
@@ -1690,9 +1698,9 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._Color;
 			obj51 = "_Color = " + baseColor.ToString() + "\n";
 		}
-		array[169] = (string)obj51;
-		array[170] = ((_Surface > 0) ? ("_Surface = " + fingerprint._Surface + "\n") : "");
-		array[171] = ((_Metallic > 0) ? ("_Metallic = " + fingerprint._Metallic + "\n") : "");
+		array[171] = (string)obj51;
+		array[172] = ((_Surface > 0) ? ("_Surface = " + fingerprint._Surface + "\n") : "");
+		array[173] = ((_Metallic > 0) ? ("_Metallic = " + fingerprint._Metallic + "\n") : "");
 		object obj52;
 		if (_SpecColor <= 0)
 		{
@@ -1703,8 +1711,8 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._SpecColor;
 			obj52 = "_SpecColor = " + baseColor.ToString() + "\n";
 		}
-		array[172] = (string)obj52;
-		array[173] = ((_DayNightLightmapArray > 0) ? ("_DayNightLightmapArray = " + fingerprint._DayNightLightmapArray + "\n") : "");
+		array[174] = (string)obj52;
+		array[175] = ((_DayNightLightmapArray > 0) ? ("_DayNightLightmapArray = " + fingerprint._DayNightLightmapArray + "\n") : "");
 		object obj53;
 		if (_DayNightLightmapArray_ST <= 0)
 		{
@@ -1715,14 +1723,14 @@ public struct UberShaderMatUsedProps
 			int4 baseColor = fingerprint._DayNightLightmapArray_ST;
 			obj53 = "_DayNightLightmapArray_ST = " + baseColor.ToString() + "\n";
 		}
-		array[174] = (string)obj53;
-		array[175] = ((_DayNightLightmapArray_AtlasSlice > 0) ? ("_DayNightLightmapArray_AtlasSlice = " + fingerprint._DayNightLightmapArray_AtlasSlice + "\n") : "");
+		array[176] = (string)obj53;
+		array[177] = ((_DayNightLightmapArray_AtlasSlice > 0) ? ("_DayNightLightmapArray_AtlasSlice = " + fingerprint._DayNightLightmapArray_AtlasSlice + "\n") : "");
 		return string.Concat(array);
 	}
 
 	public string ToStringTSV()
 	{
-		string[] array = new string[695];
+		string[] array = new string[703];
 		array[0] = "---- MaterialFingerprint of ";
 		array[1] = material?.name;
 		array[2] = " ----\nName,\tUsed?,\tRounded Value_TransparencyMode,\t";
@@ -1757,721 +1765,735 @@ public struct UberShaderMatUsedProps
 		array[28] = ",\t";
 		baseColor = fingerprint._AChannelColor;
 		array[29] = baseColor.ToString();
-		array[30] = "\n_TexMipBias,\t";
-		array[31] = (_TexMipBias > 0).ToString();
+		array[30] = "\n_BaseMap,\t";
+		array[31] = (_BaseMap > 0).ToString();
 		array[32] = ",\t";
-		array[33] = fingerprint._TexMipBias.ToString();
-		array[34] = "\n_BaseMap,\t";
-		array[35] = (_BaseMap > 0).ToString();
+		array[33] = fingerprint._BaseMap;
+		array[34] = "\n_BaseMap_ST,\t";
+		array[35] = (_BaseMap_ST > 0).ToString();
 		array[36] = ",\t";
-		array[37] = fingerprint._BaseMap;
-		array[38] = "\n_BaseMap_ST,\t";
-		array[39] = (_BaseMap_ST > 0).ToString();
-		array[40] = ",\t";
 		baseColor = fingerprint._BaseMap_ST;
-		array[41] = baseColor.ToString();
-		array[42] = "\n_BaseMap_WH,\t";
-		array[43] = (_BaseMap_WH > 0).ToString();
+		array[37] = baseColor.ToString();
+		array[38] = "\n_SettingsPreset,\t";
+		array[39] = (_SettingsPreset > 0).ToString();
+		array[40] = ",\t";
+		array[41] = fingerprint._SettingsPreset.ToString();
+		array[42] = "\n_AdvancedOptions,\t";
+		array[43] = (_AdvancedOptions > 0).ToString();
 		array[44] = ",\t";
-		baseColor = fingerprint._BaseMap_WH;
-		array[45] = baseColor.ToString();
-		array[46] = "\n_TexelSnapToggle,\t";
-		array[47] = (_TexelSnapToggle > 0).ToString();
+		array[45] = fingerprint._AdvancedOptions.ToString();
+		array[46] = "\n_TexMipBias,\t";
+		array[47] = (_TexMipBias > 0).ToString();
 		array[48] = ",\t";
-		array[49] = fingerprint._TexelSnapToggle.ToString();
-		array[50] = "\n_TexelSnap_Factor,\t";
-		array[51] = (_TexelSnap_Factor > 0).ToString();
+		array[49] = fingerprint._TexMipBias.ToString();
+		array[50] = "\n_BaseMap_WH,\t";
+		array[51] = (_BaseMap_WH > 0).ToString();
 		array[52] = ",\t";
-		array[53] = fingerprint._TexelSnap_Factor.ToString();
-		array[54] = "\n_UVSource,\t";
-		array[55] = (_UVSource > 0).ToString();
+		baseColor = fingerprint._BaseMap_WH;
+		array[53] = baseColor.ToString();
+		array[54] = "\n_TexelSnapToggle,\t";
+		array[55] = (_TexelSnapToggle > 0).ToString();
 		array[56] = ",\t";
-		array[57] = fingerprint._UVSource.ToString();
-		array[58] = "\n_AlphaDetailToggle,\t";
-		array[59] = (_AlphaDetailToggle > 0).ToString();
+		array[57] = fingerprint._TexelSnapToggle.ToString();
+		array[58] = "\n_TexelSnap_Factor,\t";
+		array[59] = (_TexelSnap_Factor > 0).ToString();
 		array[60] = ",\t";
-		array[61] = fingerprint._AlphaDetailToggle.ToString();
-		array[62] = "\n_AlphaDetail_ST,\t";
-		array[63] = (_AlphaDetail_ST > 0).ToString();
+		array[61] = fingerprint._TexelSnap_Factor.ToString();
+		array[62] = "\n_UVSource,\t";
+		array[63] = (_UVSource > 0).ToString();
 		array[64] = ",\t";
-		baseColor = fingerprint._AlphaDetail_ST;
-		array[65] = baseColor.ToString();
-		array[66] = "\n_AlphaDetail_Opacity,\t";
-		array[67] = (_AlphaDetail_Opacity > 0).ToString();
+		array[65] = fingerprint._UVSource.ToString();
+		array[66] = "\n_AlphaDetailToggle,\t";
+		array[67] = (_AlphaDetailToggle > 0).ToString();
 		array[68] = ",\t";
-		array[69] = fingerprint._AlphaDetail_Opacity.ToString();
-		array[70] = "\n_AlphaDetail_WorldSpace,\t";
-		array[71] = (_AlphaDetail_WorldSpace > 0).ToString();
+		array[69] = fingerprint._AlphaDetailToggle.ToString();
+		array[70] = "\n_AlphaDetail_ST,\t";
+		array[71] = (_AlphaDetail_ST > 0).ToString();
 		array[72] = ",\t";
-		array[73] = fingerprint._AlphaDetail_WorldSpace.ToString();
-		array[74] = "\n_MaskMapToggle,\t";
-		array[75] = (_MaskMapToggle > 0).ToString();
+		baseColor = fingerprint._AlphaDetail_ST;
+		array[73] = baseColor.ToString();
+		array[74] = "\n_AlphaDetail_Opacity,\t";
+		array[75] = (_AlphaDetail_Opacity > 0).ToString();
 		array[76] = ",\t";
-		array[77] = fingerprint._MaskMapToggle.ToString();
-		array[78] = "\n_MaskMap,\t";
-		array[79] = (_MaskMap > 0).ToString();
+		array[77] = fingerprint._AlphaDetail_Opacity.ToString();
+		array[78] = "\n_AlphaDetail_WorldSpace,\t";
+		array[79] = (_AlphaDetail_WorldSpace > 0).ToString();
 		array[80] = ",\t";
-		array[81] = fingerprint._MaskMap;
-		array[82] = "\n_MaskMap_ST,\t";
-		array[83] = (_MaskMap_ST > 0).ToString();
+		array[81] = fingerprint._AlphaDetail_WorldSpace.ToString();
+		array[82] = "\n_MaskMapToggle,\t";
+		array[83] = (_MaskMapToggle > 0).ToString();
 		array[84] = ",\t";
-		baseColor = fingerprint._MaskMap_ST;
-		array[85] = baseColor.ToString();
-		array[86] = "\n_MaskMap_WH,\t";
-		array[87] = (_MaskMap_WH > 0).ToString();
+		array[85] = fingerprint._MaskMapToggle.ToString();
+		array[86] = "\n_MaskMap,\t";
+		array[87] = (_MaskMap > 0).ToString();
 		array[88] = ",\t";
-		baseColor = fingerprint._MaskMap_WH;
-		array[89] = baseColor.ToString();
-		array[90] = "\n_LavaLampToggle,\t";
-		array[91] = (_LavaLampToggle > 0).ToString();
+		array[89] = fingerprint._MaskMap;
+		array[90] = "\n_MaskMap_ST,\t";
+		array[91] = (_MaskMap_ST > 0).ToString();
 		array[92] = ",\t";
-		array[93] = fingerprint._LavaLampToggle.ToString();
-		array[94] = "\n_GradientMapToggle,\t";
-		array[95] = (_GradientMapToggle > 0).ToString();
+		baseColor = fingerprint._MaskMap_ST;
+		array[93] = baseColor.ToString();
+		array[94] = "\n_MaskMap_WH,\t";
+		array[95] = (_MaskMap_WH > 0).ToString();
 		array[96] = ",\t";
-		array[97] = fingerprint._GradientMapToggle.ToString();
-		array[98] = "\n_GradientMap,\t";
-		array[99] = (_GradientMap > 0).ToString();
+		baseColor = fingerprint._MaskMap_WH;
+		array[97] = baseColor.ToString();
+		array[98] = "\n_LavaLampToggle,\t";
+		array[99] = (_LavaLampToggle > 0).ToString();
 		array[100] = ",\t";
-		array[101] = fingerprint._GradientMap;
-		array[102] = "\n_DoTextureRotation,\t";
-		array[103] = (_DoTextureRotation > 0).ToString();
+		array[101] = fingerprint._LavaLampToggle.ToString();
+		array[102] = "\n_GradientMapToggle,\t";
+		array[103] = (_GradientMapToggle > 0).ToString();
 		array[104] = ",\t";
-		array[105] = fingerprint._DoTextureRotation.ToString();
-		array[106] = "\n_RotateAngle,\t";
-		array[107] = (_RotateAngle > 0).ToString();
+		array[105] = fingerprint._GradientMapToggle.ToString();
+		array[106] = "\n_GradientMap,\t";
+		array[107] = (_GradientMap > 0).ToString();
 		array[108] = ",\t";
-		array[109] = fingerprint._RotateAngle.ToString();
-		array[110] = "\n_RotateAnim,\t";
-		array[111] = (_RotateAnim > 0).ToString();
+		array[109] = fingerprint._GradientMap;
+		array[110] = "\n_DoTextureRotation,\t";
+		array[111] = (_DoTextureRotation > 0).ToString();
 		array[112] = ",\t";
-		array[113] = fingerprint._RotateAnim.ToString();
-		array[114] = "\n_UseWaveWarp,\t";
-		array[115] = (_UseWaveWarp > 0).ToString();
+		array[113] = fingerprint._DoTextureRotation.ToString();
+		array[114] = "\n_RotateAngle,\t";
+		array[115] = (_RotateAngle > 0).ToString();
 		array[116] = ",\t";
-		array[117] = fingerprint._UseWaveWarp.ToString();
-		array[118] = "\n_WaveAmplitude,\t";
-		array[119] = (_WaveAmplitude > 0).ToString();
+		array[117] = fingerprint._RotateAngle.ToString();
+		array[118] = "\n_RotateAnim,\t";
+		array[119] = (_RotateAnim > 0).ToString();
 		array[120] = ",\t";
-		array[121] = fingerprint._WaveAmplitude.ToString();
-		array[122] = "\n_WaveFrequency,\t";
-		array[123] = (_WaveFrequency > 0).ToString();
+		array[121] = fingerprint._RotateAnim.ToString();
+		array[122] = "\n_UseWaveWarp,\t";
+		array[123] = (_UseWaveWarp > 0).ToString();
 		array[124] = ",\t";
-		array[125] = fingerprint._WaveFrequency.ToString();
-		array[126] = "\n_WaveScale,\t";
-		array[127] = (_WaveScale > 0).ToString();
+		array[125] = fingerprint._UseWaveWarp.ToString();
+		array[126] = "\n_WaveAmplitude,\t";
+		array[127] = (_WaveAmplitude > 0).ToString();
 		array[128] = ",\t";
-		array[129] = fingerprint._WaveScale.ToString();
-		array[130] = "\n_WaveTimeScale,\t";
-		array[131] = (_WaveTimeScale > 0).ToString();
+		array[129] = fingerprint._WaveAmplitude.ToString();
+		array[130] = "\n_WaveFrequency,\t";
+		array[131] = (_WaveFrequency > 0).ToString();
 		array[132] = ",\t";
-		array[133] = fingerprint._WaveTimeScale.ToString();
-		array[134] = "\n_UseWeatherMap,\t";
-		array[135] = (_UseWeatherMap > 0).ToString();
+		array[133] = fingerprint._WaveFrequency.ToString();
+		array[134] = "\n_WaveScale,\t";
+		array[135] = (_WaveScale > 0).ToString();
 		array[136] = ",\t";
-		array[137] = fingerprint._UseWeatherMap.ToString();
-		array[138] = "\n_WeatherMap,\t";
-		array[139] = (_WeatherMap > 0).ToString();
+		array[137] = fingerprint._WaveScale.ToString();
+		array[138] = "\n_WaveTimeScale,\t";
+		array[139] = (_WaveTimeScale > 0).ToString();
 		array[140] = ",\t";
-		array[141] = fingerprint._WeatherMap;
-		array[142] = "\n_WeatherMapDissolveEdgeSize,\t";
-		array[143] = (_WeatherMapDissolveEdgeSize > 0).ToString();
+		array[141] = fingerprint._WaveTimeScale.ToString();
+		array[142] = "\n_UseWeatherMap,\t";
+		array[143] = (_UseWeatherMap > 0).ToString();
 		array[144] = ",\t";
-		array[145] = fingerprint._WeatherMapDissolveEdgeSize.ToString();
-		array[146] = "\n_ReflectToggle,\t";
-		array[147] = (_ReflectToggle > 0).ToString();
+		array[145] = fingerprint._UseWeatherMap.ToString();
+		array[146] = "\n_WeatherMap,\t";
+		array[147] = (_WeatherMap > 0).ToString();
 		array[148] = ",\t";
-		array[149] = fingerprint._ReflectToggle.ToString();
-		array[150] = "\n_ReflectBoxProjectToggle,\t";
-		array[151] = (_ReflectBoxProjectToggle > 0).ToString();
+		array[149] = fingerprint._WeatherMap;
+		array[150] = "\n_WeatherMapDissolveEdgeSize,\t";
+		array[151] = (_WeatherMapDissolveEdgeSize > 0).ToString();
 		array[152] = ",\t";
-		array[153] = fingerprint._ReflectBoxProjectToggle.ToString();
-		array[154] = "\n_ReflectBoxCubePos,\t";
-		array[155] = (_ReflectBoxCubePos > 0).ToString();
+		array[153] = fingerprint._WeatherMapDissolveEdgeSize.ToString();
+		array[154] = "\n_ReflectToggle,\t";
+		array[155] = (_ReflectToggle > 0).ToString();
 		array[156] = ",\t";
-		baseColor = fingerprint._ReflectBoxCubePos;
-		array[157] = baseColor.ToString();
-		array[158] = "\n_ReflectBoxSize,\t";
-		array[159] = (_ReflectBoxSize > 0).ToString();
+		array[157] = fingerprint._ReflectToggle.ToString();
+		array[158] = "\n_ReflectBoxProjectToggle,\t";
+		array[159] = (_ReflectBoxProjectToggle > 0).ToString();
 		array[160] = ",\t";
-		baseColor = fingerprint._ReflectBoxSize;
-		array[161] = baseColor.ToString();
-		array[162] = "\n_ReflectBoxRotation,\t";
-		array[163] = (_ReflectBoxRotation > 0).ToString();
+		array[161] = fingerprint._ReflectBoxProjectToggle.ToString();
+		array[162] = "\n_ReflectBoxCubePos,\t";
+		array[163] = (_ReflectBoxCubePos > 0).ToString();
 		array[164] = ",\t";
-		baseColor = fingerprint._ReflectBoxRotation;
+		baseColor = fingerprint._ReflectBoxCubePos;
 		array[165] = baseColor.ToString();
-		array[166] = "\n_ReflectMatcapToggle,\t";
-		array[167] = (_ReflectMatcapToggle > 0).ToString();
+		array[166] = "\n_ReflectBoxSize,\t";
+		array[167] = (_ReflectBoxSize > 0).ToString();
 		array[168] = ",\t";
-		array[169] = fingerprint._ReflectMatcapToggle.ToString();
-		array[170] = "\n_ReflectMatcapPerspToggle,\t";
-		array[171] = (_ReflectMatcapPerspToggle > 0).ToString();
+		baseColor = fingerprint._ReflectBoxSize;
+		array[169] = baseColor.ToString();
+		array[170] = "\n_ReflectBoxRotation,\t";
+		array[171] = (_ReflectBoxRotation > 0).ToString();
 		array[172] = ",\t";
-		array[173] = fingerprint._ReflectMatcapPerspToggle.ToString();
-		array[174] = "\n_ReflectNormalToggle,\t";
-		array[175] = (_ReflectNormalToggle > 0).ToString();
+		baseColor = fingerprint._ReflectBoxRotation;
+		array[173] = baseColor.ToString();
+		array[174] = "\n_ReflectMatcapToggle,\t";
+		array[175] = (_ReflectMatcapToggle > 0).ToString();
 		array[176] = ",\t";
-		array[177] = fingerprint._ReflectNormalToggle.ToString();
-		array[178] = "\n_ReflectTex,\t";
-		array[179] = (_ReflectTex > 0).ToString();
+		array[177] = fingerprint._ReflectMatcapToggle.ToString();
+		array[178] = "\n_ReflectMatcapPerspToggle,\t";
+		array[179] = (_ReflectMatcapPerspToggle > 0).ToString();
 		array[180] = ",\t";
-		array[181] = fingerprint._ReflectTex;
-		array[182] = "\n_ReflectNormalTex,\t";
-		array[183] = (_ReflectNormalTex > 0).ToString();
+		array[181] = fingerprint._ReflectMatcapPerspToggle.ToString();
+		array[182] = "\n_ReflectNormalToggle,\t";
+		array[183] = (_ReflectNormalToggle > 0).ToString();
 		array[184] = ",\t";
-		array[185] = fingerprint._ReflectNormalTex;
-		array[186] = "\n_ReflectAlbedoTint,\t";
-		array[187] = (_ReflectAlbedoTint > 0).ToString();
+		array[185] = fingerprint._ReflectNormalToggle.ToString();
+		array[186] = "\n_ReflectTex,\t";
+		array[187] = (_ReflectTex > 0).ToString();
 		array[188] = ",\t";
-		array[189] = fingerprint._ReflectAlbedoTint.ToString();
-		array[190] = "\n_ReflectTint,\t";
-		array[191] = (_ReflectTint > 0).ToString();
+		array[189] = fingerprint._ReflectTex;
+		array[190] = "\n_ReflectNormalTex,\t";
+		array[191] = (_ReflectNormalTex > 0).ToString();
 		array[192] = ",\t";
-		baseColor = fingerprint._ReflectTint;
-		array[193] = baseColor.ToString();
-		array[194] = "\n_ReflectOpacity,\t";
-		array[195] = (_ReflectOpacity > 0).ToString();
+		array[193] = fingerprint._ReflectNormalTex;
+		array[194] = "\n_ReflectAlbedoTint,\t";
+		array[195] = (_ReflectAlbedoTint > 0).ToString();
 		array[196] = ",\t";
-		array[197] = fingerprint._ReflectOpacity.ToString();
-		array[198] = "\n_ReflectExposure,\t";
-		array[199] = (_ReflectExposure > 0).ToString();
+		array[197] = fingerprint._ReflectAlbedoTint.ToString();
+		array[198] = "\n_ReflectTint,\t";
+		array[199] = (_ReflectTint > 0).ToString();
 		array[200] = ",\t";
-		array[201] = fingerprint._ReflectExposure.ToString();
-		array[202] = "\n_ReflectOffset,\t";
-		array[203] = (_ReflectOffset > 0).ToString();
+		baseColor = fingerprint._ReflectTint;
+		array[201] = baseColor.ToString();
+		array[202] = "\n_ReflectOpacity,\t";
+		array[203] = (_ReflectOpacity > 0).ToString();
 		array[204] = ",\t";
-		baseColor = fingerprint._ReflectOffset;
-		array[205] = baseColor.ToString();
-		array[206] = "\n_ReflectScale,\t";
-		array[207] = (_ReflectScale > 0).ToString();
+		array[205] = fingerprint._ReflectOpacity.ToString();
+		array[206] = "\n_ReflectExposure,\t";
+		array[207] = (_ReflectExposure > 0).ToString();
 		array[208] = ",\t";
-		baseColor = fingerprint._ReflectScale;
-		array[209] = baseColor.ToString();
-		array[210] = "\n_ReflectRotate,\t";
-		array[211] = (_ReflectRotate > 0).ToString();
+		array[209] = fingerprint._ReflectExposure.ToString();
+		array[210] = "\n_ReflectOffset,\t";
+		array[211] = (_ReflectOffset > 0).ToString();
 		array[212] = ",\t";
-		array[213] = fingerprint._ReflectRotate.ToString();
-		array[214] = "\n_HalfLambertToggle,\t";
-		array[215] = (_HalfLambertToggle > 0).ToString();
+		baseColor = fingerprint._ReflectOffset;
+		array[213] = baseColor.ToString();
+		array[214] = "\n_ReflectScale,\t";
+		array[215] = (_ReflectScale > 0).ToString();
 		array[216] = ",\t";
-		array[217] = fingerprint._HalfLambertToggle.ToString();
-		array[218] = "\n_ParallaxPlanarToggle,\t";
-		array[219] = (_ParallaxPlanarToggle > 0).ToString();
+		baseColor = fingerprint._ReflectScale;
+		array[217] = baseColor.ToString();
+		array[218] = "\n_ReflectRotate,\t";
+		array[219] = (_ReflectRotate > 0).ToString();
 		array[220] = ",\t";
-		array[221] = fingerprint._ParallaxPlanarToggle.ToString();
-		array[222] = "\n_ParallaxToggle,\t";
-		array[223] = (_ParallaxToggle > 0).ToString();
+		array[221] = fingerprint._ReflectRotate.ToString();
+		array[222] = "\n_HalfLambertToggle,\t";
+		array[223] = (_HalfLambertToggle > 0).ToString();
 		array[224] = ",\t";
-		array[225] = fingerprint._ParallaxToggle.ToString();
-		array[226] = "\n_ParallaxAAToggle,\t";
-		array[227] = (_ParallaxAAToggle > 0).ToString();
+		array[225] = fingerprint._HalfLambertToggle.ToString();
+		array[226] = "\n_ParallaxPlanarToggle,\t";
+		array[227] = (_ParallaxPlanarToggle > 0).ToString();
 		array[228] = ",\t";
-		array[229] = fingerprint._ParallaxAAToggle.ToString();
-		array[230] = "\n_ParallaxAABias,\t";
-		array[231] = (_ParallaxAABias > 0).ToString();
+		array[229] = fingerprint._ParallaxPlanarToggle.ToString();
+		array[230] = "\n_ParallaxToggle,\t";
+		array[231] = (_ParallaxToggle > 0).ToString();
 		array[232] = ",\t";
-		array[233] = fingerprint._ParallaxAABias.ToString();
-		array[234] = "\n_DepthMap,\t";
-		array[235] = (_DepthMap > 0).ToString();
+		array[233] = fingerprint._ParallaxToggle.ToString();
+		array[234] = "\n_ParallaxAAToggle,\t";
+		array[235] = (_ParallaxAAToggle > 0).ToString();
 		array[236] = ",\t";
-		array[237] = fingerprint._DepthMap;
-		array[238] = "\n_ParallaxAmplitude,\t";
-		array[239] = (_ParallaxAmplitude > 0).ToString();
+		array[237] = fingerprint._ParallaxAAToggle.ToString();
+		array[238] = "\n_ParallaxAABias,\t";
+		array[239] = (_ParallaxAABias > 0).ToString();
 		array[240] = ",\t";
-		array[241] = fingerprint._ParallaxAmplitude.ToString();
-		array[242] = "\n_ParallaxSamplesMinMax,\t";
-		array[243] = (_ParallaxSamplesMinMax > 0).ToString();
+		array[241] = fingerprint._ParallaxAABias.ToString();
+		array[242] = "\n_DepthMap,\t";
+		array[243] = (_DepthMap > 0).ToString();
 		array[244] = ",\t";
-		baseColor = fingerprint._ParallaxSamplesMinMax;
-		array[245] = baseColor.ToString();
-		array[246] = "\n_UvShiftToggle,\t";
-		array[247] = (_UvShiftToggle > 0).ToString();
+		array[245] = fingerprint._DepthMap;
+		array[246] = "\n_ParallaxAmplitude,\t";
+		array[247] = (_ParallaxAmplitude > 0).ToString();
 		array[248] = ",\t";
-		array[249] = fingerprint._UvShiftToggle.ToString();
-		array[250] = "\n_UvShiftSteps,\t";
-		array[251] = (_UvShiftSteps > 0).ToString();
+		array[249] = fingerprint._ParallaxAmplitude.ToString();
+		array[250] = "\n_ParallaxSamplesMinMax,\t";
+		array[251] = (_ParallaxSamplesMinMax > 0).ToString();
 		array[252] = ",\t";
-		baseColor = fingerprint._UvShiftSteps;
+		baseColor = fingerprint._ParallaxSamplesMinMax;
 		array[253] = baseColor.ToString();
-		array[254] = "\n_UvShiftRate,\t";
-		array[255] = (_UvShiftRate > 0).ToString();
+		array[254] = "\n_UvShiftToggle,\t";
+		array[255] = (_UvShiftToggle > 0).ToString();
 		array[256] = ",\t";
-		baseColor = fingerprint._UvShiftRate;
-		array[257] = baseColor.ToString();
-		array[258] = "\n_UvShiftOffset,\t";
-		array[259] = (_UvShiftOffset > 0).ToString();
+		array[257] = fingerprint._UvShiftToggle.ToString();
+		array[258] = "\n_UvShiftSteps,\t";
+		array[259] = (_UvShiftSteps > 0).ToString();
 		array[260] = ",\t";
-		baseColor = fingerprint._UvShiftOffset;
+		baseColor = fingerprint._UvShiftSteps;
 		array[261] = baseColor.ToString();
-		array[262] = "\n_UseGridEffect,\t";
-		array[263] = (_UseGridEffect > 0).ToString();
+		array[262] = "\n_UvShiftRate,\t";
+		array[263] = (_UvShiftRate > 0).ToString();
 		array[264] = ",\t";
-		array[265] = fingerprint._UseGridEffect.ToString();
-		array[266] = "\n_UseCrystalEffect,\t";
-		array[267] = (_UseCrystalEffect > 0).ToString();
+		baseColor = fingerprint._UvShiftRate;
+		array[265] = baseColor.ToString();
+		array[266] = "\n_UvShiftOffset,\t";
+		array[267] = (_UvShiftOffset > 0).ToString();
 		array[268] = ",\t";
-		array[269] = fingerprint._UseCrystalEffect.ToString();
-		array[270] = "\n_CrystalPower,\t";
-		array[271] = (_CrystalPower > 0).ToString();
+		baseColor = fingerprint._UvShiftOffset;
+		array[269] = baseColor.ToString();
+		array[270] = "\n_UseGridEffect,\t";
+		array[271] = (_UseGridEffect > 0).ToString();
 		array[272] = ",\t";
-		array[273] = fingerprint._CrystalPower.ToString();
-		array[274] = "\n_CrystalRimColor,\t";
-		array[275] = (_CrystalRimColor > 0).ToString();
+		array[273] = fingerprint._UseGridEffect.ToString();
+		array[274] = "\n_UseCrystalEffect,\t";
+		array[275] = (_UseCrystalEffect > 0).ToString();
 		array[276] = ",\t";
-		baseColor = fingerprint._CrystalRimColor;
-		array[277] = baseColor.ToString();
-		array[278] = "\n_LiquidVolume,\t";
-		array[279] = (_LiquidVolume > 0).ToString();
+		array[277] = fingerprint._UseCrystalEffect.ToString();
+		array[278] = "\n_CrystalPower,\t";
+		array[279] = (_CrystalPower > 0).ToString();
 		array[280] = ",\t";
-		array[281] = fingerprint._LiquidVolume.ToString();
-		array[282] = "\n_LiquidFill,\t";
-		array[283] = (_LiquidFill > 0).ToString();
+		array[281] = fingerprint._CrystalPower.ToString();
+		array[282] = "\n_CrystalRimColor,\t";
+		array[283] = (_CrystalRimColor > 0).ToString();
 		array[284] = ",\t";
-		array[285] = fingerprint._LiquidFill.ToString();
-		array[286] = "\n_LiquidFillNormal,\t";
-		array[287] = (_LiquidFillNormal > 0).ToString();
+		baseColor = fingerprint._CrystalRimColor;
+		array[285] = baseColor.ToString();
+		array[286] = "\n_LiquidVolume,\t";
+		array[287] = (_LiquidVolume > 0).ToString();
 		array[288] = ",\t";
-		baseColor = fingerprint._LiquidFillNormal;
-		array[289] = baseColor.ToString();
-		array[290] = "\n_LiquidSurfaceColor,\t";
-		array[291] = (_LiquidSurfaceColor > 0).ToString();
+		array[289] = fingerprint._LiquidVolume.ToString();
+		array[290] = "\n_LiquidFill,\t";
+		array[291] = (_LiquidFill > 0).ToString();
 		array[292] = ",\t";
-		baseColor = fingerprint._LiquidSurfaceColor;
-		array[293] = baseColor.ToString();
-		array[294] = "\n_LiquidSwayX,\t";
-		array[295] = (_LiquidSwayX > 0).ToString();
+		array[293] = fingerprint._LiquidFill.ToString();
+		array[294] = "\n_LiquidFillNormal,\t";
+		array[295] = (_LiquidFillNormal > 0).ToString();
 		array[296] = ",\t";
-		array[297] = fingerprint._LiquidSwayX.ToString();
-		array[298] = "\n_LiquidSwayY,\t";
-		array[299] = (_LiquidSwayY > 0).ToString();
+		baseColor = fingerprint._LiquidFillNormal;
+		array[297] = baseColor.ToString();
+		array[298] = "\n_LiquidSurfaceColor,\t";
+		array[299] = (_LiquidSurfaceColor > 0).ToString();
 		array[300] = ",\t";
-		array[301] = fingerprint._LiquidSwayY.ToString();
-		array[302] = "\n_LiquidContainer,\t";
-		array[303] = (_LiquidContainer > 0).ToString();
+		baseColor = fingerprint._LiquidSurfaceColor;
+		array[301] = baseColor.ToString();
+		array[302] = "\n_LiquidSwayX,\t";
+		array[303] = (_LiquidSwayX > 0).ToString();
 		array[304] = ",\t";
-		array[305] = fingerprint._LiquidContainer.ToString();
-		array[306] = "\n_LiquidPlanePosition,\t";
-		array[307] = (_LiquidPlanePosition > 0).ToString();
+		array[305] = fingerprint._LiquidSwayX.ToString();
+		array[306] = "\n_LiquidSwayY,\t";
+		array[307] = (_LiquidSwayY > 0).ToString();
 		array[308] = ",\t";
-		baseColor = fingerprint._LiquidPlanePosition;
-		array[309] = baseColor.ToString();
-		array[310] = "\n_LiquidPlaneNormal,\t";
-		array[311] = (_LiquidPlaneNormal > 0).ToString();
+		array[309] = fingerprint._LiquidSwayY.ToString();
+		array[310] = "\n_LiquidContainer,\t";
+		array[311] = (_LiquidContainer > 0).ToString();
 		array[312] = ",\t";
-		baseColor = fingerprint._LiquidPlaneNormal;
-		array[313] = baseColor.ToString();
-		array[314] = "\n_VertexFlapToggle,\t";
-		array[315] = (_VertexFlapToggle > 0).ToString();
+		array[313] = fingerprint._LiquidContainer.ToString();
+		array[314] = "\n_LiquidPlanePosition,\t";
+		array[315] = (_LiquidPlanePosition > 0).ToString();
 		array[316] = ",\t";
-		array[317] = fingerprint._VertexFlapToggle.ToString();
-		array[318] = "\n_VertexFlapAxis,\t";
-		array[319] = (_VertexFlapAxis > 0).ToString();
+		baseColor = fingerprint._LiquidPlanePosition;
+		array[317] = baseColor.ToString();
+		array[318] = "\n_LiquidPlaneNormal,\t";
+		array[319] = (_LiquidPlaneNormal > 0).ToString();
 		array[320] = ",\t";
-		baseColor = fingerprint._VertexFlapAxis;
+		baseColor = fingerprint._LiquidPlaneNormal;
 		array[321] = baseColor.ToString();
-		array[322] = "\n_VertexFlapDegreesMinMax,\t";
-		array[323] = (_VertexFlapDegreesMinMax > 0).ToString();
+		array[322] = "\n_VertexFlapToggle,\t";
+		array[323] = (_VertexFlapToggle > 0).ToString();
 		array[324] = ",\t";
-		baseColor = fingerprint._VertexFlapDegreesMinMax;
-		array[325] = baseColor.ToString();
-		array[326] = "\n_VertexFlapSpeed,\t";
-		array[327] = (_VertexFlapSpeed > 0).ToString();
+		array[325] = fingerprint._VertexFlapToggle.ToString();
+		array[326] = "\n_VertexFlapAxis,\t";
+		array[327] = (_VertexFlapAxis > 0).ToString();
 		array[328] = ",\t";
-		array[329] = fingerprint._VertexFlapSpeed.ToString();
-		array[330] = "\n_VertexFlapPhaseOffset,\t";
-		array[331] = (_VertexFlapPhaseOffset > 0).ToString();
+		baseColor = fingerprint._VertexFlapAxis;
+		array[329] = baseColor.ToString();
+		array[330] = "\n_VertexFlapDegreesMinMax,\t";
+		array[331] = (_VertexFlapDegreesMinMax > 0).ToString();
 		array[332] = ",\t";
-		array[333] = fingerprint._VertexFlapPhaseOffset.ToString();
-		array[334] = "\n_VertexWaveToggle,\t";
-		array[335] = (_VertexWaveToggle > 0).ToString();
+		baseColor = fingerprint._VertexFlapDegreesMinMax;
+		array[333] = baseColor.ToString();
+		array[334] = "\n_VertexFlapSpeed,\t";
+		array[335] = (_VertexFlapSpeed > 0).ToString();
 		array[336] = ",\t";
-		array[337] = fingerprint._VertexWaveToggle.ToString();
-		array[338] = "\n_VertexWaveDebug,\t";
-		array[339] = (_VertexWaveDebug > 0).ToString();
+		array[337] = fingerprint._VertexFlapSpeed.ToString();
+		array[338] = "\n_VertexFlapPhaseOffset,\t";
+		array[339] = (_VertexFlapPhaseOffset > 0).ToString();
 		array[340] = ",\t";
-		array[341] = fingerprint._VertexWaveDebug.ToString();
-		array[342] = "\n_VertexWaveEnd,\t";
-		array[343] = (_VertexWaveEnd > 0).ToString();
+		array[341] = fingerprint._VertexFlapPhaseOffset.ToString();
+		array[342] = "\n_VertexWaveToggle,\t";
+		array[343] = (_VertexWaveToggle > 0).ToString();
 		array[344] = ",\t";
-		baseColor = fingerprint._VertexWaveEnd;
-		array[345] = baseColor.ToString();
-		array[346] = "\n_VertexWaveParams,\t";
-		array[347] = (_VertexWaveParams > 0).ToString();
+		array[345] = fingerprint._VertexWaveToggle.ToString();
+		array[346] = "\n_VertexWaveDebug,\t";
+		array[347] = (_VertexWaveDebug > 0).ToString();
 		array[348] = ",\t";
-		baseColor = fingerprint._VertexWaveParams;
-		array[349] = baseColor.ToString();
-		array[350] = "\n_VertexWaveFalloff,\t";
-		array[351] = (_VertexWaveFalloff > 0).ToString();
+		array[349] = fingerprint._VertexWaveDebug.ToString();
+		array[350] = "\n_VertexWaveEnd,\t";
+		array[351] = (_VertexWaveEnd > 0).ToString();
 		array[352] = ",\t";
-		baseColor = fingerprint._VertexWaveFalloff;
+		baseColor = fingerprint._VertexWaveEnd;
 		array[353] = baseColor.ToString();
-		array[354] = "\n_VertexWaveSphereMask,\t";
-		array[355] = (_VertexWaveSphereMask > 0).ToString();
+		array[354] = "\n_VertexWaveParams,\t";
+		array[355] = (_VertexWaveParams > 0).ToString();
 		array[356] = ",\t";
-		baseColor = fingerprint._VertexWaveSphereMask;
+		baseColor = fingerprint._VertexWaveParams;
 		array[357] = baseColor.ToString();
-		array[358] = "\n_VertexWavePhaseOffset,\t";
-		array[359] = (_VertexWavePhaseOffset > 0).ToString();
+		array[358] = "\n_VertexWaveFalloff,\t";
+		array[359] = (_VertexWaveFalloff > 0).ToString();
 		array[360] = ",\t";
-		array[361] = fingerprint._VertexWavePhaseOffset.ToString();
-		array[362] = "\n_VertexWaveAxes,\t";
-		array[363] = (_VertexWaveAxes > 0).ToString();
+		baseColor = fingerprint._VertexWaveFalloff;
+		array[361] = baseColor.ToString();
+		array[362] = "\n_VertexWaveSphereMask,\t";
+		array[363] = (_VertexWaveSphereMask > 0).ToString();
 		array[364] = ",\t";
-		baseColor = fingerprint._VertexWaveAxes;
+		baseColor = fingerprint._VertexWaveSphereMask;
 		array[365] = baseColor.ToString();
-		array[366] = "\n_VertexRotateToggle,\t";
-		array[367] = (_VertexRotateToggle > 0).ToString();
+		array[366] = "\n_VertexWavePhaseOffset,\t";
+		array[367] = (_VertexWavePhaseOffset > 0).ToString();
 		array[368] = ",\t";
-		array[369] = fingerprint._VertexRotateToggle.ToString();
-		array[370] = "\n_VertexRotateAngles,\t";
-		array[371] = (_VertexRotateAngles > 0).ToString();
+		array[369] = fingerprint._VertexWavePhaseOffset.ToString();
+		array[370] = "\n_VertexWaveAxes,\t";
+		array[371] = (_VertexWaveAxes > 0).ToString();
 		array[372] = ",\t";
-		baseColor = fingerprint._VertexRotateAngles;
+		baseColor = fingerprint._VertexWaveAxes;
 		array[373] = baseColor.ToString();
-		array[374] = "\n_VertexRotateAnim,\t";
-		array[375] = (_VertexRotateAnim > 0).ToString();
+		array[374] = "\n_VertexRotateToggle,\t";
+		array[375] = (_VertexRotateToggle > 0).ToString();
 		array[376] = ",\t";
-		array[377] = fingerprint._VertexRotateAnim.ToString();
-		array[378] = "\n_VertexLightToggle,\t";
-		array[379] = (_VertexLightToggle > 0).ToString();
+		array[377] = fingerprint._VertexRotateToggle.ToString();
+		array[378] = "\n_VertexRotateAngles,\t";
+		array[379] = (_VertexRotateAngles > 0).ToString();
 		array[380] = ",\t";
-		array[381] = fingerprint._VertexLightToggle.ToString();
-		array[382] = "\n_InnerGlowOn,\t";
-		array[383] = (_InnerGlowOn > 0).ToString();
+		baseColor = fingerprint._VertexRotateAngles;
+		array[381] = baseColor.ToString();
+		array[382] = "\n_VertexRotateAnim,\t";
+		array[383] = (_VertexRotateAnim > 0).ToString();
 		array[384] = ",\t";
-		array[385] = fingerprint._InnerGlowOn.ToString();
-		array[386] = "\n_InnerGlowColor,\t";
-		array[387] = (_InnerGlowColor > 0).ToString();
+		array[385] = fingerprint._VertexRotateAnim.ToString();
+		array[386] = "\n_VertexLightToggle,\t";
+		array[387] = (_VertexLightToggle > 0).ToString();
 		array[388] = ",\t";
-		baseColor = fingerprint._InnerGlowColor;
-		array[389] = baseColor.ToString();
-		array[390] = "\n_InnerGlowParams,\t";
-		array[391] = (_InnerGlowParams > 0).ToString();
+		array[389] = fingerprint._VertexLightToggle.ToString();
+		array[390] = "\n_InnerGlowOn,\t";
+		array[391] = (_InnerGlowOn > 0).ToString();
 		array[392] = ",\t";
-		baseColor = fingerprint._InnerGlowParams;
-		array[393] = baseColor.ToString();
-		array[394] = "\n_InnerGlowTap,\t";
-		array[395] = (_InnerGlowTap > 0).ToString();
+		array[393] = fingerprint._InnerGlowOn.ToString();
+		array[394] = "\n_InnerGlowColor,\t";
+		array[395] = (_InnerGlowColor > 0).ToString();
 		array[396] = ",\t";
-		array[397] = fingerprint._InnerGlowTap.ToString();
-		array[398] = "\n_InnerGlowSine,\t";
-		array[399] = (_InnerGlowSine > 0).ToString();
+		baseColor = fingerprint._InnerGlowColor;
+		array[397] = baseColor.ToString();
+		array[398] = "\n_InnerGlowParams,\t";
+		array[399] = (_InnerGlowParams > 0).ToString();
 		array[400] = ",\t";
-		array[401] = fingerprint._InnerGlowSine.ToString();
-		array[402] = "\n_InnerGlowSinePeriod,\t";
-		array[403] = (_InnerGlowSinePeriod > 0).ToString();
+		baseColor = fingerprint._InnerGlowParams;
+		array[401] = baseColor.ToString();
+		array[402] = "\n_InnerGlowTap,\t";
+		array[403] = (_InnerGlowTap > 0).ToString();
 		array[404] = ",\t";
-		array[405] = fingerprint._InnerGlowSinePeriod.ToString();
-		array[406] = "\n_InnerGlowSinePhaseShift,\t";
-		array[407] = (_InnerGlowSinePhaseShift > 0).ToString();
+		array[405] = fingerprint._InnerGlowTap.ToString();
+		array[406] = "\n_InnerGlowSine,\t";
+		array[407] = (_InnerGlowSine > 0).ToString();
 		array[408] = ",\t";
-		array[409] = fingerprint._InnerGlowSinePhaseShift.ToString();
-		array[410] = "\n_StealthEffectOn,\t";
-		array[411] = (_StealthEffectOn > 0).ToString();
+		array[409] = fingerprint._InnerGlowSine.ToString();
+		array[410] = "\n_InnerGlowSinePeriod,\t";
+		array[411] = (_InnerGlowSinePeriod > 0).ToString();
 		array[412] = ",\t";
-		array[413] = fingerprint._StealthEffectOn.ToString();
-		array[414] = "\n_UseEyeTracking,\t";
-		array[415] = (_UseEyeTracking > 0).ToString();
+		array[413] = fingerprint._InnerGlowSinePeriod.ToString();
+		array[414] = "\n_InnerGlowSinePhaseShift,\t";
+		array[415] = (_InnerGlowSinePhaseShift > 0).ToString();
 		array[416] = ",\t";
-		array[417] = fingerprint._UseEyeTracking.ToString();
-		array[418] = "\n_EyeTileOffsetUV,\t";
-		array[419] = (_EyeTileOffsetUV > 0).ToString();
+		array[417] = fingerprint._InnerGlowSinePhaseShift.ToString();
+		array[418] = "\n_StealthEffectOn,\t";
+		array[419] = (_StealthEffectOn > 0).ToString();
 		array[420] = ",\t";
-		baseColor = fingerprint._EyeTileOffsetUV;
-		array[421] = baseColor.ToString();
-		array[422] = "\n_EyeOverrideUV,\t";
-		array[423] = (_EyeOverrideUV > 0).ToString();
+		array[421] = fingerprint._StealthEffectOn.ToString();
+		array[422] = "\n_UseEyeTracking,\t";
+		array[423] = (_UseEyeTracking > 0).ToString();
 		array[424] = ",\t";
-		array[425] = fingerprint._EyeOverrideUV.ToString();
-		array[426] = "\n_EyeOverrideUVTransform,\t";
-		array[427] = (_EyeOverrideUVTransform > 0).ToString();
+		array[425] = fingerprint._UseEyeTracking.ToString();
+		array[426] = "\n_EyeTileOffsetUV,\t";
+		array[427] = (_EyeTileOffsetUV > 0).ToString();
 		array[428] = ",\t";
-		baseColor = fingerprint._EyeOverrideUVTransform;
+		baseColor = fingerprint._EyeTileOffsetUV;
 		array[429] = baseColor.ToString();
-		array[430] = "\n_UseMouthFlap,\t";
-		array[431] = (_UseMouthFlap > 0).ToString();
+		array[430] = "\n_EyeOverrideUV,\t";
+		array[431] = (_EyeOverrideUV > 0).ToString();
 		array[432] = ",\t";
-		array[433] = fingerprint._UseMouthFlap.ToString();
-		array[434] = "\n_MouthMap,\t";
-		array[435] = (_MouthMap > 0).ToString();
+		array[433] = fingerprint._EyeOverrideUV.ToString();
+		array[434] = "\n_EyeOverrideUVTransform,\t";
+		array[435] = (_EyeOverrideUVTransform > 0).ToString();
 		array[436] = ",\t";
-		array[437] = fingerprint._MouthMap;
-		array[438] = "\n_MouthMap_ST,\t";
-		array[439] = (_MouthMap_ST > 0).ToString();
+		baseColor = fingerprint._EyeOverrideUVTransform;
+		array[437] = baseColor.ToString();
+		array[438] = "\n_UseMouthFlap,\t";
+		array[439] = (_UseMouthFlap > 0).ToString();
 		array[440] = ",\t";
-		baseColor = fingerprint._MouthMap_ST;
-		array[441] = baseColor.ToString();
-		array[442] = "\n_UseVertexColor,\t";
-		array[443] = (_UseVertexColor > 0).ToString();
+		array[441] = fingerprint._UseMouthFlap.ToString();
+		array[442] = "\n_MouthMap,\t";
+		array[443] = (_MouthMap > 0).ToString();
 		array[444] = ",\t";
-		array[445] = fingerprint._UseVertexColor.ToString();
-		array[446] = "\n_WaterEffect,\t";
-		array[447] = (_WaterEffect > 0).ToString();
+		array[445] = fingerprint._MouthMap;
+		array[446] = "\n_MouthMap_ST,\t";
+		array[447] = (_MouthMap_ST > 0).ToString();
 		array[448] = ",\t";
-		array[449] = fingerprint._WaterEffect.ToString();
-		array[450] = "\n_HeightBasedWaterEffect,\t";
-		array[451] = (_HeightBasedWaterEffect > 0).ToString();
+		baseColor = fingerprint._MouthMap_ST;
+		array[449] = baseColor.ToString();
+		array[450] = "\n_UseVertexColor,\t";
+		array[451] = (_UseVertexColor > 0).ToString();
 		array[452] = ",\t";
-		array[453] = fingerprint._HeightBasedWaterEffect.ToString();
-		array[454] = "\n_WaterCaustics,\t";
-		array[455] = (_WaterCaustics > 0).ToString();
+		array[453] = fingerprint._UseVertexColor.ToString();
+		array[454] = "\n_WaterEffect,\t";
+		array[455] = (_WaterEffect > 0).ToString();
 		array[456] = ",\t";
-		array[457] = fingerprint._WaterCaustics.ToString();
-		array[458] = "\n_UseDayNightLightmap,\t";
-		array[459] = (_UseDayNightLightmap > 0).ToString();
+		array[457] = fingerprint._WaterEffect.ToString();
+		array[458] = "\n_HeightBasedWaterEffect,\t";
+		array[459] = (_HeightBasedWaterEffect > 0).ToString();
 		array[460] = ",\t";
-		array[461] = fingerprint._UseDayNightLightmap.ToString();
-		array[462] = "\n_UseSpecular,\t";
-		array[463] = (_UseSpecular > 0).ToString();
+		array[461] = fingerprint._HeightBasedWaterEffect.ToString();
+		array[462] = "\n_WaterCaustics,\t";
+		array[463] = (_WaterCaustics > 0).ToString();
 		array[464] = ",\t";
-		array[465] = fingerprint._UseSpecular.ToString();
-		array[466] = "\n_UseSpecularAlphaChannel,\t";
-		array[467] = (_UseSpecularAlphaChannel > 0).ToString();
+		array[465] = fingerprint._WaterCaustics.ToString();
+		array[466] = "\n_UseDayNightLightmap,\t";
+		array[467] = (_UseDayNightLightmap > 0).ToString();
 		array[468] = ",\t";
-		array[469] = fingerprint._UseSpecularAlphaChannel.ToString();
-		array[470] = "\n_Smoothness,\t";
-		array[471] = (_Smoothness > 0).ToString();
+		array[469] = fingerprint._UseDayNightLightmap.ToString();
+		array[470] = "\n_UseSpecular,\t";
+		array[471] = (_UseSpecular > 0).ToString();
 		array[472] = ",\t";
-		array[473] = fingerprint._Smoothness.ToString();
-		array[474] = "\n_UseSpecHighlight,\t";
-		array[475] = (_UseSpecHighlight > 0).ToString();
+		array[473] = fingerprint._UseSpecular.ToString();
+		array[474] = "\n_UseSpecularAlphaChannel,\t";
+		array[475] = (_UseSpecularAlphaChannel > 0).ToString();
 		array[476] = ",\t";
-		array[477] = fingerprint._UseSpecHighlight.ToString();
-		array[478] = "\n_SpecularDir,\t";
-		array[479] = (_SpecularDir > 0).ToString();
+		array[477] = fingerprint._UseSpecularAlphaChannel.ToString();
+		array[478] = "\n_Smoothness,\t";
+		array[479] = (_Smoothness > 0).ToString();
 		array[480] = ",\t";
-		baseColor = fingerprint._SpecularDir;
-		array[481] = baseColor.ToString();
-		array[482] = "\n_SpecularPowerIntensity,\t";
-		array[483] = (_SpecularPowerIntensity > 0).ToString();
+		array[481] = fingerprint._Smoothness.ToString();
+		array[482] = "\n_UseSpecHighlight,\t";
+		array[483] = (_UseSpecHighlight > 0).ToString();
 		array[484] = ",\t";
-		baseColor = fingerprint._SpecularPowerIntensity;
-		array[485] = baseColor.ToString();
-		array[486] = "\n_SpecularColor,\t";
-		array[487] = (_SpecularColor > 0).ToString();
+		array[485] = fingerprint._UseSpecHighlight.ToString();
+		array[486] = "\n_SpecularDir,\t";
+		array[487] = (_SpecularDir > 0).ToString();
 		array[488] = ",\t";
-		baseColor = fingerprint._SpecularColor;
+		baseColor = fingerprint._SpecularDir;
 		array[489] = baseColor.ToString();
-		array[490] = "\n_SpecularUseDiffuseColor,\t";
-		array[491] = (_SpecularUseDiffuseColor > 0).ToString();
+		array[490] = "\n_SpecularPowerIntensity,\t";
+		array[491] = (_SpecularPowerIntensity > 0).ToString();
 		array[492] = ",\t";
-		array[493] = fingerprint._SpecularUseDiffuseColor.ToString();
-		array[494] = "\n_EmissionToggle,\t";
-		array[495] = (_EmissionToggle > 0).ToString();
+		baseColor = fingerprint._SpecularPowerIntensity;
+		array[493] = baseColor.ToString();
+		array[494] = "\n_SpecularColor,\t";
+		array[495] = (_SpecularColor > 0).ToString();
 		array[496] = ",\t";
-		array[497] = fingerprint._EmissionToggle.ToString();
-		array[498] = "\n_EmissionColor,\t";
-		array[499] = (_EmissionColor > 0).ToString();
+		baseColor = fingerprint._SpecularColor;
+		array[497] = baseColor.ToString();
+		array[498] = "\n_SpecularUseDiffuseColor,\t";
+		array[499] = (_SpecularUseDiffuseColor > 0).ToString();
 		array[500] = ",\t";
-		baseColor = fingerprint._EmissionColor;
-		array[501] = baseColor.ToString();
-		array[502] = "\n_EmissionMap,\t";
-		array[503] = (_EmissionMap > 0).ToString();
+		array[501] = fingerprint._SpecularUseDiffuseColor.ToString();
+		array[502] = "\n_EmissionToggle,\t";
+		array[503] = (_EmissionToggle > 0).ToString();
 		array[504] = ",\t";
-		array[505] = fingerprint._EmissionMap;
-		array[506] = "\n_EmissionMaskByBaseMapAlpha,\t";
-		array[507] = (_EmissionMaskByBaseMapAlpha > 0).ToString();
+		array[505] = fingerprint._EmissionToggle.ToString();
+		array[506] = "\n_EmissionColor,\t";
+		array[507] = (_EmissionColor > 0).ToString();
 		array[508] = ",\t";
-		array[509] = fingerprint._EmissionMaskByBaseMapAlpha.ToString();
-		array[510] = "\n_EmissionUVScrollSpeed,\t";
-		array[511] = (_EmissionUVScrollSpeed > 0).ToString();
+		baseColor = fingerprint._EmissionColor;
+		array[509] = baseColor.ToString();
+		array[510] = "\n_EmissionMap,\t";
+		array[511] = (_EmissionMap > 0).ToString();
 		array[512] = ",\t";
-		baseColor = fingerprint._EmissionUVScrollSpeed;
-		array[513] = baseColor.ToString();
-		array[514] = "\n_EmissionDissolveProgress,\t";
-		array[515] = (_EmissionDissolveProgress > 0).ToString();
+		array[513] = fingerprint._EmissionMap;
+		array[514] = "\n_EmissionMaskByBaseMapAlpha,\t";
+		array[515] = (_EmissionMaskByBaseMapAlpha > 0).ToString();
 		array[516] = ",\t";
-		array[517] = fingerprint._EmissionDissolveProgress.ToString();
-		array[518] = "\n_EmissionDissolveAnimation,\t";
-		array[519] = (_EmissionDissolveAnimation > 0).ToString();
+		array[517] = fingerprint._EmissionMaskByBaseMapAlpha.ToString();
+		array[518] = "\n_EmissionUVScrollSpeed,\t";
+		array[519] = (_EmissionUVScrollSpeed > 0).ToString();
 		array[520] = ",\t";
-		baseColor = fingerprint._EmissionDissolveAnimation;
+		baseColor = fingerprint._EmissionUVScrollSpeed;
 		array[521] = baseColor.ToString();
-		array[522] = "\n_EmissionDissolveEdgeSize,\t";
-		array[523] = (_EmissionDissolveEdgeSize > 0).ToString();
+		array[522] = "\n_EmissionDissolveProgress,\t";
+		array[523] = (_EmissionDissolveProgress > 0).ToString();
 		array[524] = ",\t";
-		array[525] = fingerprint._EmissionDissolveEdgeSize.ToString();
-		array[526] = "\n_EmissionIntensityInDynamic,\t";
-		array[527] = (_EmissionIntensityInDynamic > 0).ToString();
+		array[525] = fingerprint._EmissionDissolveProgress.ToString();
+		array[526] = "\n_EmissionDissolveAnimation,\t";
+		array[527] = (_EmissionDissolveAnimation > 0).ToString();
 		array[528] = ",\t";
-		array[529] = fingerprint._EmissionIntensityInDynamic.ToString();
-		array[530] = "\n_EmissionUseUVWaveWarp,\t";
-		array[531] = (_EmissionUseUVWaveWarp > 0).ToString();
+		baseColor = fingerprint._EmissionDissolveAnimation;
+		array[529] = baseColor.ToString();
+		array[530] = "\n_EmissionDissolveEdgeSize,\t";
+		array[531] = (_EmissionDissolveEdgeSize > 0).ToString();
 		array[532] = ",\t";
-		array[533] = fingerprint._EmissionUseUVWaveWarp.ToString();
-		array[534] = "\n_GreyZoneException,\t";
-		array[535] = (_GreyZoneException > 0).ToString();
+		array[533] = fingerprint._EmissionDissolveEdgeSize.ToString();
+		array[534] = "\n_EmissionIntensityInDynamic,\t";
+		array[535] = (_EmissionIntensityInDynamic > 0).ToString();
 		array[536] = ",\t";
-		array[537] = fingerprint._GreyZoneException.ToString();
-		array[538] = "\n_Cull,\t";
-		array[539] = (_Cull > 0).ToString();
+		array[537] = fingerprint._EmissionIntensityInDynamic.ToString();
+		array[538] = "\n_EmissionUseUVWaveWarp,\t";
+		array[539] = (_EmissionUseUVWaveWarp > 0).ToString();
 		array[540] = ",\t";
-		array[541] = fingerprint._Cull.ToString();
-		array[542] = "\n_StencilReference,\t";
-		array[543] = (_StencilReference > 0).ToString();
+		array[541] = fingerprint._EmissionUseUVWaveWarp.ToString();
+		array[542] = "\n_GreyZoneException,\t";
+		array[543] = (_GreyZoneException > 0).ToString();
 		array[544] = ",\t";
-		array[545] = fingerprint._StencilReference.ToString();
-		array[546] = "\n_StencilComparison,\t";
-		array[547] = (_StencilComparison > 0).ToString();
+		array[545] = fingerprint._GreyZoneException.ToString();
+		array[546] = "\n_Cull,\t";
+		array[547] = (_Cull > 0).ToString();
 		array[548] = ",\t";
-		array[549] = fingerprint._StencilComparison.ToString();
-		array[550] = "\n_StencilPassFront,\t";
-		array[551] = (_StencilPassFront > 0).ToString();
+		array[549] = fingerprint._Cull.ToString();
+		array[550] = "\n_StencilReference,\t";
+		array[551] = (_StencilReference > 0).ToString();
 		array[552] = ",\t";
-		array[553] = fingerprint._StencilPassFront.ToString();
-		array[554] = "\n_USE_DEFORM_MAP,\t";
-		array[555] = (_USE_DEFORM_MAP > 0).ToString();
+		array[553] = fingerprint._StencilReference.ToString();
+		array[554] = "\n_StencilComparison,\t";
+		array[555] = (_StencilComparison > 0).ToString();
 		array[556] = ",\t";
-		array[557] = fingerprint._USE_DEFORM_MAP.ToString();
-		array[558] = "\n_DeformMap,\t";
-		array[559] = (_DeformMap > 0).ToString();
+		array[557] = fingerprint._StencilComparison.ToString();
+		array[558] = "\n_StencilPassFront,\t";
+		array[559] = (_StencilPassFront > 0).ToString();
 		array[560] = ",\t";
-		array[561] = fingerprint._DeformMap;
-		array[562] = "\n_DeformMapIntensity,\t";
-		array[563] = (_DeformMapIntensity > 0).ToString();
+		array[561] = fingerprint._StencilPassFront.ToString();
+		array[562] = "\n_USE_DEFORM_MAP,\t";
+		array[563] = (_USE_DEFORM_MAP > 0).ToString();
 		array[564] = ",\t";
-		array[565] = fingerprint._DeformMapIntensity.ToString();
-		array[566] = "\n_DeformMapMaskByVertColorRAmount,\t";
-		array[567] = (_DeformMapMaskByVertColorRAmount > 0).ToString();
+		array[565] = fingerprint._USE_DEFORM_MAP.ToString();
+		array[566] = "\n_DeformMap,\t";
+		array[567] = (_DeformMap > 0).ToString();
 		array[568] = ",\t";
-		array[569] = fingerprint._DeformMapMaskByVertColorRAmount.ToString();
-		array[570] = "\n_DeformMapScrollSpeed,\t";
-		array[571] = (_DeformMapScrollSpeed > 0).ToString();
+		array[569] = fingerprint._DeformMap;
+		array[570] = "\n_DeformMapIntensity,\t";
+		array[571] = (_DeformMapIntensity > 0).ToString();
 		array[572] = ",\t";
-		baseColor = fingerprint._DeformMapScrollSpeed;
-		array[573] = baseColor.ToString();
-		array[574] = "\n_DeformMapUV0Influence,\t";
-		array[575] = (_DeformMapUV0Influence > 0).ToString();
+		array[573] = fingerprint._DeformMapIntensity.ToString();
+		array[574] = "\n_DeformMapMaskByVertColorRAmount,\t";
+		array[575] = (_DeformMapMaskByVertColorRAmount > 0).ToString();
 		array[576] = ",\t";
-		baseColor = fingerprint._DeformMapUV0Influence;
-		array[577] = baseColor.ToString();
-		array[578] = "\n_DeformMapObjectSpaceOffsetsU,\t";
-		array[579] = (_DeformMapObjectSpaceOffsetsU > 0).ToString();
+		array[577] = fingerprint._DeformMapMaskByVertColorRAmount.ToString();
+		array[578] = "\n_DeformMapScrollSpeed,\t";
+		array[579] = (_DeformMapScrollSpeed > 0).ToString();
 		array[580] = ",\t";
-		baseColor = fingerprint._DeformMapObjectSpaceOffsetsU;
+		baseColor = fingerprint._DeformMapScrollSpeed;
 		array[581] = baseColor.ToString();
-		array[582] = "\n_DeformMapObjectSpaceOffsetsV,\t";
-		array[583] = (_DeformMapObjectSpaceOffsetsV > 0).ToString();
+		array[582] = "\n_DeformMapUV0Influence,\t";
+		array[583] = (_DeformMapUV0Influence > 0).ToString();
 		array[584] = ",\t";
-		baseColor = fingerprint._DeformMapObjectSpaceOffsetsV;
+		baseColor = fingerprint._DeformMapUV0Influence;
 		array[585] = baseColor.ToString();
-		array[586] = "\n_DeformMapWorldSpaceOffsetsU,\t";
-		array[587] = (_DeformMapWorldSpaceOffsetsU > 0).ToString();
+		array[586] = "\n_DeformMapObjectSpaceOffsetsU,\t";
+		array[587] = (_DeformMapObjectSpaceOffsetsU > 0).ToString();
 		array[588] = ",\t";
-		baseColor = fingerprint._DeformMapWorldSpaceOffsetsU;
+		baseColor = fingerprint._DeformMapObjectSpaceOffsetsU;
 		array[589] = baseColor.ToString();
-		array[590] = "\n_DeformMapWorldSpaceOffsetsV,\t";
-		array[591] = (_DeformMapWorldSpaceOffsetsV > 0).ToString();
+		array[590] = "\n_DeformMapObjectSpaceOffsetsV,\t";
+		array[591] = (_DeformMapObjectSpaceOffsetsV > 0).ToString();
 		array[592] = ",\t";
-		baseColor = fingerprint._DeformMapWorldSpaceOffsetsV;
+		baseColor = fingerprint._DeformMapObjectSpaceOffsetsV;
 		array[593] = baseColor.ToString();
-		array[594] = "\n_RotateOnYAxisBySinTime,\t";
-		array[595] = (_RotateOnYAxisBySinTime > 0).ToString();
+		array[594] = "\n_DeformMapWorldSpaceOffsetsU,\t";
+		array[595] = (_DeformMapWorldSpaceOffsetsU > 0).ToString();
 		array[596] = ",\t";
-		baseColor = fingerprint._RotateOnYAxisBySinTime;
+		baseColor = fingerprint._DeformMapWorldSpaceOffsetsU;
 		array[597] = baseColor.ToString();
-		array[598] = "\n_USE_TEX_ARRAY_ATLAS,\t";
-		array[599] = (_USE_TEX_ARRAY_ATLAS > 0).ToString();
+		array[598] = "\n_DeformMapWorldSpaceOffsetsV,\t";
+		array[599] = (_DeformMapWorldSpaceOffsetsV > 0).ToString();
 		array[600] = ",\t";
-		array[601] = fingerprint._USE_TEX_ARRAY_ATLAS.ToString();
-		array[602] = "\n_BaseMap_Atlas,\t";
-		array[603] = (_BaseMap_Atlas > 0).ToString();
+		baseColor = fingerprint._DeformMapWorldSpaceOffsetsV;
+		array[601] = baseColor.ToString();
+		array[602] = "\n_RotateOnYAxisBySinTime,\t";
+		array[603] = (_RotateOnYAxisBySinTime > 0).ToString();
 		array[604] = ",\t";
-		array[605] = fingerprint._BaseMap_Atlas;
-		array[606] = "\n_BaseMap_AtlasSlice,\t";
-		array[607] = (_BaseMap_AtlasSlice > 0).ToString();
+		baseColor = fingerprint._RotateOnYAxisBySinTime;
+		array[605] = baseColor.ToString();
+		array[606] = "\n_USE_TEX_ARRAY_ATLAS,\t";
+		array[607] = (_USE_TEX_ARRAY_ATLAS > 0).ToString();
 		array[608] = ",\t";
-		array[609] = fingerprint._BaseMap_AtlasSlice.ToString();
-		array[610] = "\n_BaseMap_AtlasSliceSource,\t";
-		array[611] = (_BaseMap_AtlasSliceSource > 0).ToString();
+		array[609] = fingerprint._USE_TEX_ARRAY_ATLAS.ToString();
+		array[610] = "\n_BaseMap_Atlas,\t";
+		array[611] = (_BaseMap_Atlas > 0).ToString();
 		array[612] = ",\t";
-		array[613] = fingerprint._BaseMap_AtlasSliceSource.ToString();
-		array[614] = "\n_EmissionMap_Atlas,\t";
-		array[615] = (_EmissionMap_Atlas > 0).ToString();
+		array[613] = fingerprint._BaseMap_Atlas;
+		array[614] = "\n_BaseMap_AtlasSlice,\t";
+		array[615] = (_BaseMap_AtlasSlice > 0).ToString();
 		array[616] = ",\t";
-		array[617] = fingerprint._EmissionMap_Atlas;
-		array[618] = "\n_EmissionMap_AtlasSlice,\t";
-		array[619] = (_EmissionMap_AtlasSlice > 0).ToString();
+		array[617] = fingerprint._BaseMap_AtlasSlice.ToString();
+		array[618] = "\n_BaseMap_AtlasSliceSource,\t";
+		array[619] = (_BaseMap_AtlasSliceSource > 0).ToString();
 		array[620] = ",\t";
-		array[621] = fingerprint._EmissionMap_AtlasSlice.ToString();
-		array[622] = "\n_DeformMap_Atlas,\t";
-		array[623] = (_DeformMap_Atlas > 0).ToString();
+		array[621] = fingerprint._BaseMap_AtlasSliceSource.ToString();
+		array[622] = "\n_EmissionMap_Atlas,\t";
+		array[623] = (_EmissionMap_Atlas > 0).ToString();
 		array[624] = ",\t";
-		array[625] = fingerprint._DeformMap_Atlas;
-		array[626] = "\n_DeformMap_AtlasSlice,\t";
-		array[627] = (_DeformMap_AtlasSlice > 0).ToString();
+		array[625] = fingerprint._EmissionMap_Atlas;
+		array[626] = "\n_EmissionMap_AtlasSlice,\t";
+		array[627] = (_EmissionMap_AtlasSlice > 0).ToString();
 		array[628] = ",\t";
-		array[629] = fingerprint._DeformMap_AtlasSlice.ToString();
-		array[630] = "\n_WeatherMap_Atlas,\t";
-		array[631] = (_WeatherMap_Atlas > 0).ToString();
+		array[629] = fingerprint._EmissionMap_AtlasSlice.ToString();
+		array[630] = "\n_DeformMap_Atlas,\t";
+		array[631] = (_DeformMap_Atlas > 0).ToString();
 		array[632] = ",\t";
-		array[633] = fingerprint._WeatherMap_Atlas;
-		array[634] = "\n_WeatherMap_AtlasSlice,\t";
-		array[635] = (_WeatherMap_AtlasSlice > 0).ToString();
+		array[633] = fingerprint._DeformMap_Atlas;
+		array[634] = "\n_DeformMap_AtlasSlice,\t";
+		array[635] = (_DeformMap_AtlasSlice > 0).ToString();
 		array[636] = ",\t";
-		array[637] = fingerprint._WeatherMap_AtlasSlice.ToString();
-		array[638] = "\n_DEBUG_PAWN_DATA,\t";
-		array[639] = (_DEBUG_PAWN_DATA > 0).ToString();
+		array[637] = fingerprint._DeformMap_AtlasSlice.ToString();
+		array[638] = "\n_WeatherMap_Atlas,\t";
+		array[639] = (_WeatherMap_Atlas > 0).ToString();
 		array[640] = ",\t";
-		array[641] = fingerprint._DEBUG_PAWN_DATA.ToString();
-		array[642] = "\n_SrcBlend,\t";
-		array[643] = (_SrcBlend > 0).ToString();
+		array[641] = fingerprint._WeatherMap_Atlas;
+		array[642] = "\n_WeatherMap_AtlasSlice,\t";
+		array[643] = (_WeatherMap_AtlasSlice > 0).ToString();
 		array[644] = ",\t";
-		array[645] = fingerprint._SrcBlend.ToString();
-		array[646] = "\n_DstBlend,\t";
-		array[647] = (_DstBlend > 0).ToString();
+		array[645] = fingerprint._WeatherMap_AtlasSlice.ToString();
+		array[646] = "\n_DEBUG_PAWN_DATA,\t";
+		array[647] = (_DEBUG_PAWN_DATA > 0).ToString();
 		array[648] = ",\t";
-		array[649] = fingerprint._DstBlend.ToString();
-		array[650] = "\n_SrcBlendAlpha,\t";
-		array[651] = (_SrcBlendAlpha > 0).ToString();
+		array[649] = fingerprint._DEBUG_PAWN_DATA.ToString();
+		array[650] = "\n_SrcBlend,\t";
+		array[651] = (_SrcBlend > 0).ToString();
 		array[652] = ",\t";
-		array[653] = fingerprint._SrcBlendAlpha.ToString();
-		array[654] = "\n_DstBlendAlpha,\t";
-		array[655] = (_DstBlendAlpha > 0).ToString();
+		array[653] = fingerprint._SrcBlend.ToString();
+		array[654] = "\n_DstBlend,\t";
+		array[655] = (_DstBlend > 0).ToString();
 		array[656] = ",\t";
-		array[657] = fingerprint._DstBlendAlpha.ToString();
-		array[658] = "\n_ZWrite,\t";
-		array[659] = (_ZWrite > 0).ToString();
+		array[657] = fingerprint._DstBlend.ToString();
+		array[658] = "\n_SrcBlendAlpha,\t";
+		array[659] = (_SrcBlendAlpha > 0).ToString();
 		array[660] = ",\t";
-		array[661] = fingerprint._ZWrite.ToString();
-		array[662] = "\n_AlphaToMask,\t";
-		array[663] = (_AlphaToMask > 0).ToString();
+		array[661] = fingerprint._SrcBlendAlpha.ToString();
+		array[662] = "\n_DstBlendAlpha,\t";
+		array[663] = (_DstBlendAlpha > 0).ToString();
 		array[664] = ",\t";
-		array[665] = fingerprint._AlphaToMask.ToString();
-		array[666] = "\n_Color,\t";
-		array[667] = (_Color > 0).ToString();
+		array[665] = fingerprint._DstBlendAlpha.ToString();
+		array[666] = "\n_ZWrite,\t";
+		array[667] = (_ZWrite > 0).ToString();
 		array[668] = ",\t";
-		baseColor = fingerprint._Color;
-		array[669] = baseColor.ToString();
-		array[670] = "\n_Surface,\t";
-		array[671] = (_Surface > 0).ToString();
+		array[669] = fingerprint._ZWrite.ToString();
+		array[670] = "\n_AlphaToMask,\t";
+		array[671] = (_AlphaToMask > 0).ToString();
 		array[672] = ",\t";
-		array[673] = fingerprint._Surface.ToString();
-		array[674] = "\n_Metallic,\t";
-		array[675] = (_Metallic > 0).ToString();
+		array[673] = fingerprint._AlphaToMask.ToString();
+		array[674] = "\n_Color,\t";
+		array[675] = (_Color > 0).ToString();
 		array[676] = ",\t";
-		array[677] = fingerprint._Metallic.ToString();
-		array[678] = "\n_SpecColor,\t";
-		array[679] = (_SpecColor > 0).ToString();
+		baseColor = fingerprint._Color;
+		array[677] = baseColor.ToString();
+		array[678] = "\n_Surface,\t";
+		array[679] = (_Surface > 0).ToString();
 		array[680] = ",\t";
-		baseColor = fingerprint._SpecColor;
-		array[681] = baseColor.ToString();
-		array[682] = "\n_DayNightLightmapArray,\t";
-		array[683] = (_DayNightLightmapArray > 0).ToString();
+		array[681] = fingerprint._Surface.ToString();
+		array[682] = "\n_Metallic,\t";
+		array[683] = (_Metallic > 0).ToString();
 		array[684] = ",\t";
-		array[685] = fingerprint._DayNightLightmapArray;
-		array[686] = "\n_DayNightLightmapArray_ST,\t";
-		array[687] = (_DayNightLightmapArray_ST > 0).ToString();
+		array[685] = fingerprint._Metallic.ToString();
+		array[686] = "\n_SpecColor,\t";
+		array[687] = (_SpecColor > 0).ToString();
 		array[688] = ",\t";
-		baseColor = fingerprint._DayNightLightmapArray_ST;
+		baseColor = fingerprint._SpecColor;
 		array[689] = baseColor.ToString();
-		array[690] = "\n_DayNightLightmapArray_AtlasSlice,\t";
-		array[691] = (_DayNightLightmapArray_AtlasSlice > 0).ToString();
+		array[690] = "\n_DayNightLightmapArray,\t";
+		array[691] = (_DayNightLightmapArray > 0).ToString();
 		array[692] = ",\t";
-		array[693] = fingerprint._DayNightLightmapArray_AtlasSlice.ToString();
-		array[694] = "\n";
+		array[693] = fingerprint._DayNightLightmapArray;
+		array[694] = "\n_DayNightLightmapArray_ST,\t";
+		array[695] = (_DayNightLightmapArray_ST > 0).ToString();
+		array[696] = ",\t";
+		baseColor = fingerprint._DayNightLightmapArray_ST;
+		array[697] = baseColor.ToString();
+		array[698] = "\n_DayNightLightmapArray_AtlasSlice,\t";
+		array[699] = (_DayNightLightmapArray_AtlasSlice > 0).ToString();
+		array[700] = ",\t";
+		array[701] = fingerprint._DayNightLightmapArray_AtlasSlice.ToString();
+		array[702] = "\n";
 		return string.Concat(array);
+	}
+
+	public static void _g_Macro_TRANSFORM_TEX(in GTUberShader_MaterialKeywordStates kw, ref int tex, ref int tex_ST)
+	{
+		tex++;
+		tex_ST++;
 	}
 
 	private static void _g_Macro_DECLARE_ATLASABLE_TEX2D(in GTUberShader_MaterialKeywordStates kw, ref int tex, ref int tex_Atlas)

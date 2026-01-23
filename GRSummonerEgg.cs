@@ -10,6 +10,8 @@ public class GRSummonerEgg : MonoBehaviour
 
 	public GameEntity entityPrefabToSpawn;
 
+	public GRBreakableItemSpawnConfig lootTableToSpawn;
+
 	public Vector3 spawnOffset = new Vector3(0f, 0f, 0.3f);
 
 	public float minHatchTime = 3f;
@@ -36,6 +38,7 @@ public class GRSummonerEgg : MonoBehaviour
 			component.rotation = base.transform.rotation;
 			component.linearVelocity = Vector3.up * 2f;
 			component.angularVelocity = Vector3.zero;
+			component.constraints |= (RigidbodyConstraints)10;
 		}
 		Invoke("HatchEgg", hatchTime);
 	}
@@ -51,14 +54,16 @@ public class GRSummonerEgg : MonoBehaviour
 		{
 			Vector3 position = entity.transform.position + spawnOffset;
 			Quaternion identity = Quaternion.identity;
-			GhostReactorManager.Get(entity).gameEntityManager.RequestCreateItem(entityPrefabToSpawn.name.GetStaticHash(), position, identity, (summonedEntity != null) ? summonedEntity.GetSummonerNetID() : 0);
+			GameEntityManager gameEntityManager = GhostReactorManager.Get(entity).gameEntityManager;
+			GameEntity gameEntity = entityPrefabToSpawn;
+			if (lootTableToSpawn != null)
+			{
+				lootTableToSpawn.TryForRandomItem(entity, out gameEntity);
+			}
+			gameEntityManager.RequestCreateItem(gameEntity.name.GetStaticHash(), position, identity, 0L, (summonedEntity != null) ? summonedEntity.GetSummonerID() : GameEntityId.Invalid);
 		}
 		Invoke("DestroySelf", 2f);
 		hatchSound.Play(hatchAudio);
-	}
-
-	private void Update()
-	{
 	}
 
 	public void DestroySelf()

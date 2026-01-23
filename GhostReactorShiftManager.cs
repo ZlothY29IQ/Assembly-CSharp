@@ -32,7 +32,7 @@ public class GhostReactorShiftManager : MonoBehaviourTick
 	private const string EVENT_GOOD_KD = "GRShiftGoodKD";
 
 	[SerializeField]
-	private GhostReactor reactor;
+	public GhostReactor reactor;
 
 	[SerializeField]
 	private GRMetalEnergyGate frontGate;
@@ -205,8 +205,6 @@ public class GhostReactorShiftManager : MonoBehaviourTick
 
 	private float leaderboardUpdateFrequency = 0.5f;
 
-	private State state;
-
 	public double stateStartTime;
 
 	private double lastReactorLogoAnimationTime;
@@ -234,6 +232,8 @@ public class GhostReactorShiftManager : MonoBehaviourTick
 	public float TotalPlayTime => totalPlayTime;
 
 	public string ShiftId => gameIdGuid;
+
+	public State ShiftState { get; private set; }
 
 	public void SetShiftId(string shiftId)
 	{
@@ -331,7 +331,7 @@ public class GhostReactorShiftManager : MonoBehaviourTick
 		cachedStringBuilder.Clear();
 		int num2 = Mathf.FloorToInt(countDownTotal / 60f);
 		int num3 = Mathf.FloorToInt(countDownTotal % 60f);
-		switch (state)
+		switch (ShiftState)
 		{
 		case State.WaitingForShiftStart:
 		case State.WaitingForFirstShiftStart:
@@ -542,7 +542,7 @@ public class GhostReactorShiftManager : MonoBehaviourTick
 					break;
 				}
 			}
-			if (state == State.ShiftActive && countDownTotal > 0f && countDownTotal < anomalyAlertCountdownTimeToStartPlayingInMinutes * 60f && !anomalyAlert.isPlaying)
+			if (ShiftState == State.ShiftActive && countDownTotal > 0f && countDownTotal < anomalyAlertCountdownTimeToStartPlayingInMinutes * 60f && !anomalyAlert.isPlaying)
 			{
 				anomalyAlert.Play();
 			}
@@ -779,11 +779,11 @@ public class GhostReactorShiftManager : MonoBehaviourTick
 
 	public void SetState(State newState, bool force = false)
 	{
-		if (state == newState && !force)
+		if (ShiftState == newState && !force)
 		{
 			return;
 		}
-		switch (state)
+		switch (ShiftState)
 		{
 		case State.ReadyForShift:
 			if (startShiftButton != null)
@@ -795,9 +795,9 @@ public class GhostReactorShiftManager : MonoBehaviourTick
 			reactor.shiftManager.depthDisplay.StopDelveDeeperFX();
 			break;
 		}
-		state = newState;
+		ShiftState = newState;
 		stateStartTime = PhotonNetwork.Time;
-		switch (state)
+		switch (ShiftState)
 		{
 		case State.ShiftActive:
 			announceStartShift.Play(announceAudioSource);
@@ -855,7 +855,7 @@ public class GhostReactorShiftManager : MonoBehaviourTick
 
 	public State GetState()
 	{
-		return state;
+		return ShiftState;
 	}
 
 	public bool IsSoaking()
@@ -916,7 +916,7 @@ public class GhostReactorShiftManager : MonoBehaviourTick
 			return;
 		}
 		double time = PhotonNetwork.Time;
-		switch (state)
+		switch (ShiftState)
 		{
 		case State.WaitingForConnect:
 			if (reactor.grManager.IsZoneReady())
@@ -971,7 +971,7 @@ public class GhostReactorShiftManager : MonoBehaviourTick
 	private void UpdateStateShared()
 	{
 		double time = PhotonNetwork.Time;
-		switch (state)
+		switch (ShiftState)
 		{
 		case State.WaitingForFirstShiftStart:
 		{

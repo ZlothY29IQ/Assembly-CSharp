@@ -7,7 +7,7 @@ using UnityEngine.Serialization;
 [RequireComponent(typeof(GameGrabbable))]
 [RequireComponent(typeof(GameSnappable))]
 [RequireComponent(typeof(GameButtonActivatable))]
-public class SIGadgetWristJet : SIGadget, I_SIDisruptable
+public class SIGadgetWristJet : SIGadget, I_SIDisruptable, IEnergyGadget
 {
 	private enum State
 	{
@@ -137,11 +137,15 @@ public class SIGadgetWristJet : SIGadget, I_SIDisruptable
 		{
 			if (!rechargeRequiresFloorTouch || _floorTouched)
 			{
-				return state != State.Active;
+				return state == State.Unactive;
 			}
 			return false;
 		}
 	}
+
+	public bool UsesEnergy => true;
+
+	public bool IsFull => currentFuel >= fuelSize;
 
 	private void Awake()
 	{
@@ -257,10 +261,6 @@ public class SIGadgetWristJet : SIGadget, I_SIDisruptable
 		switch (state)
 		{
 		case State.Unactive:
-			if (CanRecharge)
-			{
-				currentFuel = Mathf.Clamp(currentFuel + dt * fuelGainRate, 0f, fuelSize);
-			}
 			if (flag)
 			{
 				SetStateAuthority(State.Active);
@@ -440,5 +440,13 @@ public class SIGadgetWristJet : SIGadget, I_SIDisruptable
 		}
 		currentFuel = (fuelSize = 10f);
 		_throttle = (_currentBurnRate = 1f);
+	}
+
+	public void UpdateRecharge(float dt)
+	{
+		if (CanRecharge)
+		{
+			currentFuel = Mathf.Clamp(currentFuel + dt * fuelGainRate, 0f, fuelSize);
+		}
 	}
 }

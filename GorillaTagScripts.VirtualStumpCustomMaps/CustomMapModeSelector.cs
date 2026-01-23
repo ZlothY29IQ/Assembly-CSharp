@@ -131,6 +131,10 @@ public class CustomMapModeSelector : GameModeSelectorButtonLayout
 
 	public override async void SetupButtons()
 	{
+		if (superToggleButton != null)
+		{
+			superToggleButton.transform.parent.gameObject.SetActive(value: false);
+		}
 		int count = 0;
 		while (GorillaComputer.instance == null)
 		{

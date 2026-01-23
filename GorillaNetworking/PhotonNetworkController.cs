@@ -554,6 +554,15 @@ public class PhotonNetworkController : MonoBehaviour
 					break;
 				}
 			}
+			if (flag && GorillaComputer.instance.friendJoinCollider != null && !GorillaComputer.instance.friendJoinCollider.playerIDsCurrentlyTouching.Contains(NetworkSystem.Instance.LocalPlayer.UserId))
+			{
+				GTZone gTZone = ParseZoneFromGameMode(NetworkSystem.Instance.GameModeString);
+				if (gTZone != GTZone.none && !ZoneManagement.IsInZone(gTZone))
+				{
+					Debug.Log($"NOT ALLOWED IN ROOM: Joined {gTZone} room but not physically in {gTZone} zone");
+					flag = false;
+				}
+			}
 			if (!flag)
 			{
 				GorillaComputer.instance.roomNotAllowed = true;
@@ -722,5 +731,21 @@ public class PhotonNetworkController : MonoBehaviour
 		{
 			NetworkSystem.Instance?.ReturnToSinglePlayer();
 		}
+	}
+
+	private GTZone ParseZoneFromGameMode(string gameMode)
+	{
+		if (string.IsNullOrEmpty(gameMode))
+		{
+			return GTZone.none;
+		}
+		foreach (GTZone value in Enum.GetValues(typeof(GTZone)))
+		{
+			if (value != GTZone.none && gameMode.StartsWith(value.ToString(), StringComparison.OrdinalIgnoreCase))
+			{
+				return value;
+			}
+		}
+		return GTZone.none;
 	}
 }

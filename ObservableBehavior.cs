@@ -15,7 +15,21 @@ public abstract class ObservableBehavior : MonoBehaviour, IGorillaSliceableSimpl
 	private void OnDisable()
 	{
 		GorillaSlicerSimpleManager.UnregisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.LateUpdate);
+		if (observable)
+		{
+			observable = false;
+			OnLostObservable();
+		}
 		UnityOnDisable();
+	}
+
+	private void OnDestroy()
+	{
+		if (observable)
+		{
+			observable = false;
+			OnLostObservable();
+		}
 	}
 
 	void IGorillaSliceableSimple.SliceUpdate()

@@ -9,4 +9,6 @@ public struct GameEntityCreateData
 	public Quaternion rotation;
 
 	public long createData;
+
+	public int createdByEntityId;
 }

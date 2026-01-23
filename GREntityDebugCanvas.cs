@@ -12,6 +12,8 @@ public class GREntityDebugCanvas : MonoBehaviour
 
 	public Vector3 prefabAttachOffset = new Vector3(0f, 0.5f, 0f);
 
+	public float fontSize = 100f;
+
 	private StringBuilder builder;
 
 	private void Awake()
@@ -28,6 +30,7 @@ public class GREntityDebugCanvas : MonoBehaviour
 		}
 		if (text != null)
 		{
+			text.fontSize = fontSize;
 			text.gameObject.SetActive(value: false);
 		}
 	}

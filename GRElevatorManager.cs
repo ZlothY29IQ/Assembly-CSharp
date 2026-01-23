@@ -6,6 +6,7 @@ using GorillaLocomotion;
 using GorillaNetworking;
 using Photon.Pun;
 using UnityEngine;
+using UnityEngine.Video;
 
 [NetworkBehaviourWeaved(0)]
 public class GRElevatorManager : NetworkComponent, ITickSystemTick
@@ -41,6 +42,14 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 		GhostReactor,
 		MonkeBlocks,
 		None
+	}
+
+	[Serializable]
+	public struct DestinationVideo
+	{
+		public ElevatorLocation Destination;
+
+		public VideoClip VideoClip;
 	}
 
 	public PhotonView photonView;
@@ -103,6 +112,15 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 	private float waitForZoneLoadFallbackTimer;
 
 	public float waitForZoneLoadFallbackMaxTime = 5f;
+
+	[SerializeField]
+	private DestinationVideo[] DestinationVideos;
+
+	[SerializeField]
+	private VideoPlayer DestinationVideoPlayer;
+
+	[SerializeField]
+	private AudioSource DestinationVideoPlayerAudioSource;
 
 	public bool InPrivateRoom => NetworkSystem.Instance.SessionIsPrivate;
 
@@ -167,6 +185,7 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 		NetworkBehaviourUtils.InternalOnEnable(this);
 		base.OnEnable();
 		TickSystem<object>.AddTickCallback(this);
+		DestinationVideoPlayer.loopPointReached += DisableVideoScreens;
 	}
 
 	private new void OnDisable()
@@ -174,6 +193,15 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 		NetworkBehaviourUtils.InternalOnDisable(this);
 		base.OnDisable();
 		TickSystem<object>.RemoveTickCallback(this);
+		DestinationVideoPlayer.loopPointReached -= DisableVideoScreens;
+	}
+
+	private void DisableVideoScreens(VideoPlayer source)
+	{
+		for (int i = 0; i < allElevators.Count; i++)
+		{
+			allElevators[i].videoDisplay.SetActive(value: false);
+		}
 	}
 
 	public void Tick()
@@ -328,6 +356,7 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 				if (destination != currentLocation)
 				{
 					destination = location;
+					PlayDestinationVideo(destination);
 				}
 				elevatorByLocation[currentLocation].PlayElevatorMoving();
 				elevatorByLocation[destination].PlayElevatorMoving();
@@ -348,6 +377,7 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 				if (location != currentLocation)
 				{
 					destination = location;
+					PlayDestinationVideo(destination);
 				}
 				break;
 			case ElevatorSystemState.WaitingToTeleport:
@@ -378,10 +408,13 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 				if (location != currentLocation)
 				{
 					destination = location;
-					break;
+					PlayDestinationVideo(destination);
 				}
-				OpenElevator(location);
-				newState = ElevatorSystemState.InLocation;
+				else
+				{
+					OpenElevator(location);
+					newState = ElevatorSystemState.InLocation;
+				}
 				break;
 			case ElevatorSystemState.InLocation:
 			{
@@ -406,6 +439,7 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 					destination = location;
 					destinationButtonLastPressedTime = GetTime();
 					maxDoorClosingTime = GetTime();
+					PlayDestinationVideo(destination);
 				}
 				else
 				{
@@ -443,6 +477,36 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 		}
 		currentState = newState;
 		UpdateUI();
+	}
+
+	private void PlayDestinationVideo(ElevatorLocation destination)
+	{
+		VideoClip clipForDestination = getClipForDestination(destination);
+		if (DestinationVideoPlayer.isPlaying && DestinationVideoPlayer.clip != clipForDestination)
+		{
+			DestinationVideoPlayer.Stop();
+			DisableVideoScreens(DestinationVideoPlayer);
+		}
+		if (clipForDestination != null && currentLocation != ElevatorLocation.None)
+		{
+			DestinationVideoPlayer.clip = clipForDestination;
+			DestinationVideoPlayer.SetTargetAudioSource(0, DestinationVideoPlayerAudioSource);
+			DestinationVideoPlayer.Play();
+			DestinationVideoPlayerAudioSource.transform.position = elevatorByLocation[currentLocation].videoAudio.transform.position;
+			elevatorByLocation[currentLocation].videoDisplay.SetActive(value: true);
+		}
+	}
+
+	private VideoClip getClipForDestination(ElevatorLocation destination)
+	{
+		for (int i = 0; i < DestinationVideos.Length; i++)
+		{
+			if (DestinationVideos[i].Destination == destination)
+			{
+				return DestinationVideos[i].VideoClip;
+			}
+		}
+		return null;
 	}
 
 	public void UpdateUI()
@@ -623,6 +687,11 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 		num = (int)stream.ReceiveNext();
 		if (num >= 0 && num < 5)
 		{
+			ElevatorSystemState elevatorSystemState = (ElevatorSystemState)num;
+			if (elevatorSystemState != currentState && elevatorSystemState == ElevatorSystemState.DestinationPressed)
+			{
+				PlayDestinationVideo(destination);
+			}
 			currentState = (ElevatorSystemState)num;
 		}
 		UpdateUI();
@@ -699,6 +768,11 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 			return;
 		}
 		elevatorByLocation[destination].collidersAndVisuals.SetActive(value: true);
+		if (DestinationVideoPlayer.isPlaying)
+		{
+			elevatorByLocation[destination].videoDisplay.SetActive(value: true);
+			DestinationVideoPlayerAudioSource.transform.position = elevatorByLocation[destination].videoAudio.transform.position;
+		}
 		float num = gRElevator2.transform.rotation.eulerAngles.y - gRElevator.transform.rotation.eulerAngles.y;
 		GTPlayer instance = GTPlayer.Instance;
 		VRRig localRig = VRRig.LocalRig;

@@ -5,7 +5,7 @@ using GorillaNetworking;
 using GorillaTagScripts.VirtualStumpCustomMaps;
 using UnityEngine;
 
-public class SIGadgetTentacleArm : SIGadget, ICallBack
+public class SIGadgetTentacleArm : SIGadget, ICallBack, IEnergyGadget
 {
 	private class HeldPlayerCallback : ICallBack
 	{
@@ -230,6 +230,10 @@ public class SIGadgetTentacleArm : SIGadget, ICallBack
 	public bool isAnchored { get; private set; }
 
 	public bool isHoldingHand { get; private set; }
+
+	public bool UsesEnergy => true;
+
+	public bool IsFull => currentFuel >= fuelSize;
 
 	private void Awake()
 	{
@@ -565,7 +569,6 @@ public class SIGadgetTentacleArm : SIGadget, ICallBack
 		clawVisualRot = clawRotation;
 		if (!isAnchored)
 		{
-			currentFuel = Mathf.Clamp(currentFuel + dt * FuelPerSecond_Recharging, 0f, fuelSize);
 			isLowFuel = currentFuel < FuelCost_Grab;
 		}
 		wasGrabPressed = flag;
@@ -844,6 +847,14 @@ public class SIGadgetTentacleArm : SIGadget, ICallBack
 		if (lastHeldCallbackFrame == lastCallbackFrame)
 		{
 			CallBack();
+		}
+	}
+
+	public void UpdateRecharge(float dt)
+	{
+		if (!isAnchored)
+		{
+			currentFuel = Mathf.Clamp(currentFuel + dt * FuelPerSecond_Recharging, 0f, fuelSize);
 		}
 	}
 }

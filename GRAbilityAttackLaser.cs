@@ -26,6 +26,8 @@ public class GRAbilityAttackLaser : GRAbilityBase
 
 	public float attackMoveSpeed;
 
+	public bool doNotFaceTarget;
+
 	public List<AnimationData> animData;
 
 	public AbilitySound soundAttack;
@@ -136,7 +138,10 @@ public class GRAbilityAttackLaser : GRAbilityBase
 				num2 = Mathf.Min(maxLaserRange, num2);
 				targetPos = position + vector2 * num2;
 			}
-			GameAgent.UpdateFacingTarget(root, agent.navAgent, target, maxTurnSpeed);
+			if (!doNotFaceTarget)
+			{
+				GameAgent.UpdateFacingTarget(root, agent.navAgent, target, maxTurnSpeed);
+			}
 			if (num > tellDuration)
 			{
 				state = State.Attack;

@@ -83,6 +83,7 @@ public class CustomMapsGameManager : MonoBehaviour, IGameEntityZoneComponent
 			gameEntityCreateData.position = entities[i].transform.position;
 			gameEntityCreateData.rotation = entities[i].transform.rotation;
 			gameEntityCreateData.createData = entities[i].GetPackedCreateData();
+			gameEntityCreateData.createdByEntityId = -1;
 			GameEntityCreateData item = gameEntityCreateData;
 			tempCreateEntitiesList.Add(item);
 		}

@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using GorillaNetworking;
+using Newtonsoft.Json;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -30,6 +31,10 @@ public class CodeRedemption : MonoBehaviour
 		public string itemID;
 
 		public string playFabItemName;
+
+		public DateTimeOffset? startTime;
+
+		public DateTimeOffset? endTime;
 	}
 
 	public static volatile CodeRedemption Instance;
@@ -50,7 +55,7 @@ public class CodeRedemption : MonoBehaviour
 
 	public void HandleCodeRedemption(string code)
 	{
-		string text = JsonUtility.ToJson(new CodeRedemptionRequest
+		string text = JsonConvert.SerializeObject(new CodeRedemptionRequest
 		{
 			itemGUID = code,
 			playFabID = PlayFabAuthenticator.instance.GetPlayFabPlayerId(),
@@ -74,11 +79,25 @@ public class CodeRedemption : MonoBehaviour
 		string empty = string.Empty;
 		try
 		{
-			CodeRedemptionResponse codeRedemptionResponse = JsonUtility.FromJson<CodeRedemptionResponse>(completedRequest.downloadHandler.text);
+			CodeRedemptionResponse codeRedemptionResponse = JsonConvert.DeserializeObject<CodeRedemptionResponse>(completedRequest.downloadHandler.text);
 			if (codeRedemptionResponse.result.Contains("AlreadyRedeemed", StringComparison.OrdinalIgnoreCase))
 			{
-				Debug.Log("[CodeRedemption] Item has already been redeemed!");
+				Debug.Log("[CodeRedemption] Code has already been redeemed!");
 				GorillaComputer.instance.RedemptionStatus = GorillaComputer.RedemptionResult.AlreadyUsed;
+				return;
+			}
+			if (codeRedemptionResponse.result.Contains("TooEarly", StringComparison.OrdinalIgnoreCase))
+			{
+				Debug.Log($"[CodeRedemption] Code is not redeemable until {codeRedemptionResponse.startTime}!");
+				GorillaComputer.instance.RedemptionRestrictionTime = codeRedemptionResponse.startTime;
+				GorillaComputer.instance.RedemptionStatus = GorillaComputer.RedemptionResult.TooEarly;
+				return;
+			}
+			if (codeRedemptionResponse.result.Contains("TooLate", StringComparison.OrdinalIgnoreCase))
+			{
+				Debug.Log($"[CodeRedemption] Code expired at {codeRedemptionResponse.endTime}!");
+				GorillaComputer.instance.RedemptionRestrictionTime = codeRedemptionResponse.endTime;
+				GorillaComputer.instance.RedemptionStatus = GorillaComputer.RedemptionResult.TooLate;
 				return;
 			}
 			empty = codeRedemptionResponse.playFabItemName;

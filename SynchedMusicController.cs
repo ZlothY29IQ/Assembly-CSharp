@@ -380,7 +380,16 @@ public class SynchedMusicController : MonoBehaviour, IGorillaSliceableSimple
 
 	public void OnDisable()
 	{
+		StopAllAudioSources();
 		GorillaSlicerSimpleManager.UnregisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
+	}
+
+	private void StopAllAudioSources()
+	{
+		for (int i = 0; i < audioSourceArray.Length; i++)
+		{
+			audioSourceArray[i].Stop();
+		}
 	}
 
 	private void New_Update()

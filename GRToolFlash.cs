@@ -305,6 +305,7 @@ public class GRToolFlash : MonoBehaviour, IGameEntityDebugComponent, IGameEntity
 					gameHitData.hitPosition = ((raycastHit.distance == 0f) ? shootFrom.position : raycastHit.point);
 					gameHitData.hitImpulse = Vector3.zero;
 					gameHitData.hitAmount = gameHitter.CalcHitAmount(GameHitType.Flash, component, gameEntity);
+					gameHitData.hittablePoint = component.FindHittablePoint(raycastHit.collider);
 					GameHitData hitData = gameHitData;
 					component.RequestHit(hitData);
 				}

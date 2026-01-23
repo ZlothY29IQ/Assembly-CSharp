@@ -276,6 +276,7 @@ public class GhostReactorLevelSection : MonoBehaviour
 				gameEntityCreateData.position = nextSpawnPoint.transform.position;
 				gameEntityCreateData.rotation = nextSpawnPoint.transform.rotation;
 				gameEntityCreateData.createData = createData;
+				gameEntityCreateData.createdByEntityId = -1;
 				GameEntityCreateData item = gameEntityCreateData;
 				tempCreateEntitiesList.Add(item);
 				if (tempCreateEntitiesList.Count > 25)
@@ -287,6 +288,10 @@ public class GhostReactorLevelSection : MonoBehaviour
 		}
 		for (int l = 0; l < prePlacedGameEntities.Count; l++)
 		{
+			if (prePlacedGameEntities[l].isBuiltIn)
+			{
+				continue;
+			}
 			int staticHash2 = prePlacedGameEntities[l].gameObject.name.GetStaticHash();
 			if (!gameEntityManager.FactoryHasEntity(staticHash2))
 			{
@@ -298,6 +303,7 @@ public class GhostReactorLevelSection : MonoBehaviour
 			gameEntityCreateData.position = prePlacedGameEntities[l].transform.position;
 			gameEntityCreateData.rotation = prePlacedGameEntities[l].transform.rotation;
 			gameEntityCreateData.createData = 0L;
+			gameEntityCreateData.createdByEntityId = -1;
 			GameEntityCreateData item2 = gameEntityCreateData;
 			tempCreateEntitiesList.Add(item2);
 			if (tempCreateEntitiesList.Count > 25)
@@ -308,7 +314,7 @@ public class GhostReactorLevelSection : MonoBehaviour
 		}
 	}
 
-	public void RespawnEntity(ref SRand randomGenerator, GameEntityManager gameEntityManager, int entityId, long entityCreateData)
+	public void RespawnEntity(ref SRand randomGenerator, GameEntityManager gameEntityManager, int entityId, long entityCreateData, GameEntityId createdByEntityId)
 	{
 		if (0 <= spawnPointGroupLookup.Length)
 		{
@@ -330,7 +336,7 @@ public class GhostReactorLevelSection : MonoBehaviour
 			GhostReactor.EnemyEntityCreateData enemyEntityCreateData = GhostReactor.EnemyEntityCreateData.Unpack(entityCreateData);
 			enemyEntityCreateData.patrolIndex = ((gREntitySpawnPoint.patrolPath != null) ? gREntitySpawnPoint.patrolPath.index : 255);
 			long createData = enemyEntityCreateData.Pack();
-			gameEntityManager.RequestCreateItem(entityId, gREntitySpawnPoint.transform.position, gREntitySpawnPoint.transform.rotation, createData);
+			gameEntityManager.RequestCreateItem(entityId, gREntitySpawnPoint.transform.position, gREntitySpawnPoint.transform.rotation, createData, createdByEntityId);
 		}
 	}
 

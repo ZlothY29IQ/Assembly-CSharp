@@ -61,7 +61,6 @@ public class GRAbilityWander : GRAbilityBase
 			Vector3 position2 = hit.position;
 			Vector3 forward = agent.transform.forward;
 			float num = 0f;
-			Vector3 sourcePosition = position2;
 			for (int i = 0; i < rotations.Length; i++)
 			{
 				Vector3 vector = rotations[i] * forward;
@@ -71,15 +70,11 @@ public class GRAbilityWander : GRAbilityBase
 					num2 = hit.distance * 0.95f;
 				}
 				float num3 = num2 * rotationWeight[i];
-				if (num3 > num)
+				if (num3 > num && NavMesh.SamplePosition(position2 + vector * num2, out hit, 1f, walkableArea))
 				{
 					num = num3;
-					sourcePosition = position2 + vector * num2;
+					position = hit.position;
 				}
-			}
-			if (NavMesh.SamplePosition(sourcePosition, out hit, 1f, walkableArea))
-			{
-				position = hit.position;
 			}
 		}
 		return position;

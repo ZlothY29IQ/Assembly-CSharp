@@ -53,18 +53,6 @@ public class SITechTreeStation : MonoBehaviour, ITouchScreenStation
 
 	public Sprite floppyMetalSprite;
 
-	public Sprite thrustersIcon;
-
-	public Sprite longArmsIcon;
-
-	public Sprite dashYoYoIcon;
-
-	public Sprite platformsIcon;
-
-	public Sprite blasterIcon;
-
-	public Sprite tentacleIcon;
-
 	public int currentNodeId;
 
 	public SITechTreeSO techTreeSO;
@@ -265,24 +253,16 @@ public class SITechTreeStation : MonoBehaviour, ITouchScreenStation
 		spriteByType.Add(SIResource.ResourceType.VibratingSpring, vibratingSpringSprite);
 		spriteByType.Add(SIResource.ResourceType.BouncySand, bouncySandSprite);
 		spriteByType.Add(SIResource.ResourceType.FloppyMetal, floppyMetalSprite);
-		techTreeIconById.Add(SITechTreePageId.Thruster, thrustersIcon);
-		techTreeIconById.Add(SITechTreePageId.Stilt, longArmsIcon);
-		techTreeIconById.Add(SITechTreePageId.Grenades, floppyMetalSprite);
-		techTreeIconById.Add(SITechTreePageId.Dash, dashYoYoIcon);
-		techTreeIconById.Add(SITechTreePageId.Platform, platformsIcon);
-		techTreeIconById.Add(SITechTreePageId.TapTeleport, floppyMetalSprite);
-		techTreeIconById.Add(SITechTreePageId.Tentacle, tentacleIcon);
-		techTreeIconById.Add(SITechTreePageId.AirGrab, floppyMetalSprite);
-		techTreeIconById.Add(SITechTreePageId.SlipMitt, floppyMetalSprite);
-		techTreeIconById.Add(SITechTreePageId.Blaster, blasterIcon);
-		for (int i = 0; i < techTreeSO.TreePages.Count; i++)
+		int count = techTreeSO.TreePages.Count;
+		for (int i = 0; i < count; i++)
 		{
 			SITechTreePage sITechTreePage = techTreeSO.TreePages[i];
 			if (sITechTreePage.IsValid)
 			{
+				techTreeIconById.Add(sITechTreePage.pageId, sITechTreePage.icon);
 				SIGadgetListEntry sIGadgetListEntry = UnityEngine.Object.Instantiate(pageListEntryPrefab, pageListParent);
 				StaticLodManager.TryAddLateInstantiatedMembers(sIGadgetListEntry.gameObject);
-				sIGadgetListEntry.Configure(this, sITechTreePage, parentTerminal.zeroZeroImage, parentTerminal.onePointTwoText, SITouchscreenButton.SITouchscreenButtonType.PageSelect, i, -0.07f);
+				sIGadgetListEntry.Configure(this, sITechTreePage, parentTerminal.zeroZeroImage, parentTerminal.onePointTwoText, SITouchscreenButton.SITouchscreenButtonType.PageSelect, i, -0.07f, count);
 				pageButtons.Add(sIGadgetListEntry);
 				SITechTreeUIPage sITechTreeUIPage = UnityEngine.Object.Instantiate(pagePrefab, pageParent);
 				StaticLodManager.TryAddLateInstantiatedMembers(sITechTreeUIPage.gameObject);

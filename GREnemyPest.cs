@@ -141,7 +141,7 @@ public class GREnemyPest : MonoBehaviour, IGameEntityComponent, IGameEntitySeria
 		navAgent.updateRotation = false;
 		behaviorStartTime = -1.0;
 		agent.onBehaviorStateChanged += OnNetworkBehaviorStateChange;
-		senseNearby.Setup(headTransform);
+		senseNearby.Setup(headTransform, entity);
 		GameEntity gameEntity = entity;
 		gameEntity.OnGrabbed = (Action)Delegate.Combine(gameEntity.OnGrabbed, new Action(OnGrabbed));
 		GameEntity gameEntity2 = entity;
@@ -570,7 +570,7 @@ public class GREnemyPest : MonoBehaviour, IGameEntityComponent, IGameEntitySeria
 		}
 	}
 
-	public void OnHitByClub(GameHitData hit)
+	private void OnHitByClub(GameHitData hit)
 	{
 		if (currBodyState == BodyState.Bones)
 		{
@@ -595,7 +595,13 @@ public class GREnemyPest : MonoBehaviour, IGameEntityComponent, IGameEntitySeria
 		}
 	}
 
-	public void OnHitByFlash(GRTool tool, GameHitData hit)
+	public void InstantDeath()
+	{
+		hp = 0;
+		SetBehavior(Behavior.Destroyed);
+	}
+
+	private void OnHitByFlash(GRTool tool, GameHitData hit)
 	{
 		abilityFlashed.SetStaggerVelocity(hit.hitImpulse);
 		if (currBodyState == BodyState.Shell)
@@ -638,7 +644,7 @@ public class GREnemyPest : MonoBehaviour, IGameEntityComponent, IGameEntitySeria
 		TrySetBehavior(Behavior.Flashed);
 	}
 
-	public void OnHitByShield(GameHitData hit)
+	private void OnHitByShield(GameHitData hit)
 	{
 		OnHitByClub(hit);
 	}
@@ -682,6 +688,7 @@ public class GREnemyPest : MonoBehaviour, IGameEntityComponent, IGameEntitySeria
 			gameHitData.hitEntityPosition = component4.transform.position;
 			gameHitData.hitImpulse = Vector3.zero;
 			gameHitData.hitPosition = component4.transform.position;
+			gameHitData.hittablePoint = component5.FindHittablePoint(collider);
 			GameHitData hitData = gameHitData;
 			component5.RequestHit(hitData);
 		}

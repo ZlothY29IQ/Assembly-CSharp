@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
+using GorillaTag;
 using Photon.Pun;
 using TMPro;
 using UnityEngine;
@@ -13,11 +13,14 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 	public enum GadgetDispenserTerminalState
 	{
 		WaitingForScan,
+		GadgetType,
 		GadgetList,
 		GadgetInformation,
 		GadgetDispensed,
 		HelpScreen
 	}
+
+	public GadgetDispenserTerminalState handScannedState = GadgetDispenserTerminalState.GadgetList;
 
 	public GadgetDispenserTerminalState currentState;
 
@@ -30,6 +33,8 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 	public SICombinedTerminal parentTerminal;
 
 	public GameObject waitingForScanScreen;
+
+	public GameObject gadgetTypeScreen;
 
 	public GameObject gadgetListScreen;
 
@@ -63,7 +68,7 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 	[SerializeField]
 	private SIGadgetListEntry pageListEntryPrefab;
 
-	private List<SIGadgetListEntry> gadgetPages;
+	private List<SIGadgetListEntry> gadgetPages = new List<SIGadgetListEntry>();
 
 	[FormerlySerializedAs("noDispensableGadgetsNotif")]
 	[Header("Gadgets List")]
@@ -123,22 +128,19 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 
 	public SITechTreeSO TechTreeSO => parentTerminal.superInfection.techTreeSO;
 
-	private void CollectButtonColliders()
+	private void OnEnable()
 	{
-		List<SITouchscreenButton> buttons = GetComponentsInChildren<SITouchscreenButton>(includeInactive: true).ToList();
-		RemoveButtonsInside((from d in GetComponentsInChildren<DestroyIfNotBeta>()
-			select d.gameObject).ToArray());
-		RemoveButtonsInside(new GameObject[2] { gadgetDispensedScreen, gadgetsHelpScreen });
-		_nonPopupButtonColliders = buttons.Select((SITouchscreenButton b) => b.GetComponent<Collider>()).ToList();
-		void RemoveButtonsInside(GameObject[] roots)
+		_RefreshButtonsUsableState();
+	}
+
+	private void _RefreshButtonsUsableState()
+	{
+		foreach (SIGadgetListEntry gadgetPage in gadgetPages)
 		{
-			for (int i = 0; i < roots.Length; i++)
+			SITechTreePageId id = (SITechTreePageId)gadgetPage.Id;
+			if (TechTreeSO.TryGetTreePage(id, out var treePage))
 			{
-				SITouchscreenButton[] componentsInChildren = roots[i].GetComponentsInChildren<SITouchscreenButton>(includeInactive: true);
-				foreach (SITouchscreenButton item in componentsInChildren)
-				{
-					buttons.Remove(item);
-				}
+				gadgetPage.ButtonContainer.SetUsable(treePage.IsAllowed);
 			}
 		}
 	}
@@ -162,18 +164,20 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 			}
 			screenData = new Dictionary<GadgetDispenserTerminalState, GameObject>();
 			screenData.Add(GadgetDispenserTerminalState.WaitingForScan, waitingForScanScreen);
+			screenData.Add(GadgetDispenserTerminalState.GadgetType, gadgetTypeScreen);
 			screenData.Add(GadgetDispenserTerminalState.GadgetList, gadgetListScreen);
 			screenData.Add(GadgetDispenserTerminalState.GadgetInformation, gadgetInformationScreen);
 			screenData.Add(GadgetDispenserTerminalState.GadgetDispensed, gadgetDispensedScreen);
 			screenData.Add(GadgetDispenserTerminalState.HelpScreen, gadgetsHelpScreen);
 			parentTerminal.superInfection.techTreeSO.EnsureInitialized();
 			int num = 0;
-			gadgetPages = new List<SIGadgetListEntry>();
-			for (int i = 0; i < parentTerminal.superInfection.techTreeSO.TreePages.Count; i++)
+			int count = parentTerminal.superInfection.techTreeSO.TreePages.Count;
+			for (int i = 0; i < count; i++)
 			{
 				SITechTreePage sITechTreePage = parentTerminal.superInfection.techTreeSO.TreePages[i];
 				SIGadgetListEntry sIGadgetListEntry = UnityEngine.Object.Instantiate(pageListEntryPrefab, pageListParent);
-				sIGadgetListEntry.Configure(this, sITechTreePage, parentTerminal.zeroZeroImage, parentTerminal.onePointTwoText, SITouchscreenButton.SITouchscreenButtonType.Select, i, -0.07f);
+				StaticLodManager.TryAddLateInstantiatedMembers(sIGadgetListEntry.gameObject);
+				sIGadgetListEntry.Configure(this, sITechTreePage, parentTerminal.zeroZeroImage, parentTerminal.onePointTwoText, SITouchscreenButton.SITouchscreenButtonType.Select, i, -0.07f, count);
 				gadgetPages.Add(sIGadgetListEntry);
 				num = Math.Max(num, sITechTreePage.DispensableGadgets.Count);
 			}
@@ -278,6 +282,9 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 		SetScreenVisibility(currentState, lastState);
 		switch (currentState)
 		{
+		case GadgetDispenserTerminalState.GadgetType:
+			screenDescription.text = "GADGET TYPES";
+			break;
 		case GadgetDispenserTerminalState.GadgetList:
 			screenDescription.text = "UNLOCKED " + CurrentPage.nickName + " GADGETS";
 			UpdateGadgetListVisibility();
@@ -348,7 +355,7 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 
 	public void PlayerHandScanned(int actorNr)
 	{
-		UpdateState(GadgetDispenserTerminalState.GadgetList);
+		UpdateState(handScannedState);
 	}
 
 	public void AddButton(SITouchscreenButton button, bool isPopupButton = false)
@@ -388,10 +395,20 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 					UpdateState(GadgetDispenserTerminalState.HelpScreen);
 				}
 				break;
+			case GadgetDispenserTerminalState.GadgetType:
+				if (buttonType == SITouchscreenButton.SITouchscreenButtonType.Select)
+				{
+					parentTerminal.SetActivePage(data);
+				}
+				break;
 			case GadgetDispenserTerminalState.GadgetList:
 				if (buttonType == SITouchscreenButton.SITouchscreenButtonType.Help)
 				{
 					UpdateState(GadgetDispenserTerminalState.HelpScreen);
+				}
+				if (buttonType == SITouchscreenButton.SITouchscreenButtonType.Back)
+				{
+					UpdateState(GadgetDispenserTerminalState.GadgetType);
 				}
 				if (buttonType == SITouchscreenButton.SITouchscreenButtonType.Select)
 				{

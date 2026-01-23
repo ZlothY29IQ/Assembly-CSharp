@@ -8,6 +8,8 @@ public class GRAbilityDie : GRAbilityBase
 {
 	public float delayDeath;
 
+	public float delayRespawn = -1f;
+
 	public List<Renderer> hideWhenDead;
 
 	public List<Collider> disableCollidersWhenDead;
@@ -43,6 +45,10 @@ public class GRAbilityDie : GRAbilityBase
 	private float totalDeathDelay;
 
 	public GRAbilityInterpolatedMovement staggerMovement;
+
+	public GameAbilityEvents events;
+
+	private bool reported;
 
 	public override void Setup(GameAgent agent, Animation anim, AudioSource audioSource, Transform root, Transform head, GRSenseLineOfSight lineOfSight)
 	{
@@ -84,6 +90,8 @@ public class GRAbilityDie : GRAbilityBase
 		{
 			fxDeath.SetActive(value: false);
 		}
+		events.Reset();
+		events.OnAbilityStart(GetAbilityTime(Time.timeAsDouble), audioSource);
 	}
 
 	protected override void OnStop()
@@ -93,6 +101,7 @@ public class GRAbilityDie : GRAbilityBase
 		agent.SetDisableNetworkSync(disable: false);
 		Hide(hideWhenDead, hide: false);
 		Disable(disableCollidersWhenDead, disable: false);
+		events.OnAbilityStop(GetAbilityTime(Time.timeAsDouble), audioSource);
 	}
 
 	public void SetStaggerVelocity(Vector3 vel)
@@ -109,6 +118,7 @@ public class GRAbilityDie : GRAbilityBase
 
 	public void SetInstigatingPlayerIndex(int actorNumber)
 	{
+		Debug.Log($"SetInstigatingPlayerIndex {actorNumber}");
 		instigatingActorNumber = actorNumber;
 	}
 
@@ -150,16 +160,26 @@ public class GRAbilityDie : GRAbilityBase
 
 	public void DestroySelf()
 	{
-		GameEntity gameEntity = agent.entity;
-		GRPlayer gRPlayer = GRPlayer.Get(instigatingActorNumber);
-		if (gRPlayer != null)
+		Debug.Log("DESTROY SELF");
+		ReportDeathStat();
+		if (agent.entity.IsAuthority())
 		{
-			gRPlayer.IncrementSynchronizedSessionStat(GRPlayer.SynchronizedSessionStat.Kills, 1f);
+			agent.entity.manager.RequestDestroyItem(agent.entity.id);
 		}
-		GhostReactor.instance.shiftManager.shiftStats.IncrementEnemyKills(gameEntity.GetEnemyType());
-		if (gameEntity.IsAuthority())
+	}
+
+	public void ReportDeathStat()
+	{
+		if (!reported)
 		{
-			gameEntity.manager.RequestDestroyItem(gameEntity.id);
+			reported = true;
+			GameEntity gameEntity = agent.entity;
+			GRPlayer gRPlayer = GRPlayer.Get(instigatingActorNumber);
+			if (gRPlayer != null)
+			{
+				gRPlayer.IncrementSynchronizedSessionStat(GRPlayer.SynchronizedSessionStat.Kills, 1f);
+			}
+			GhostReactor.instance.shiftManager.shiftStats.IncrementEnemyKills(gameEntity.GetEnemyType());
 		}
 	}
 
@@ -184,10 +204,11 @@ public class GRAbilityDie : GRAbilityBase
 			}
 			else if (isDead && num > (double)(totalDeathDelay + destroyDelay))
 			{
-				GhostReactorManager.Get(entity).OnAbilityDie(entity);
+				GhostReactorManager.Get(entity).OnAbilityDie(entity, delayRespawn);
 				DestroySelf();
 				startTime = -1.0;
 			}
+			events.TryPlay((float)num, audioSource);
 		}
 	}
 

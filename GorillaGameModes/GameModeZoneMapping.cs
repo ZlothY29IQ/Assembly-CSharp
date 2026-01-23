@@ -9,6 +9,10 @@ namespace GorillaGameModes;
 public class GameModeZoneMapping : ScriptableObject
 {
 	[SerializeField]
+	[TextArea(4, 40)]
+	private string notes;
+
+	[SerializeField]
 	private GameModeNameOverrides[] gameModeNameOverrides;
 
 	[SerializeField]

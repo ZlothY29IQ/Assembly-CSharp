@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using GorillaNetworking;
 using UnityEngine;
 
 public class GhostReactorLevelGenerator : MonoBehaviourTick
@@ -82,17 +83,7 @@ public class GhostReactorLevelGenerator : MonoBehaviourTick
 
 	public int nextVisCheckNodeIndex;
 
-	public List<GhostReactorLevelGeneratorV2.TreeLevelConfig> TreeLevels
-	{
-		get
-		{
-			if (depthConfigs == null || depthConfigs.Count <= 0)
-			{
-				return null;
-			}
-			return depthConfigs[Mathf.Clamp(reactor.GetDepthLevel(), 0, depthConfigs.Count - 1)].options[reactor.GetDepthConfigIndex()].levelConfig.treeLevels;
-		}
-	}
+	public List<GhostReactorLevelGeneratorV2.TreeLevelConfig> TreeLevels => GetTreeLevels();
 
 	private void Awake()
 	{
@@ -153,6 +144,44 @@ public class GhostReactorLevelGenerator : MonoBehaviourTick
 			}
 			nextVisCheckNodeIndex++;
 		}
+	}
+
+	private List<GhostReactorLevelGeneratorV2.TreeLevelConfig> GetTreeLevels()
+	{
+		if (depthConfigs == null || depthConfigs.Count == 0)
+		{
+			return null;
+		}
+		List<GhostReactorLevelGeneratorV2.TreeLevelConfig> treeLevels = depthConfigs[Mathf.Clamp(reactor.GetDepthLevel(), 0, depthConfigs.Count - 1)].options[reactor.GetDepthConfigIndex()].levelConfig.treeLevels;
+		List<GhostReactorLevelGeneratorV2.TreeLevelConfig> list = new List<GhostReactorLevelGeneratorV2.TreeLevelConfig>();
+		foreach (GhostReactorLevelGeneratorV2.TreeLevelConfig item in treeLevels)
+		{
+			if (TreeLevelIsEnabledNow(item))
+			{
+				list.Add(item);
+			}
+		}
+		return list;
+	}
+
+	private static bool TreeLevelIsEnabledNow(GhostReactorLevelGeneratorV2.TreeLevelConfig treeLevel)
+	{
+		if (string.IsNullOrEmpty(treeLevel.EnableAfterDatetime) && string.IsNullOrEmpty(treeLevel.DisableAfterDatetime))
+		{
+			return true;
+		}
+		if (!string.IsNullOrEmpty(treeLevel.EnableAfterDatetime) && !string.IsNullOrEmpty(treeLevel.DisableAfterDatetime))
+		{
+			throw new ArgumentException("Both enable and disable after datetime are set--this should never happen!");
+		}
+		DateTime dateTime = GorillaComputer.instance.GetServerTime().ToUniversalTime();
+		if (!string.IsNullOrEmpty(treeLevel.EnableAfterDatetime))
+		{
+			DateTime dateTime2 = DateTime.Parse(treeLevel.EnableAfterDatetime).ToUniversalTime();
+			return dateTime > dateTime2;
+		}
+		DateTime dateTime3 = DateTime.Parse(treeLevel.DisableAfterDatetime).ToUniversalTime();
+		return dateTime < dateTime3;
 	}
 
 	private bool TestForCollision(GhostReactorLevelSection section, Vector3 position, Quaternion rotation, int selfi, int selfj, int selfk)
@@ -482,12 +511,12 @@ public class GhostReactorLevelGenerator : MonoBehaviourTick
 		}
 	}
 
-	public void RespawnEntity(int entityId, long entityCreateData)
+	public void RespawnEntity(int entityId, long entityCreateData, GameEntityId createdByEntityId)
 	{
 		int sectionIndex = GhostReactor.EnemyEntityCreateData.Unpack(entityCreateData).sectionIndex;
 		if (sectionIndex >= 0 && sectionIndex < nodeList.Count)
 		{
-			nodeList[sectionIndex].sectionInstance.RespawnEntity(ref randomGenerator, reactor.grManager.gameEntityManager, entityId, entityCreateData);
+			nodeList[sectionIndex].sectionInstance.RespawnEntity(ref randomGenerator, reactor.grManager.gameEntityManager, entityId, entityCreateData, createdByEntityId);
 		}
 	}
 

@@ -185,7 +185,7 @@ public class GREnemyMonkeye : MonoBehaviour, IGameEntityComponent, IGameEntitySe
 		abilityStagger.Setup(agent, anim, audioSource, base.transform, null, null);
 		abilityDie.Setup(agent, anim, audioSource, base.transform, null, null);
 		abilityJump.Setup(agent, anim, audioSource, base.transform, null, null);
-		senseNearby.Setup(headTransform);
+		senseNearby.Setup(headTransform, entity);
 		Setup(entity.createData);
 		if ((bool)entity && (bool)entity.manager && (bool)entity.manager.ghostReactorManager && (bool)entity.manager.ghostReactorManager.reactor)
 		{
@@ -559,7 +559,7 @@ public class GREnemyMonkeye : MonoBehaviour, IGameEntityComponent, IGameEntitySe
 		}
 	}
 
-	public void OnUpdate(float dt)
+	private void OnUpdate(float dt)
 	{
 		if (entity.IsAuthority())
 		{
@@ -571,7 +571,7 @@ public class GREnemyMonkeye : MonoBehaviour, IGameEntityComponent, IGameEntitySe
 		}
 	}
 
-	public void OnUpdateAuthority(float dt)
+	private void OnUpdateAuthority(float dt)
 	{
 		switch (currBehavior)
 		{
@@ -663,7 +663,7 @@ public class GREnemyMonkeye : MonoBehaviour, IGameEntityComponent, IGameEntitySe
 		}
 	}
 
-	public void OnUpdateRemote(float dt)
+	private void OnUpdateRemote(float dt)
 	{
 		switch (currBehavior)
 		{
@@ -703,7 +703,7 @@ public class GREnemyMonkeye : MonoBehaviour, IGameEntityComponent, IGameEntitySe
 		}
 	}
 
-	public void OnHitByClub(GRTool tool, GameHitData hit)
+	private void OnHitByClub(GRTool tool, GameHitData hit)
 	{
 		if (currBodyState == BodyState.Bones)
 		{
@@ -741,6 +741,13 @@ public class GREnemyMonkeye : MonoBehaviour, IGameEntityComponent, IGameEntitySe
 		{
 			armor.PlayBlockFx(hit.hitEntityPosition);
 		}
+	}
+
+	public void InstantDeath()
+	{
+		hp = 0;
+		SetBodyState(BodyState.Destroyed);
+		SetBehavior(Behavior.Dying);
 	}
 
 	public void OnHitByFlash(GRTool grTool, GameHitData hit)
@@ -790,6 +797,7 @@ public class GREnemyMonkeye : MonoBehaviour, IGameEntityComponent, IGameEntitySe
 			gameHitData.hitEntityPosition = component4.transform.position;
 			gameHitData.hitImpulse = Vector3.zero;
 			gameHitData.hitPosition = component4.transform.position;
+			gameHitData.hittablePoint = component5.FindHittablePoint(collider);
 			GameHitData hitData = gameHitData;
 			component5.RequestHit(hitData);
 		}

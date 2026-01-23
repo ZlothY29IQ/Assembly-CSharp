@@ -66,6 +66,11 @@ public class GorillaSlicerSimpleManager : MonoBehaviour
 		}
 	}
 
+	public static void RegisterSliceable(IGorillaSliceableSimple gSS)
+	{
+		RegisterSliceable(gSS, UpdateStep.Update);
+	}
+
 	public static void RegisterSliceable(IGorillaSliceableSimple gSS, UpdateStep step)
 	{
 		if (!hasInstance)
@@ -96,7 +101,20 @@ public class GorillaSlicerSimpleManager : MonoBehaviour
 		}
 	}
 
-	public static void UnregisterSliceable(IGorillaSliceableSimple gSS, UpdateStep step)
+	public static bool UnregisterSliceable(IGorillaSliceableSimple gSS)
+	{
+		if (UnregisterSliceable(gSS, UpdateStep.Update))
+		{
+			return true;
+		}
+		if (UnregisterSliceable(gSS, UpdateStep.LateUpdate))
+		{
+			return true;
+		}
+		return UnregisterSliceable(gSS, UpdateStep.FixedUpdate);
+	}
+
+	public static bool UnregisterSliceable(IGorillaSliceableSimple gSS, UpdateStep step)
 	{
 		if (!hasInstance)
 		{
@@ -108,21 +126,25 @@ public class GorillaSlicerSimpleManager : MonoBehaviour
 			if (instance.fixedUpdateSlice.Contains(gSS))
 			{
 				instance.fixedUpdateSlice.Remove(gSS);
+				return true;
 			}
 			break;
 		case UpdateStep.Update:
 			if (instance.updateSlice.Contains(gSS))
 			{
 				instance.updateSlice.Remove(gSS);
+				return true;
 			}
 			break;
 		case UpdateStep.LateUpdate:
 			if (instance.lateUpdateSlice.Contains(gSS))
 			{
 				instance.lateUpdateSlice.Remove(gSS);
+				return true;
 			}
 			break;
 		}
+		return false;
 	}
 
 	public void FixedUpdate()

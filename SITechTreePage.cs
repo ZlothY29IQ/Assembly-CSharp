@@ -14,6 +14,8 @@ public class SITechTreePage
 
 	public SITechTreePageId pageId;
 
+	public Sprite icon;
+
 	public ESuperGameModes excludedGameModes;
 
 	[SerializeField]

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using GorillaTagScripts.GhostReactor;
 using TMPro;
 using UnityEngine;
 
@@ -103,9 +104,14 @@ public class GhostReactorShiftDepthDisplay
 			{
 				if (item.Count > 0)
 				{
-					int num4 = (shiftManager.shiftStats.EnemyKills.ContainsKey(item.EnemyType) ? Math.Min(shiftManager.shiftStats.EnemyKills[item.EnemyType], item.Count) : 0);
+					int num4 = (shiftManager.shiftStats.EnemyKills.ContainsKey(item.GetEnemyType()) ? Math.Min(shiftManager.shiftStats.EnemyKills[item.GetEnemyType()], item.Count) : 0);
 					StringBuilder stringBuilder3 = new StringBuilder();
-					stringBuilder3.Append($"Kill {item.Count} {item.EnemyType}s ");
+					string text = "Kill";
+					if (item.EnemyType == GREnemyType.MoonBoss_Phase1 || item.EnemyType == GREnemyType.MoonBoss_Phase2)
+					{
+						text = "Repel";
+					}
+					stringBuilder3.Append((item.Count == 1) ? (text + " 1 " + item.GetEnemyName() + " ") : $"{text} {item.Count} {item.GetEnemyType().Pluralize()} ");
 					stringBuilder3.Append($"({num4}/{item.Count})");
 					stringBuilder3.Append("\n");
 					cachedStringBuilder.Append(stringBuilder3);
@@ -163,7 +169,7 @@ public class GhostReactorShiftDepthDisplay
 		bool flag4 = true;
 		foreach (GREnemyCount item in shiftManager.killsRequiredToDelveDeeper)
 		{
-			if (shiftStats.EnemyKills.GetValueOrDefault(item.EnemyType) < item.Count)
+			if (shiftStats.EnemyKills.GetValueOrDefault(item.GetEnemyType()) < item.Count)
 			{
 				flag4 = false;
 				break;

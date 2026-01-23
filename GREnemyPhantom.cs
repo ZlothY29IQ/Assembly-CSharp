@@ -148,7 +148,7 @@ public class GREnemyPhantom : MonoBehaviour, IGameEntityComponent, IGameEntitySe
 		behaviorStartTime = -1.0;
 		agent.onBodyStateChanged += OnNetworkBodyStateChange;
 		agent.onBehaviorStateChanged += OnNetworkBehaviorStateChange;
-		senseNearby.Setup(headTransform);
+		senseNearby.Setup(headTransform, entity);
 	}
 
 	public void OnEntityInit()
@@ -614,6 +614,7 @@ public class GREnemyPhantom : MonoBehaviour, IGameEntityComponent, IGameEntitySe
 				gameHitData.hitEntityPosition = component2.transform.position;
 				gameHitData.hitImpulse = Vector3.zero;
 				gameHitData.hitPosition = component2.transform.position;
+				gameHitData.hittablePoint = component3.FindHittablePoint(collider);
 				GameHitData hitData = gameHitData;
 				component3.RequestHit(hitData);
 			}

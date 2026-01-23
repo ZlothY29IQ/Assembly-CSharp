@@ -565,7 +565,7 @@ public class GhostReactor : MonoBehaviourTick, IBuildValidation
 				flag4 = true;
 				if (grManager.gameEntityManager.IsAuthority())
 				{
-					levelGenerator.RespawnEntity(item.entityTypeID, item.entityCreateData);
+					levelGenerator.RespawnEntity(item.entityTypeID, item.entityCreateData, GameEntityId.Invalid);
 				}
 			}
 		}
@@ -938,17 +938,26 @@ public class GhostReactor : MonoBehaviourTick, IBuildValidation
 		handPrintLocations.Clear();
 	}
 
-	public void OnAbilityDie(GameEntity entity)
+	public void OnAbilityDie(GameEntity entity, float forcedRespawn = -1f)
 	{
 		EnemyEntityCreateData enemyEntityCreateData = EnemyEntityCreateData.Unpack(entity.createData);
-		if (enemyEntityCreateData.respawnCount != 0)
+		if (enemyEntityCreateData.respawnCount == 0)
 		{
-			EntityTypeRespawnTracker entityTypeRespawnTracker = new EntityTypeRespawnTracker();
-			entityTypeRespawnTracker.entityTypeID = entity.typeId;
-			entityTypeRespawnTracker.entityCreateData = enemyEntityCreateData.Pack();
-			entityTypeRespawnTracker.entityNextRespawnTime = respawnTime;
-			respawnQueue.Add(entityTypeRespawnTracker);
+			return;
 		}
+		if (grManager.GetBossEntity() != null)
+		{
+			GREnemyBossMoon component = grManager.GetBossEntity().GetComponent<GREnemyBossMoon>();
+			if (component != null && component.BossHasRevealed)
+			{
+				return;
+			}
+		}
+		EntityTypeRespawnTracker entityTypeRespawnTracker = new EntityTypeRespawnTracker();
+		entityTypeRespawnTracker.entityTypeID = entity.typeId;
+		entityTypeRespawnTracker.entityCreateData = enemyEntityCreateData.Pack();
+		entityTypeRespawnTracker.entityNextRespawnTime = ((forcedRespawn < 0f) ? respawnTime : forcedRespawn);
+		respawnQueue.Add(entityTypeRespawnTracker);
 	}
 
 	public void ClearAllRespawns()

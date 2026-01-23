@@ -37,6 +37,8 @@ public class GRAbilityAttackSimple : GRAbilityBase
 
 	public AbilitySound soundOutro;
 
+	private float timeMult = 1f;
+
 	private State state;
 
 	public float maxTurnSpeed;
@@ -44,6 +46,10 @@ public class GRAbilityAttackSimple : GRAbilityBase
 	public List<GameObject> damageTrigger;
 
 	private string animNameString;
+
+	public GameAbilityEvents events;
+
+	public bool adjustByAnimationSpeed;
 
 	public override void Setup(GameAgent agent, Animation anim, AudioSource audioSource, Transform root, Transform head, GRSenseLineOfSight lineOfSight)
 	{
@@ -53,7 +59,7 @@ public class GRAbilityAttackSimple : GRAbilityBase
 
 	protected override void OnStart()
 	{
-		if ((double)tellDuration > 0.0)
+		if ((double)(tellDuration * timeMult) > 0.0)
 		{
 			PlayState(State.Tell, tellAnimData, soundTell, damageEnabled: false);
 		}
@@ -66,6 +72,8 @@ public class GRAbilityAttackSimple : GRAbilityBase
 			agent.SetIsPathing(isPathing: false, ignoreRigiBody: true);
 			agent.SetDisableNetworkSync(disable: true);
 		}
+		events.Reset();
+		events.OnAbilityStart(GetAbilityTime(Time.timeAsDouble), audioSource);
 	}
 
 	protected override void OnStop()
@@ -76,6 +84,7 @@ public class GRAbilityAttackSimple : GRAbilityBase
 			agent.SetDisableNetworkSync(disable: false);
 		}
 		EnableList(damageTrigger, enable: false);
+		events.OnAbilityStop(GetAbilityTime(Time.timeAsDouble), audioSource);
 	}
 
 	private void PlayState(State newState, AnimationData animData, AbilitySound sound, bool damageEnabled)
@@ -84,6 +93,7 @@ public class GRAbilityAttackSimple : GRAbilityBase
 		{
 			PlayAnim(animData.animName, 0.1f, animData.speed);
 			animNameString = animData.animName;
+			timeMult = ((adjustByAnimationSpeed && !Mathf.Approximately(animData.speed, 0f)) ? (1f / animData.speed) : 1f);
 		}
 		sound.soundSelectMode = AbilitySound.SoundSelectMode.Random;
 		sound.Play(null);
@@ -102,24 +112,25 @@ public class GRAbilityAttackSimple : GRAbilityBase
 		switch (state)
 		{
 		case State.Tell:
-			if (num > tellDuration)
+			if (num > tellDuration * timeMult)
 			{
 				PlayState(State.Attack, attackAnimData, soundAttack, damageEnabled: true);
 			}
 			break;
 		case State.Attack:
-			if (num > tellDuration + attackDuration)
+			if (num > (tellDuration + attackDuration) * timeMult)
 			{
 				PlayState(State.FollowThrough, outroAnimData, soundOutro, damageEnabled: false);
 			}
 			break;
 		case State.FollowThrough:
-			if (num >= duration)
+			if (num >= duration * timeMult)
 			{
 				state = State.Done;
 			}
 			break;
 		}
+		events.TryPlay(num / timeMult, audioSource);
 	}
 
 	public void SetTargetPlayer(NetPlayer targetPlayer)

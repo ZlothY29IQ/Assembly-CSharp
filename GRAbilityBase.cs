@@ -91,6 +91,11 @@ public class GRAbilityBase
 		OnStop();
 	}
 
+	public float GetAbilityTime(double currTime)
+	{
+		return (float)(currTime - startTime);
+	}
+
 	public virtual bool IsDone()
 	{
 		return false;

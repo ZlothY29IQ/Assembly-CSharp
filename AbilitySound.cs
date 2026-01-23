@@ -40,7 +40,7 @@ public class AbilitySound
 		return false;
 	}
 
-	private void UpdateNextSound()
+	public void UpdateNextSound()
 	{
 		switch (soundSelectMode)
 		{

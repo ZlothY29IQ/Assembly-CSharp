@@ -13,6 +13,19 @@ public static class GREnemyTypeExtensions
 		{
 			return GREnemyType.None;
 		}
+		if (component.enemyType == GREnemyType.MoonBoss_Phase1 || component.enemyType == GREnemyType.MoonBoss_Phase2)
+		{
+			return GREnemyType.MoonBoss;
+		}
 		return component.enemyType;
+	}
+
+	public static string Pluralize(this GREnemyType t)
+	{
+		if (t == GREnemyType.MoonBoss)
+		{
+			return "Meteor Monsters";
+		}
+		return $"{t}s";
 	}
 }

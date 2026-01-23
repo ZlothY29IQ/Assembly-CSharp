@@ -38,6 +38,8 @@ public class GameAgent : MonoBehaviour, IGameEntityComponent
 
 	private bool wasOnOffMeshNavLink;
 
+	public bool navAgentless;
+
 	[ReadOnly]
 	public bool pauseEntityThink;
 
@@ -237,6 +239,11 @@ public class GameAgent : MonoBehaviour, IGameEntityComponent
 		{
 			navAgent.velocity = vel;
 		}
+	}
+
+	public void ClearLastRequestedDestination()
+	{
+		lastRequestedDest = Vector3.one * 10000f;
 	}
 
 	public void ApplyNetworkUpdate(Vector3 position, Quaternion rotation)

@@ -315,6 +315,8 @@ public class GorillaTagger : MonoBehaviour, IGuidedRefReceiverMono, IGuidedRefMo
 
 	private int tagRadiusOverrideFrame = -1;
 
+	public XRDisplaySubsystem activeXRDisplay;
+
 	private static Action onPlayerSpawnedRootCallback;
 
 	public static GorillaTagger Instance => _instance;
@@ -444,20 +446,24 @@ public class GorillaTagger : MonoBehaviour, IGuidedRefReceiverMono, IGuidedRefMo
 		}
 	}
 
-	private void IsXRSubsystemActive()
+	private async void IsXRSubsystemActive()
 	{
 		loadedDeviceName = XRSettings.loadedDeviceName;
-		List<XRDisplaySubsystem> list = new List<XRDisplaySubsystem>();
-		SubsystemManager.GetSubsystems(list);
-		foreach (XRDisplaySubsystem item in list)
+		while (!xrSubsystemIsActive)
 		{
-			if (item.running)
+			List<XRDisplaySubsystem> list = new List<XRDisplaySubsystem>();
+			SubsystemManager.GetSubsystems(list);
+			foreach (XRDisplaySubsystem item in list)
 			{
-				xrSubsystemIsActive = true;
-				return;
+				if (item.running)
+				{
+					xrSubsystemIsActive = true;
+					activeXRDisplay = item;
+					return;
+				}
 			}
+			await Awaitable.WaitForSecondsAsync(0.1f);
 		}
-		xrSubsystemIsActive = false;
 	}
 
 	protected void Start()
@@ -563,11 +569,10 @@ public class GorillaTagger : MonoBehaviour, IGuidedRefReceiverMono, IGuidedRefMo
 			}
 			GTPlayer.Instance.inOverlay = false;
 		}
-		if (xrSubsystemIsActive && Application.platform != RuntimePlatform.Android)
+		if (xrSubsystemIsActive && Application.platform != RuntimePlatform.Android && activeXRDisplay != null && activeXRDisplay.TryGetDisplayRefreshRate(out _defaultRefreshRate))
 		{
-			_defaultRefreshRate = XRDevice.refreshRate;
 			float num = (_forceChangeRefreshRate ? _forcedRefreshRate : _defaultRefreshRate);
-			float num2 = 1f / (num - 1f);
+			float num2 = 1f / num;
 			if (SteamVR.settings.lockPhysicsUpdateRateToRenderFrequency)
 			{
 				num2 = 1f / num;
@@ -607,32 +612,18 @@ public class GorillaTagger : MonoBehaviour, IGuidedRefReceiverMono, IGuidedRefMo
 			{
 				num4 = _forcedRefreshRate;
 			}
-			else
+			while (num4 > 90f)
 			{
-				if (systemDisplayFrequency != 60f)
+				num3--;
+				if (num3 < 0)
 				{
-					if (systemDisplayFrequency == 71f)
-					{
-						num4 = 72f;
-					}
+					break;
 				}
-				else
-				{
-					num4 = 60f;
-				}
-				while (num4 > 90f)
-				{
-					num3--;
-					if (num3 < 0)
-					{
-						break;
-					}
-					num4 = OVRManager.display.displayFrequenciesAvailable[num3];
-				}
-				_defaultRefreshRate = num4;
+				num4 = OVRManager.display.displayFrequenciesAvailable[num3];
 			}
+			_defaultRefreshRate = num4;
 			float num5 = 1f;
-			float num6 = 1f / (num4 - 1f);
+			float num6 = 1f / num4;
 			if (_forceFramerateCheck || Mathf.Abs(Time.fixedDeltaTime - num6 * num5) > 0.0001f)
 			{
 				_forceFramerateCheck = false;
@@ -660,13 +651,14 @@ public class GorillaTagger : MonoBehaviour, IGuidedRefReceiverMono, IGuidedRefMo
 				GTPlayer.Instance.InitializeValues();
 				OVRManager.instance.gameObject.SetActive(value: false);
 				_frameRateUpdated = true;
+				ConfirmUpdatedFrameRate();
 			}
 		}
 		else if (!xrSubsystemIsActive && Application.platform != RuntimePlatform.Android)
 		{
 			_defaultRefreshRate = 144f;
 			int num8 = (_forceChangeRefreshRate ? ((int)_forcedRefreshRate) : ((int)_defaultRefreshRate));
-			float num9 = 1f / (float)(num8 - 1);
+			float num9 = 1f / (float)num8;
 			if (_forceFramerateCheck || Mathf.Abs(Time.fixedDeltaTime - num9) > 0.0001f)
 			{
 				_forceFramerateCheck = false;
@@ -1278,7 +1270,7 @@ public class GorillaTagger : MonoBehaviour, IGuidedRefReceiverMono, IGuidedRefMo
 		Tappable component = null;
 		bool flag3 = surfaceOverride != null && surfaceOverride.TryGetComponent<Tappable>(out component);
 		HandEffectContext handEffect = offlineVRRig.GetHandEffect(isLeftHand, stiltID);
-		if ((!flag3 || !component.overrideTapCooldown) && (!(handEffect.SeparateUpTapCooldown && flag2) || !(Time.time > lastTapUpTime + tapCoolDown)) && !(Time.time > lastTapTime + tapCoolDown))
+		if ((!flag3 || !component.overrideTapCooldown) && (!(handEffect.SeparateUpTapCooldown && flag2) || !(Time.time > lastTapUpTime + tapCoolDown)) && (!flag || !(Time.time > lastTapTime + tapCoolDown)))
 		{
 			return;
 		}
@@ -1365,6 +1357,33 @@ public class GorillaTagger : MonoBehaviour, IGuidedRefReceiverMono, IGuidedRefMo
 		if (NetworkSystem.Instance.InRoom && myVRRig.IsNotNull() && myVRRig != null)
 		{
 			myVRRig.GetView.RPC("OnHandTapRPC", RpcTarget.Others, audioClipIndex, flag, isLeftHand, stiltID, handTapSpeed, Utils.PackVector3ToLong(dirFromHitToHand));
+		}
+	}
+
+	public async void ConfirmUpdatedFrameRate()
+	{
+		await Awaitable.WaitForSecondsAsync(1f);
+		if (Mathf.RoundToInt(OVRPlugin.systemDisplayFrequency) != Application.targetFrameRate)
+		{
+			float systemDisplayFrequency = OVRPlugin.systemDisplayFrequency;
+			float fixedDeltaTime = 1f / systemDisplayFrequency;
+			Debug.Log("Thinger: =========== Force Re-adjusting, presumably overwritten =========");
+			Debug.Log(" fixedDeltaTime before:\t" + Time.fixedDeltaTime);
+			Debug.Log(" Refresh rate         :\t" + systemDisplayFrequency);
+			Application.targetFrameRate = Mathf.RoundToInt(OVRPlugin.systemDisplayFrequency);
+			Time.fixedDeltaTime = fixedDeltaTime;
+			UpdateResolutionScale(systemDisplayFrequency < _defaultRefreshRate);
+			Debug.Log(" fixedDeltaTime after :\t" + Time.fixedDeltaTime);
+			Debug.Log(" History size before  :\t" + GTPlayer.Instance.velocityHistorySize);
+			GTPlayer.Instance.velocityHistorySize = Mathf.Max(Mathf.Min(Mathf.FloorToInt(systemDisplayFrequency * (1f / 12f)), 10), 6);
+			if (GTPlayer.Instance.velocityHistorySize > 9)
+			{
+				GTPlayer.Instance.velocityHistorySize--;
+			}
+			Debug.Log("New history size: " + GTPlayer.Instance.velocityHistorySize);
+			Debug.Log(" ============================================");
+			GTPlayer.Instance.slideControl = 1f - CalcSlideControl(systemDisplayFrequency);
+			GTPlayer.Instance.InitializeValues();
 		}
 	}
 

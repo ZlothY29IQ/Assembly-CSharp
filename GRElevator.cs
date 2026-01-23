@@ -102,6 +102,10 @@ public class GRElevator : MonoBehaviour
 
 	public GameObject collidersAndVisuals;
 
+	public GameObject videoDisplay;
+
+	public AudioSource videoAudio;
+
 	private void OnEnable()
 	{
 		GRElevatorManager.RegisterElevator(this);

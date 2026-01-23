@@ -136,7 +136,7 @@ public class SIProgression : MonoBehaviour, IGorillaSliceableSimple, GorillaQues
 
 	private const int STARTING_STASHED_BONUS_POINTS = 0;
 
-	public const int SHARED_QUEST_TURNINS_FOR_POINT = 10;
+	public const int SHARED_QUEST_TURNINS_FOR_POINT = 4;
 
 	public const int NEW_QUESTS_PER_DAY = 3;
 

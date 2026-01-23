@@ -59,8 +59,6 @@ public class GrowingSnowballThrowable : SnowballThrowable
 
 	private PhotonEvent snowballThrowEvent;
 
-	private CallLimiterWithCooldown snowballThrowCallLimit = new CallLimiterWithCooldown(10f, 10, 2f);
-
 	[HideInInspector]
 	public static bool debugDrawAOERange = false;
 
@@ -255,7 +253,7 @@ public class GrowingSnowballThrowable : SnowballThrowable
 
 	private void SnowballThrowEventReceiver(int sender, int receiver, object[] args, PhotonMessageInfoWrapped info)
 	{
-		if (sender != receiver || args == null || args.Length < 3 || targetRig.IsNull() || !targetRig.gameObject.activeSelf)
+		if (sender != receiver || args == null || args.Length < 4 || targetRig.IsNull() || !targetRig.gameObject.activeSelf)
 		{
 			return;
 		}
@@ -265,7 +263,7 @@ public class GrowingSnowballThrowable : SnowballThrowable
 			return;
 		}
 		GorillaNot.IncrementRPCCall(info, "SnowballThrowEventReceiver");
-		if (snowballThrowCallLimit.CheckCallTime(Time.time) && args[0] is Vector3 v && args[1] is Vector3 inVel && args[2] is int index)
+		if (FXSystem.CheckCallSpam(targetRig.fxSettings, 4, info.SentServerTime) && args[0] is Vector3 v && args[1] is Vector3 inVel && args[2] is int index)
 		{
 			Vector3 velocity = targetRig.ClampVelocityRelativeToPlayerSafe(inVel, 50f);
 			float x = snowballModelTransform.lossyScale.x;

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using CjLib;
@@ -47,6 +46,10 @@ public class GREnemyRanged : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 	public GRAttributes attributes;
 
 	public Animation anim;
+
+	public GRSenseNearby senseNearby;
+
+	public GRSenseLineOfSight senseLineOfSight;
 
 	public GRAbilityStagger abilityStagger;
 
@@ -311,6 +314,7 @@ public class GREnemyRanged : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 		colliders = new List<Collider>(4);
 		GetComponentsInChildren(colliders);
 		visibilityLayerMask = LayerMask.GetMask("Default");
+		senseNearby.Setup(headTransform, entity);
 		if (armor != null)
 		{
 			armor.SetHp(0);
@@ -636,47 +640,23 @@ public class GREnemyRanged : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 
 	private void UpdateTarget()
 	{
-		float num = float.MaxValue;
 		bestTargetPlayer = null;
 		bestTargetNetPlayer = null;
 		tempRigs.Clear();
 		tempRigs.Add(VRRig.LocalRig);
 		VRRigCache.Instance.GetAllUsedRigs(tempRigs);
-		Vector3 position = base.transform.position;
-		Vector3 rhs = base.transform.rotation * Vector3.forward;
-		float num2 = sightDist * sightDist;
-		float num3 = Mathf.Cos(sightFOV * (MathF.PI / 180f));
-		for (int i = 0; i < tempRigs.Count; i++)
+		senseNearby.UpdateNearby(tempRigs, senseLineOfSight);
+		float outDistanceSq;
+		VRRig vRRig = senseNearby.PickClosest(out outDistanceSq);
+		if (vRRig != null)
 		{
-			VRRig vRRig = tempRigs[i];
 			GRPlayer component = vRRig.GetComponent<GRPlayer>();
-			if (component.State == GRPlayer.GRPlayerState.Ghost)
+			if ((object)component != null && component.State != GRPlayer.GRPlayerState.Ghost)
 			{
-				continue;
-			}
-			Vector3 position2 = vRRig.transform.position;
-			Vector3 vector = position2 - position;
-			float sqrMagnitude = vector.sqrMagnitude;
-			if (sqrMagnitude > num2)
-			{
-				continue;
-			}
-			float num4 = 0f;
-			if (sqrMagnitude > 0f)
-			{
-				num4 = Mathf.Sqrt(sqrMagnitude);
-				if (Vector3.Dot(vector / num4, rhs) < num3)
-				{
-					continue;
-				}
-			}
-			if (num4 < num && Physics.RaycastNonAlloc(new Ray(headTransform.position, position2 - headTransform.position), GREnemyChaser.visibilityHits, num4, visibilityLayerMask.value, QueryTriggerInteraction.Ignore) < 1)
-			{
-				num = num4;
 				bestTargetPlayer = component;
 				bestTargetNetPlayer = vRRig.OwningNetPlayer;
 				lastSeenTargetTime = Time.timeAsDouble;
-				lastSeenTargetPosition = position2;
+				lastSeenTargetPosition = vRRig.transform.position;
 			}
 		}
 	}
@@ -712,7 +692,7 @@ public class GREnemyRanged : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 		}
 	}
 
-	public void OnUpdateAuthority(float dt)
+	private void OnUpdateAuthority(float dt)
 	{
 		switch (currBehavior)
 		{
@@ -857,7 +837,7 @@ public class GREnemyRanged : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 		GameAgent.UpdateFacing(base.transform, navAgent, targetPlayer, turnSpeed);
 	}
 
-	public void OnUpdateRemote(float dt)
+	private void OnUpdateRemote(float dt)
 	{
 		switch (currBehavior)
 		{
@@ -915,7 +895,7 @@ public class GREnemyRanged : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 		}
 	}
 
-	public void UpdateSearch()
+	private void UpdateSearch()
 	{
 		Vector3 vector = searchPosition - base.transform.position;
 		if (new Vector3(vector.x, 0f, vector.z).sqrMagnitude < 0.15f)
@@ -944,7 +924,7 @@ public class GREnemyRanged : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 		}
 	}
 
-	public void OnHitByClub(GRTool tool, GameHitData hit)
+	private void OnHitByClub(GRTool tool, GameHitData hit)
 	{
 		if (currBodyState == BodyState.Bones)
 		{
@@ -976,7 +956,14 @@ public class GREnemyRanged : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 		}
 	}
 
-	public void OnHitByFlash(GRTool tool, GameHitData hit)
+	public void InstantDeath()
+	{
+		hp = 0;
+		SetBodyState(BodyState.Destroyed);
+		SetBehavior(Behavior.Dying);
+	}
+
+	private void OnHitByFlash(GRTool tool, GameHitData hit)
 	{
 		if (currBodyState == BodyState.Shell)
 		{

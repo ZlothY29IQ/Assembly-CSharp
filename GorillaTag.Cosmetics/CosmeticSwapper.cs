@@ -169,6 +169,10 @@ public class CosmeticSwapper : MonoBehaviour, ITickSystemTick
 			return null;
 		}
 		CosmeticsController.CosmeticItem replacedItem = controller.currentWornSet.items[(int)cosmeticSlot];
+		if (!replacedItem.isNullItem && replacedItem.itemName == cosmeticItem.itemName)
+		{
+			return null;
+		}
 		controller.ApplyCosmeticItemToSet(controller.tempUnlockedSet, cosmeticItem, isLeftHand, applyToPlayerPrefs: false);
 		controller.UpdateWornCosmetics(sync: true);
 		CosmeticState value = default(CosmeticState);

@@ -25,7 +25,7 @@ public class GameLight : MonoBehaviour
 		intensityMult = 1;
 	}
 
-	private void OnEnable()
+	protected void OnEnable()
 	{
 		if (initialized)
 		{
@@ -33,13 +33,13 @@ public class GameLight : MonoBehaviour
 		}
 	}
 
-	private void Start()
+	protected void Start()
 	{
 		lightId = GameLightingManager.instance.AddGameLight(this);
 		initialized = true;
 	}
 
-	private void OnDisable()
+	protected void OnDisable()
 	{
 		if (initialized)
 		{

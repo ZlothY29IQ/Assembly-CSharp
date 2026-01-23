@@ -62,6 +62,7 @@ public class GRAbilityChase : GRAbilityBase
 		agent.SetSpeed(chaseSpeed);
 		lastSeenTargetTime = Time.timeAsDouble;
 		movementSound.Play(null);
+		agent.ClearLastRequestedDestination();
 	}
 
 	protected override void OnStop()

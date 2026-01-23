@@ -19,10 +19,15 @@ public class GRSenseNearby
 
 	private Transform headTransform;
 
-	public void Setup(Transform headTransform)
+	private GameEntity _entity;
+
+	private bool BossEntityPresent => GhostReactorManager.Get(_entity).GetBossEntity() != null;
+
+	public void Setup(Transform headTransform, GameEntity entity)
 	{
 		rigsNearby = new List<VRRig>();
 		this.headTransform = headTransform;
+		_entity = entity;
 	}
 
 	public void OnHitByPlayer(int hitByActorId)
@@ -56,8 +61,12 @@ public class GRSenseNearby
 		return false;
 	}
 
-	public bool IsAnyoneNearby(float range)
+	public bool IsAnyoneNearby(float range, bool ignoreBossEntity = false)
 	{
+		if (!ignoreBossEntity && BossEntityPresent && rigsNearby.Count > 0)
+		{
+			return true;
+		}
 		if (!IsAnyoneNearby())
 		{
 			return false;
@@ -81,6 +90,17 @@ public class GRSenseNearby
 
 	public void AddNearby(Vector3 position, Vector3 forward, List<VRRig> allRigs)
 	{
+		if (BossEntityPresent)
+		{
+			foreach (VRRig allRig in allRigs)
+			{
+				if (!rigsNearby.Contains(allRig))
+				{
+					rigsNearby.Add(allRig);
+				}
+			}
+			return;
+		}
 		float num = range * range;
 		float num2 = Mathf.Cos(fov * (MathF.PI / 180f));
 		for (int i = 0; i < allRigs.Count; i++)
@@ -115,6 +135,10 @@ public class GRSenseNearby
 
 	public void RemoveNotNearby(Vector3 position)
 	{
+		if (BossEntityPresent)
+		{
+			return;
+		}
 		float num = exitRange * exitRange;
 		for (int i = 0; i < rigsNearby.Count; i++)
 		{
@@ -134,6 +158,10 @@ public class GRSenseNearby
 
 	public void RemoveNoLineOfSight(Vector3 headPos, GRSenseLineOfSight senseLineOfSight)
 	{
+		if (BossEntityPresent)
+		{
+			return;
+		}
 		for (int i = 0; i < rigsNearby.Count; i++)
 		{
 			Vector3 rigTestLocation = GetRigTestLocation(rigsNearby[i]);

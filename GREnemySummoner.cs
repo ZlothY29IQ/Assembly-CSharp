@@ -155,7 +155,7 @@ public class GREnemySummoner : MonoBehaviour, IGameEntityComponent, IGameEntityS
 		navAgent.updateRotation = false;
 		behaviorStartTime = -1.0;
 		agent.onBehaviorStateChanged += OnNetworkBehaviorStateChange;
-		senseNearby.Setup(headTransform);
+		senseNearby.Setup(headTransform, entity);
 	}
 
 	public void OnEntityInit()
@@ -197,14 +197,6 @@ public class GREnemySummoner : MonoBehaviour, IGameEntityComponent, IGameEntityS
 	}
 
 	public void OnEntityStateChange(long prevState, long nextState)
-	{
-	}
-
-	private void OnDisable()
-	{
-	}
-
-	private void OnEnable()
 	{
 	}
 
@@ -610,7 +602,7 @@ public class GREnemySummoner : MonoBehaviour, IGameEntityComponent, IGameEntityS
 		}
 	}
 
-	public void OnHitByClub(GRTool tool, GameHitData hit)
+	private void OnHitByClub(GRTool tool, GameHitData hit)
 	{
 		if (currBehavior == Behavior.Destroyed)
 		{
@@ -637,7 +629,13 @@ public class GREnemySummoner : MonoBehaviour, IGameEntityComponent, IGameEntityS
 		}
 	}
 
-	public void OnHitByFlash(GRTool tool, GameHitData hit)
+	public void InstantDeath()
+	{
+		hp = 0;
+		SetBehavior(Behavior.Destroyed);
+	}
+
+	private void OnHitByFlash(GRTool tool, GameHitData hit)
 	{
 		abilityFlashed.SetStaggerVelocity(hit.hitImpulse);
 		if (currBodyState == BodyState.Shell)
@@ -706,6 +704,7 @@ public class GREnemySummoner : MonoBehaviour, IGameEntityComponent, IGameEntityS
 				gameHitData.hitEntityPosition = component2.transform.position;
 				gameHitData.hitImpulse = Vector3.zero;
 				gameHitData.hitPosition = component2.transform.position;
+				gameHitData.hittablePoint = component3.FindHittablePoint(collider);
 				GameHitData hitData = gameHitData;
 				component3.RequestHit(hitData);
 			}

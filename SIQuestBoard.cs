@@ -7,6 +7,15 @@ using UnityEngine;
 
 public class SIQuestBoard : MonoBehaviour, IGorillaSliceableSimple
 {
+	private enum RoomFXDurationState
+	{
+		_15seconds,
+		_30seconds,
+		_60seconds,
+		_90seconds,
+		_120seconds
+	}
+
 	public SuperInfection superInfection;
 
 	public List<SIUIPlayerQuestDisplay> questDisplays;
@@ -24,6 +33,35 @@ public class SIQuestBoard : MonoBehaviour, IGorillaSliceableSimple
 	private int lastMinutes;
 
 	private int lastSeconds;
+
+	private Dictionary<RoomFXDurationState, float> roomFXDurations = new Dictionary<RoomFXDurationState, float>
+	{
+		{
+			RoomFXDurationState._15seconds,
+			15f
+		},
+		{
+			RoomFXDurationState._30seconds,
+			30f
+		},
+		{
+			RoomFXDurationState._60seconds,
+			60f
+		},
+		{
+			RoomFXDurationState._90seconds,
+			90f
+		},
+		{
+			RoomFXDurationState._120seconds,
+			120f
+		}
+	};
+
+	private RoomFXDurationState currentDuration = RoomFXDurationState._30seconds;
+
+	[SerializeField]
+	private TextMeshPro RoomFXDurationReadout;
 
 	public void WriteDataPUN(PhotonStream stream, PhotonMessageInfo info)
 	{
@@ -137,6 +175,33 @@ public class SIQuestBoard : MonoBehaviour, IGorillaSliceableSimple
 	}
 
 	public void CheatAddBonusPoints(int points)
+	{
+	}
+
+	public void CheatRoomFXDurationPlus()
+	{
+		if (currentDuration < RoomFXDurationState._120seconds)
+		{
+			currentDuration++;
+		}
+		RoomFXDurationReadout.text = $"{roomFXDurations[currentDuration]}secs";
+	}
+
+	public void CheatRoomFXDurationMinus()
+	{
+		if (currentDuration > RoomFXDurationState._15seconds)
+		{
+			currentDuration--;
+		}
+		RoomFXDurationReadout.text = $"{roomFXDurations[currentDuration]}secs";
+	}
+
+	public void CheatRoomFX_Underwater()
+	{
+		StartRoomFX(roomFXDurations[currentDuration]);
+	}
+
+	public void StartRoomFX(float duration)
 	{
 	}
 }

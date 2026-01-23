@@ -19,6 +19,11 @@ public class GameEntity : MonoBehaviour
 
 	public const int Invalid = -1;
 
+	public List<GameEntity> builtInEntities;
+
+	[NonSerialized]
+	public bool isBuiltIn;
+
 	public bool pickupable = true;
 
 	public float pickupRangeFromSurface;
@@ -90,6 +95,9 @@ public class GameEntity : MonoBehaviour
 	public long createData { get; set; }
 
 	[DebugReadout]
+	public GameEntityId createdByEntityId { get; set; }
+
+	[DebugReadout]
 	public int heldByActorNumber { get; internal set; }
 
 	[DebugReadout]
@@ -143,20 +151,41 @@ public class GameEntity : MonoBehaviour
 		GetComponentsInChildren(entityComponents);
 		entitySerialize = new List<IGameEntitySerialize>(1);
 		GetComponentsInChildren(entitySerialize);
+		if (builtInEntities != null)
+		{
+			for (int i = 0; i < builtInEntities.Count; i++)
+			{
+				builtInEntities[i].isBuiltIn = true;
+			}
+		}
 	}
 
-	public void Create(GameEntityManager manager, int typeId)
+	public void Create(GameEntityManager manager, int netId, int typeId)
 	{
 		this.manager = manager;
 		this.typeId = typeId;
+		if (builtInEntities != null)
+		{
+			for (int i = 0; i < builtInEntities.Count; i++)
+			{
+				int netId2 = netId + 1 + i;
+				manager.AddGameEntity(netId2, builtInEntities[i]);
+				builtInEntities[i].Create(manager, netId2, -1);
+			}
+		}
 	}
 
-	public void Init(long createData)
+	public void Init(long createData, int createdByEntityNetId)
 	{
 		this.createData = createData;
+		createdByEntityId = manager.GetEntityIdFromNetId(createdByEntityNetId);
 		for (int i = 0; i < entityComponents.Count; i++)
 		{
 			entityComponents[i].OnEntityInit();
+		}
+		for (int j = 0; j < builtInEntities.Count; j++)
+		{
+			builtInEntities[j].Init(0L, -1);
 		}
 	}
 
@@ -303,7 +332,7 @@ public class GameEntity : MonoBehaviour
 		manager.RemoveGameEntity(this);
 		manager = newManager;
 		GameEntityId result = (id = newManager.AddGameEntity(this));
-		manager.InitItemLocal(this, createData);
+		manager.InitItemLocal(this, createData, -1);
 		return result;
 	}
 

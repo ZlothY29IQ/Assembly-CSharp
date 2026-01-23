@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class GRSummonedEntity : MonoBehaviour, IGameEntityComponent
 {
-	private int summonerNetID;
+	private GameEntityId summonerEntityId = GameEntityId.Invalid;
 
 	private GameEntity entity;
 
@@ -15,8 +15,8 @@ public class GRSummonedEntity : MonoBehaviour, IGameEntityComponent
 
 	public void OnEntityInit()
 	{
-		summonerNetID = (int)entity.createData;
-		if (summonerNetID != 0)
+		summonerEntityId = entity.createdByEntityId;
+		if (summonerEntityId.IsValid())
 		{
 			summoner = FindSummoner();
 			if (summoner != null)
@@ -26,9 +26,9 @@ public class GRSummonedEntity : MonoBehaviour, IGameEntityComponent
 		}
 	}
 
-	public int GetSummonerNetID()
+	public GameEntityId GetSummonerID()
 	{
-		return summonerNetID;
+		return summonerEntityId;
 	}
 
 	public void OnEntityDestroy()
@@ -45,11 +45,9 @@ public class GRSummonedEntity : MonoBehaviour, IGameEntityComponent
 
 	private IGRSummoningEntity FindSummoner()
 	{
-		if (summonerNetID != 0)
+		if (summonerEntityId.IsValid())
 		{
-			GameEntityManager gameEntityManager = GhostReactorManager.Get(entity).gameEntityManager;
-			GameEntityId entityIdFromNetId = gameEntityManager.GetEntityIdFromNetId(summonerNetID);
-			GameEntity gameEntity = gameEntityManager.GetGameEntity(entityIdFromNetId);
+			GameEntity gameEntity = GhostReactorManager.Get(entity).gameEntityManager.GetGameEntity(summonerEntityId);
 			if (gameEntity != null)
 			{
 				return gameEntity.GetComponent<IGRSummoningEntity>();

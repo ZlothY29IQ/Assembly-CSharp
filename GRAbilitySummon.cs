@@ -6,6 +6,12 @@ using UnityEngine.AI;
 [Serializable]
 public class GRAbilitySummon : GRAbilityBase
 {
+	[Serializable]
+	public class SummonMarker
+	{
+		public Transform transform;
+	}
+
 	private enum State
 	{
 		Charge,
@@ -20,6 +26,10 @@ public class GRAbilitySummon : GRAbilityBase
 	public List<AnimationData> animData;
 
 	private float animSpeed = 1f;
+
+	public float coolDown;
+
+	public float range;
 
 	public float chargeTime = 3f;
 
@@ -46,6 +56,8 @@ public class GRAbilitySummon : GRAbilityBase
 	private int spawnedCount;
 
 	public Transform lookAtTarget;
+
+	public List<SummonMarker> summonMarkers;
 
 	private State state;
 
@@ -134,10 +146,17 @@ public class GRAbilitySummon : GRAbilityBase
 
 	private Vector3? GetSpawnLocation()
 	{
+		if (summonMarkers != null && summonMarkers.Count > 0)
+		{
+			int index = UnityEngine.Random.Range(0, summonMarkers.Count);
+			if (summonMarkers[index] != null)
+			{
+				return summonMarkers[index].transform.position;
+			}
+		}
 		Vector3 position = root.position;
 		float num = UnityEngine.Random.Range((0f - summonConeAngle) / 2f, summonConeAngle / 2f);
-		int num2 = 0;
-		while (num2 < 5)
+		for (int i = 0; i < 5; i++)
 		{
 			Vector3 vector = Quaternion.Euler(0f, num, 0f) * root.forward;
 			Vector3 vector2 = position + vector * desiredSpawnDistance;
@@ -150,14 +169,21 @@ public class GRAbilitySummon : GRAbilityBase
 					{
 						summonConeAngle = (0f - summonConeAngle) / 2f;
 					}
-					num2++;
 					continue;
 				}
 				vector2 = hit.position + Vector3.up * spawnHeight;
 			}
-			return vector2;
+			if (!Physics.Raycast(vector2, Vector3.down, out var hitInfo) || (object)hitInfo.collider.gameObject.GetComponent<GRHazardousMaterial>() == null)
+			{
+				return vector2;
+			}
 		}
 		return null;
+	}
+
+	public bool ForceSpawn()
+	{
+		return DoSpawn();
 	}
 
 	private bool DoSpawn()
@@ -168,7 +194,7 @@ public class GRAbilitySummon : GRAbilityBase
 			if (entity.IsAuthority())
 			{
 				Quaternion identity = Quaternion.identity;
-				GhostReactorManager.Get(entity).gameEntityManager.RequestCreateItem(entityPrefabToSpawn.name.GetStaticHash(), spawnLocation.Value, identity, entity.GetNetId());
+				GhostReactorManager.Get(entity).gameEntityManager.RequestCreateItem(entityPrefabToSpawn.name.GetStaticHash(), spawnLocation.Value, identity, 0L, entity.id);
 				spawnedCount++;
 			}
 			if (audioSource != null)
@@ -188,5 +214,15 @@ public class GRAbilitySummon : GRAbilityBase
 	public override bool IsDone()
 	{
 		return state == State.Done;
+	}
+
+	public override bool IsCoolDownOver()
+	{
+		return IsCoolDownOver(coolDown);
+	}
+
+	public override float GetRange()
+	{
+		return range;
 	}
 }

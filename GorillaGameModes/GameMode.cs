@@ -20,13 +20,13 @@ public class GameMode : MonoBehaviour
 	private static Dictionary<int, GorillaGameManager> gameModeTable;
 
 	[OnEnterPlay_Clear]
-	private static Dictionary<string, int> gameModeKeyByName;
+	public static Dictionary<string, int> gameModeKeyByName;
 
 	[OnEnterPlay_Clear]
 	private static Dictionary<int, FusionGameModeData> fusionTypeTable;
 
 	[OnEnterPlay_Clear]
-	private static List<GorillaGameManager> gameModes;
+	public static List<GorillaGameManager> gameModes;
 
 	[OnEnterPlay_Clear]
 	public static readonly List<string> gameModeNames;

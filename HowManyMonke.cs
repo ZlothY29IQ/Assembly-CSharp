@@ -22,6 +22,10 @@ public class HowManyMonke : MonoBehaviour
 		public string ErrorMessage;
 	}
 
+	private const string preLog = "[GT/HowManyMonke]  ";
+
+	private const string preErr = "ERROR!!!  ";
+
 	public static int ThisMany = 12549;
 
 	public static Action<int> OnCheck;
@@ -42,18 +46,18 @@ public class HowManyMonke : MonoBehaviour
 	{
 		state = State.READY;
 		await Task.Delay(1000);
-		Debug.Log($"Checking NetworkSystem.Instance: {NetworkSystem.Instance}");
+		Debug.Log("[GT/HowManyMonke]  " + $"Checking NetworkSystem.Instance: {NetworkSystem.Instance}");
 		while (NetworkSystem.Instance == null)
 		{
 			await Task.Delay(1000);
-			Debug.Log($"Re-Checking NetworkSystem.Instance: {NetworkSystem.Instance}");
+			Debug.Log("[GT/HowManyMonke]  " + $"Re-Checking NetworkSystem.Instance: {NetworkSystem.Instance}");
 		}
 		ThisMany = await FetchThisMany();
 		if (OnCheck != null)
 		{
 			OnCheck(ThisMany);
 		}
-		Debug.Log($"Fetch Complete: {ThisMany}");
+		Debug.Log("[GT/HowManyMonke]  " + $"Fetch Complete: {ThisMany}");
 		await FetchRecheckDelay();
 		while (Application.isPlaying && recheckDelay > 0)
 		{

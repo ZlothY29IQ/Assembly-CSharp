@@ -5,7 +5,7 @@ using UnityEngine;
 [RequireComponent(typeof(GameGrabbable))]
 [RequireComponent(typeof(GameSnappable))]
 [RequireComponent(typeof(GameButtonActivatable))]
-public class SIGadgetPlatformDeployer : SIGadget, I_SIDisruptable
+public class SIGadgetPlatformDeployer : SIGadget, I_SIDisruptable, IEnergyGadget
 {
 	private enum State
 	{
@@ -107,6 +107,10 @@ public class SIGadgetPlatformDeployer : SIGadget, I_SIDisruptable
 
 	private int deployedPlatformCount;
 
+	public bool UsesEnergy => true;
+
+	public bool IsFull => remainingRechargeTime <= 0f;
+
 	private void Start()
 	{
 		previewPlatform.SetActive(value: false);
@@ -129,15 +133,14 @@ public class SIGadgetPlatformDeployer : SIGadget, I_SIDisruptable
 		SetState(State.Idle);
 	}
 
-	protected override void Update()
+	public void UpdateRecharge(float dt)
 	{
-		base.Update();
 		if (!(remainingRechargeTime > 0f))
 		{
 			return;
 		}
 		int num = Mathf.CeilToInt(remainingRechargeTime / chargeRecoveryTime);
-		remainingRechargeTime = Mathf.Max(remainingRechargeTime - Time.deltaTime, 0f);
+		remainingRechargeTime = Mathf.Max(remainingRechargeTime - dt, 0f);
 		int num2 = Mathf.CeilToInt(remainingRechargeTime / chargeRecoveryTime);
 		chargeDisplay.UpdateDisplay(maxCharges - num2);
 		if (num2 != num && IsEquippedLocal())

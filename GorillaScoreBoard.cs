@@ -87,13 +87,29 @@ public class GorillaScoreBoard : MonoBehaviour
 		gmNames = GameMode.gameModeNames;
 		gmName = "ERROR";
 		int count = gmNames.Count;
-		for (int i = 0; i < count; i++)
+		int num = initialGameMode.LastIndexOf('|');
+		if (num >= 0)
 		{
-			tempGmName = gmNames[i];
-			if (initialGameMode.Contains(tempGmName))
+			tempGmName = initialGameMode.Substring(num + 1);
+			for (int i = 0; i < count; i++)
 			{
-				gmName = tempGmName;
-				break;
+				if (tempGmName == gmNames[i])
+				{
+					gmName = tempGmName;
+					break;
+				}
+			}
+		}
+		else
+		{
+			for (int j = 0; j < count; j++)
+			{
+				tempGmName = gmNames[j];
+				if (initialGameMode.Contains(tempGmName))
+				{
+					gmName = tempGmName;
+					break;
+				}
 			}
 		}
 		return gmName;

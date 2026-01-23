@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using GorillaExtensions;
+using Photon.Pun;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -16,12 +18,18 @@ public class CountDrivenEvents : MonoBehaviour
 		[Tooltip("Events to invoke when count reaches this value")]
 		public UnityEvent onCountReached;
 
+		public UnityEvent onCountReachedShared;
+
 		[Tooltip("Should this trigger fire every time the count passes through this value, or only once?")]
 		public bool triggerOnce;
 
 		[NonSerialized]
 		public bool hasTriggered;
 	}
+
+	[Header("Network")]
+	[SerializeField]
+	private bool syncAllEvents;
 
 	[Header("General Settings")]
 	[Tooltip("If true, triggers will be evaluated once on enable using the initial count.")]
@@ -36,28 +44,75 @@ public class CountDrivenEvents : MonoBehaviour
 	[SerializeField]
 	private List<CountTrigger> triggers = new List<CountTrigger>();
 
-	[Header("General Events")]
+	[Header("Local and Networked Events")]
 	public UnityEvent<int> onCountChanged;
+
+	public UnityEvent<int> onCountChangedShared;
 
 	public UnityEvent<int> onCountIncreased;
 
+	public UnityEvent<int> onCountIncreasedShared;
+
 	public UnityEvent<int> onCountDecreased;
+
+	public UnityEvent<int> onCountDecreasedShared;
 
 	public UnityEvent onCountResetToZero;
 
+	public UnityEvent onCountResetToZeroShared;
+
 	public UnityEvent onReachedMaxTrigger;
+
+	public UnityEvent onReachedMaxTriggerShared;
 
 	[Header("Debug - Counter Settings")]
 	[SerializeField]
 	private int currentCount;
 
+	private RubberDuckEvents _events;
+
+	private VRRig myRig;
+
+	private CallLimiter callLimiter = new CallLimiter(10, 1f);
+
 	public int CurrentCount => currentCount;
 
 	private void OnEnable()
 	{
+		if (myRig == null)
+		{
+			myRig = GetComponentInParent<VRRig>();
+		}
+		if (_events == null)
+		{
+			_events = base.gameObject.GetOrAddComponent<RubberDuckEvents>();
+		}
+		NetPlayer netPlayer = ((myRig != null) ? (myRig.creator ?? NetworkSystem.Instance.LocalPlayer) : NetworkSystem.Instance.LocalPlayer);
+		if (netPlayer != null)
+		{
+			_events.Init(netPlayer);
+		}
+		if (_events != null)
+		{
+			_events.Activate.reliable = true;
+			_events.Deactivate.reliable = true;
+			_events.Activate += new Action<int, int, object[], PhotonMessageInfoWrapped>(OnCountChanged_SharedEvent);
+			_events.Deactivate += new Action<int, int, object[], PhotonMessageInfoWrapped>(OnCountReached_SharedEvent);
+		}
 		if (evaluateOnEnable)
 		{
 			CheckTriggers(currentCount, currentCount);
+		}
+	}
+
+	private void OnDisable()
+	{
+		if (_events != null)
+		{
+			_events.Activate -= new Action<int, int, object[], PhotonMessageInfoWrapped>(OnCountChanged_SharedEvent);
+			_events.Deactivate -= new Action<int, int, object[], PhotonMessageInfoWrapped>(OnCountReached_SharedEvent);
+			_events.Dispose();
+			_events = null;
 		}
 	}
 
@@ -88,6 +143,10 @@ public class CountDrivenEvents : MonoBehaviour
 
 	public void SetCount(int newCount)
 	{
+		if (myRig != null && !myRig.isLocal)
+		{
+			return;
+		}
 		int num = currentCount;
 		if (wrapCount)
 		{
@@ -108,25 +167,37 @@ public class CountDrivenEvents : MonoBehaviour
 		}
 		if (newCount != num)
 		{
+			bool flag = false;
 			currentCount = newCount;
 			onCountChanged?.Invoke(currentCount);
+			onCountChangedShared?.Invoke(currentCount);
 			if (currentCount > num)
 			{
 				onCountIncreased?.Invoke(currentCount);
+				onCountIncreasedShared?.Invoke(currentCount);
+				flag = true;
 			}
 			else if (currentCount < num)
 			{
 				onCountDecreased?.Invoke(currentCount);
+				onCountDecreasedShared?.Invoke(currentCount);
 			}
 			CheckTriggers(num, currentCount);
 			if (currentCount == 0)
 			{
 				onCountResetToZero?.Invoke();
+				onCountResetToZeroShared?.Invoke();
 			}
 			int highestTriggerCount2 = GetHighestTriggerCount();
 			if (highestTriggerCount2 > 0 && currentCount == highestTriggerCount2)
 			{
 				onReachedMaxTrigger?.Invoke();
+				onReachedMaxTriggerShared?.Invoke();
+			}
+			if (syncAllEvents && PhotonNetwork.InRoom && _events != null && _events.Activate != null)
+			{
+				object[] args = new object[2] { flag, currentCount };
+				_events.Activate.RaiseOthers(args);
 			}
 		}
 	}
@@ -155,6 +226,10 @@ public class CountDrivenEvents : MonoBehaviour
 
 	private void CheckTriggers(int oldCount, int newCount)
 	{
+		if (myRig != null && !myRig.isLocal)
+		{
+			return;
+		}
 		for (int i = 0; i < triggers.Count; i++)
 		{
 			CountTrigger countTrigger = triggers[i];
@@ -185,10 +260,58 @@ public class CountDrivenEvents : MonoBehaviour
 			if (flag)
 			{
 				countTrigger.onCountReached?.Invoke();
+				countTrigger.onCountReachedShared?.Invoke();
+				if (syncAllEvents && PhotonNetwork.InRoom && _events != null && _events.Deactivate != null)
+				{
+					object[] args = new object[1] { i };
+					_events.Deactivate.RaiseOthers(args);
+				}
 				if (countTrigger.triggerOnce)
 				{
 					countTrigger.hasTriggered = true;
 				}
+			}
+		}
+	}
+
+	private void OnCountChanged_SharedEvent(int sender, int target, object[] args, PhotonMessageInfoWrapped info)
+	{
+		if (sender != target || info.senderID != myRig.creator.ActorNumber)
+		{
+			return;
+		}
+		GorillaNot.IncrementRPCCall(info, "OnCountChanged_SharedEvent");
+		if (callLimiter.CheckCallTime(Time.time) && args.Length == 2 && args[0] is bool flag && args[1] is int num)
+		{
+			onCountChangedShared?.Invoke(num);
+			if (flag)
+			{
+				onCountIncreasedShared?.Invoke(num);
+			}
+			else
+			{
+				onCountDecreasedShared?.Invoke(num);
+			}
+			int highestTriggerCount = GetHighestTriggerCount();
+			if (num == 0)
+			{
+				onCountResetToZeroShared?.Invoke();
+			}
+			else if (highestTriggerCount > 0 && num == highestTriggerCount)
+			{
+				onReachedMaxTriggerShared?.Invoke();
+			}
+		}
+	}
+
+	private void OnCountReached_SharedEvent(int sender, int target, object[] args, PhotonMessageInfoWrapped info)
+	{
+		if (sender == target && info.senderID == myRig.creator.ActorNumber)
+		{
+			GorillaNot.IncrementRPCCall(info, "OnCountReached_SharedEvent");
+			if (callLimiter.CheckCallTime(Time.time) && args.Length == 1 && args[0] is int num && num >= 0 && num < triggers.Count)
+			{
+				triggers[num].onCountReachedShared?.Invoke();
 			}
 		}
 	}

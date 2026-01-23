@@ -30,7 +30,7 @@ public class GRHazardTower : MonoBehaviour, IGameEntityComponent, IGameProjectil
 		gameEntity.MinTimeBetweenTicks = 0.5f;
 		GameEntity obj = gameEntity;
 		obj.OnTick = (Action)Delegate.Combine(obj.OnTick, new Action(OnThink));
-		senseNearby.Setup(fireFrom);
+		senseNearby.Setup(fireFrom, gameEntity);
 	}
 
 	public void OnEntityDestroy()

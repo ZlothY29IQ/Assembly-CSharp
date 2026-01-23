@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using XNode;
@@ -8,6 +9,8 @@ public class TechTreeGadgetGraph : NodeGraph
 	public string nickName;
 
 	public SITechTreePageId pageId;
+
+	public Sprite icon;
 
 	public float costMultiplier = 1f;
 
@@ -20,4 +23,22 @@ public class TechTreeGadgetGraph : NodeGraph
 	private const float YLayoutStep = 250f;
 
 	public GadgetNode[] GadgetNodes => nodes.Select((Node n) => n as GadgetNode).ToArray();
+
+	public bool IsValid
+	{
+		get
+		{
+			EAssetReleaseTier eAssetReleaseTier = releaseTier;
+			if (eAssetReleaseTier != 0 && eAssetReleaseTier <= EAssetReleaseTier.PublicRC)
+			{
+				List<Node> list = nodes;
+				if (list == null)
+				{
+					return false;
+				}
+				return list.Count > 0;
+			}
+			return false;
+		}
+	}
 }

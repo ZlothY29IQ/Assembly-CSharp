@@ -35,7 +35,7 @@ public class BuilderRoomBoundary : GorillaTriggerBox
 		if (!(other.attachedRigidbody == null))
 		{
 			rigRef = other.attachedRigidbody.gameObject.GetComponent<VRRig>();
-			if (!(rigRef == null) && rigRef.isOfflineVRRig && BuilderTable.TryGetBuilderTableForZone(rigRef.zoneEntity.currentZone, out var table) && table.isTableMutable)
+			if (!(rigRef == null) && rigRef.isOfflineVRRig && BuilderTable.TryGetBuilderTableForZone(rigRef.zoneEntity.currentZone, out var _) && ZoneManagement.instance.IsZoneActive(GTZone.monkeBlocks))
 			{
 				rigRef.EnableBuilderResizeWatch(on: true);
 			}

@@ -62,6 +62,8 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		Invalid,
 		Checking,
 		AlreadyUsed,
+		TooEarly,
+		TooLate,
 		Success
 	}
 
@@ -322,13 +324,15 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 
 	private const string SUPPORT_SCREEN_INTRO_KEY = "SUPPORT_SCREEN_INTRO";
 
-	private const string SUPPORT_SCREEN_DETAILS_PLAYERID_KEY = "SUPPORT_SCREEN_DETAILS_PLAYERID";
+	private const string SUPPORT_SCREEN_DETAILS_PLAYER_ID_KEY = "SUPPORT_SCREEN_DETAILS_PLAYERID";
 
 	private const string SUPPORT_SCREEN_DETAILS_VERSION_KEY = "SUPPORT_SCREEN_DETAILS_VERSION";
 
 	private const string SUPPORT_SCREEN_DETAILS_PLATFORM_KEY = "SUPPORT_SCREEN_DETAILS_PLATFORM";
 
 	private const string SUPPORT_SCREEN_DETAILS_BUILD_DATE_KEY = "SUPPORT_SCREEN_DETAILS_BUILD_DATE";
+
+	private const string SUPPORT_SCREEN_DETAILS_MOTHERSHIP_SESSION_ID_KEY = "SUPPORT_SCREEN_DETAILS_MOTHERSHIP_SESSION_ID";
 
 	private const string SUPPORT_SCREEN_INITIAL_KEY = "SUPPORT_SCREEN_INITIAL";
 
@@ -434,6 +438,10 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 
 	private const string REDEMPTION_CODE_ALREADY_USED_KEY = "REDEMPTION_CODE_ALREADY_USED";
 
+	private const string REDEMPTION_CODE_TOO_EARLY_KEY = "REDEMPTION_CODE_TOO_EARLY";
+
+	private const string REDEMPTION_CODE_TOO_LATE_KEY = "REDEMPTION_CODE_TOO_LATE";
+
 	private const string REDEMPTION_CODE_SUCCESS_KEY = "REDEMPTION_CODE_SUCCESS";
 
 	private const string LIMITED_ONLINE_FUNC_KEY = "LIMITED_ONLINE_FUNC";
@@ -532,6 +540,8 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 	public long startupMillis;
 
 	public DateTime startupTime;
+
+	public GameModeType lastPressedGameModeType;
 
 	public string lastPressedGameMode;
 
@@ -741,9 +751,9 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 
 	private const string k_sessionCountKey = "sessionCount";
 
-	private const GameModeType k_defaultGameMode = GameModeType.SuperInfect;
+	internal const GameModeType k_defaultGameMode = GameModeType.SuperInfect;
 
-	private const GameModeType k_noobGameMode = GameModeType.Infection;
+	internal const GameModeType k_noobGameMode = GameModeType.Infection;
 
 	private const int k_noobSessionCountThreshold = 4;
 
@@ -874,6 +884,8 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		}
 	}
 
+	public DateTimeOffset? RedemptionRestrictionTime { get; set; }
+
 	public DateTime GetServerTime()
 	{
 		return startupTime + TimeSpan.FromSeconds(Time.realtimeSinceStartup);
@@ -895,7 +907,7 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		{
 			UnityEngine.Object.Destroy(base.gameObject);
 		}
-		Debug.Log("==== GORILLA TAG - VERSION: " + version + ", BUILD NUMBER: " + buildCode + ", BUILD DATE: " + buildDate + " ====\r\n\r\n               _______\r\n              /       \\\r\n             /  _____  \\\r\n            / / _   _ \\ \\\r\n           [ | (O) (O) | ]\r\n            | \\  . .  / |\r\n     _______|  | _._ |  |_______\r\n    /        \\  \\___/  /        \\\r\n\r\n\r\n");
+		Debug.Log("==== GORILLA TAG - VERSION: " + version + ", BUILD NUMBER: " + buildCode + ", BUILD DATE: " + buildDate + " ====\r\n.\r\n.               _______\r\n.              /       \\\r\n.             /  _____  \\\r\n.            / / _   _ \\ \\\r\n.           [ | (O) (O) | ]\r\n.            | \\  . .  / |\r\n.     _______|  | _._ |  |_______\r\n.    /        \\  \\___/  /        \\\r\n.\r\n.\r\n");
 		_activeOrderList = OrderList;
 		defaultUpdateCooldown = updateCooldown;
 	}
@@ -1237,40 +1249,51 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 
 	private void InitializeGameMode()
 	{
-		if (!didInitializeGameMode)
+		if (didInitializeGameMode)
 		{
-			sessionCount = PlayerPrefs.GetInt("sessionCount", -1);
-			string text = PlayerPrefs.GetString("currentGameModePostSI");
-			if (sessionCount == -1)
-			{
-				sessionCount = ((text.Length != 0) ? 100 : 0);
-				PlayerPrefs.SetInt("sessionCount", sessionCount);
-				PlayerPrefs.Save();
-			}
-			if (sessionCount < 4)
-			{
-				text = GameModeType.Infection.ToString();
-			}
-			GameModeType gameModeType;
-			try
-			{
-				gameModeType = Enum.Parse<GameModeType>(text, ignoreCase: true);
-			}
-			catch
-			{
-				gameModeType = GameModeType.SuperInfect;
-				text = GameModeType.SuperInfect.ToString();
-			}
-			if (gameModeType != 0 && gameModeType != GameModeType.Infection && gameModeType != GameModeType.HuntDown && gameModeType != GameModeType.Paintbrawl && gameModeType != GameModeType.Ambush && gameModeType != GameModeType.SuperInfect && gameModeType != GameModeType.SuperCasual)
-			{
-				PlayerPrefs.SetString("currentGameModePostSI", GameModeType.SuperInfect.ToString());
-				PlayerPrefs.Save();
-				text = GameModeType.SuperInfect.ToString();
-			}
-			leftHanded = PlayerPrefs.GetInt("leftHanded", 0) == 1;
-			OnModeSelectButtonPress(text, leftHanded);
-			GameModePages.SetSelectedGameModeShared(text);
+			return;
 		}
+		sessionCount = PlayerPrefs.GetInt("sessionCount", -1);
+		string text = PlayerPrefs.GetString("currentGameModePostSI");
+		if (sessionCount == -1)
+		{
+			sessionCount = ((text.Length != 0) ? 100 : 0);
+			PlayerPrefs.SetInt("sessionCount", sessionCount);
+			text = GameModeType.Infection.ToString();
+			PlayerPrefs.SetString("currentGameModePostSI", text);
+			PlayerPrefs.Save();
+		}
+		else if (sessionCount == 3)
+		{
+			sessionCount++;
+			PlayerPrefs.SetInt("sessionCount", sessionCount);
+			if (!text.StartsWith("Super"))
+			{
+				text = ((text == GameModeType.Casual.ToString()) ? GameModeType.SuperCasual.ToString() : GameModeType.SuperInfect.ToString());
+				PlayerPrefs.SetString("currentGameModePostSI", text);
+			}
+			PlayerPrefs.Save();
+		}
+		GameModeType gameModeType;
+		try
+		{
+			gameModeType = Enum.Parse<GameModeType>(text, ignoreCase: true);
+		}
+		catch
+		{
+			gameModeType = GameModeType.SuperInfect;
+			text = GameModeType.SuperInfect.ToString();
+		}
+		if (!GameMode.GameModeZoneMapping.AllModes.Contains(gameModeType) || gameModeType == GameModeType.None || gameModeType == GameModeType.Count)
+		{
+			Debug.Log("[GT/GorillaComputer]  InitializeGameMode: Falling back to default game mode " + $"\"{GameModeType.SuperInfect}\" because stored game mode \"{gameModeType}\" is not available in any zone.");
+			PlayerPrefs.SetString("currentGameModePostSI", GameModeType.SuperInfect.ToString());
+			PlayerPrefs.Save();
+			text = GameModeType.SuperInfect.ToString();
+		}
+		leftHanded = PlayerPrefs.GetInt("leftHanded", 0) == 1;
+		OnModeSelectButtonPress(text, leftHanded);
+		GameModePages.SetSelectedGameModeShared(text);
 	}
 
 	private void InitializeCreditsState()
@@ -1483,10 +1506,8 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 	public void OnModeSelectButtonPress(string gameMode, bool leftHand)
 	{
 		lastPressedGameMode = gameMode;
-		if (sessionCount >= 4)
-		{
-			PlayerPrefs.SetString("currentGameModePostSI", gameMode);
-		}
+		lastPressedGameModeType = (GameModeType)GameMode.gameModeKeyByName.GetValueOrDefault(gameMode, 11);
+		PlayerPrefs.SetString("currentGameModePostSI", gameMode);
 		if (leftHand != leftHanded)
 		{
 			PlayerPrefs.SetInt("leftHanded", leftHand ? 1 : 0);
@@ -2430,22 +2451,36 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 			string defaultResult = "SUPPORT";
 			LocalisationManager.TryGetKeyForCurrentLocale("SUPPORT_SCREEN_INTRO", out result, defaultResult);
 			screenText.Append(result);
-			defaultResult = "\n\nPLAYERID";
+			defaultResult = "\n\nPLAYER ID";
 			LocalisationManager.TryGetKeyForCurrentLocale("SUPPORT_SCREEN_DETAILS_PLAYERID", out result, defaultResult);
-			screenText.Append(result + "   ");
+			screenText.Append(result + "  ");
 			screenText.Append(PlayFabAuthenticator.instance.GetPlayFabPlayerId());
 			defaultResult = "\nVERSION";
 			LocalisationManager.TryGetKeyForCurrentLocale("SUPPORT_SCREEN_DETAILS_VERSION", out result, defaultResult);
-			screenText.Append(result + "    ");
+			screenText.Append(result + " ");
 			screenText.Append(version.ToUpper());
 			defaultResult = "\nPLATFORM";
 			LocalisationManager.TryGetKeyForCurrentLocale("SUPPORT_SCREEN_DETAILS_PLATFORM", out result, defaultResult);
-			screenText.Append(result + "   ");
+			screenText.Append(result + " ");
 			screenText.Append(text);
 			defaultResult = "\nBUILD DATE";
 			LocalisationManager.TryGetKeyForCurrentLocale("SUPPORT_SCREEN_DETAILS_BUILD_DATE", out result, defaultResult);
 			screenText.Append(result + " ");
 			screenText.Append(buildDate);
+			defaultResult = "\nSESSION ID";
+			LocalisationManager.TryGetKeyForCurrentLocale("SUPPORT_SCREEN_DETAILS_MOTHERSHIP_SESSION_ID", out result, defaultResult);
+			string sessionId = MothershipClientApiUnity.SessionId;
+			string str = sessionId;
+			int num = sessionId.LastIndexOf('-');
+			if (num >= 0)
+			{
+				string text4 = sessionId.Substring(0, num);
+				text2 = sessionId;
+				int num2 = num + 1;
+				str = text4 + "\n            " + text2.Substring(num2, text2.Length - num2);
+			}
+			screenText.Append(result + " ");
+			screenText.Append(str);
 			if (KIDManager.KidEnabled)
 			{
 				defaultResult = "\nk-ID ACCOUNT TYPE:";
@@ -3109,6 +3144,16 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 			defaultResult = "\n\nCODE ALREADY CLAIMED";
 			LocalisationManager.TryGetKeyForCurrentLocale("REDEMPTION_CODE_ALREADY_USED", out result, defaultResult);
 			screenText.Append(result);
+			break;
+		case RedemptionResult.TooEarly:
+			defaultResult = "CODE IS NOT REDEEMABLE UNTIL";
+			LocalisationManager.TryGetKeyForCurrentLocale("REDEMPTION_CODE_TOO_EARLY", out result, defaultResult);
+			screenText.Append(RedemptionRestrictionTime.HasValue ? ("\n\n" + result + "\n" + RedemptionRestrictionTime.Value.ToLocalTime().ToString("f").ToUpper()) : ("\n\n" + result + "\n[MISSING]"));
+			break;
+		case RedemptionResult.TooLate:
+			defaultResult = "CODE EXPIRED";
+			LocalisationManager.TryGetKeyForCurrentLocale("REDEMPTION_CODE_TOO_LATE", out result, defaultResult);
+			screenText.Append(RedemptionRestrictionTime.HasValue ? ("\n\n" + result + "\n" + RedemptionRestrictionTime.Value.ToLocalTime().ToString("f").ToUpper()) : ("\n\n" + result + "\n[MISSING]"));
 			break;
 		case RedemptionResult.Success:
 			defaultResult = "\n\nSUCCESSFULLY CLAIMED!";

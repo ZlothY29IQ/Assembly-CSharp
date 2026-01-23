@@ -63,19 +63,23 @@ public class GhostReactorLevelSectionConnector : MonoBehaviour
 		}
 		for (int i = 0; i < prePlacedGameEntities.Count; i++)
 		{
-			int staticHash = prePlacedGameEntities[i].gameObject.name.GetStaticHash();
-			if (!grManager.gameEntityManager.FactoryHasEntity(staticHash))
+			if (!prePlacedGameEntities[i].isBuiltIn)
 			{
-				Debug.LogErrorFormat("Cannot Find Entity in Factory {0} {1}", prePlacedGameEntities[i].gameObject.name, staticHash);
-				continue;
+				int staticHash = prePlacedGameEntities[i].gameObject.name.GetStaticHash();
+				if (!grManager.gameEntityManager.FactoryHasEntity(staticHash))
+				{
+					Debug.LogErrorFormat("Cannot Find Entity in Factory {0} {1}", prePlacedGameEntities[i].gameObject.name, staticHash);
+					continue;
+				}
+				GameEntityCreateData gameEntityCreateData = default(GameEntityCreateData);
+				gameEntityCreateData.entityTypeId = staticHash;
+				gameEntityCreateData.position = prePlacedGameEntities[i].transform.position;
+				gameEntityCreateData.rotation = prePlacedGameEntities[i].transform.rotation;
+				gameEntityCreateData.createData = 0L;
+				gameEntityCreateData.createdByEntityId = -1;
+				GameEntityCreateData item = gameEntityCreateData;
+				GhostReactorLevelSection.tempCreateEntitiesList.Add(item);
 			}
-			GameEntityCreateData gameEntityCreateData = default(GameEntityCreateData);
-			gameEntityCreateData.entityTypeId = staticHash;
-			gameEntityCreateData.position = prePlacedGameEntities[i].transform.position;
-			gameEntityCreateData.rotation = prePlacedGameEntities[i].transform.rotation;
-			gameEntityCreateData.createData = 0L;
-			GameEntityCreateData item = gameEntityCreateData;
-			GhostReactorLevelSection.tempCreateEntitiesList.Add(item);
 		}
 		grManager.gameEntityManager.RequestCreateItems(GhostReactorLevelSection.tempCreateEntitiesList);
 		GhostReactorLevelSection.tempCreateEntitiesList.Clear();

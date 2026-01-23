@@ -229,4 +229,20 @@ public class GadgetNode : TechTreeNodeBase
 		}
 		return num;
 	}
+
+	public bool CostEquals(SIResource.ResourceCost[] cost)
+	{
+		if (cost.Length != nodeCost.Length)
+		{
+			return false;
+		}
+		for (int i = 0; i < cost.Length; i++)
+		{
+			if (!cost[i].Equals(nodeCost[i]))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
 }

@@ -27,7 +27,8 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 		ResourceDepositTechPointRejected,
 		CallEntityRPC,
 		CallEntityRPCData,
-		TriggerMonkeIdolDepositCelebration
+		TriggerMonkeIdolDepositCelebration,
+		StartUnderwaterFX
 	}
 
 	public enum ClientToClientRPC
@@ -264,9 +265,30 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 		if (component != null)
 		{
 			SIPlayer sIPlayer = SIPlayer.Get((int)(entity.createData & 0xFFFFFFFFu));
-			if (sIPlayer != null && !sIPlayer.activePlayerGadgets.Contains(entity.GetNetId()))
+			if (sIPlayer != null)
 			{
-				sIPlayer.activePlayerGadgets.Add(entity.GetNetId());
+				int num = 0;
+				for (int num2 = sIPlayer.activePlayerGadgets.Count - 1; num2 >= 0; num2--)
+				{
+					GameEntity gameEntityFromNetId = gameEntityManager.GetGameEntityFromNetId(sIPlayer.activePlayerGadgets[num2]);
+					if (gameEntityFromNetId == null)
+					{
+						sIPlayer.activePlayerGadgets.RemoveAt(num2);
+					}
+					else
+					{
+						num++;
+						if (num >= sIPlayer.totalGadgetLimit)
+						{
+							gameEntityManager.DestroyItemLocal(gameEntityFromNetId.id);
+							break;
+						}
+					}
+				}
+				if (!sIPlayer.activePlayerGadgets.Contains(entity.GetNetId()))
+				{
+					sIPlayer.activePlayerGadgets.Add(entity.GetNetId());
+				}
 			}
 			SIUpgradeSet upgrades = new SIUpgradeSet((int)(entity.createData >> 32));
 			upgrades = component.FilterUpgradeNodes(upgrades);
@@ -593,6 +615,8 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 			}
 			break;
 		}
+		case AuthorityToClientRPC.StartUnderwaterFX:
+			break;
 		}
 	}
 

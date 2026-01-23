@@ -14,5 +14,8 @@ public enum GREnemyType
 	ArmoredChaser,
 	ArmoredSummoner,
 	BigChaser,
-	BigPest
+	BigPest,
+	MoonBoss,
+	MoonBoss_Phase1,
+	MoonBoss_Phase2
 }
