@@ -4,17 +4,12 @@ using UnityEngine;
 namespace GorillaTag;
 
 [Serializable]
-public struct HashWrapper : IEquatable<int>
+public struct HashWrapper(int hash = -1) : IEquatable<int>
 {
 	[SerializeField]
-	private int hashCode;
+	private int hashCode = hash;
 
 	public const int NULL_HASH = -1;
-
-	public HashWrapper(int hash = -1)
-	{
-		hashCode = hash;
-	}
 
 	public override int GetHashCode()
 	{

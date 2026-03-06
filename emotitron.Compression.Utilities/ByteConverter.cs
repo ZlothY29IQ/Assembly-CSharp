@@ -113,72 +113,82 @@ public struct ByteConverter
 
 	public static implicit operator ByteConverter(byte val)
 	{
-		ByteConverter result = default(ByteConverter);
-		result.byte0 = val;
-		return result;
+		return new ByteConverter
+		{
+			byte0 = val
+		};
 	}
 
 	public static implicit operator ByteConverter(sbyte val)
 	{
-		ByteConverter result = default(ByteConverter);
-		result.int8 = val;
-		return result;
+		return new ByteConverter
+		{
+			int8 = val
+		};
 	}
 
 	public static implicit operator ByteConverter(char val)
 	{
-		ByteConverter result = default(ByteConverter);
-		result.character = val;
-		return result;
+		return new ByteConverter
+		{
+			character = val
+		};
 	}
 
 	public static implicit operator ByteConverter(uint val)
 	{
-		ByteConverter result = default(ByteConverter);
-		result.uint32 = val;
-		return result;
+		return new ByteConverter
+		{
+			uint32 = val
+		};
 	}
 
 	public static implicit operator ByteConverter(int val)
 	{
-		ByteConverter result = default(ByteConverter);
-		result.int32 = val;
-		return result;
+		return new ByteConverter
+		{
+			int32 = val
+		};
 	}
 
 	public static implicit operator ByteConverter(ulong val)
 	{
-		ByteConverter result = default(ByteConverter);
-		result.uint64 = val;
-		return result;
+		return new ByteConverter
+		{
+			uint64 = val
+		};
 	}
 
 	public static implicit operator ByteConverter(long val)
 	{
-		ByteConverter result = default(ByteConverter);
-		result.int64 = val;
-		return result;
+		return new ByteConverter
+		{
+			int64 = val
+		};
 	}
 
 	public static implicit operator ByteConverter(float val)
 	{
-		ByteConverter result = default(ByteConverter);
-		result.float32 = val;
-		return result;
+		return new ByteConverter
+		{
+			float32 = val
+		};
 	}
 
 	public static implicit operator ByteConverter(double val)
 	{
-		ByteConverter result = default(ByteConverter);
-		result.float64 = val;
-		return result;
+		return new ByteConverter
+		{
+			float64 = val
+		};
 	}
 
 	public static implicit operator ByteConverter(bool val)
 	{
-		ByteConverter result = default(ByteConverter);
-		result.int32 = (val ? 1 : 0);
-		return result;
+		return new ByteConverter
+		{
+			int32 = (val ? 1 : 0)
+		};
 	}
 
 	public void ExtractByteArray(byte[] targetArray)

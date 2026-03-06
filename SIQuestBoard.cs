@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using GorillaLocomotion;
+using GorillaTag;
 using Photon.Pun;
 using TMPro;
 using UnityEngine;
@@ -28,11 +29,11 @@ public class SIQuestBoard : MonoBehaviour, IGorillaSliceableSimple
 
 	public TextMeshProUGUI timeToNewQuests;
 
-	private int lastHours;
+	private static readonly char[] _timeToNewQuests_chars = "NEW QUESTS IN: ??:??:??".ToCharArray();
 
-	private int lastMinutes;
+	private const int _timeToNewQuests_index = 15;
 
-	private int lastSeconds;
+	private static int _lastTotalSeconds;
 
 	private Dictionary<RoomFXDurationState, float> roomFXDurations = new Dictionary<RoomFXDurationState, float>
 	{
@@ -100,13 +101,7 @@ public class SIQuestBoard : MonoBehaviour, IGorillaSliceableSimple
 			dateTime = dateTime.AddDays(1.0);
 		}
 		TimeSpan timeSpan = dateTime - utcNow;
-		if (lastHours != timeSpan.Hours || lastMinutes != timeSpan.Minutes || lastSeconds != timeSpan.Seconds)
-		{
-			timeToNewQuests.text = "NEW QUESTS IN: " + timeSpan.ToString("hh\\:mm\\:ss");
-		}
-		lastHours = timeSpan.Hours;
-		lastMinutes = timeSpan.Minutes;
-		lastSeconds = timeSpan.Seconds;
+		GTTime.TryUpdateTimeText(timeToNewQuests, timeSpan, _timeToNewQuests_chars, 15, ref _lastTotalSeconds);
 	}
 
 	private void AuthorityUpdateScreenAssignments()
@@ -198,10 +193,30 @@ public class SIQuestBoard : MonoBehaviour, IGorillaSliceableSimple
 
 	public void CheatRoomFX_Underwater()
 	{
-		StartRoomFX(roomFXDurations[currentDuration]);
+		StartRoomFX(SuperInfectionManager.RoomFXType.Underwater, roomFXDurations[currentDuration]);
 	}
 
-	public void StartRoomFX(float duration)
+	public void CheatRoomFX_LunarMode()
+	{
+		StartRoomFX(SuperInfectionManager.RoomFXType.LunarMode, roomFXDurations[currentDuration]);
+	}
+
+	public void CheatRoomFX_ConstLowG()
+	{
+		StartRoomFX(SuperInfectionManager.RoomFXType.ConstLowG, roomFXDurations[currentDuration]);
+	}
+
+	public void CheatRoomFX_Bouncy()
+	{
+		StartRoomFX(SuperInfectionManager.RoomFXType.Bouncy, roomFXDurations[currentDuration]);
+	}
+
+	public void CheatRoomFX_Supercharge()
+	{
+		StartRoomFX(SuperInfectionManager.RoomFXType.Supercharge, roomFXDurations[currentDuration]);
+	}
+
+	public void StartRoomFX(SuperInfectionManager.RoomFXType fxType, float duration)
 	{
 	}
 }

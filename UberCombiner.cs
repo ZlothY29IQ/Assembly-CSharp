@@ -118,7 +118,7 @@ public class UberCombiner : MonoBehaviour
 		List<GameObject> targetMeshes = (from r in renderersToCombine
 			select r.gameObject into g
 			where !(g == null)
-			where !objectsToIgnore.Contains(g)
+			where !Enumerable.Contains(objectsToIgnore, g)
 			where !invalidObjects.Contains(g)
 			select g).DistinctBy((GameObject g) => g.GetInstanceID()).ToList();
 		_combiner.targetMeshes = targetMeshes;

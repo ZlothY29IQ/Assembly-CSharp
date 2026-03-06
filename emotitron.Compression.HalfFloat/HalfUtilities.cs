@@ -113,15 +113,19 @@ public static class HalfUtilities
 
 	public static float Unpack(ushort value)
 	{
-		FloatToUint floatToUint = default(FloatToUint);
-		floatToUint.uintValue = HalfToFloatMantissaTable[(int)HalfToFloatOffsetTable[value >> 10] + (value & 0x3FF)] + HalfToFloatExponentTable[value >> 10];
+		FloatToUint floatToUint = new FloatToUint
+		{
+			uintValue = HalfToFloatMantissaTable[(int)HalfToFloatOffsetTable[value >> 10] + (value & 0x3FF)] + HalfToFloatExponentTable[value >> 10]
+		};
 		return floatToUint.floatValue;
 	}
 
 	public static ushort Pack(float value)
 	{
-		FloatToUint floatToUint = default(FloatToUint);
-		floatToUint.floatValue = value;
+		FloatToUint floatToUint = new FloatToUint
+		{
+			floatValue = value
+		};
 		return (ushort)(FloatToHalfBaseTable[(floatToUint.uintValue >> 23) & 0x1FF] + ((floatToUint.uintValue & 0x7FFFFF) >> (int)FloatToHalfShiftTable[(floatToUint.uintValue >> 23) & 0x1FF]));
 	}
 }

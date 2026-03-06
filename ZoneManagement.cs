@@ -179,6 +179,7 @@ public class ZoneManagement : MonoBehaviour
 		}
 		allObjects = hashSet.ToArray();
 		objectActivationState = new bool[allObjects.Length];
+		AddSceneToForceStayLoaded("City");
 	}
 
 	private void SetZones(GTZone[] newActiveZones)
@@ -198,7 +199,11 @@ public class ZoneManagement : MonoBehaviour
 		for (int k = 0; k < zones.Length; k++)
 		{
 			ZoneData zoneData = zones[k];
-			if (zoneData == null || zoneData.rootGameObjects == null || !newActiveZones.Contains(zoneData.zone))
+			if (zoneData == null)
+			{
+				continue;
+			}
+			if (zoneData.rootGameObjects == null || !Enumerable.Contains(newActiveZones, zoneData.zone))
 			{
 				zoneData.active = false;
 				continue;

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Cysharp.Text;
-using ExitGames.Client.Photon;
 using Fusion;
 using GorillaExtensions;
 using GorillaLocomotion;
@@ -12,9 +11,10 @@ using Photon.Pun;
 using Photon.Realtime;
 using Unity.Collections;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [NetworkBehaviourWeaved(0)]
-public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoomCallbacks, IRequestableOwnershipGuardCallbacks, ITickSystemTick, IGorillaSliceableSimple
+public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCallbacks, ITickSystemTick, IGorillaSliceableSimple
 {
 	public delegate void ZoneStartEvent(GTZone zoneId);
 
@@ -75,11 +75,11 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 		public Quaternion localRotation;
 	}
 
-	private const string preLog = "[GameEntityManager]  ";
+	private const string preLog = "[GT/GameEntityManager]  ";
 
-	private const string preErr = "[GameEntityManager]  ERROR!!!  ";
+	private const string preErr = "[GT/GameEntityManager]  ERROR!!!  ";
 
-	private const string preErrBeta = "[GameEntityManager]  ERROR!!!  (beta only log) ";
+	private const string preErrBeta = "[GT/GameEntityManager]  ERROR!!!  (beta only log) ";
 
 	private const int MAX_STATE_BYTES = 15360;
 
@@ -111,7 +111,8 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 
 	public Player prevAuthorityPlayer;
 
-	public BoxCollider zoneLimit;
+	[FormerlySerializedAs("zoneLimit")]
+	public BoxCollider boundsBoxCollider;
 
 	public bool useRandomCheckForAuthority;
 
@@ -174,6 +175,10 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 	private NativeArray<int> netIds;
 
 	private Dictionary<int, int> createdItemTypeCount;
+
+	private const float ZONE_MIGRATION_RECOVERY_DURATION = 10f;
+
+	private readonly Dictionary<int, float> playerZoneJoinTimes = new Dictionary<int, float>(20);
 
 	private ZoneClearReason zoneClearReason;
 
@@ -260,6 +265,9 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 		TickSystem<object>.AddTickCallback(this);
 		VRRigCache.OnRigDeactivated += OnRigDeactivated;
 		VRRigCache.OnActiveRigsChanged += RefreshRigList;
+		RoomSystem.JoinedRoomEvent += new Action(OnNetworkJoinedRoom);
+		RoomSystem.LeftRoomEvent += new Action(OnNetworkLeftRoom);
+		RoomSystem.PlayerLeftEvent += new Action<NetPlayer>(OnNetworkPlayerLeft);
 		RefreshRigList();
 		GorillaSlicerSimpleManager.RegisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
 	}
@@ -271,6 +279,9 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 		TickSystem<object>.RemoveTickCallback(this);
 		VRRigCache.OnRigDeactivated -= OnRigDeactivated;
 		VRRigCache.OnActiveRigsChanged -= RefreshRigList;
+		RoomSystem.JoinedRoomEvent -= new Action(OnNetworkJoinedRoom);
+		RoomSystem.LeftRoomEvent -= new Action(OnNetworkLeftRoom);
+		RoomSystem.PlayerLeftEvent -= new Action<NetPlayer>(OnNetworkPlayerLeft);
 		GorillaSlicerSimpleManager.UnregisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
 	}
 
@@ -350,8 +361,20 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 
 	public GameEntityId AddGameEntity(int netId, GameEntity gameEntity)
 	{
+		if (netId == -1)
+		{
+			Debug.LogError("[GT/GameEntityManager]  ERROR!!!  AddGameEntity: Aborting. Invalid netId for GameEntity '" + gameEntity?.name + "'.", gameEntity);
+			return GameEntityId.Invalid;
+		}
+		if (netIdToIndex.TryGetValue(netId, out var value) && value != -1)
+		{
+			GameEntity gameEntity2 = GetGameEntity(value);
+			if (gameEntity2 != null)
+			{
+				Debug.LogError("[GT/GameEntityManager]  ERROR!!!  AddGameEntity: " + $"UH OH!!!! NetId {netId} is in use by '{gameEntity2.name}' but will be overwritten by '{gameEntity.name}'! Meaning there will be a zombie gameEntity on at least this client! (should probably abort but this is how it worked before so don't want to break existing behavior)");
+			}
+		}
 		int num = FindNewEntityIndex();
-		Debug.LogFormat("Add Game Entity {0} {1} {2}", gameEntity.gameObject.name, netId, num);
 		entities[num] = gameEntity;
 		entitiesActiveCount++;
 		gameEntityData.Add(default(GameEntityData));
@@ -380,6 +403,7 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 
 	public void RemoveGameEntity(GameEntity entity)
 	{
+		netIdToIndex.Remove(entity.GetNetId());
 		int index = entity.id.index;
 		if (index < 0 || index >= entities.Count)
 		{
@@ -435,9 +459,10 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 	{
 		if (netIdToIndex.TryGetValue(netId, out var value))
 		{
-			GameEntityId result = default(GameEntityId);
-			result.index = value;
-			return result;
+			return new GameEntityId
+			{
+				index = value
+			};
 		}
 		return GameEntityId.Invalid;
 	}
@@ -502,11 +527,11 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 		return zoneStateData.state == ZoneState.Active;
 	}
 
-	public bool IsPositionInZone(Vector3 pos)
+	public bool IsPositionInManagerBounds(Vector3 pos)
 	{
-		if (!(zoneLimit == null))
+		if (!(boundsBoxCollider == null))
 		{
-			return zoneLimit.bounds.Contains(pos);
+			return boundsBoxCollider.bounds.Contains(pos);
 		}
 		return true;
 	}
@@ -537,7 +562,7 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 	{
 		if (IsValidClientRPC(sender, entityNetId))
 		{
-			return IsPositionInZone(pos);
+			return IsPositionInManagerBounds(pos);
 		}
 		return false;
 	}
@@ -546,7 +571,7 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 	{
 		if (IsValidClientRPC(sender))
 		{
-			return IsPositionInZone(pos);
+			return IsPositionInManagerBounds(pos);
 		}
 		return false;
 	}
@@ -577,7 +602,7 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 	{
 		if (IsValidAuthorityRPC(sender, entityNetId))
 		{
-			return IsPositionInZone(pos);
+			return IsPositionInManagerBounds(pos);
 		}
 		return false;
 	}
@@ -586,7 +611,7 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 	{
 		if (IsValidAuthorityRPC(sender))
 		{
-			return IsPositionInZone(pos);
+			return IsPositionInManagerBounds(pos);
 		}
 		return false;
 	}
@@ -656,7 +681,7 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 	private void BuildFactory()
 	{
 		using Utf16ValueStringBuilder utf16ValueStringBuilder = ZString.CreateStringBuilder(notNested: true);
-		string value = "[GameEntityManager]  BuildFactory: Entity names and typeIds for manager \"" + base.name + "\":";
+		string value = "[GT/GameEntityManager]  BuildFactory: Entity names and typeIds for manager \"" + base.name + "\":";
 		utf16ValueStringBuilder.AppendLine(value);
 		foreach (IGameEntityZoneComponent zoneComponent in zoneComponents)
 		{
@@ -715,7 +740,7 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 
 	public GameEntityId RequestCreateItem(int entityTypeId, Vector3 position, Quaternion rotation, long createData, GameEntityId createdByEntityId)
 	{
-		if (!IsZoneAuthority() || !IsZoneActive() || !IsPositionInZone(position))
+		if (!IsZoneAuthority() || !IsZoneActive() || !IsPositionInManagerBounds(position))
 		{
 			return GameEntityId.Invalid;
 		}
@@ -739,21 +764,42 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 		{
 			return;
 		}
-		for (int i = 0; i < netId.Length; i++)
+		if (netId.Length > 1)
 		{
-			Vector3 v = BitPackUtils.UnpackWorldPosFromNetwork(packedPos[i]);
-			Quaternion q = BitPackUtils.UnpackQuaternionFromNetwork(packedRot[i]);
-			if (!v.IsValid(10000f) || !q.IsValid() || !FactoryHasEntity(entityTypeId[i]) || !IsPositionInZone(v))
+			for (int i = 0; i < zoneComponents.Count; i++)
+			{
+				if (!zoneComponents[i].ValidateCreateItemBatchSize(netId.Length))
+				{
+					return;
+				}
+			}
+		}
+		for (int j = 0; j < netId.Length; j++)
+		{
+			Vector3 v = BitPackUtils.UnpackWorldPosFromNetwork(packedPos[j]);
+			Quaternion q = BitPackUtils.UnpackQuaternionFromNetwork(packedRot[j]);
+			if (!v.IsValid(10000f) || !q.IsValid() || !FactoryHasEntity(entityTypeId[j]) || !IsPositionInManagerBounds(v))
 			{
 				break;
 			}
-			CreateAndInitItemLocal(netId[i], entityTypeId[i], v, q, createData[i], createdByEntityNetId[i]);
+			int num = netId[j];
+			int entityTypeId2 = entityTypeId[j];
+			long createData2 = createData[j];
+			int createdByEntityNetId2 = createdByEntityNetId[j];
+			bool flag = true;
+			for (int k = 0; k < zoneComponents.Count; k++)
+			{
+				flag &= zoneComponents[k].ValidateCreateItem(num, entityTypeId2, v, q, createData2, createdByEntityNetId2);
+			}
+			if (flag)
+			{
+				CreateAndInitItemLocal(num, entityTypeId2, v, q, createData2, createdByEntityNetId2);
+			}
 		}
 	}
 
 	public void RequestCreateItems(List<GameEntityCreateData> entityData)
 	{
-		Debug.Log($"GameEntityManager RequestCreateItems List.Count: {entityData.Count}");
 		if (!IsZoneAuthority() || !IsZoneActive())
 		{
 			GTDev.LogError($"[GameEntityManager::RequestCreateItems] Cannot create items. Zone Auth: {IsZoneAuthority()} " + $"| Zone Active: {IsZoneActive()}");
@@ -796,9 +842,16 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 			using MemoryStream input = new MemoryStream(array);
 			using BinaryReader binaryReader = new BinaryReader(input);
 			int num = binaryReader.ReadInt32();
-			for (int i = 0; i < num; i++)
+			for (int i = 0; i < zoneComponents.Count; i++)
 			{
-				int netId = binaryReader.ReadInt32();
+				if (!zoneComponents[i].ValidateCreateMultipleItems(zoneId, stateData, num))
+				{
+					return;
+				}
+			}
+			for (int j = 0; j < num; j++)
+			{
+				int num2 = binaryReader.ReadInt32();
 				int entityTypeId = binaryReader.ReadInt32();
 				long data = binaryReader.ReadInt64();
 				int data2 = binaryReader.ReadInt32();
@@ -806,15 +859,42 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 				int createdByEntityNetId = binaryReader.ReadInt32();
 				Vector3 v = BitPackUtils.UnpackWorldPosFromNetwork(data);
 				Quaternion q = BitPackUtils.UnpackQuaternionFromNetwork(data2);
-				if (v.IsValid(10000f) && q.IsValid() && FactoryHasEntity(entityTypeId) && IsPositionInZone(v))
+				if (v.IsValid(10000f) && q.IsValid() && FactoryHasEntity(entityTypeId) && IsPositionInManagerBounds(v))
 				{
-					CreateAndInitItemLocal(netId, entityTypeId, v, q, createData, createdByEntityNetId);
+					bool flag = true;
+					for (int k = 0; k < zoneComponents.Count; k++)
+					{
+						flag &= zoneComponents[k].ValidateCreateItem(num2, entityTypeId, v, q, createData, createdByEntityNetId);
+					}
+					if (flag)
+					{
+						CreateAndInitItemLocal(num2, entityTypeId, v, q, createData, createdByEntityNetId);
+					}
 				}
 			}
 		}
 		catch (Exception)
 		{
 		}
+	}
+
+	public void RequestMigrationRecovery(List<GameEntityCreateData> entityData)
+	{
+		if (entityData == null || entityData.Count == 0)
+		{
+			return;
+		}
+		ClearByteBuffer(tempSerializeGameState);
+		using MemoryStream output = new MemoryStream(tempSerializeGameState);
+		using BinaryWriter binaryWriter = new BinaryWriter(output);
+		binaryWriter.Write(entityData.Count);
+		for (int i = 0; i < entityData.Count; i++)
+		{
+			GameEntityCreateData gameEntityCreateData = entityData[i];
+			_JoinWithItems_WriteOne(binaryWriter, gameEntityCreateData.entityTypeId, gameEntityCreateData.position, gameEntityCreateData.rotation, gameEntityCreateData.createData, gameEntityCreateData.createdByEntityId, gameEntityCreateData.slotIndex);
+		}
+		byte[] array = GZipStream.CompressBuffer(tempSerializeGameState);
+		photonView.RPC("JoinWithItemsRPC", GetAuthorityPlayer(), array, Array.Empty<int>(), PhotonNetwork.LocalPlayer.ActorNumber);
 	}
 
 	public void JoinWithItems(List<GameEntity> entities)
@@ -840,33 +920,17 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 			GameEntity gameEntity = entities[j];
 			if (!(gameEntity == null))
 			{
-				int typeId = gameEntity.typeId;
-				long value = BitPackUtils.PackWorldPosForNetwork(gameEntity.transform.localPosition);
-				int value2 = BitPackUtils.PackQuaternionForNetwork(gameEntity.transform.localRotation);
-				long num2 = gameEntity.createData;
-				int netIdFromEntityId = GetNetIdFromEntityId(gameEntity.createdByEntityId);
+				long createData = gameEntity.createData;
 				for (int k = 0; k < zoneComponents.Count; k++)
 				{
-					num2 = zoneComponents[k].ProcessMigratedGameEntityCreateData(gameEntity, num2);
+					createData = zoneComponents[k].ProcessMigratedGameEntityCreateData(gameEntity, createData);
 				}
-				byte b = 0;
-				b = gameEntity.snappedJoint switch
-				{
-					SnapJointType.HandR => 2, 
-					SnapJointType.HandL => 3, 
-					_ => (gameEntity.heldByHandIndex == 0) ? ((byte)1) : ((byte)0), 
-				};
-				binaryWriter.Write(typeId);
-				binaryWriter.Write(value);
-				binaryWriter.Write(value2);
-				binaryWriter.Write(num2);
-				binaryWriter.Write(netIdFromEntityId);
-				binaryWriter.Write(b);
+				_JoinWithItems_WriteOne(binaryWriter, gameEntity.typeId, gameEntity.transform.localPosition, gameEntity.transform.localRotation, createData, GetNetIdFromEntityId(gameEntity.createdByEntityId), gameEntity.slotIndex);
 			}
 		}
 		_ = memoryStream.Position;
 		byte[] array = GZipStream.CompressBuffer(tempSerializeGameState);
-		photonView.RPC("JoinWithItemsRPC", GetAuthorityPlayer(), array, new int[0], PhotonNetwork.LocalPlayer.ActorNumber);
+		photonView.RPC("JoinWithItemsRPC", GetAuthorityPlayer(), array, Array.Empty<int>(), PhotonNetwork.LocalPlayer.ActorNumber);
 	}
 
 	[PunRPC]
@@ -885,13 +949,13 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 			}
 			DestroyItemLocal(item);
 		}
+		playerZoneJoinTimes.Remove(info.Sender.ActorNumber);
 		gamePlayer.OnPlayerLeftZone?.Invoke();
 	}
 
 	[PunRPC]
 	public void JoinWithItemsRPC(byte[] stateData, int[] netIds, int joiningActorNum, PhotonMessageInfo info)
 	{
-		GamePlayer joiningPlayer = GamePlayer.GetGamePlayer(joiningActorNum);
 		bool isAuthority = IsAuthority();
 		if (isAuthority)
 		{
@@ -904,7 +968,9 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 		{
 			return;
 		}
-		if (joiningPlayer == null || (!isAuthority && GetAuthorityPlayer() != info.Sender) || (isAuthority && info.Sender.ActorNumber != joiningActorNum) || stateData == null || stateData.Length >= 255 || joiningPlayer.DidJoinWithItems || !IsInZone())
+		float value;
+		bool flag = playerZoneJoinTimes.TryGetValue(joiningActorNum, out value) && Time.unscaledTime - value < 10f;
+		if (!GamePlayer.TryGetGamePlayer(joiningActorNum, out var joiningPlayer) || (!isAuthority && GetAuthorityPlayer() != info.Sender) || (isAuthority && info.Sender.ActorNumber != joiningActorNum) || stateData == null || stateData.Length >= 255 || (joiningPlayer.DidJoinWithItems && !flag) || !IsInZone())
 		{
 			return;
 		}
@@ -917,8 +983,8 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 		{
 			try
 			{
-				GamePlayer gamePlayer = joiningPlayer;
-				gamePlayer.OnPlayerInitialized = (Action)Delegate.Remove(gamePlayer.OnPlayerInitialized, createItemsCallback);
+				GamePlayer gamePlayer2 = joiningPlayer;
+				gamePlayer2.OnPlayerInitialized = (Action)Delegate.Remove(gamePlayer2.OnPlayerInitialized, createItemsCallback);
 				byte[] array = GZipStream.UncompressBuffer(stateData);
 				_ = array.Length;
 				using MemoryStream input = new MemoryStream(array);
@@ -932,56 +998,40 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 					}
 					for (int i = 0; i < num; i++)
 					{
-						int entityTypeId = binaryReader.ReadInt32();
-						long data = binaryReader.ReadInt64();
-						int data2 = binaryReader.ReadInt32();
-						long createData = binaryReader.ReadInt64();
-						int createdByEntityNetId = binaryReader.ReadInt32();
-						byte b = binaryReader.ReadByte();
-						if (isAuthority)
+						_JoinWithItems_ReadOne(binaryReader, out var entityTypeId, out var localPos, out var localRot, out var createData, out var createdByEntityNetId, out var slotIndex);
+						if (!joiningPlayer.TryGetSlotXform(slotIndex, out var slotXform))
 						{
-							int numToCreate = 1 + FactoryGetBuiltInEntityCountById(entityTypeId);
-							netIds[i] = CreateNetId(numToCreate);
+							Debug.LogError("[GT/GameEntityManager]  ERROR!!!  " + $"JoinWithItemsRPC: No slot transform for item's slot, {slotIndex}.");
 						}
-						int netId = netIds[i];
-						Vector3 v = BitPackUtils.UnpackWorldPosFromNetwork(data);
-						Quaternion q = BitPackUtils.UnpackQuaternionFromNetwork(data2);
-						if (v.IsValid(10000f) && q.IsValid() && FactoryHasEntity(entityTypeId) && IsPositionInZone(v))
+						else
 						{
-							bool flag = true;
-							for (int j = 0; j < zoneComponents.Count && flag; j++)
+							if (isAuthority)
 							{
-								flag &= zoneComponents[j].ValidateMigratedGameEntity(netId, entityTypeId, joiningPlayer.rig.transform.position, Quaternion.identity, createData, joiningActorNum);
+								int numToCreate = 1 + FactoryGetBuiltInEntityCountById(entityTypeId);
+								netIds[i] = CreateNetId(numToCreate);
 							}
-							if (flag)
+							int netId = netIds[i];
+							Vector3 pos = slotXform.TransformPoint(localPos);
+							if (localPos.IsValid(10000f) && localRot.IsValid() && FactoryHasEntity(entityTypeId) && IsPositionInManagerBounds(pos))
 							{
-								GameEntityId gameEntityId = CreateAndInitItemLocal(netId, entityTypeId, joiningPlayer.rig.transform.position, Quaternion.identity, createData, createdByEntityNetId);
-								bool isLeftHand = false;
-								SnapJointType snapJointType;
-								switch (b)
+								bool flag2 = true;
+								for (int j = 0; j < zoneComponents.Count && flag2; j++)
 								{
-								default:
-									snapJointType = SnapJointType.None;
-									break;
-								case 1:
-									snapJointType = SnapJointType.None;
-									isLeftHand = true;
-									break;
-								case 2:
-									snapJointType = SnapJointType.HandR;
-									break;
-								case 3:
-									snapJointType = SnapJointType.HandL;
-									isLeftHand = true;
-									break;
+									flag2 &= zoneComponents[j].ValidateMigratedGameEntity(netId, entityTypeId, joiningPlayer.rig.transform.position, Quaternion.identity, createData, joiningActorNum);
 								}
-								if (snapJointType != 0)
+								if (flag2)
 								{
-									SnapEntityLocal(gameEntityId, isLeftHand, v, q, (int)snapJointType, joiningPlayer.rig.OwningNetPlayer);
-								}
-								else
-								{
-									GrabEntityOnCreate(gameEntityId, isLeftHand, v, q, joiningPlayer.rig.OwningNetPlayer);
+									GameEntityId gameEntityId = CreateAndInitItemLocal(netId, entityTypeId, joiningPlayer.rig.transform.position, Quaternion.identity, createData, createdByEntityNetId);
+									bool isLeftHand = slotIndex == 0;
+									SnapJointType snapIndexToJoint = GameSnappable.GetSnapIndexToJoint(slotIndex);
+									if (snapIndexToJoint != SnapJointType.None)
+									{
+										SnapEntityLocal(gameEntityId, isLeftHand, localPos, localRot, (int)snapIndexToJoint, joiningPlayer.rig.Creator);
+									}
+									else
+									{
+										GrabEntityOnCreate(gameEntityId, isLeftHand, localPos, localRot, joiningPlayer.rig.Creator);
+									}
 								}
 							}
 						}
@@ -1001,8 +1051,28 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 			createItemsCallback();
 			return;
 		}
-		GamePlayer gamePlayer2 = joiningPlayer;
-		gamePlayer2.OnPlayerInitialized = (Action)Delegate.Combine(gamePlayer2.OnPlayerInitialized, createItemsCallback);
+		GamePlayer gamePlayer = joiningPlayer;
+		gamePlayer.OnPlayerInitialized = (Action)Delegate.Combine(gamePlayer.OnPlayerInitialized, createItemsCallback);
+	}
+
+	private static void _JoinWithItems_WriteOne(BinaryWriter writer, int typeId, Vector3 localPos, Quaternion localRot, long createData, int createdByEntityId, int slotIndex)
+	{
+		writer.Write(typeId);
+		writer.Write(BitPackUtils.PackWorldPosForNetwork(localPos));
+		writer.Write(BitPackUtils.PackQuaternionForNetwork(localRot));
+		writer.Write(createData);
+		writer.Write(createdByEntityId);
+		writer.Write((byte)(slotIndex + 1));
+	}
+
+	private static void _JoinWithItems_ReadOne(BinaryReader reader, out int entityTypeId, out Vector3 localPos, out Quaternion localRot, out long createData, out int createdByEntityNetId, out int slotIndex)
+	{
+		entityTypeId = reader.ReadInt32();
+		localPos = BitPackUtils.UnpackWorldPosFromNetwork(reader.ReadInt64());
+		localRot = BitPackUtils.UnpackQuaternionFromNetwork(reader.ReadInt32());
+		createData = reader.ReadInt64();
+		createdByEntityNetId = reader.ReadInt32();
+		slotIndex = reader.ReadByte() - 1;
 	}
 
 	public bool FactoryHasEntity(int entityTypeId)
@@ -1158,17 +1228,20 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 			createdItemTypeCount[gameEntity.typeId] = 1;
 		}
 		createdItemTypeCount[gameEntity.typeId]--;
-		if (GamePlayer.TryGetGamePlayer(gameEntity.heldByActorNumber, out var out_gamePlayer))
+		if (RoomSystem.JoinedRoom)
 		{
-			out_gamePlayer.ClearGrabbedIfHeld(gameEntity.id);
-			if (out_gamePlayer.IsLocal())
+			if (gameEntity.heldByActorNumber != -1 && GamePlayer.TryGetGamePlayer(gameEntity.heldByActorNumber, out var out_gamePlayer))
 			{
-				GamePlayerLocal.instance.ClearGrabbedIfHeld(gameEntity.id);
+				out_gamePlayer.ClearGrabbedIfHeld(gameEntity.id);
+				if (out_gamePlayer.IsLocal())
+				{
+					GamePlayerLocal.instance.ClearGrabbedIfHeld(gameEntity.id);
+				}
 			}
-		}
-		if (GamePlayer.TryGetGamePlayer(gameEntity.snappedByActorNumber, out var out_gamePlayer2))
-		{
-			out_gamePlayer2.ClearSnappedIfSnapped(gameEntity.id);
+			if (gameEntity.snappedByActorNumber != -1 && GamePlayer.TryGetGamePlayer(gameEntity.snappedByActorNumber, out var out_gamePlayer2))
+			{
+				out_gamePlayer2.ClearSnappedIfSnapped(gameEntity.id);
+			}
 		}
 		RemoveGameEntity(gameEntity);
 		if (gameEntity.isBuiltIn)
@@ -1347,7 +1420,7 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 
 	private void GrabEntityLocal(GameEntityId gameEntityId, bool isLeftHand, Vector3 localPosition, Quaternion localRotation, NetPlayer grabbedByPlayer)
 	{
-		if (!VRRigCache.Instance.TryGetVrrig(NetworkSystem.Instance.GetPlayer(grabbedByPlayer.ActorNumber), out var playerRig))
+		if (!VRRigCache.Instance.TryGetVrrig(NetworkSystem.Instance.GetPlayer(grabbedByPlayer.ActorNumber), out var _))
 		{
 			return;
 		}
@@ -1376,7 +1449,7 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 				GamePlayerLocal.instance.ClearGrabbed(num);
 			}
 		}
-		Transform handTransform = GamePlayer.GetHandTransform(playerRig.Rig, handIndex);
+		Transform handTransform = out_gamePlayer.GetHandTransform(handIndex);
 		Rigidbody component = gameEntity.GetComponent<Rigidbody>();
 		if (component != null)
 		{
@@ -1403,20 +1476,7 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 			GamePlayerLocal.instance.SetGrabbed(gameEntityId, GamePlayer.GetHandIndex(isLeftHand));
 			GamePlayerLocal.instance.PlayCatchFx(isLeftHand);
 		}
-		GameSnappable component2 = gameEntity.GetComponent<GameSnappable>();
-		if (component2 != null && component2.snappedToJoint != null && component2.snappedToJoint.jointType != 0)
-		{
-			SuperInfectionSnapPoint superInfectionSnapPoint = SuperInfectionSnapPointManager.FindSnapPoint(out_gamePlayer, component2.snappedToJoint.jointType);
-			if (superInfectionSnapPoint == null)
-			{
-				superInfectionSnapPoint = component2.snappedToJoint;
-			}
-			superInfectionSnapPoint.Unsnapped();
-			component2.OnUnsnap();
-			gameEntity.OnUnsnapped?.Invoke();
-			gameEntity.snappedByActorNumber = -1;
-			gameEntity.snappedJoint = SnapJointType.None;
-		}
+		TryUnsnapLocal(gameEntity);
 		gameEntity.PlayCatchFx();
 		gameEntity.OnGrabbed?.Invoke();
 		CustomGameMode.OnEntityGrabbed(gameEntity, isGrabbed: true);
@@ -1431,12 +1491,13 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 		GrabEntityLocal(gameEntityId, isLeftHand, localPosition, localRotation, grabbedByPlayer);
 	}
 
-	public GameEntityId TryGrabLocal(Vector3 handPosition, bool isLeftHand, out Vector3 closestPointOnBoundingBox)
+	public GameEntityId TryGrabLocal(Vector3 handPosition, Vector3 fingerPosition, bool isLeftHand, out Vector3 closestPointOnBoundingBox, out bool fingerPositionUsed)
 	{
 		float a = 0.03f;
 		float num = 0f;
 		float num2 = 0.1f;
 		float max = 0.25f;
+		fingerPositionUsed = false;
 		int actorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
 		Vector3 rigidbodyVelocity = GTPlayer.Instance.RigidbodyVelocity;
 		GameEntity bestEntity = null;
@@ -1465,14 +1526,22 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 			{
 				if (meshRenderer.gameObject.activeInHierarchy && meshRenderer.enabled)
 				{
-					_TryGrabLocal_TestBounds(handPosition, meshRenderer.transform, slopProjection, meshFilter.sharedMesh.bounds, num4, num, gameEntity, ref bestDist, ref bestEntity, ref closestPoint);
+					_TryGrabLocal_TestBounds(handPosition, meshRenderer.transform, slopProjection, meshFilter.sharedMesh.bounds, num4, num, gameEntity, isTestingAltPosition: false, ref bestDist, ref bestEntity, ref closestPoint, ref fingerPositionUsed);
+					if (IsThinAlongDirection(meshRenderer.transform, meshFilter.sharedMesh.bounds, fingerPosition - handPosition))
+					{
+						_TryGrabLocal_TestBounds(fingerPosition, meshRenderer.transform, slopProjection, meshFilter.sharedMesh.bounds, num4, num, gameEntity, isTestingAltPosition: true, ref bestDist, ref bestEntity, ref closestPoint, ref fingerPositionUsed);
+					}
 				}
 			}
 			foreach (SkinnedMeshRenderer skinnedRenderer in grabbableRenderers.skinnedRenderers)
 			{
 				if (skinnedRenderer.gameObject.activeInHierarchy && skinnedRenderer.enabled)
 				{
-					_TryGrabLocal_TestBounds(handPosition, skinnedRenderer.transform, slopProjection, skinnedRenderer.localBounds, num4, num, gameEntity, ref bestDist, ref bestEntity, ref closestPoint);
+					_TryGrabLocal_TestBounds(handPosition, skinnedRenderer.rootBone, slopProjection, skinnedRenderer.localBounds, num4, num, gameEntity, isTestingAltPosition: false, ref bestDist, ref bestEntity, ref closestPoint, ref fingerPositionUsed);
+					if (IsThinAlongDirection(skinnedRenderer.rootBone, skinnedRenderer.bounds, fingerPosition - handPosition))
+					{
+						_TryGrabLocal_TestBounds(fingerPosition, skinnedRenderer.rootBone, slopProjection, skinnedRenderer.localBounds, num4, num, gameEntity, isTestingAltPosition: true, ref bestDist, ref bestEntity, ref closestPoint, ref fingerPositionUsed);
+					}
 				}
 			}
 			if (grabbableRenderers.renderers.Count == 0 && grabbableRenderers.skinnedRenderers.Count == 0)
@@ -1498,8 +1567,19 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 		return GameEntityId.Invalid;
 	}
 
+	private static bool IsThinAlongDirection(Transform transform, Bounds bounds, Vector3 direction, float thinThreshold = 0.1f)
+	{
+		return GetBoundsThicknessAlongDirection(bounds, transform.InverseTransformDirection(direction)) <= thinThreshold;
+	}
+
+	private static float GetBoundsThicknessAlongDirection(Bounds bounds, Vector3 localDirection)
+	{
+		localDirection.Normalize();
+		return Vector3.Dot(rhs: new Vector3(Mathf.Abs(localDirection.x), Mathf.Abs(localDirection.y), Mathf.Abs(localDirection.z)), lhs: bounds.extents);
+	}
+
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private static void _TryGrabLocal_TestBounds(Vector3 handPosition, Transform t, Vector3 slopProjection, Bounds bounds, float slopForSpeed, float maxAdjustedGrabDistance, GameEntity entity, ref float bestDist, ref GameEntity bestEntity, ref Vector3 closestPoint)
+	private static void _TryGrabLocal_TestBounds(Vector3 handPosition, Transform t, Vector3 slopProjection, Bounds bounds, float slopForSpeed, float maxAdjustedGrabDistance, GameEntity entity, bool isTestingAltPosition, ref float bestDist, ref GameEntity bestEntity, ref Vector3 closestPoint, ref bool usedAltPosition)
 	{
 		Vector3 vector = t.InverseTransformPoint(handPosition);
 		Vector3 b = t.InverseTransformPoint(handPosition + slopProjection);
@@ -1523,6 +1603,7 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 			bestDist = num;
 			bestEntity = entity;
 			closestPoint = handPosition - vector2;
+			usedAltPosition = isTestingAltPosition;
 		}
 	}
 
@@ -1587,11 +1668,11 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 		{
 			return false;
 		}
-		if (gameEntity.heldByActorNumber != -1 && gameEntity.heldByActorNumber != playerActorNumber && GamePlayer.GetGamePlayer(gameEntity.heldByActorNumber) != null)
+		if (gameEntity.heldByActorNumber != -1 && gameEntity.heldByActorNumber != playerActorNumber && GamePlayer.TryGetGamePlayer(gameEntity.heldByActorNumber, out var out_gamePlayer))
 		{
 			return false;
 		}
-		if (gameEntity.snappedByActorNumber != -1 && gameEntity.snappedByActorNumber != playerActorNumber && GamePlayer.GetGamePlayer(gameEntity.snappedByActorNumber) != null)
+		if (gameEntity.snappedByActorNumber != -1 && gameEntity.snappedByActorNumber != playerActorNumber && GamePlayer.TryGetGamePlayer(gameEntity.snappedByActorNumber, out out_gamePlayer))
 		{
 			return false;
 		}
@@ -1605,7 +1686,7 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 			GameEntity gameEntity2 = GetGameEntity(gameEntity.attachedToEntityId);
 			if (gameEntity2 != null)
 			{
-				if (gameEntity2.snappedByActorNumber != -1 && gameEntity2.snappedByActorNumber != playerActorNumber && GamePlayer.GetGamePlayer(gameEntity2.snappedByActorNumber) != null)
+				if (gameEntity2.snappedByActorNumber != -1 && gameEntity2.snappedByActorNumber != playerActorNumber && GamePlayer.TryGetGamePlayer(gameEntity2.snappedByActorNumber, out out_gamePlayer))
 				{
 					return false;
 				}
@@ -1699,7 +1780,7 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 	[PunRPC]
 	public void RequestThrowEntityRPC(int entityNetId, bool isLeftHand, Vector3 position, Quaternion rotation, Vector3 velocity, Vector3 angVelocity, PhotonMessageInfo info)
 	{
-		if (IsValidAuthorityRPC(info.Sender, entityNetId) && position.IsValid(10000f) && rotation.IsValid() && velocity.IsValid(10000f) && angVelocity.IsValid(10000f) && !(velocity.sqrMagnitude > 1600f) && IsPositionInZone(position) && GamePlayer.TryGetGamePlayer(info.Sender, out var gamePlayer) && IsPlayerHandNearPosition(gamePlayer, position, isLeftHand, checkBothHands: false) && gamePlayer.IsHoldingEntity(GetEntityIdFromNetId(entityNetId), isLeftHand) && gamePlayer.netThrowLimiter.CheckCallTime(Time.time))
+		if (IsValidAuthorityRPC(info.Sender, entityNetId) && position.IsValid(10000f) && rotation.IsValid() && velocity.IsValid(10000f) && angVelocity.IsValid(10000f) && !(velocity.sqrMagnitude > 1600f) && IsPositionInManagerBounds(position) && GamePlayer.TryGetGamePlayer(info.Sender, out var gamePlayer) && IsPlayerHandNearPosition(gamePlayer, position, isLeftHand, checkBothHands: false) && gamePlayer.IsHoldingEntity(GetEntityIdFromNetId(entityNetId), isLeftHand) && gamePlayer.netThrowLimiter.CheckCallTime(Time.time))
 		{
 			photonView.RPC("ThrowEntityRPC", RpcTarget.All, entityNetId, isLeftHand, position, rotation, velocity, angVelocity, info.Sender, info.SentServerTime);
 			PhotonNetwork.SendAllOutgoingCommands();
@@ -1796,7 +1877,7 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 	[PunRPC]
 	public void RequestSnapEntityRPC(int entityNetId, bool isLeftHand, Vector3 position, Quaternion rotation, int jointType, PhotonMessageInfo info)
 	{
-		if (IsValidAuthorityRPC(info.Sender, entityNetId) && position.IsValid(10000f) && rotation.IsValid() && IsPositionInZone(position))
+		if (IsValidAuthorityRPC(info.Sender, entityNetId) && position.IsValid(10000f) && rotation.IsValid() && IsPositionInManagerBounds(position))
 		{
 			GamePlayer gamePlayer = GamePlayer.GetGamePlayer(info.Sender);
 			if (!(gamePlayer == null) && IsPlayerHandNearPosition(gamePlayer, position, isLeftHand, checkBothHands: false) && gamePlayer.IsHoldingEntity(GetEntityIdFromNetId(entityNetId), isLeftHand) && gamePlayer.netSnapLimiter.CheckCallTime(Time.time))
@@ -1828,37 +1909,31 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 			return;
 		}
 		SuperInfectionSnapPoint superInfectionSnapPoint = null;
-		GamePlayer player = null;
+		if (!GamePlayer.TryGetGamePlayer(snappedByPlayer.ActorNumber, out var out_gamePlayer))
+		{
+			return;
+		}
 		TryDetachCompletely(gameEntity);
 		if (jointType == 64)
 		{
 			gameEntity.GetComponent<GameSnappable>();
-			superInfectionSnapPoint = SuperInfectionSnapPointManager.FindSnapPoint(player, (SnapJointType)jointType);
+			superInfectionSnapPoint = SuperInfectionSnapPointManager.FindSnapPoint(out_gamePlayer, (SnapJointType)jointType);
 		}
 		else
 		{
-			player = GamePlayer.GetGamePlayer(snappedByPlayer.ActorNumber);
-			superInfectionSnapPoint = SuperInfectionSnapPointManager.FindSnapPoint(player, (SnapJointType)jointType);
+			superInfectionSnapPoint = SuperInfectionSnapPointManager.FindSnapPoint(out_gamePlayer, (SnapJointType)jointType);
 			int num = -1;
 			if (jointType == 1)
 			{
-				num = GamePlayer.GetHandIndex(leftHand: true);
+				num = 2;
 			}
 			if (jointType == 4)
 			{
-				num = GamePlayer.GetHandIndex(leftHand: false);
-			}
-			if (jointType == 128)
-			{
-				num = GamePlayer.GetHandIndex(leftHand: true);
-			}
-			if (jointType == 256)
-			{
-				num = GamePlayer.GetHandIndex(leftHand: false);
+				num = 3;
 			}
 			if (num != -1)
 			{
-				player.SetSnapped(gameEntityId, num, this);
+				out_gamePlayer.SetSnapped(gameEntityId, num, this);
 			}
 		}
 		if (superInfectionSnapPoint == null)
@@ -1919,21 +1994,17 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 		SnapEntityLocal(gameEntityId, isLeftHand, localPosition, localRotation, jointType, grabbedByPlayer);
 	}
 
-	private void TryUnsnapLocal(GameEntity gameEntity)
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private static void TryUnsnapLocal(GameEntity gameEntity)
 	{
-		if (gameEntity == null)
+		if (GamePlayer.TryGetGamePlayer(gameEntity.snappedByActorNumber, out var out_gamePlayer))
 		{
-			return;
-		}
-		GamePlayer gamePlayer = GamePlayer.GetGamePlayer(gameEntity.snappedByActorNumber);
-		if (gamePlayer != null)
-		{
-			gamePlayer.ClearSnappedIfSnapped(gameEntity.id);
+			out_gamePlayer.ClearSnappedIfSnapped(gameEntity.id);
 		}
 		GameSnappable component = gameEntity.GetComponent<GameSnappable>();
-		if (component != null && component.snappedToJoint != null && component.snappedToJoint.jointType != 0)
+		if (component != null && component.snappedToJoint != null && component.snappedToJoint.jointType != SnapJointType.None)
 		{
-			SuperInfectionSnapPoint superInfectionSnapPoint = SuperInfectionSnapPointManager.FindSnapPoint(gamePlayer, component.snappedToJoint.jointType);
+			SuperInfectionSnapPoint superInfectionSnapPoint = SuperInfectionSnapPointManager.FindSnapPoint(out_gamePlayer, component.snappedToJoint.jointType);
 			if (superInfectionSnapPoint == null)
 			{
 				superInfectionSnapPoint = component.snappedToJoint;
@@ -1983,7 +2054,7 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 				return;
 			}
 		}
-		else if (!IsPositionInZone(localPosition))
+		else if (!IsPositionInManagerBounds(localPosition))
 		{
 			return;
 		}
@@ -2064,15 +2135,12 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 		}
 	}
 
-	private void TryDetachLocal(GameEntity gameEntity)
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private static void TryDetachLocal(GameEntity gameEntity)
 	{
-		if (gameEntity == null)
-		{
-			return;
-		}
 		if (gameEntity.attachedToEntityId != GameEntityId.Invalid)
 		{
-			GameEntity gameEntity2 = entities[gameEntity.attachedToEntityId.index];
+			GameEntity gameEntity2 = gameEntity.manager.entities[gameEntity.attachedToEntityId.index];
 			if (gameEntity2 != null)
 			{
 				GameDock component = gameEntity2.GetComponent<GameDock>();
@@ -2094,26 +2162,29 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 		gameEntity.attachedToEntityId = GameEntityId.Invalid;
 	}
 
-	public void TryDetachCompletely(GameEntity gameEntity)
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	internal static void TryDetachCompletely(GameEntity gameEntity)
 	{
-		TryRemoveFromHandLocal(gameEntity);
-		TryUnsnapLocal(gameEntity);
-		TryDetachLocal(gameEntity);
+		if (!(gameEntity == null))
+		{
+			TryRemoveFromHandLocal(gameEntity);
+			TryUnsnapLocal(gameEntity);
+			TryDetachLocal(gameEntity);
+		}
 	}
 
-	private void TryRemoveFromHandLocal(GameEntity gameEntity)
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private static void TryRemoveFromHandLocal(GameEntity gameEntity)
 	{
 		GameEntityId id = gameEntity.id;
 		int heldByActorNumber = gameEntity.heldByActorNumber;
-		GamePlayer gamePlayer = GamePlayer.GetGamePlayer(heldByActorNumber);
-		if (gamePlayer != null)
+		if (GamePlayer.TryGetGamePlayer(heldByActorNumber, out var out_gamePlayer))
 		{
-			bool num = heldByActorNumber == PhotonNetwork.LocalPlayer.ActorNumber;
-			gamePlayer.ClearGrabbedIfHeld(id);
-			if (num)
+			if (heldByActorNumber == PhotonNetwork.LocalPlayer.ActorNumber)
 			{
 				GamePlayerLocal.instance.ClearGrabbedIfHeld(id);
 			}
+			out_gamePlayer.ClearGrabbedIfHeld(id);
 			gameEntity.OnReleased?.Invoke();
 		}
 		gameEntity.heldByActorNumber = -1;
@@ -2138,7 +2209,7 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 	[PunRPC]
 	public void RequestHitRPC(int hittableNetId, int hitByNetId, int hitTypeId, Vector3 entityPosition, Vector3 hitPosition, Vector3 hitImpulse, int hittablePoint, PhotonMessageInfo info)
 	{
-		if (!entityPosition.IsValid(10000f) || !hitPosition.IsValid(10000f) || !hitImpulse.IsValid(10000f) || !IsValidAuthorityRPC(info.Sender, hittableNetId, entityPosition) || !IsPositionInZone(hitPosition) || !GamePlayer.TryGetGamePlayer(info.Sender, out var gamePlayer) || !gamePlayer.netImpulseLimiter.CheckCallTime(Time.time))
+		if (!entityPosition.IsValid(10000f) || !hitPosition.IsValid(10000f) || !hitImpulse.IsValid(10000f) || !IsValidAuthorityRPC(info.Sender, hittableNetId, entityPosition) || !IsPositionInManagerBounds(hitPosition) || !GamePlayer.TryGetGamePlayer(info.Sender, out var gamePlayer) || !gamePlayer.netImpulseLimiter.CheckCallTime(Time.time))
 		{
 			return;
 		}
@@ -2146,15 +2217,16 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 		GameHittable gameComponent = GetGameComponent<GameHittable>(entityIdFromNetId);
 		if (!(gameComponent == null))
 		{
-			GameHitData gameHitData = default(GameHitData);
-			gameHitData.hitTypeId = hitTypeId;
-			gameHitData.hitEntityId = entityIdFromNetId;
-			gameHitData.hitByEntityId = GetEntityIdFromNetId(hitByNetId);
-			gameHitData.hitEntityPosition = entityPosition;
-			gameHitData.hitPosition = hitPosition;
-			gameHitData.hitImpulse = hitImpulse;
-			gameHitData.hittablePoint = hittablePoint;
-			GameHitData hitData = gameHitData;
+			GameHitData hitData = new GameHitData
+			{
+				hitTypeId = hitTypeId,
+				hitEntityId = entityIdFromNetId,
+				hitByEntityId = GetEntityIdFromNetId(hitByNetId),
+				hitEntityPosition = entityPosition,
+				hitPosition = hitPosition,
+				hitImpulse = hitImpulse,
+				hittablePoint = hittablePoint
+			};
 			if (gameComponent.IsHitValid(hitData))
 			{
 				SendRPC("ApplyHitRPC", RpcTarget.All, hittableNetId, hitByNetId, hitTypeId, entityPosition, hitPosition, hitImpulse, hittablePoint, info.Sender);
@@ -2171,16 +2243,17 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 		}
 		hitImpulse = Vector3.ClampMagnitude(hitImpulse, 100f);
 		GameEntityId entityIdFromNetId = GetEntityIdFromNetId(hittableNetId);
-		GameHitData gameHitData = default(GameHitData);
-		gameHitData.hitTypeId = hitTypeId;
-		gameHitData.hitEntityId = entityIdFromNetId;
-		gameHitData.hitByEntityId = GetEntityIdFromNetId(hitByNetId);
-		gameHitData.hitEntityPosition = entityPosition;
-		gameHitData.hitPosition = hitPosition;
-		gameHitData.hitImpulse = hitImpulse;
-		gameHitData.hitAmount = 0;
-		gameHitData.hittablePoint = hittablePoint;
-		GameHitData hitData = gameHitData;
+		GameHitData hitData = new GameHitData
+		{
+			hitTypeId = hitTypeId,
+			hitEntityId = entityIdFromNetId,
+			hitByEntityId = GetEntityIdFromNetId(hitByNetId),
+			hitEntityPosition = entityPosition,
+			hitPosition = hitPosition,
+			hitImpulse = hitImpulse,
+			hitAmount = 0,
+			hittablePoint = hittablePoint
+		};
 		GameEntity gameEntity = GetGameEntity(GetEntityIdFromNetId(hitByNetId));
 		GameHittable gameComponent = GetGameComponent<GameHittable>(entityIdFromNetId);
 		if (gameEntity != null)
@@ -2318,9 +2391,9 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 				entities[k] = null;
 			}
 		}
-		foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+		foreach (VRRig activeRig in VRRigCache.ActiveRigs)
 		{
-			GamePlayer component = vrrig.GetComponent<GamePlayer>();
+			GamePlayer component = activeRig.GetComponent<GamePlayer>();
 			if (!component.IsLocal())
 			{
 				component.ClearZone(this);
@@ -2587,12 +2660,12 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 					num++;
 					int index = UnityEngine.Random.Range(0, allRigs.Count);
 					VRRig vRRig = allRigs[index];
-					if (GamePlayer.TryGetGamePlayer(vRRig, out var out_gamePlayer) && !(out_gamePlayer.rig == null) && out_gamePlayer.rig.OwningNetPlayer != null && !out_gamePlayer.rig.isLocal)
+					if (GamePlayer.TryGetGamePlayer(vRRig, out var out_gamePlayer) && !(out_gamePlayer.rig == null) && out_gamePlayer.rig.Creator != null && !out_gamePlayer.rig.isLocal)
 					{
 						GTZone currentZone2 = vRRig.zoneEntity.currentZone;
 						if (currentZone2 == zone && currentZone2 != currentZone)
 						{
-							player = out_gamePlayer.rig.OwningNetPlayer.GetPlayerRef();
+							player = out_gamePlayer.rig.Creator.GetPlayerRef();
 						}
 					}
 				}
@@ -2602,17 +2675,17 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 				for (int i = 0; i < allRigs.Count; i++)
 				{
 					VRRig vRRig2 = allRigs[i];
-					if (GamePlayer.TryGetGamePlayer(vRRig2, out var out_gamePlayer2) && !(out_gamePlayer2.rig == null) && out_gamePlayer2.rig.OwningNetPlayer != null && !out_gamePlayer2.rig.isLocal)
+					if (GamePlayer.TryGetGamePlayer(vRRig2, out var out_gamePlayer2) && !(out_gamePlayer2.rig == null) && out_gamePlayer2.rig.Creator != null && !out_gamePlayer2.rig.isLocal)
 					{
 						GTZone currentZone3 = vRRig2.zoneEntity.currentZone;
 						if (currentZone3 == zone && currentZone3 != currentZone)
 						{
-							player = out_gamePlayer2.rig.OwningNetPlayer.GetPlayerRef();
+							player = out_gamePlayer2.rig.Creator.GetPlayerRef();
 						}
 					}
 				}
 			}
-			if (player != null && player != null)
+			if (player != null)
 			{
 				guard.TransferOwnership(player);
 			}
@@ -2738,8 +2811,10 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 				zoneComponents[i].OnZoneInit();
 			}
 		}
-		catch (Exception)
+		catch (Exception exception)
 		{
+			Debug.LogException(exception);
+			Debug.LogError("[GT/GameEntityManager]  ERROR!!!  ResolveTableData: See exception in previous message.");
 		}
 	}
 
@@ -2752,7 +2827,7 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 		}
 		if (!IsInZone())
 		{
-			if (zoneStateData.state != 0)
+			if (zoneStateData.state != ZoneState.WaitingToEnterZone)
 			{
 				zoneClearReason = ZoneClearReason.LeaveZone;
 				SetZoneState(ZoneState.WaitingToEnterZone);
@@ -2793,7 +2868,7 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 		}
 		if (!IsInZone())
 		{
-			if (zoneStateData.state != 0)
+			if (zoneStateData.state != ZoneState.WaitingToEnterZone)
 			{
 				zoneClearReason = ZoneClearReason.LeaveZone;
 				SetZoneState(ZoneState.WaitingToEnterZone);
@@ -2902,6 +2977,7 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 		{
 			return;
 		}
+		playerZoneJoinTimes[info.Sender.ActorNumber] = Time.unscaledTime;
 		for (int i = 0; i < zoneStateData.zoneStateRequests.Count; i++)
 		{
 			if (zoneStateData.zoneStateRequests[i].player == info.Sender)
@@ -2941,60 +3017,22 @@ public class GameEntityManager : NetworkComponent, IMatchmakingCallbacks, IInRoo
 		}
 	}
 
-	void IMatchmakingCallbacks.OnJoinedRoom()
+	private void OnNetworkJoinedRoom()
 	{
 		zoneClearReason = ZoneClearReason.JoinZone;
 		SetZoneState(ZoneState.WaitingToEnterZone);
 	}
 
-	void IMatchmakingCallbacks.OnLeftRoom()
+	private void OnNetworkLeftRoom()
 	{
 		zoneClearReason = ZoneClearReason.Disconnect;
 		SetZoneState(ZoneState.WaitingToEnterZone);
+		playerZoneJoinTimes.Clear();
 	}
 
-	void IMatchmakingCallbacks.OnCreateRoomFailed(short returnCode, string message)
+	private void OnNetworkPlayerLeft(NetPlayer leavingPlayer)
 	{
-	}
-
-	void IMatchmakingCallbacks.OnJoinRoomFailed(short returnCode, string message)
-	{
-	}
-
-	void IMatchmakingCallbacks.OnCreatedRoom()
-	{
-	}
-
-	void IMatchmakingCallbacks.OnPreLeavingRoom()
-	{
-	}
-
-	void IMatchmakingCallbacks.OnJoinRandomFailed(short returnCode, string message)
-	{
-	}
-
-	void IMatchmakingCallbacks.OnFriendListUpdate(List<FriendInfo> friendList)
-	{
-	}
-
-	void IInRoomCallbacks.OnMasterClientSwitched(Player newMasterClient)
-	{
-	}
-
-	void IInRoomCallbacks.OnPlayerEnteredRoom(Player newPlayer)
-	{
-	}
-
-	void IInRoomCallbacks.OnPlayerLeftRoom(Player leavingPlayer)
-	{
-	}
-
-	void IInRoomCallbacks.OnPlayerPropertiesUpdate(Player targetPlayer, Hashtable changedProps)
-	{
-	}
-
-	void IInRoomCallbacks.OnRoomPropertiesUpdate(Hashtable propertiesThatChanged)
-	{
+		playerZoneJoinTimes.Remove(leavingPlayer.ActorNumber);
 	}
 
 	public void OnRigDeactivated(RigContainer container)

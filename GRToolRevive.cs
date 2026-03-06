@@ -159,7 +159,7 @@ public class GRToolRevive : MonoBehaviour
 			if (!(attachedRigidbody == null))
 			{
 				GRPlayer component = attachedRigidbody.GetComponent<GRPlayer>();
-				if (component != null && component.State != 0)
+				if (component != null && component.State != GRPlayer.GRPlayerState.Alive)
 				{
 					GhostReactorManager.Get(gameEntity).RequestPlayerStateChange(component, GRPlayer.GRPlayerState.Alive);
 					break;

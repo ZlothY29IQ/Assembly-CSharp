@@ -278,16 +278,17 @@ public class VectorizedCustomRopeSimulation : MonoBehaviour
 			return;
 		}
 		float deltaTime = math.min(Time.deltaTime, 0.05f);
-		VectorizedSolveRopeJob vectorizedSolveRopeJob = default(VectorizedSolveRopeJob);
-		vectorizedSolveRopeJob.applyConstraintIterations = applyConstraintIterations;
-		vectorizedSolveRopeJob.finalPassIterations = finalPassIterations;
-		vectorizedSolveRopeJob.lastDeltaTime = lastDelta;
-		vectorizedSolveRopeJob.deltaTime = deltaTime;
-		vectorizedSolveRopeJob.gravity = gravity;
-		vectorizedSolveRopeJob.data = burstData;
-		vectorizedSolveRopeJob.nodeDistance = nodeDistance;
-		vectorizedSolveRopeJob.ropeCount = ropes.Count;
-		VectorizedSolveRopeJob jobData = vectorizedSolveRopeJob;
+		VectorizedSolveRopeJob jobData = new VectorizedSolveRopeJob
+		{
+			applyConstraintIterations = applyConstraintIterations,
+			finalPassIterations = finalPassIterations,
+			lastDeltaTime = lastDelta,
+			deltaTime = deltaTime,
+			gravity = gravity,
+			data = burstData,
+			nodeDistance = nodeDistance,
+			ropeCount = ropes.Count
+		};
 		jobData.Schedule().Complete();
 		for (int i = 0; i < ropes.Count; i++)
 		{

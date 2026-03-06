@@ -49,7 +49,7 @@ public class GorillaComputerTerminal : MonoBehaviour, IBuildValidation
 		myFunctionText.text = GorillaComputer.instance.functionSelectText.currentText;
 		if (GorillaComputer.instance.screenText.currentMaterials != null)
 		{
-			monitorMesh.materials = GorillaComputer.instance.screenText.currentMaterials;
+			monitorMesh.sharedMaterials = GorillaComputer.instance.screenText.currentMaterials;
 		}
 	}
 
@@ -72,7 +72,7 @@ public class GorillaComputerTerminal : MonoBehaviour, IBuildValidation
 
 	private void OnMaterialsChanged(Material[] materials)
 	{
-		monitorMesh.materials = materials;
+		monitorMesh.sharedMaterials = materials;
 	}
 
 	private void OnLanguageChanged()

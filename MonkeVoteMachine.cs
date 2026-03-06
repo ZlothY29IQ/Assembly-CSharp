@@ -430,7 +430,7 @@ public class MonkeVoteMachine : MonoBehaviour
 	{
 		_state = newState;
 		bool flag = _currentPoll?.IsValid ?? false;
-		if (_state < VotingState.None || _state > VotingState.Complete || (_state != 0 && !flag))
+		if (_state < VotingState.None || _state > VotingState.Complete || (_state != VotingState.None && !flag))
 		{
 			_state = VotingState.None;
 		}
@@ -594,13 +594,13 @@ public class MonkeVoteMachine : MonoBehaviour
 		return list;
 		static int LargestFractionIndex(IList<float> fractions)
 		{
-			float num8 = float.NegativeInfinity;
+			float num7 = float.NegativeInfinity;
 			int result = -1;
 			for (int k = 0; k < fractions.Count; k++)
 			{
-				if (fractions[k] > num8)
+				if (fractions[k] > num7)
 				{
-					num8 = fractions[k];
+					num7 = fractions[k];
 					result = k;
 				}
 			}
@@ -619,7 +619,7 @@ public class MonkeVoteMachine : MonoBehaviour
 
 	private void OnVoteEntered(MonkeVoteOption option, Collider votingCollider)
 	{
-		if (_waitingOnVote || (Time.time < _voteCooldownEnd && !_isTestingPoll))
+		if (_waitingOnVote || (Time.realtimeSinceStartup < _voteCooldownEnd && !_isTestingPoll))
 		{
 			PlayVoteFailEffects();
 			return;
@@ -664,7 +664,7 @@ public class MonkeVoteMachine : MonoBehaviour
 		if (success)
 		{
 			PlayVoteSuccessEffects();
-			_voteCooldownEnd = Time.time + _voteCooldown;
+			_voteCooldownEnd = Time.realtimeSinceStartup + _voteCooldown;
 			int num;
 			int num2;
 			(num, num2) = GetVote(id);
@@ -716,8 +716,8 @@ public class MonkeVoteMachine : MonoBehaviour
 
 	private void SaveVote(int id, int voteOption, int predictionOption)
 	{
-		int @int = PlayerPrefs.GetInt("Vote_Current_Id", -1);
-		if (@int == -1 || @int == id)
+		int num = PlayerPrefs.GetInt("Vote_Current_Id", -1);
+		if (num == -1 || num == id)
 		{
 			PlayerPrefs.SetInt("Vote_Current_Id", id);
 			PlayerPrefs.SetInt("Vote_Current_Option", voteOption);
@@ -725,7 +725,7 @@ public class MonkeVoteMachine : MonoBehaviour
 		}
 		else
 		{
-			PlayerPrefs.SetInt("Vote_Previous_Id", @int);
+			PlayerPrefs.SetInt("Vote_Previous_Id", num);
 			PlayerPrefs.SetInt("Vote_Previous_Option", PlayerPrefs.GetInt("Vote_Current_Option"));
 			PlayerPrefs.SetInt("Vote_Previous_Prediction", PlayerPrefs.GetInt("Vote_Current_Prediction"));
 			PlayerPrefs.SetInt("Vote_Previous_Streak", PlayerPrefs.GetInt("Vote_Current_Streak"));
@@ -741,15 +741,15 @@ public class MonkeVoteMachine : MonoBehaviour
 	{
 		if (PlayerPrefs.GetInt("Vote_Current_Id", -1) == voteId)
 		{
-			int @int = PlayerPrefs.GetInt("Vote_Current_Option", -1);
-			int int2 = PlayerPrefs.GetInt("Vote_Current_Prediction", -1);
-			return (voteOption: @int, predictionOption: int2);
+			int item = PlayerPrefs.GetInt("Vote_Current_Option", -1);
+			int item2 = PlayerPrefs.GetInt("Vote_Current_Prediction", -1);
+			return (voteOption: item, predictionOption: item2);
 		}
 		if (PlayerPrefs.GetInt("Vote_Previous_Id", -1) == voteId)
 		{
-			int int3 = PlayerPrefs.GetInt("Vote_Previous_Option", -1);
-			int int4 = PlayerPrefs.GetInt("Vote_Previous_Prediction", -1);
-			return (voteOption: int3, predictionOption: int4);
+			int item3 = PlayerPrefs.GetInt("Vote_Previous_Option", -1);
+			int item4 = PlayerPrefs.GetInt("Vote_Previous_Prediction", -1);
+			return (voteOption: item3, predictionOption: item4);
 		}
 		return (voteOption: -1, predictionOption: -1);
 	}

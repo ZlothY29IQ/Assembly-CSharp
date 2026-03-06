@@ -40,7 +40,7 @@ public class SITechTreePage
 		get
 		{
 			EAssetReleaseTier edReleaseTier = m_edReleaseTier;
-			if (edReleaseTier != 0 && edReleaseTier <= EAssetReleaseTier.PublicRC)
+			if (edReleaseTier != EAssetReleaseTier.Disabled && edReleaseTier <= EAssetReleaseTier.PublicRC)
 			{
 				SITechTreeNode[] array = treeNodes;
 				if (array == null)

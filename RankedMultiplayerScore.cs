@@ -22,29 +22,19 @@ public class RankedMultiplayerScore : MonoBehaviourTick
 		public float PointsOnDefense;
 	}
 
-	public struct PlayerScoreInRound
+	public struct PlayerScoreInRound(int id, bool initInfected = false)
 	{
-		public int PlayerId;
+		public int PlayerId = id;
 
-		public int NumTags;
+		public int NumTags = 0;
 
-		public float PointsOnDefense;
+		public float PointsOnDefense = 0f;
 
-		public float JoinTime;
+		public float JoinTime = Time.time;
 
-		public float TaggedTime;
+		public float TaggedTime = (initInfected ? Time.time : 0f);
 
-		public bool Infected;
-
-		public PlayerScoreInRound(int id, bool initInfected = false)
-		{
-			PlayerId = id;
-			NumTags = 0;
-			PointsOnDefense = 0f;
-			JoinTime = Time.time;
-			Infected = initInfected;
-			TaggedTime = (initInfected ? Time.time : 0f);
-		}
+		public bool Infected = initInfected;
 	}
 
 	public struct ResultData
@@ -404,38 +394,38 @@ public class RankedMultiplayerScore : MonoBehaviourTick
 		AllFinalPlayerScores = AllFinalPlayerScores.OrderByDescending((PlayerScore s) => s.GameScore).ToList();
 		float k = Progression.MaxEloConstant / (float)(AllFinalPlayerScores.Count - 1);
 		InProgressEloDeltaPerPlayer.Clear();
-		for (int i = 0; i < AllFinalPlayerScores.Count; i++)
+		for (int num = 0; num < AllFinalPlayerScores.Count; num++)
 		{
-			InProgressEloDeltaPerPlayer.Add(AllFinalPlayerScores[i].PlayerId, 0f);
+			InProgressEloDeltaPerPlayer.Add(AllFinalPlayerScores[num].PlayerId, 0f);
 		}
-		for (int j = 0; j < AllFinalPlayerScores.Count; j++)
+		for (int num2 = 0; num2 < AllFinalPlayerScores.Count; num2++)
 		{
-			for (int l = 0; l < AllFinalPlayerScores.Count; l++)
+			for (int num3 = 0; num3 < AllFinalPlayerScores.Count; num3++)
 			{
-				if (j != l)
+				if (num2 != num3)
 				{
-					bool flag = AllFinalPlayerScores[j].GameScore.Approx(AllFinalPlayerScores[l].GameScore);
-					float num = 0f;
-					float eloWinProbability = RankedProgressionManager.GetEloWinProbability(AllFinalPlayerScores[l].EloScore, AllFinalPlayerScores[j].EloScore);
-					float eloWinProbability2 = RankedProgressionManager.GetEloWinProbability(AllFinalPlayerScores[j].EloScore, AllFinalPlayerScores[l].EloScore);
-					int key = j * AllFinalPlayerScores.Count + l;
+					bool flag = AllFinalPlayerScores[num2].GameScore.Approx(AllFinalPlayerScores[num3].GameScore);
+					float num4 = 0f;
+					float eloWinProbability = RankedProgressionManager.GetEloWinProbability(AllFinalPlayerScores[num3].EloScore, AllFinalPlayerScores[num2].EloScore);
+					float eloWinProbability2 = RankedProgressionManager.GetEloWinProbability(AllFinalPlayerScores[num2].EloScore, AllFinalPlayerScores[num3].EloScore);
+					int key = num2 * AllFinalPlayerScores.Count + num3;
 					if (!VisitedScoreCombintations.ContainsKey(key))
 					{
-						PlayerScore playerScore = AllFinalPlayerScores[j];
-						num = ((!flag) ? ((float)((j < l) ? 1 : 0)) : 0.5f);
+						PlayerScore playerScore = AllFinalPlayerScores[num2];
+						num4 = ((!flag) ? ((float)((num2 < num3) ? 1 : 0)) : 0.5f);
 						float eloScore = playerScore.EloScore;
-						float num2 = RankedProgressionManager.UpdateEloScore(eloScore, eloWinProbability, num, k);
-						InProgressEloDeltaPerPlayer[playerScore.PlayerId] += num2 - eloScore;
+						float num5 = RankedProgressionManager.UpdateEloScore(eloScore, eloWinProbability, num4, k);
+						InProgressEloDeltaPerPlayer[playerScore.PlayerId] += num5 - eloScore;
 						VisitedScoreCombintations.Add(key, value: true);
 					}
-					int key2 = l * AllFinalPlayerScores.Count + j;
+					int key2 = num3 * AllFinalPlayerScores.Count + num2;
 					if (!VisitedScoreCombintations.ContainsKey(key2))
 					{
-						PlayerScore playerScore2 = AllFinalPlayerScores[l];
-						num = ((!flag) ? ((float)((l < j) ? 1 : 0)) : 0.5f);
+						PlayerScore playerScore2 = AllFinalPlayerScores[num3];
+						num4 = ((!flag) ? ((float)((num3 < num2) ? 1 : 0)) : 0.5f);
 						float eloScore2 = playerScore2.EloScore;
-						float num3 = RankedProgressionManager.UpdateEloScore(eloScore2, eloWinProbability2, num, k);
-						InProgressEloDeltaPerPlayer[playerScore2.PlayerId] += num3 - eloScore2;
+						float num6 = RankedProgressionManager.UpdateEloScore(eloScore2, eloWinProbability2, num4, k);
+						InProgressEloDeltaPerPlayer[playerScore2.PlayerId] += num6 - eloScore2;
 						VisitedScoreCombintations.Add(key2, value: true);
 					}
 				}

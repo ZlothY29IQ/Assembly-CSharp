@@ -21,17 +21,11 @@ public class RCHoverboard : RCVehicle
 	}
 
 	[Serializable]
-	private struct _SingleInputOption
+	private struct _SingleInputOption(_EInputSource source, AnimationCurve remapCurve)
 	{
-		public GTOption<StringEnum<_EInputSource>> source;
+		public GTOption<StringEnum<_EInputSource>> source = new GTOption<StringEnum<_EInputSource>>(source);
 
-		public GTOption<AnimationCurve> remapCurve;
-
-		public _SingleInputOption(_EInputSource source, AnimationCurve remapCurve)
-		{
-			this.source = new GTOption<StringEnum<_EInputSource>>(source);
-			this.remapCurve = new GTOption<AnimationCurve>(remapCurve);
-		}
+		public GTOption<AnimationCurve> remapCurve = new GTOption<AnimationCurve>(remapCurve);
 
 		public float Get(RCRemoteHoldable.RCInput input)
 		{
@@ -299,11 +293,11 @@ public class RCHoverboard : RCVehicle
 			float target2 = math.lerp(0f - m_maxTiltAngle, m_maxTiltAngle, math.unlerp(-1f, 1f, num));
 			_currentTiltAngle = _MoveTowards(_currentTiltAngle, target2, _tiltAccel * fixedDeltaTime);
 			base.transform.rotation = quaternion.EulerXYZ(math.radians(new float3(_currentTiltAngle, _currentTurnAngle, 0f)));
-			float3 @float = base.transform.forward;
-			float num4 = math.dot(@float, rb.linearVelocity);
+			float3 float5 = base.transform.forward;
+			float num4 = math.dot(float5, rb.linearVelocity);
 			float num5 = num * m_maxForwardSpeed;
 			float num6 = ((math.abs(num5) > 0.001f && ((num5 > 0f && num4 < num5) || (num5 < 0f && num4 > num5))) ? math.sign(num5) : 0f);
-			rb.AddForce(@float * _forwardAccel * num6 * rb.mass, ForceMode.Force);
+			rb.AddForce(float5 * _forwardAccel * num6 * rb.mass, ForceMode.Force);
 			if (flag)
 			{
 				float num7 = math.saturate(m_hoverHeight - hitInfo.distance);

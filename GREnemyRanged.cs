@@ -745,7 +745,7 @@ public class GREnemyRanged : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 				break;
 			}
 			GRPlayer gRPlayer = GRPlayer.Get(targetPlayer.ActorNumber);
-			if (!(gRPlayer != null) || gRPlayer.State != 0)
+			if (!(gRPlayer != null) || gRPlayer.State != GRPlayer.GRPlayerState.Alive)
 			{
 				break;
 			}

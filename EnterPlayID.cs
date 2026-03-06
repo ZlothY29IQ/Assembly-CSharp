@@ -14,8 +14,9 @@ public struct EnterPlayID
 
 	public static EnterPlayID GetCurrent()
 	{
-		EnterPlayID result = default(EnterPlayID);
-		result.id = currentID;
-		return result;
+		return new EnterPlayID
+		{
+			id = currentID
+		};
 	}
 }

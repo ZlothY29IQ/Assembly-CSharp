@@ -139,7 +139,7 @@ public class FartBagThrowable : MonoBehaviour, IProjectile
 	{
 		if (sender == target && args.Length == 2)
 		{
-			GorillaNot.IncrementRPCCall(info, "DeflateEvent");
+			MonkeAgent.IncrementRPCCall(info, "DeflateEvent");
 			if (callLimiter.CheckCallTime(Time.time) && args[0] is Vector3 v && args[1] is Vector3 v2 && v2.IsValid(10000f) && v.IsValid(10000f) && ParentTransferable.targetRig.IsPositionInRange(v, 4f))
 			{
 				handNormalVector = v2;

@@ -124,8 +124,8 @@ public class AnnouncementManager : MonoBehaviour
 			Debug.LogError("[ANNOUNCEMENT] Announcement Version is empty or null. Will not show announcement");
 			return;
 		}
-		string @string = PlayerPrefs.GetString(AnnouncementDPlayerPref, "");
-		if (_announcementData.AnnouncementID == @string)
+		string text = PlayerPrefs.GetString(AnnouncementDPlayerPref, "");
+		if (_announcementData.AnnouncementID == text)
 		{
 			_completedSetup = true;
 			return;

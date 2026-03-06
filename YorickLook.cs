@@ -11,7 +11,7 @@ public class YorickLook : MonoBehaviour
 
 	public float lookRadius = 0.5f;
 
-	public VRRig[] rigs = new VRRig[10];
+	public VRRig[] rigs = new VRRig[20];
 
 	public VRRig[] overlapRigs;
 
@@ -21,7 +21,7 @@ public class YorickLook : MonoBehaviour
 
 	private void Awake()
 	{
-		overlapRigs = new VRRig[10];
+		overlapRigs = new VRRig[20];
 	}
 
 	private void LateUpdate()

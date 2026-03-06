@@ -246,7 +246,7 @@ public class FusionCallbackHandler : SimulationBehaviour, INetworkRunnerCallback
 					return false;
 				}
 			}
-			if (opts.TargetActors != null && !opts.TargetActors.Contains(runner.LocalPlayer.PlayerId))
+			if (opts.TargetActors != null && !Enumerable.Contains(opts.TargetActors, runner.LocalPlayer.PlayerId))
 			{
 				return false;
 			}

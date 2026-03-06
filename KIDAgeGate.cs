@@ -109,18 +109,19 @@ public class KIDAgeGate : MonoBehaviour
 	private async Task InitialiseAgeGate()
 	{
 		Debug.Log("[KID] Initialising Age-Gate");
-		TelemetryData telemetryData = default(TelemetryData);
-		telemetryData.EventName = "kid_screen_shown";
-		telemetryData.CustomTags = new string[4]
+		TelemetryData telemetryData = new TelemetryData
 		{
-			KIDTelemetry.Open_MetricActionCustomTag,
-			"kid_age_gate",
-			KIDTelemetry.GameVersionCustomTag,
-			KIDTelemetry.GameEnvironment
+			EventName = "kid_screen_shown",
+			CustomTags = new string[4]
+			{
+				KIDTelemetry.Open_MetricActionCustomTag,
+				"kid_age_gate",
+				KIDTelemetry.GameVersionCustomTag,
+				KIDTelemetry.GameEnvironment
+			},
+			BodyData = new Dictionary<string, string> { { "screen", "age_gate" } }
 		};
-		telemetryData.BodyData = new Dictionary<string, string> { { "screen", "age_gate" } };
-		TelemetryData telemetryData2 = telemetryData;
-		GorillaTelemetry.EnqueueTelemetryEvent(telemetryData2.EventName, telemetryData2.BodyData, telemetryData2.CustomTags);
+		GorillaTelemetry.EnqueueTelemetryEvent(telemetryData.EventName, telemetryData.BodyData, telemetryData.CustomTags);
 		bool flag;
 		do
 		{
@@ -138,41 +139,43 @@ public class KIDAgeGate : MonoBehaviour
 			}
 			if (KIDManager.TryGetAgeStatusTypeFromAge(UserAge, out var ageType))
 			{
-				telemetryData = default(TelemetryData);
-				telemetryData.EventName = "kid_age_gate";
-				telemetryData.CustomTags = new string[4]
+				telemetryData = new TelemetryData
 				{
-					KIDTelemetry.Closed_MetricActionCustomTag,
-					"kid_age_gate",
-					KIDTelemetry.GameVersionCustomTag,
-					KIDTelemetry.GameEnvironment
+					EventName = "kid_age_gate",
+					CustomTags = new string[4]
+					{
+						KIDTelemetry.Closed_MetricActionCustomTag,
+						"kid_age_gate",
+						KIDTelemetry.GameVersionCustomTag,
+						KIDTelemetry.GameEnvironment
+					},
+					BodyData = new Dictionary<string, string> { 
+					{
+						"age_declared",
+						ageType.ToString()
+					} }
 				};
-				telemetryData.BodyData = new Dictionary<string, string> { 
-				{
-					"age_declared",
-					ageType.ToString()
-				} };
-				telemetryData2 = telemetryData;
-				GorillaTelemetry.EnqueueTelemetryEvent(telemetryData2.EventName, telemetryData2.BodyData, telemetryData2.CustomTags);
+				GorillaTelemetry.EnqueueTelemetryEvent(telemetryData.EventName, telemetryData.BodyData, telemetryData.CustomTags);
 			}
 			_confirmationUIManager.Reset(_ageValue);
 			PrivateUIRoom.AddUI(_confirmationUI.transform);
 			flag = await ProcessAgeGateConfirmation();
-			telemetryData = default(TelemetryData);
-			telemetryData.EventName = "kid_age_gate_confirm";
-			telemetryData.CustomTags = new string[3]
+			telemetryData = new TelemetryData
 			{
-				"kid_age_gate",
-				KIDTelemetry.GameVersionCustomTag,
-				KIDTelemetry.GameEnvironment
+				EventName = "kid_age_gate_confirm",
+				CustomTags = new string[3]
+				{
+					"kid_age_gate",
+					KIDTelemetry.GameVersionCustomTag,
+					KIDTelemetry.GameEnvironment
+				},
+				BodyData = new Dictionary<string, string> { 
+				{
+					"button_pressed",
+					flag ? "confirm" : "go_back"
+				} }
 			};
-			telemetryData.BodyData = new Dictionary<string, string> { 
-			{
-				"button_pressed",
-				flag ? "confirm" : "go_back"
-			} };
-			telemetryData2 = telemetryData;
-			GorillaTelemetry.EnqueueTelemetryEvent(telemetryData2.EventName, telemetryData2.BodyData, telemetryData2.CustomTags);
+			GorillaTelemetry.EnqueueTelemetryEvent(telemetryData.EventName, telemetryData.BodyData, telemetryData.CustomTags);
 			KIDAudioManager.Instance?.PlaySoundWithDelay(KIDAudioManager.KIDSoundType.PageTransition);
 			PrivateUIRoom.RemoveUI(_confirmationUI.transform);
 			HandRayController.Instance.DisableHandRays();
@@ -285,17 +288,18 @@ public class KIDAgeGate : MonoBehaviour
 
 	public void OnWhyAgeGateButtonPressed()
 	{
-		TelemetryData telemetryData = default(TelemetryData);
-		telemetryData.EventName = "kid_screen_shown";
-		telemetryData.CustomTags = new string[3]
+		TelemetryData telemetryData = new TelemetryData
 		{
-			"kid_age_gate",
-			KIDTelemetry.GameVersionCustomTag,
-			KIDTelemetry.GameEnvironment
+			EventName = "kid_screen_shown",
+			CustomTags = new string[3]
+			{
+				"kid_age_gate",
+				KIDTelemetry.GameVersionCustomTag,
+				KIDTelemetry.GameEnvironment
+			},
+			BodyData = new Dictionary<string, string> { { "screen", "why_age_gate" } }
 		};
-		telemetryData.BodyData = new Dictionary<string, string> { { "screen", "why_age_gate" } };
-		TelemetryData telemetryData2 = telemetryData;
-		GorillaTelemetry.EnqueueTelemetryEvent(telemetryData2.EventName, telemetryData2.BodyData, telemetryData2.CustomTags);
+		GorillaTelemetry.EnqueueTelemetryEvent(telemetryData.EventName, telemetryData.BodyData, telemetryData.CustomTags);
 		_uiParent.SetActive(value: false);
 		PrivateUIRoom.AddUI(_whyAgeGateScreen.transform);
 		_whyAgeGateScreen.SetActive(value: true);
@@ -311,17 +315,18 @@ public class KIDAgeGate : MonoBehaviour
 	public void OnLearnMoreAboutKIDPressed()
 	{
 		_metrics_LearnMorePressed = true;
-		TelemetryData telemetryData = default(TelemetryData);
-		telemetryData.EventName = "kid_screen_shown";
-		telemetryData.CustomTags = new string[3]
+		TelemetryData telemetryData = new TelemetryData
 		{
-			"kid_age_gate",
-			KIDTelemetry.GameVersionCustomTag,
-			KIDTelemetry.GameEnvironment
+			EventName = "kid_screen_shown",
+			CustomTags = new string[3]
+			{
+				"kid_age_gate",
+				KIDTelemetry.GameVersionCustomTag,
+				KIDTelemetry.GameEnvironment
+			},
+			BodyData = new Dictionary<string, string> { { "screen", "learn_more_url" } }
 		};
-		telemetryData.BodyData = new Dictionary<string, string> { { "screen", "learn_more_url" } };
-		TelemetryData telemetryData2 = telemetryData;
-		GorillaTelemetry.EnqueueTelemetryEvent(telemetryData2.EventName, telemetryData2.BodyData, telemetryData2.CustomTags);
+		GorillaTelemetry.EnqueueTelemetryEvent(telemetryData.EventName, telemetryData.BodyData, telemetryData.CustomTags);
 		Application.OpenURL("https://whyagegate.com/");
 	}
 }

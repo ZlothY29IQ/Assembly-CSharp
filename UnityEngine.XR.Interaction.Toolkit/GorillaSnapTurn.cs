@@ -349,9 +349,9 @@ public class GorillaSnapTurn : LocomotionProvider, ITickSystemTick
 		if (!(CachedSnapTurnRef == null))
 		{
 			string defaultValue = ((Application.platform == RuntimePlatform.Android) ? "NONE" : "SNAP");
-			string @string = PlayerPrefs.GetString("stickTurning", defaultValue);
-			int @int = PlayerPrefs.GetInt("turnFactor", 4);
-			CachedSnapTurnRef.ChangeTurnMode(@string, @int);
+			string turnMode = PlayerPrefs.GetString("stickTurning", defaultValue);
+			int turnSpeedFactor = PlayerPrefs.GetInt("turnFactor", 4);
+			CachedSnapTurnRef.ChangeTurnMode(turnMode, turnSpeedFactor);
 		}
 	}
 

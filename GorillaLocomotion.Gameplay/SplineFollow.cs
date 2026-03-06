@@ -8,20 +8,13 @@ namespace GorillaLocomotion.Gameplay;
 
 public sealed class SplineFollow : MonoBehaviour
 {
-	private struct SplineNode
+	private struct SplineNode(Vector3 position, Vector3 tangent, Vector3 up)
 	{
-		public readonly Vector3 Position;
+		public readonly Vector3 Position = position;
 
-		public readonly Vector3 Tangent;
+		public readonly Vector3 Tangent = tangent;
 
-		public readonly Vector3 Up;
-
-		public SplineNode(Vector3 position, Vector3 tangent, Vector3 up)
-		{
-			Position = position;
-			Tangent = tangent;
-			Up = up;
-		}
+		public readonly Vector3 Up = up;
 
 		public static SplineNode Lerp(SplineNode a, SplineNode b, float t)
 		{

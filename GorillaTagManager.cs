@@ -24,7 +24,7 @@ public class GorillaTagManager : GorillaGameManager
 	public const byte ReportInfectionTagEvent = 2;
 
 	[NonSerialized]
-	public List<NetPlayer> currentInfected = new List<NetPlayer>(10);
+	public List<NetPlayer> currentInfected = new List<NetPlayer>(20);
 
 	[NonSerialized]
 	public int[] currentInfectedArray;
@@ -64,7 +64,7 @@ public class GorillaTagManager : GorillaGameManager
 	public override void Awake()
 	{
 		base.Awake();
-		currentInfectedArray = new int[10];
+		currentInfectedArray = new int[20];
 		for (int i = 0; i < currentInfectedArray.Length; i++)
 		{
 			currentInfectedArray[i] = -1;
@@ -378,7 +378,7 @@ public class GorillaTagManager : GorillaGameManager
 		{
 			if (!taggingRig.IsPositionInRange(taggedRig.transform.position, 6f) && !taggingRig.CheckTagDistanceRollback(taggedRig, 6f, 0.2f))
 			{
-				GorillaNot.instance.SendReport("extremely far tag", taggingPlayer.UserId, taggingPlayer.NickName);
+				MonkeAgent.instance.SendReport("extremely far tag", taggingPlayer.UserId, taggingPlayer.NickName);
 				return;
 			}
 			HandleTagBroadcast(taggedPlayer, taggingPlayer);
@@ -596,9 +596,11 @@ public class GorillaTagManager : GorillaGameManager
 	public override object OnSerializeWrite()
 	{
 		CopyInfectedListToArray();
-		TagData tagData = default(TagData);
-		tagData.isCurrentlyTag = isCurrentlyTag;
-		tagData.currentItID = ((currentIt != null) ? currentIt.ActorNumber : (-1));
+		TagData tagData = new TagData
+		{
+			isCurrentlyTag = isCurrentlyTag,
+			currentItID = ((currentIt != null) ? currentIt.ActorNumber : (-1))
+		};
 		tagData.infectedPlayerList.CopyFrom(currentInfectedArray, 0, currentInfectedArray.Length);
 		return tagData;
 	}
@@ -618,6 +620,16 @@ public class GorillaTagManager : GorillaGameManager
 		stream.SendNext(currentInfectedArray[7]);
 		stream.SendNext(currentInfectedArray[8]);
 		stream.SendNext(currentInfectedArray[9]);
+		stream.SendNext(currentInfectedArray[10]);
+		stream.SendNext(currentInfectedArray[11]);
+		stream.SendNext(currentInfectedArray[12]);
+		stream.SendNext(currentInfectedArray[13]);
+		stream.SendNext(currentInfectedArray[14]);
+		stream.SendNext(currentInfectedArray[15]);
+		stream.SendNext(currentInfectedArray[16]);
+		stream.SendNext(currentInfectedArray[17]);
+		stream.SendNext(currentInfectedArray[18]);
+		stream.SendNext(currentInfectedArray[19]);
 		WriteLastTagged(stream);
 	}
 
@@ -639,6 +651,16 @@ public class GorillaTagManager : GorillaGameManager
 		currentInfectedArray[7] = (int)stream.ReceiveNext();
 		currentInfectedArray[8] = (int)stream.ReceiveNext();
 		currentInfectedArray[9] = (int)stream.ReceiveNext();
+		currentInfectedArray[10] = (int)stream.ReceiveNext();
+		currentInfectedArray[11] = (int)stream.ReceiveNext();
+		currentInfectedArray[12] = (int)stream.ReceiveNext();
+		currentInfectedArray[13] = (int)stream.ReceiveNext();
+		currentInfectedArray[14] = (int)stream.ReceiveNext();
+		currentInfectedArray[15] = (int)stream.ReceiveNext();
+		currentInfectedArray[16] = (int)stream.ReceiveNext();
+		currentInfectedArray[17] = (int)stream.ReceiveNext();
+		currentInfectedArray[18] = (int)stream.ReceiveNext();
+		currentInfectedArray[19] = (int)stream.ReceiveNext();
 		ReadLastTagged(stream);
 		CopyInfectedArrayToList();
 		if (isCurrentlyTag)

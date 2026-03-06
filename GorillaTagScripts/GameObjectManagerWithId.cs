@@ -27,10 +27,10 @@ public class GameObjectManagerWithId : MonoBehaviour
 		Transform[] componentsInChildren = objectsContainer.GetComponentsInChildren<Transform>(includeInactive: false);
 		for (int i = 0; i < componentsInChildren.Length; i++)
 		{
-			gameObjectData gameObjectData = new gameObjectData();
-			gameObjectData.transform = componentsInChildren[i];
-			gameObjectData.id = zone.ToString() + i;
-			objectData.Add(gameObjectData);
+			gameObjectData gameObjectData2 = new gameObjectData();
+			gameObjectData2.transform = componentsInChildren[i];
+			gameObjectData2.id = zone.ToString() + i;
+			objectData.Add(gameObjectData2);
 		}
 	}
 

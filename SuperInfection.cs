@@ -124,7 +124,6 @@ public class SuperInfection : MonoBehaviour, IGorillaSliceableSimple
 		siManager = SuperInfectionManager.GetSIManagerForZone(zone);
 		if (siManager != null)
 		{
-			Debug.Log($"$OnEnable: {siManager} zoneSuperInfection = {this}");
 			siManager.OnEnableZoneSuperInfection(this);
 		}
 		if (siManager.isActiveAndEnabled)
@@ -170,7 +169,7 @@ public class SuperInfection : MonoBehaviour, IGorillaSliceableSimple
 
 	public void OnZoneClear(ZoneClearReason reason)
 	{
-		if (reason != 0)
+		if (reason != ZoneClearReason.JoinZone)
 		{
 			DisableStations();
 			SIProgression.Instance.SendTelemetryData();
@@ -263,7 +262,6 @@ public class SuperInfection : MonoBehaviour, IGorillaSliceableSimple
 				GameEntity gameEntity = sIResourceRegion.Items[num];
 				if (!gameEntity)
 				{
-					GTDev.Log($"Removing null item at {num}");
 					sIResourceRegion.Items.RemoveAt(num);
 				}
 				else if (gameEntity.transform.position.y < resourceResetHeight)
@@ -299,29 +297,22 @@ public class SuperInfection : MonoBehaviour, IGorillaSliceableSimple
 			return;
 		}
 		(bool, Vector3, Vector3) spawnPointWithNormal = sIResourceRegion.GetSpawnPointWithNormal();
-		if (!spawnPointWithNormal.Item1)
+		if (spawnPointWithNormal.Item1 && !(sIResourceRegion.resourcePrefab == null))
 		{
-			GTDev.Log($"[{base.name}] Couldn't find a valid {sIResourceRegion.resourcePrefab.name} spawn point in {sIResourceRegion}");
-			return;
-		}
-		if (sIResourceRegion.resourcePrefab == null)
-		{
-			GTDev.Log("No resourceprefab set for region");
-			return;
-		}
-		float spawnPitchVariance = sIResourceRegion.resourcePrefab.spawnPitchVariance;
-		Quaternion quaternion = Quaternion.Euler(UnityEngine.Random.Range(0f - spawnPitchVariance, spawnPitchVariance), UnityEngine.Random.Range(0, 360), UnityEngine.Random.Range(0f - spawnPitchVariance, spawnPitchVariance));
-		Quaternion rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(Vector3.forward, spawnPointWithNormal.Item3), spawnPointWithNormal.Item3) * quaternion;
-		GameEntity gameEntity = siManager.gameEntityManager.GetGameEntity(siManager.gameEntityManager.RequestCreateItem(sIResourceRegion.resourcePrefab.gameObject.name.GetStaticHash(), spawnPointWithNormal.Item2, rotation, 0L));
-		if ((bool)gameEntity)
-		{
-			GTDev.Log($"Spawned {gameEntity.name} at {spawnPointWithNormal.Item2}", gameEntity);
-			sIResourceRegion.AddItem(gameEntity);
-			sIResourceRegion.LastSpawnTime = (_lastResourceSpawnTime = Time.time);
-		}
-		else
-		{
-			GTDev.LogError($"Failed to spawn {sIResourceRegion.resourcePrefab.gameObject.name} at {spawnPointWithNormal.Item2}");
+			float spawnPitchVariance = sIResourceRegion.resourcePrefab.spawnPitchVariance;
+			Quaternion quaternion = Quaternion.Euler(UnityEngine.Random.Range(0f - spawnPitchVariance, spawnPitchVariance), UnityEngine.Random.Range(0, 360), UnityEngine.Random.Range(0f - spawnPitchVariance, spawnPitchVariance));
+			Quaternion rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(Vector3.forward, spawnPointWithNormal.Item3), spawnPointWithNormal.Item3) * quaternion;
+			GameEntity gameEntity = siManager.gameEntityManager.GetGameEntity(siManager.gameEntityManager.RequestCreateItem(sIResourceRegion.resourcePrefab.gameObject.name.GetStaticHash(), spawnPointWithNormal.Item2, rotation, 0L));
+			if ((bool)gameEntity)
+			{
+				GTDev.Log($"Spawned {gameEntity.name} at {spawnPointWithNormal.Item2}", gameEntity);
+				sIResourceRegion.AddItem(gameEntity);
+				sIResourceRegion.LastSpawnTime = (_lastResourceSpawnTime = Time.time);
+			}
+			else
+			{
+				GTDev.LogError($"Failed to spawn {sIResourceRegion.resourcePrefab.gameObject.name} at {spawnPointWithNormal.Item2}");
+			}
 		}
 	}
 

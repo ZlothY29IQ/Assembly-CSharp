@@ -125,9 +125,9 @@ public class PhotonEvent : IEquatable<PhotonEvent>
 		if (_delegate != null)
 		{
 			Delegate[] invocationList = _delegate.GetInvocationList();
-			foreach (Delegate @delegate in invocationList)
+			foreach (Delegate obj in invocationList)
 			{
-				if ((object)@delegate != null && @delegate.Equals(callback))
+				if ((object)obj != null && obj.Equals(callback))
 				{
 					return;
 				}

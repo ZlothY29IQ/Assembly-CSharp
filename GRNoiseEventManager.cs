@@ -36,20 +36,21 @@ public class GRNoiseEventManager : MonoBehaviourTick
 
 	public void AddNoiseEvent(Vector3 position, float magnitude = 1f, float duration = 1f)
 	{
-		GameNoiseEvent gameNoiseEvent = default(GameNoiseEvent);
-		gameNoiseEvent.position = position;
-		gameNoiseEvent.eventTime = Time.timeAsDouble;
-		gameNoiseEvent.duration = duration;
-		gameNoiseEvent.magnitude = magnitude;
-		GameNoiseEvent gameNoiseEvent2 = gameNoiseEvent;
+		GameNoiseEvent gameNoiseEvent = new GameNoiseEvent
+		{
+			position = position,
+			eventTime = Time.timeAsDouble,
+			duration = duration,
+			magnitude = magnitude
+		};
 		int num = FindUnusedEventEntry();
 		if (num == -1)
 		{
-			noiseEvents.Add(gameNoiseEvent2);
+			noiseEvents.Add(gameNoiseEvent);
 		}
 		else
 		{
-			noiseEvents[num] = gameNoiseEvent2;
+			noiseEvents[num] = gameNoiseEvent;
 		}
 	}
 

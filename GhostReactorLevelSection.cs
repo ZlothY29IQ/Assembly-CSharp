@@ -271,13 +271,15 @@ public class GhostReactorLevelSection : MonoBehaviour
 					enemyEntityCreateData.patrolIndex = patrolIndex;
 					createData = enemyEntityCreateData.Pack();
 				}
-				GameEntityCreateData gameEntityCreateData = default(GameEntityCreateData);
-				gameEntityCreateData.entityTypeId = staticHash;
-				gameEntityCreateData.position = nextSpawnPoint.transform.position;
-				gameEntityCreateData.rotation = nextSpawnPoint.transform.rotation;
-				gameEntityCreateData.createData = createData;
-				gameEntityCreateData.createdByEntityId = -1;
-				GameEntityCreateData item = gameEntityCreateData;
+				GameEntityCreateData item = new GameEntityCreateData
+				{
+					entityTypeId = staticHash,
+					position = nextSpawnPoint.transform.position,
+					rotation = nextSpawnPoint.transform.rotation,
+					createData = createData,
+					createdByEntityId = -1,
+					slotIndex = -1
+				};
 				tempCreateEntitiesList.Add(item);
 				if (tempCreateEntitiesList.Count > 25)
 				{
@@ -298,13 +300,15 @@ public class GhostReactorLevelSection : MonoBehaviour
 				Debug.LogErrorFormat("Cannot Find Entity in Factory {0} {1} Trying to spawn in {2}", prePlacedGameEntities[l].gameObject.name, staticHash2, base.gameObject.name);
 				continue;
 			}
-			GameEntityCreateData gameEntityCreateData = default(GameEntityCreateData);
-			gameEntityCreateData.entityTypeId = staticHash2;
-			gameEntityCreateData.position = prePlacedGameEntities[l].transform.position;
-			gameEntityCreateData.rotation = prePlacedGameEntities[l].transform.rotation;
-			gameEntityCreateData.createData = 0L;
-			gameEntityCreateData.createdByEntityId = -1;
-			GameEntityCreateData item2 = gameEntityCreateData;
+			GameEntityCreateData item2 = new GameEntityCreateData
+			{
+				entityTypeId = staticHash2,
+				position = prePlacedGameEntities[l].transform.position,
+				rotation = prePlacedGameEntities[l].transform.rotation,
+				createData = 0L,
+				createdByEntityId = -1,
+				slotIndex = -1
+			};
 			tempCreateEntitiesList.Add(item2);
 			if (tempCreateEntitiesList.Count > 25)
 			{

@@ -32,6 +32,12 @@ public struct CosmeticInfoV2 : ISerializationCallbackReceiver
 
 	public bool isThrowable;
 
+	[HideInInspector]
+	public int[] throwableMaterialGrabIndices;
+
+	[HideInInspector]
+	public int throwableIndex;
+
 	public bool usesBothHandSlots;
 
 	public bool hideWardrobeMannequin;
@@ -194,6 +200,8 @@ public struct CosmeticInfoV2 : ISerializationCallbackReceiver
 		setCosmetics = new CosmeticSO[0];
 		anchorAntiIntersectOffsets = default(CosmeticAnchorAntiIntersectOffsets);
 		debugCosmeticSOName = "__UNINITIALIZED__";
+		throwableMaterialGrabIndices = new int[0];
+		throwableIndex = -1;
 	}
 
 	void ISerializationCallbackReceiver.OnBeforeSerialize()

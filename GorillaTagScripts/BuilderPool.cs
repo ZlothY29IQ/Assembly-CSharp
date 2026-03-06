@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace GorillaTagScripts;
 
-public class BuilderPool : MonoBehaviour
+public class BuilderPool : MonoBehaviour, IGorillaSimpleBackgroundWorker
 {
 	public List<List<BuilderPiece>> piecePools;
 
@@ -29,6 +29,8 @@ public class BuilderPool : MonoBehaviour
 	private bool isSetup;
 
 	private bool hasBuiltPieceSets;
+
+	private Queue<int> piecesToAdd = new Queue<int>();
 
 	private void Awake()
 	{
@@ -85,27 +87,43 @@ public class BuilderPool : MonoBehaviour
 			{
 				foreach (BuilderPieceSet.PieceInfo pieceInfo in subset.pieceInfos)
 				{
-					int pieceType = pieceInfo.piecePrefab.name.GetStaticHash();
-					if (!piecePoolLookup.TryGetValue(pieceType, out var value))
+					int staticHash = pieceInfo.piecePrefab.name.GetStaticHash();
+					if (!piecePoolLookup.TryGetValue(staticHash, out var value))
 					{
 						value = piecePools.Count;
 						piecePools.Add(new List<BuilderPiece>(128));
-						piecePoolLookup.Add(pieceType, value);
+						piecePoolLookup.Add(staticHash, value);
 						if (!isFallbackSet)
 						{
-							int numToCreate = (isStarterSet ? 32 : 8);
-							int i = 0;
-							while (i < numToCreate)
+							int num = (isStarterSet ? 32 : 8);
+							int num2 = 0;
+							while (num2 < num)
 							{
-								i += 2;
-								AddToPool(pieceType, 2);
-								yield return null;
+								if (piecesToAdd.Count == 0)
+								{
+									GorillaSimpleBackgroundWorkerManager.WorkerSignup(this);
+								}
+								num2 += 2;
+								piecesToAdd.Enqueue(staticHash);
 							}
 						}
 					}
 					yield return null;
 				}
 			}
+		}
+	}
+
+	public void SimpleWork()
+	{
+		int count = 2;
+		if (piecesToAdd.Count > 0)
+		{
+			AddToPool(piecesToAdd.Dequeue(), count);
+		}
+		if (piecesToAdd.Count > 0)
+		{
+			GorillaSimpleBackgroundWorkerManager.WorkerSignup(this);
 		}
 	}
 

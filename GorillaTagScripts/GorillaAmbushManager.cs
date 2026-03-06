@@ -124,11 +124,12 @@ public sealed class GorillaAmbushManager : GorillaTagManager
 	public override void StopPlaying()
 	{
 		base.StopPlaying();
-		foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+		foreach (RigContainer activeRigContainer in VRRigCache.ActiveRigContainers)
 		{
-			GorillaSkin.ApplyToRig(vrrig, null, GorillaSkin.SkinType.gameMode);
-			vrrig.bodyRenderer.SetGameModeBodyType(GorillaBodyType.Default);
-			vrrig.SetInvisibleToLocalPlayer(invisible: false);
+			VRRig rig = activeRigContainer.Rig;
+			GorillaSkin.ApplyToRig(rig, null, GorillaSkin.SkinType.gameMode);
+			rig.bodyRenderer.SetGameModeBodyType(GorillaBodyType.Default);
+			rig.SetInvisibleToLocalPlayer(invisible: false);
 		}
 		CosmeticsController.instance.SetHideCosmeticsFromRemotePlayers(hideCosmetics: false);
 		if (hasScryingPlane)

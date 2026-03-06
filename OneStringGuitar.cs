@@ -142,8 +142,8 @@ public class OneStringGuitar : TransferrableObject
 	public override void OnSpawn(VRRig rig)
 	{
 		base.OnSpawn(rig);
-		chestColliderLeft = _GetChestColliderByPath(rig, "GorillaPlayerNetworkedRigAnchor/rig/body/Old Cosmetics Body/OneStringGuitarStick/Center/BaseTransformLeft");
-		chestColliderRight = _GetChestColliderByPath(rig, "GorillaPlayerNetworkedRigAnchor/rig/body/Old Cosmetics Body/OneStringGuitarStick/Center/BaseTransformRight");
+		chestColliderLeft = _GetChestColliderByPath(rig, "rig/body_pivot/Old Cosmetics Body/OneStringGuitarStick/Center/BaseTransformLeft");
+		chestColliderRight = _GetChestColliderByPath(rig, "rig/body_pivot/Old Cosmetics Body/OneStringGuitarStick/Center/BaseTransformRight");
 		currentChestCollider = chestColliderLeft;
 		if (!GTHardCodedBones.TryGetBoneXforms(rig, out var outBoneXforms, out var outErrorMsg))
 		{

@@ -37,12 +37,11 @@ public class LuauHud : MonoBehaviour
 		if (_instance != null && _instance != this)
 		{
 			Object.Destroy(base.gameObject);
+			return;
 		}
-		else
-		{
-			_instance = this;
-		}
+		_instance = this;
 		path = Path.Combine(Application.persistentDataPath, "script.luau");
+		base.transform.RotateAround(base.transform.position, Vector3.up, 180f);
 	}
 
 	private void OnDestroy()

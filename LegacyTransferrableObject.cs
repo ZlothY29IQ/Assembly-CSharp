@@ -573,7 +573,7 @@ public class LegacyTransferrableObject : HoldableObject
 				{
 					return false;
 				}
-				if (targetDock.DropZoneStorageUsed(zoneReleased.dropPosition) == -1 && zoneReleased.forBodyDock == targetDock && (zoneReleased.dropPosition & dockPositions) != 0)
+				if (targetDock.DropZoneStorageUsed(zoneReleased.dropPosition) == -1 && zoneReleased.forBodyDock == targetDock && (zoneReleased.dropPosition & dockPositions) != BodyDockPositions.DropPositions.None)
 				{
 					storedZone = zoneReleased.dropPosition;
 				}

@@ -579,28 +579,29 @@ public class FriendingManager : MonoBehaviourPun, IPunObservable, IGorillaSlicea
 			}
 		}
 		UpdateFriendingStations();
-		static FriendStationData ReceiveFriendStationData(PhotonStream stream)
+		static FriendStationData ReceiveFriendStationData(PhotonStream photonStream)
 		{
-			FriendStationData result = default(FriendStationData);
-			result.zone = (GTZone)(int)stream.ReceiveNext();
-			result.actorNumberA = (int)stream.ReceiveNext();
-			result.actorNumberB = (int)stream.ReceiveNext();
-			result.state = (FriendStationState)(int)stream.ReceiveNext();
-			return result;
+			return new FriendStationData
+			{
+				zone = (GTZone)(int)photonStream.ReceiveNext(),
+				actorNumberA = (int)photonStream.ReceiveNext(),
+				actorNumberB = (int)photonStream.ReceiveNext(),
+				state = (FriendStationState)(int)photonStream.ReceiveNext()
+			};
 		}
-		static void SendFriendStationData(PhotonStream stream, FriendStationData data)
+		static void SendFriendStationData(PhotonStream photonStream, FriendStationData data)
 		{
-			stream.SendNext((int)data.zone);
-			stream.SendNext(data.actorNumberA);
-			stream.SendNext(data.actorNumberB);
-			stream.SendNext((int)data.state);
+			photonStream.SendNext((int)data.zone);
+			photonStream.SendNext(data.actorNumberA);
+			photonStream.SendNext(data.actorNumberB);
+			photonStream.SendNext((int)data.state);
 		}
 	}
 
 	[PunRPC]
 	public void CheckFriendStatusRequestRPC(GTZone zone, int actorNumberA, int actorNumberB, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "CheckFriendStatusRequestRPC");
+		MonkeAgent.IncrementRPCCall(info, "CheckFriendStatusRequestRPC");
 		if (VRRigCache.Instance.TryGetVrrig(NetworkSystem.Instance.GetPlayer(info.Sender), out var playerRig) && playerRig.Rig.fxSettings.callSettings[12].CallLimitSettings.CheckCallTime(Time.unscaledTime))
 		{
 			CheckFriendStatusRequest(zone, actorNumberA, actorNumberB);
@@ -610,7 +611,7 @@ public class FriendingManager : MonoBehaviourPun, IPunObservable, IGorillaSlicea
 	[PunRPC]
 	public void CheckFriendStatusResponseRPC(GTZone zone, int friendTargetActorNumber, bool friends, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "CheckFriendStatusRequestRPC");
+		MonkeAgent.IncrementRPCCall(info, "CheckFriendStatusRequestRPC");
 		if (VRRigCache.Instance.TryGetVrrig(NetworkSystem.Instance.GetPlayer(info.Sender), out var playerRig) && playerRig.Rig.fxSettings.callSettings[12].CallLimitSettings.CheckCallTime(Time.unscaledTime))
 		{
 			CheckFriendStatusResponse(zone, info.Sender.ActorNumber, friendTargetActorNumber, friends);
@@ -620,7 +621,7 @@ public class FriendingManager : MonoBehaviourPun, IPunObservable, IGorillaSlicea
 	[PunRPC]
 	public void FriendButtonPressedRPC(GTZone zone, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "FriendButtonPressedRPC");
+		MonkeAgent.IncrementRPCCall(info, "FriendButtonPressedRPC");
 		if (VRRigCache.Instance.TryGetVrrig(NetworkSystem.Instance.GetPlayer(info.Sender), out var playerRig) && playerRig.Rig.fxSettings.callSettings[12].CallLimitSettings.CheckCallTime(Time.unscaledTime))
 		{
 			PlayerPressedButton(zone, info.Sender.ActorNumber);
@@ -630,7 +631,7 @@ public class FriendingManager : MonoBehaviourPun, IPunObservable, IGorillaSlicea
 	[PunRPC]
 	public void FriendButtonUnpressedRPC(GTZone zone, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "FriendButtonUnpressedRPC");
+		MonkeAgent.IncrementRPCCall(info, "FriendButtonUnpressedRPC");
 		if (VRRigCache.Instance.TryGetVrrig(NetworkSystem.Instance.GetPlayer(info.Sender), out var playerRig) && playerRig.Rig.fxSettings.callSettings[12].CallLimitSettings.CheckCallTime(Time.unscaledTime))
 		{
 			PlayerUnpressedButton(zone, info.Sender.ActorNumber);
@@ -640,7 +641,7 @@ public class FriendingManager : MonoBehaviourPun, IPunObservable, IGorillaSlicea
 	[PunRPC]
 	public void StationNoLongerActiveRPC(GTZone zone, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "StationNoLongerActiveRPC");
+		MonkeAgent.IncrementRPCCall(info, "StationNoLongerActiveRPC");
 		if (VRRigCache.Instance.TryGetVrrig(NetworkSystem.Instance.GetPlayer(info.Sender), out var playerRig) && playerRig.Rig.fxSettings.callSettings[12].CallLimitSettings.CheckCallTime(Time.unscaledTime) && info.Sender.IsMasterClient && friendingStations.TryGetValue(zone, out var value))
 		{
 			value.UpdateState(new FriendStationData
@@ -656,7 +657,7 @@ public class FriendingManager : MonoBehaviourPun, IPunObservable, IGorillaSlicea
 	[PunRPC]
 	public void NotifyClientsFriendRequestReadyRPC(GTZone zone, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "NotifyClientsFriendRequestReadyRPC");
+		MonkeAgent.IncrementRPCCall(info, "NotifyClientsFriendRequestReadyRPC");
 		if (VRRigCache.Instance.TryGetVrrig(NetworkSystem.Instance.GetPlayer(info.Sender), out var playerRig) && playerRig.Rig.fxSettings.callSettings[12].CallLimitSettings.CheckCallTime(Time.unscaledTime))
 		{
 			SendFriendRequestIfApplicable(zone);
@@ -666,7 +667,7 @@ public class FriendingManager : MonoBehaviourPun, IPunObservable, IGorillaSlicea
 	[PunRPC]
 	public void FriendRequestCompletedRPC(GTZone zone, bool succeeded, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "FriendRequestCompletedRPC");
+		MonkeAgent.IncrementRPCCall(info, "FriendRequestCompletedRPC");
 		if (VRRigCache.Instance.TryGetVrrig(NetworkSystem.Instance.GetPlayer(info.Sender), out var playerRig) && playerRig.Rig.fxSettings.callSettings[12].CallLimitSettings.CheckCallTime(Time.unscaledTime))
 		{
 			FriendRequestCompletedAuthority(zone, info.Sender.ActorNumber, succeeded);

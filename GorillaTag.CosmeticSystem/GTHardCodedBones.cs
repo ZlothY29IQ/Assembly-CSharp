@@ -174,7 +174,7 @@ public static class GTHardCodedBones
 				return;
 			}
 			EBone bone = GetBone(_boneName);
-			if (bone != 0)
+			if (bone != EBone.None)
 			{
 				_bone = bone;
 			}
@@ -609,7 +609,7 @@ public static class GTHardCodedBones
 		Transform transform4 = outBoneXforms[2];
 		if ((object)transform4 != null && (object)transform4.parent != null)
 		{
-			outBoneXforms[1] = transform4.parent;
+			outBoneXforms[1] = transform4.parent.parent;
 		}
 		else
 		{
@@ -702,7 +702,7 @@ public static class GTHardCodedBones
 				}
 			}
 			EBone bone = GetBone(transform.name);
-			if (bone != 0)
+			if (bone != EBone.None)
 			{
 				eBone = bone;
 				boneXform = transform;
@@ -750,7 +750,7 @@ public static class GTHardCodedBones
 		BodyDockPositions.DropPositions[] array = values;
 		foreach (BodyDockPositions.DropPositions dropPositions in array)
 		{
-			if (dropPositions != BodyDockPositions.DropPositions.All && dropPositions != 0 && dropPositions != BodyDockPositions.DropPositions.MaxDropPostions && (enumFlags & dropPositions) != 0)
+			if (dropPositions != BodyDockPositions.DropPositions.All && dropPositions != BodyDockPositions.DropPositions.None && dropPositions != BodyDockPositions.DropPositions.MaxDropPostions && (enumFlags & dropPositions) != BodyDockPositions.DropPositions.None)
 			{
 				list.Add(_k_bodyDockDropPosition_to_eBone[dropPositions]);
 			}
@@ -766,7 +766,7 @@ public static class GTHardCodedBones
 		TransferrableObject.PositionState[] array = values;
 		foreach (TransferrableObject.PositionState positionState in array)
 		{
-			if (positionState != 0 && positionState != TransferrableObject.PositionState.Dropped && (enumFlags & positionState) != 0)
+			if (positionState != TransferrableObject.PositionState.None && positionState != TransferrableObject.PositionState.Dropped && (enumFlags & positionState) != TransferrableObject.PositionState.None)
 			{
 				list.Add(_k_transferrablePosState_to_eBone[positionState]);
 			}

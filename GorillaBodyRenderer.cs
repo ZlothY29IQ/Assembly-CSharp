@@ -81,9 +81,9 @@ public class GorillaBodyRenderer : MonoBehaviour
 	{
 		oopsAllSkeletons = allSkeletons;
 		GorillaTagger.Instance.offlineVRRig.bodyRenderer.Refresh();
-		foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+		foreach (RigContainer activeRigContainer in VRRigCache.ActiveRigContainers)
 		{
-			vrrig.bodyRenderer.Refresh();
+			activeRigContainer.Rig.bodyRenderer.Refresh();
 		}
 	}
 

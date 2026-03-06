@@ -152,7 +152,8 @@ public class TitleDataActivation : MonoBehaviour, IGorillaSliceableSimple
 			set
 			{
 				startDateTime = value;
-				dtStart = ReferenceDate.AddDays(startDateTime.DaysPast).AddHours(startDateTime.Hour).AddMinutes(startDateTime.Minute);
+				dtStart = ReferenceDate.AddDays(startDateTime.DaysPast).AddHours(startDateTime.Hours).AddMinutes(startDateTime.Minutes)
+					.AddSeconds(startDateTime.Seconds);
 			}
 		}
 
@@ -165,7 +166,8 @@ public class TitleDataActivation : MonoBehaviour, IGorillaSliceableSimple
 			set
 			{
 				endDateTime = value;
-				dtEnd = ReferenceDate.AddDays(endDateTime.DaysPast).AddHours(endDateTime.Hour).AddMinutes(endDateTime.Minute);
+				dtEnd = ReferenceDate.AddDays(endDateTime.DaysPast).AddHours(endDateTime.Hours).AddMinutes(endDateTime.Minutes)
+					.AddSeconds(endDateTime.Seconds);
 			}
 		}
 
@@ -181,9 +183,11 @@ public class TitleDataActivation : MonoBehaviour, IGorillaSliceableSimple
 	{
 		public int DaysPast;
 
-		public int Hour;
+		public int Hours;
 
-		public int Minute;
+		public int Minutes;
+
+		public int Seconds;
 	}
 
 	public static DateTime ReferenceDate = DateTime.MinValue;
@@ -325,30 +329,53 @@ public class TitleDataActivation : MonoBehaviour, IGorillaSliceableSimple
 		for (int i = 0; i < gameObjects.Length; i++)
 		{
 			gameObjects[i].SetActive(onOff);
-			if (!onOff || !(delayedActivation > 0f))
+			if (onOff && delayedActivation > 0f)
 			{
-				continue;
-			}
-			Animator[] componentsInChildren = gameObjects[i].GetComponentsInChildren<Animator>();
-			for (int j = 0; j < componentsInChildren.Length; j++)
-			{
-				int fullPathHash = componentsInChildren[j].GetCurrentAnimatorStateInfo(0).fullPathHash;
-				componentsInChildren[j].PlayInFixedTime(fullPathHash, 0, delayedActivation);
-			}
-			AudioSource[] componentsInChildren2 = gameObjects[i].GetComponentsInChildren<AudioSource>();
-			for (int k = 0; k < componentsInChildren2.Length; k++)
-			{
-				if (componentsInChildren2[k].playOnAwake)
+				Animator[] componentsInChildren = gameObjects[i].GetComponentsInChildren<Animator>();
+				for (int j = 0; j < componentsInChildren.Length; j++)
 				{
-					if (componentsInChildren2[k].clip.length < delayedActivation)
-					{
-						componentsInChildren2[k].time = delayedActivation;
-					}
-					else
-					{
-						componentsInChildren2[k].Stop();
-					}
+					int fullPathHash = componentsInChildren[j].GetCurrentAnimatorStateInfo(0).fullPathHash;
+					componentsInChildren[j].PlayInFixedTime(fullPathHash, 0, delayedActivation);
 				}
+			}
+		}
+	}
+
+	public float GetDelayedActivationTime()
+	{
+		DateTime serverTime = GorillaComputer.instance.GetServerTime();
+		if (serverTime.Year < 2000)
+		{
+			return 0f;
+		}
+		bool inRange = false;
+		float delay = 0f;
+		int num = 0;
+		while (activationData.AbsoluteDateTimeWindow != null && num < activationData.AbsoluteDateTimeWindow.Length && !inRange)
+		{
+			activationData.AbsoluteDateTimeWindow[num].IsInWindow(serverTime, out inRange, out delay);
+			num++;
+		}
+		int num2 = 0;
+		while (activationData.RelativeDateTimeWindow != null && num2 < activationData.RelativeDateTimeWindow.Length && !inRange)
+		{
+			activationData.RelativeDateTimeWindow[num2].IsInWindow(serverTime, out inRange, out delay);
+			num2++;
+		}
+		return Mathf.Max(0f, delay);
+	}
+
+	public void PlayAnimatorAtScheduledTime(Animator animator)
+	{
+		float delayedActivationTime = GetDelayedActivationTime();
+		int fullPathHash = animator.GetCurrentAnimatorStateInfo(0).fullPathHash;
+		animator.PlayInFixedTime(fullPathHash, 0, GetDelayedActivationTime());
+		AudioSource[] componentsInChildren = animator.GetComponentsInChildren<AudioSource>();
+		for (int i = 0; i < componentsInChildren.Length; i++)
+		{
+			if (componentsInChildren[i].playOnAwake && componentsInChildren[i].clip != null && componentsInChildren[i].clip.length > delayedActivationTime)
+			{
+				componentsInChildren[i].time = delayedActivationTime;
 			}
 		}
 	}

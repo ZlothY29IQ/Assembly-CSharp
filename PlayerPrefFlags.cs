@@ -30,8 +30,8 @@ public class PlayerPrefFlags
 
 	internal static void TouchIf(Flag flag, bool value)
 	{
-		int @int = PlayerPrefs.GetInt("PlayerPrefFlags0", 5);
-		if (value == (((uint)@int & (uint)flag) == (uint)flag) && OnFlagChange != null)
+		int num = PlayerPrefs.GetInt("PlayerPrefFlags0", 5);
+		if (value == (((uint)num & (uint)flag) == (uint)flag) && OnFlagChange != null)
 		{
 			OnFlagChange(flag, value);
 		}
@@ -39,9 +39,9 @@ public class PlayerPrefFlags
 
 	internal static void Set(Flag flag, bool value)
 	{
-		int @int = PlayerPrefs.GetInt("PlayerPrefFlags0", 5);
-		@int = ((!value) ? (@int & (int)(~flag)) : (@int | (int)flag));
-		PlayerPrefs.SetInt("PlayerPrefFlags0", @int);
+		int num = PlayerPrefs.GetInt("PlayerPrefFlags0", 5);
+		num = ((!value) ? (num & (int)(~flag)) : (num | (int)flag));
+		PlayerPrefs.SetInt("PlayerPrefFlags0", num);
 		if (OnFlagChange != null)
 		{
 			OnFlagChange(flag, value);
@@ -50,10 +50,10 @@ public class PlayerPrefFlags
 
 	internal static bool Flip(Flag flag)
 	{
-		int @int = PlayerPrefs.GetInt("PlayerPrefFlags0", 5);
-		bool flag2 = ((uint)@int & (uint)flag) != (uint)flag;
-		@int = ((!flag2) ? (@int & (int)(~flag)) : (@int | (int)flag));
-		PlayerPrefs.SetInt("PlayerPrefFlags0", @int);
+		int num = PlayerPrefs.GetInt("PlayerPrefFlags0", 5);
+		bool flag2 = ((uint)num & (uint)flag) != (uint)flag;
+		num = ((!flag2) ? (num & (int)(~flag)) : (num | (int)flag));
+		PlayerPrefs.SetInt("PlayerPrefFlags0", num);
 		if (OnFlagChange != null)
 		{
 			OnFlagChange(flag, flag2);

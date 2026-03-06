@@ -6,16 +6,18 @@ public struct ModIORequestResultAnd<T>
 
 	public static ModIORequestResultAnd<T> CreateFailureResult(string inMessage)
 	{
-		ModIORequestResultAnd<T> modIORequestResultAnd = default(ModIORequestResultAnd<T>);
-		modIORequestResultAnd.result = ModIORequestResult.CreateFailureResult(inMessage);
-		return modIORequestResultAnd;
+		return new ModIORequestResultAnd<T>
+		{
+			result = ModIORequestResult.CreateFailureResult(inMessage)
+		};
 	}
 
 	public static ModIORequestResultAnd<T> CreateSuccessResult(T payload)
 	{
-		ModIORequestResultAnd<T> modIORequestResultAnd = default(ModIORequestResultAnd<T>);
-		modIORequestResultAnd.result = ModIORequestResult.CreateSuccessResult();
-		modIORequestResultAnd.data = payload;
-		return modIORequestResultAnd;
+		return new ModIORequestResultAnd<T>
+		{
+			result = ModIORequestResult.CreateSuccessResult(),
+			data = payload
+		};
 	}
 }

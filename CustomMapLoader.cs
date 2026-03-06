@@ -185,7 +185,7 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 
 	private static List<int> initialSceneIndexes = new List<int>();
 
-	private static byte maxPlayersForMap = 10;
+	private static byte maxPlayersForMap = 20;
 
 	private static ModId loadedMapModId;
 
@@ -388,7 +388,7 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		mapBundle = null;
 		initialSceneNames = new List<string>();
 		initialSceneIndexes = new List<int>();
-		maxPlayersForMap = 10;
+		maxPlayersForMap = 20;
 		loadedMapModId = ModId.Null;
 		loadedMapModFileId = -1L;
 		loadedMapPackageInfo = null;
@@ -708,7 +708,7 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		}
 		if (loadedMapPackageInfo != null && loadedMapPackageInfo.customMapSupportVersion >= 3)
 		{
-			maxPlayersForMap = (byte)System.Math.Clamp(loadedMapPackageInfo.maxPlayers, 1, 10);
+			maxPlayersForMap = (byte)System.Math.Clamp(loadedMapPackageInfo.maxPlayers, 1, 20);
 			if (loadedMapPackageInfo.customMapSupportVersion >= 5)
 			{
 				CustomMapModeSelector.SetAvailableGameModes(loadedMapPackageInfo.availableGameModes, loadedMapPackageInfo.defaultGameMode);
@@ -834,10 +834,11 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		int progressAmount = endingProgress - startingProgress;
 		int currentProgress = startingProgress;
 		refreshReviveStations = false;
-		LoadSceneParameters loadSceneParameters = default(LoadSceneParameters);
-		loadSceneParameters.loadSceneMode = LoadSceneMode.Additive;
-		loadSceneParameters.localPhysicsMode = LocalPhysicsMode.None;
-		LoadSceneParameters parameters = loadSceneParameters;
+		LoadSceneParameters parameters = new LoadSceneParameters
+		{
+			loadSceneMode = LoadSceneMode.Additive,
+			localPhysicsMode = LocalPhysicsMode.None
+		};
 		if (shouldAbortSceneLoad)
 		{
 			yield return AbortSceneLoad(sceneIndex);
@@ -1123,7 +1124,7 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		{
 			yield break;
 		}
-		maxPlayersForMap = (byte)System.Math.Clamp(sceneDescriptor.MaxPlayers, 1, 10);
+		maxPlayersForMap = (byte)System.Math.Clamp(sceneDescriptor.MaxPlayers, 1, 20);
 		cachedLuauScript = ((sceneDescriptor.CustomGamemode != null) ? sceneDescriptor.CustomGamemode.text : "");
 		devModeEnabled = sceneDescriptor.DevMode;
 		disableHoldingHandsAllModes = sceneDescriptor.DisableHoldingHandsAllGameModes;
@@ -2184,12 +2185,13 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		{
 			if (zoneLoadingCoroutine != null)
 			{
-				LoadZoneRequest loadZoneRequest = default(LoadZoneRequest);
-				loadZoneRequest.sceneIndexesToLoad = list.ToArray();
-				loadZoneRequest.sceneIndexesToUnload = list2.ToArray();
-				loadZoneRequest.onSceneLoadedCallback = onSceneLoaded;
-				loadZoneRequest.onSceneUnloadedCallback = onSceneUnloaded;
-				LoadZoneRequest item = loadZoneRequest;
+				LoadZoneRequest item = new LoadZoneRequest
+				{
+					sceneIndexesToLoad = list.ToArray(),
+					sceneIndexesToUnload = list2.ToArray(),
+					onSceneLoadedCallback = onSceneLoaded,
+					onSceneUnloadedCallback = onSceneUnloaded
+				};
 				queuedLoadZoneRequests.Add(item);
 			}
 			else
@@ -2223,12 +2225,13 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		}
 		if (zoneLoadingCoroutine != null)
 		{
-			LoadZoneRequest loadZoneRequest = default(LoadZoneRequest);
-			loadZoneRequest.sceneIndexesToLoad = loadSceneIndexes;
-			loadZoneRequest.sceneIndexesToUnload = unloadSceneIndexes;
-			loadZoneRequest.onSceneLoadedCallback = onSceneLoaded;
-			loadZoneRequest.onSceneUnloadedCallback = onSceneUnloaded;
-			LoadZoneRequest item = loadZoneRequest;
+			LoadZoneRequest item = new LoadZoneRequest
+			{
+				sceneIndexesToLoad = loadSceneIndexes,
+				sceneIndexesToUnload = unloadSceneIndexes,
+				onSceneLoadedCallback = onSceneLoaded,
+				onSceneUnloadedCallback = onSceneUnloaded
+			};
 			queuedLoadZoneRequests.Add(item);
 		}
 		else
@@ -2367,7 +2370,7 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		loadedSceneIndexes.Clear();
 		initialSceneIndexes.Clear();
 		initialSceneNames.Clear();
-		maxPlayersForMap = 10;
+		maxPlayersForMap = 20;
 		CustomMapModeSelector.ResetButtons();
 		if (RoomSystem.JoinedRoom && NetworkSystem.Instance.LocalPlayer.IsMasterClient && NetworkSystem.Instance.SessionIsPrivate)
 		{
@@ -2375,7 +2378,7 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 			{
 				GameMode.ChangeGameMode(GameModeType.Casual.ToString());
 			}
-			else if (GameMode.ActiveGameMode.GameType() != 0)
+			else if (GameMode.ActiveGameMode.GameType() != GameModeType.Casual)
 			{
 				GameMode.ChangeGameMode(GameModeType.Casual.ToString());
 			}
@@ -2565,10 +2568,11 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 	private static IEnumerator ResetLightmaps()
 	{
 		instance.dayNightManager.RequestRepopulateLightmaps();
-		LoadSceneParameters loadSceneParameters = default(LoadSceneParameters);
-		loadSceneParameters.loadSceneMode = LoadSceneMode.Additive;
-		loadSceneParameters.localPhysicsMode = LocalPhysicsMode.None;
-		LoadSceneParameters parameters = loadSceneParameters;
+		LoadSceneParameters parameters = new LoadSceneParameters
+		{
+			loadSceneMode = LoadSceneMode.Additive,
+			localPhysicsMode = LocalPhysicsMode.None
+		};
 		yield return SceneManager.LoadSceneAsync(10, parameters);
 		yield return SceneManager.UnloadSceneAsync(10);
 	}
@@ -2656,7 +2660,7 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 	{
 		if (!IsMapLoaded())
 		{
-			return 10;
+			return 20;
 		}
 		return maxPlayersForMap;
 	}

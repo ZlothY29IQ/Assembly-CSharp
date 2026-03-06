@@ -77,12 +77,6 @@ public struct MaterialFingerprint
 
 	public int _WaveTimeScale;
 
-	public int _UseWeatherMap;
-
-	public string _WeatherMap;
-
-	public int _WeatherMapDissolveEdgeSize;
-
 	public int _ReflectToggle;
 
 	public int _ReflectBoxProjectToggle;
@@ -240,6 +234,14 @@ public struct MaterialFingerprint
 	public int _WaterCaustics;
 
 	public int _UseDayNightLightmap;
+
+	public int _DAY_CYCLE_BRIGHTNESS_;
+
+	public int _UseWeatherMap;
+
+	public string _WeatherMap;
+
+	public int _WeatherMapDissolveEdgeSize;
 
 	public int _UseSpecular;
 
@@ -399,9 +401,6 @@ public struct MaterialFingerprint
 		_WaveFrequency = _Round(material.GetFloat(ShaderProps._WaveFrequency), 100, used._WaveFrequency);
 		_WaveScale = _Round(material.GetFloat(ShaderProps._WaveScale), 100, used._WaveScale);
 		_WaveTimeScale = _Round(material.GetFloat(ShaderProps._WaveTimeScale), 100, used._WaveTimeScale);
-		_UseWeatherMap = _Round(material.GetFloat(ShaderProps._UseWeatherMap), 100, used._UseWeatherMap);
-		_WeatherMap = _GetTexPropGuid(material, ShaderProps._WeatherMap, used._WeatherMap);
-		_WeatherMapDissolveEdgeSize = _Round(material.GetFloat(ShaderProps._WeatherMapDissolveEdgeSize), 100, used._WeatherMapDissolveEdgeSize);
 		_ReflectToggle = _Round(material.GetFloat(ShaderProps._ReflectToggle), 100, used._ReflectToggle);
 		_ReflectBoxProjectToggle = _Round(material.GetFloat(ShaderProps._ReflectBoxProjectToggle), 100, used._ReflectBoxProjectToggle);
 		_ReflectBoxCubePos = _Round(material.GetVector(ShaderProps._ReflectBoxCubePos), 100, used._ReflectBoxCubePos);
@@ -481,6 +480,10 @@ public struct MaterialFingerprint
 		_HeightBasedWaterEffect = _Round(material.GetFloat(ShaderProps._HeightBasedWaterEffect), 100, used._HeightBasedWaterEffect);
 		_WaterCaustics = _Round(material.GetFloat(ShaderProps._WaterCaustics), 100, used._WaterCaustics);
 		_UseDayNightLightmap = _Round(material.GetFloat(ShaderProps._UseDayNightLightmap), 100, used._UseDayNightLightmap);
+		_DAY_CYCLE_BRIGHTNESS_ = _Round(material.GetFloat(ShaderProps._DAY_CYCLE_BRIGHTNESS_), 100, used._DAY_CYCLE_BRIGHTNESS_);
+		_UseWeatherMap = _Round(material.GetFloat(ShaderProps._UseWeatherMap), 100, used._UseWeatherMap);
+		_WeatherMap = _GetTexPropGuid(material, ShaderProps._WeatherMap, used._WeatherMap);
+		_WeatherMapDissolveEdgeSize = _Round(material.GetFloat(ShaderProps._WeatherMapDissolveEdgeSize), 100, used._WeatherMapDissolveEdgeSize);
 		_UseSpecular = _Round(material.GetFloat(ShaderProps._UseSpecular), 100, used._UseSpecular);
 		_UseSpecularAlphaChannel = _Round(material.GetFloat(ShaderProps._UseSpecularAlphaChannel), 100, used._UseSpecularAlphaChannel);
 		_Smoothness = _Round(material.GetFloat(ShaderProps._Smoothness), 100, used._Smoothness);

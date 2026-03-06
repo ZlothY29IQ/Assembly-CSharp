@@ -16,7 +16,7 @@ public abstract class DrawBase : MonoBehaviour
 
 	private void Update()
 	{
-		if (Style != 0)
+		if (Style != DebugUtil.Style.Wireframe)
 		{
 			Draw(ShadededColor, Style, DepthTest);
 		}

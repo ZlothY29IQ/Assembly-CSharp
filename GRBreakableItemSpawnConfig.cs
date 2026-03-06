@@ -26,10 +26,10 @@ public class GRBreakableItemSpawnConfig : ScriptableObject
 
 	public bool TryForRandomItem(GameEntity spawnFromEntity, out GameEntity entity, int sanity = 0)
 	{
-		GRBreakableItemSpawnConfig @override = GetOverride(spawnFromEntity);
-		if (sanity <= 5 && @override != null)
+		GRBreakableItemSpawnConfig gRBreakableItemSpawnConfig = GetOverride(spawnFromEntity);
+		if (sanity <= 5 && gRBreakableItemSpawnConfig != null)
 		{
-			return @override.TryForRandomItem(spawnFromEntity, out entity, sanity + 1);
+			return gRBreakableItemSpawnConfig.TryForRandomItem(spawnFromEntity, out entity, sanity + 1);
 		}
 		if (sanity > 5)
 		{
@@ -55,10 +55,10 @@ public class GRBreakableItemSpawnConfig : ScriptableObject
 
 	public bool TryForRandomItem(GhostReactor reactor, ref SRand srand, out GameEntity entity, int sanity = 0)
 	{
-		GRBreakableItemSpawnConfig @override = GetOverride(reactor);
-		if (sanity <= 5 && @override != null)
+		GRBreakableItemSpawnConfig gRBreakableItemSpawnConfig = GetOverride(reactor);
+		if (sanity <= 5 && gRBreakableItemSpawnConfig != null)
 		{
-			return @override.TryForRandomItem(reactor, ref srand, out entity, sanity + 1);
+			return gRBreakableItemSpawnConfig.TryForRandomItem(reactor, ref srand, out entity, sanity + 1);
 		}
 		if (sanity > 5)
 		{

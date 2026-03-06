@@ -162,7 +162,7 @@ public class BuilderResizeWatch : MonoBehaviour
 		for (int i = 0; i < num; i++)
 		{
 			BuilderPiece builderPieceFromCollider = BuilderPiece.GetBuilderPieceFromCollider(tempDisableColliders[i]);
-			if (!(builderPieceFromCollider != null) || builderPieceFromCollider.state != 0 || builderPieceFromCollider.isBuiltIntoTable || collisionDisabledPieces.Contains(builderPieceFromCollider))
+			if (!(builderPieceFromCollider != null) || builderPieceFromCollider.state != BuilderPiece.State.AttachedAndPlaced || builderPieceFromCollider.isBuiltIntoTable || collisionDisabledPieces.Contains(builderPieceFromCollider))
 			{
 				continue;
 			}

@@ -114,16 +114,18 @@ public static class DebugExtension
 		Vector3 vector = up.normalized * radius;
 		Vector3 rhs = Vector3.Slerp(vector, -vector, 0.5f);
 		Vector3 vector2 = Vector3.Cross(vector, rhs).normalized * radius;
-		Matrix4x4 matrix4x = default(Matrix4x4);
-		matrix4x[0] = vector2.x;
-		matrix4x[1] = vector2.y;
-		matrix4x[2] = vector2.z;
-		matrix4x[4] = vector.x;
-		matrix4x[5] = vector.y;
-		matrix4x[6] = vector.z;
-		matrix4x[8] = rhs.x;
-		matrix4x[9] = rhs.y;
-		matrix4x[10] = rhs.z;
+		Matrix4x4 matrix4x = new Matrix4x4
+		{
+			[0] = vector2.x,
+			[1] = vector2.y,
+			[2] = vector2.z,
+			[4] = vector.x,
+			[5] = vector.y,
+			[6] = vector.z,
+			[8] = rhs.x,
+			[9] = rhs.y,
+			[10] = rhs.z
+		};
 		Vector3 start = position + matrix4x.MultiplyPoint3x4(new Vector3(Mathf.Cos(0f), 0f, Mathf.Sin(0f)));
 		Vector3 vector3 = Vector3.zero;
 		color = ((color == default(Color)) ? Color.white : color);
@@ -301,28 +303,28 @@ public static class DebugExtension
 		float x = bounds.extents.x;
 		float y = bounds.extents.y;
 		float z = bounds.extents.z;
-		Vector3 from = center + new Vector3(x, y, z);
-		Vector3 vector = center + new Vector3(x, y, 0f - z);
-		Vector3 vector2 = center + new Vector3(0f - x, y, z);
-		Vector3 vector3 = center + new Vector3(0f - x, y, 0f - z);
-		Vector3 vector4 = center + new Vector3(x, 0f - y, z);
+		Vector3 vector = center + new Vector3(x, y, z);
+		Vector3 vector2 = center + new Vector3(x, y, 0f - z);
+		Vector3 vector3 = center + new Vector3(0f - x, y, z);
+		Vector3 vector4 = center + new Vector3(0f - x, y, 0f - z);
+		Vector3 vector5 = center + new Vector3(x, 0f - y, z);
 		Vector3 to = center + new Vector3(x, 0f - y, 0f - z);
-		Vector3 vector5 = center + new Vector3(0f - x, 0f - y, z);
-		Vector3 vector6 = center + new Vector3(0f - x, 0f - y, 0f - z);
+		Vector3 vector6 = center + new Vector3(0f - x, 0f - y, z);
+		Vector3 vector7 = center + new Vector3(0f - x, 0f - y, 0f - z);
 		Color color2 = Gizmos.color;
 		Gizmos.color = color;
-		Gizmos.DrawLine(from, vector2);
-		Gizmos.DrawLine(from, vector);
-		Gizmos.DrawLine(vector2, vector3);
 		Gizmos.DrawLine(vector, vector3);
-		Gizmos.DrawLine(from, vector4);
-		Gizmos.DrawLine(vector, to);
-		Gizmos.DrawLine(vector2, vector5);
+		Gizmos.DrawLine(vector, vector2);
+		Gizmos.DrawLine(vector3, vector4);
+		Gizmos.DrawLine(vector2, vector4);
+		Gizmos.DrawLine(vector, vector5);
+		Gizmos.DrawLine(vector2, to);
 		Gizmos.DrawLine(vector3, vector6);
-		Gizmos.DrawLine(vector4, vector5);
-		Gizmos.DrawLine(vector4, to);
+		Gizmos.DrawLine(vector4, vector7);
 		Gizmos.DrawLine(vector5, vector6);
-		Gizmos.DrawLine(vector6, to);
+		Gizmos.DrawLine(vector5, to);
+		Gizmos.DrawLine(vector6, vector7);
+		Gizmos.DrawLine(vector7, to);
 		Gizmos.color = color2;
 	}
 
@@ -400,28 +402,30 @@ public static class DebugExtension
 		up = ((up == Vector3.zero) ? Vector3.up : up).normalized * radius;
 		Vector3 rhs = Vector3.Slerp(up, -up, 0.5f);
 		Vector3 vector = Vector3.Cross(up, rhs).normalized * radius;
-		Matrix4x4 matrix4x = default(Matrix4x4);
-		matrix4x[0] = vector.x;
-		matrix4x[1] = vector.y;
-		matrix4x[2] = vector.z;
-		matrix4x[4] = up.x;
-		matrix4x[5] = up.y;
-		matrix4x[6] = up.z;
-		matrix4x[8] = rhs.x;
-		matrix4x[9] = rhs.y;
-		matrix4x[10] = rhs.z;
-		Vector3 from = position + matrix4x.MultiplyPoint3x4(new Vector3(Mathf.Cos(0f), 0f, Mathf.Sin(0f)));
-		Vector3 vector2 = Vector3.zero;
+		Matrix4x4 matrix4x = new Matrix4x4
+		{
+			[0] = vector.x,
+			[1] = vector.y,
+			[2] = vector.z,
+			[4] = up.x,
+			[5] = up.y,
+			[6] = up.z,
+			[8] = rhs.x,
+			[9] = rhs.y,
+			[10] = rhs.z
+		};
+		Vector3 vector2 = position + matrix4x.MultiplyPoint3x4(new Vector3(Mathf.Cos(0f), 0f, Mathf.Sin(0f)));
+		Vector3 vector3 = Vector3.zero;
 		Color color2 = Gizmos.color;
 		Gizmos.color = ((color == default(Color)) ? Color.white : color);
 		for (int i = 0; i < 91; i++)
 		{
-			vector2.x = Mathf.Cos((float)(i * 4) * (MathF.PI / 180f));
-			vector2.z = Mathf.Sin((float)(i * 4) * (MathF.PI / 180f));
-			vector2.y = 0f;
-			vector2 = position + matrix4x.MultiplyPoint3x4(vector2);
-			Gizmos.DrawLine(from, vector2);
-			from = vector2;
+			vector3.x = Mathf.Cos((float)(i * 4) * (MathF.PI / 180f));
+			vector3.z = Mathf.Sin((float)(i * 4) * (MathF.PI / 180f));
+			vector3.y = 0f;
+			vector3 = position + matrix4x.MultiplyPoint3x4(vector3);
+			Gizmos.DrawLine(vector2, vector3);
+			vector2 = vector3;
 		}
 		Gizmos.color = color2;
 	}

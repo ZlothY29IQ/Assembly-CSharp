@@ -6,20 +6,13 @@ namespace GorillaTag;
 public static class GTColor
 {
 	[Serializable]
-	public struct HSVRanges
+	public struct HSVRanges(float hMin = 0f, float hMax = 1f, float sMin = 0f, float sMax = 1f, float vMin = 0f, float vMax = 1f)
 	{
-		public Vector2 h;
+		public Vector2 h = new Vector2(hMin, hMax);
 
-		public Vector2 s;
+		public Vector2 s = new Vector2(sMin, sMax);
 
-		public Vector2 v;
-
-		public HSVRanges(float hMin = 0f, float hMax = 1f, float sMin = 0f, float sMax = 1f, float vMin = 0f, float vMax = 1f)
-		{
-			h = new Vector2(hMin, hMax);
-			s = new Vector2(sMin, sMax);
-			v = new Vector2(vMin, vMax);
-		}
+		public Vector2 v = new Vector2(vMin, vMax);
 	}
 
 	public static Color RandomHSV(HSVRanges ranges)

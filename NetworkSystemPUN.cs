@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using ExitGames.Client.Photon;
@@ -133,6 +134,8 @@ public class NetworkSystemPUN : NetworkSystem
 		}
 	}
 
+	public override bool SessionIsSubscription => PhotonNetwork.CurrentRoom?.MaxPlayers > 10;
+
 	public override int LocalPlayerID => PhotonNetwork.LocalPlayer.ActorNumber;
 
 	public override int ServerTimestamp => PhotonNetwork.ServerTimestamp;
@@ -158,21 +161,33 @@ public class NetworkSystemPUN : NetworkSystem
 		NetworkSystem.reusableSB.Append("\ncustomProps: {");
 		NetworkSystem.reusableSB.AppendFormat("joinedGameMode={0}, ", (RoomSystem.RoomGameMode.Length < 50) ? RoomSystem.RoomGameMode : RoomSystem.RoomGameMode.Remove(50));
 		IDictionary customProperties = currentRoom.CustomProperties;
-		if (customProperties.Contains("gameMode"))
-		{
-			object obj = customProperties["gameMode"];
-			if (obj == null)
-			{
-				NetworkSystem.reusableSB.AppendFormat("gameMode=null}");
-			}
-			else if (obj is string text)
-			{
-				NetworkSystem.reusableSB.AppendFormat("gameMode={0}", (text.Length < 50) ? text : text.Remove(50));
-			}
-		}
+		AppendStringFromDict(customProperties, "gameMode", 50, NetworkSystem.reusableSB);
+		NetworkSystem.reusableSB.Append(", ");
+		AppendStringFromDict(customProperties, "platform", 10, NetworkSystem.reusableSB);
+		NetworkSystem.reusableSB.Append(", ");
+		AppendStringFromDict(customProperties, "queueName", 15, NetworkSystem.reusableSB);
+		NetworkSystem.reusableSB.Append(", ");
+		AppendStringFromDict(customProperties, "language", 15, NetworkSystem.reusableSB);
+		NetworkSystem.reusableSB.Append(", ");
+		AppendStringFromDict(customProperties, "fan_club", 6, NetworkSystem.reusableSB);
+		NetworkSystem.reusableSB.Append(", ");
+		AppendStringFromDict(customProperties, "mmrTier", 8, NetworkSystem.reusableSB);
 		NetworkSystem.reusableSB.Append("}");
 		Debug.Log(NetworkSystem.reusableSB.ToString());
 		return NetworkSystem.reusableSB.ToString();
+	}
+
+	private void AppendStringFromDict(IDictionary dict, string key, int maxStrLen, StringBuilder sb)
+	{
+		sb.AppendFormat("{0}=", key);
+		if (!dict.Contains(key) || !(dict[key] is string text))
+		{
+			sb.Append("null");
+		}
+		else
+		{
+			sb.Append((text.Length < maxStrLen) ? text : text.Remove(maxStrLen));
+		}
 	}
 
 	public override async void Initialise()
@@ -184,7 +199,7 @@ public class NetworkSystemPUN : NetworkSystem
 		PhotonNetwork.EnableCloseConnection = false;
 		PhotonNetwork.AutomaticallySyncScene = false;
 		string playerName = PlayerPrefs.GetString("playerName", "gorilla" + UnityEngine.Random.Range(0, 9999).ToString().PadLeft(4, '0'));
-		playerPool = new ObjectPool<PunNetPlayer>(10);
+		playerPool = new ObjectPool<PunNetPlayer>(20);
 		UpdatePlayers();
 		await CacheRegionInfo();
 		UpdatePlayers();
@@ -202,12 +217,12 @@ public class NetworkSystemPUN : NetworkSystem
 		{
 			regionData[i] = new NetworkRegionInfo();
 		}
-		int tryingRegionIndex = 0;
-		if (!(await WaitForStateCheck(InternalState.Authenticated)))
+		if (!(await WaitForStateCheck(InternalState.Authenticated, float.PositiveInfinity)))
 		{
 			return;
 		}
 		base.netState = NetSystemState.PingRecon;
+		int tryingRegionIndex = 0;
 		while (tryingRegionIndex < regionNames.Length)
 		{
 			internalState = InternalState.ConnectingToMaster;
@@ -216,16 +231,19 @@ public class NetworkSystemPUN : NetworkSystem
 			PhotonNetwork.ConnectUsingSettings();
 			if (!(await WaitForStateCheck(InternalState.ConnectedToMaster)))
 			{
-				return;
+				base.netState = NetSystemState.PingRecon;
 			}
-			regionData[currentRegionIndex].playersInRegion = PhotonNetwork.CountOfPlayers;
-			regionData[currentRegionIndex].pingToRegion = PhotonNetwork.GetPing();
-			Utils.Log("Ping for " + PhotonNetwork.PhotonServerSettings.AppSettings.FixedRegion.ToString() + " is " + PhotonNetwork.GetPing());
-			internalState = InternalState.PingGathering;
-			PhotonNetwork.Disconnect();
-			if (!(await WaitForStateCheck(InternalState.Internal_Disconnected)))
+			else
 			{
-				return;
+				regionData[currentRegionIndex].playersInRegion = PhotonNetwork.CountOfPlayers;
+				regionData[currentRegionIndex].pingToRegion = PhotonNetwork.GetPing();
+				Utils.Log("Ping for " + PhotonNetwork.PhotonServerSettings.AppSettings.FixedRegion.ToString() + " is " + PhotonNetwork.GetPing());
+				internalState = InternalState.PingGathering;
+				PhotonNetwork.Disconnect();
+				if (!(await WaitForStateCheck(InternalState.Internal_Disconnected)))
+				{
+					return;
+				}
 			}
 			int num = tryingRegionIndex + 1;
 			tryingRegionIndex = num;
@@ -246,13 +264,25 @@ public class NetworkSystemPUN : NetworkSystem
 
 	public override void FinishAuthenticating()
 	{
-		internalState = InternalState.Authenticated;
+		if (PhotonNetwork.AuthValues == null)
+		{
+			_taskCancelTokens.ForEach(delegate(CancellationTokenSource cts)
+			{
+				cts.Cancel();
+				cts.Dispose();
+			});
+			_taskCancelTokens.Clear();
+		}
+		else
+		{
+			internalState = InternalState.Authenticated;
+		}
 	}
 
-	private async Task WaitForState(CancellationToken ct, params InternalState[] desiredStates)
+	private async Task WaitForState(CancellationToken ct, InternalState[] desiredStates, float timeout)
 	{
-		float timeoutTime = Time.time + 10f;
-		while (!desiredStates.Contains(this.internalState))
+		float timeoutTime = Time.realtimeSinceStartup + timeout;
+		while (!Enumerable.Contains(desiredStates, this.internalState))
 		{
 			if (ct.IsCancellationRequested)
 			{
@@ -266,7 +296,7 @@ public class NetworkSystemPUN : NetworkSystem
 				this.internalState = InternalState.StateCheckFailed;
 				break;
 			}
-			if (timeoutTime < Time.time)
+			if (timeoutTime < Time.realtimeSinceStartup)
 			{
 				string text2 = "";
 				InternalState[] array = desiredStates;
@@ -282,10 +312,10 @@ public class NetworkSystemPUN : NetworkSystem
 		}
 	}
 
-	private async Task<bool> WaitForStateCheck(params InternalState[] desiredStates)
+	private async Task<bool> WaitForStateCheck(InternalState[] desiredStates, float timeout = 10f)
 	{
 		(CancellationTokenSource, CancellationToken) token = GetCancellationToken();
-		await WaitForState(token.Item2, desiredStates);
+		await WaitForState(token.Item2, desiredStates, timeout);
 		_taskCancelTokens.Remove(token.Item1);
 		token.Item1.Dispose();
 		if (internalState != InternalState.StateCheckFailed)
@@ -294,6 +324,11 @@ public class NetworkSystemPUN : NetworkSystem
 		}
 		ResetSystem();
 		return false;
+	}
+
+	private Task<bool> WaitForStateCheck(InternalState desiredState, float timeout = 10f)
+	{
+		return WaitForStateCheck(new InternalState[1] { desiredState }, timeout);
 	}
 
 	private async Task<NetJoinResult> MakeOrFindRoom(string roomName, RoomConfig opts, int regionIndex = -1)
@@ -343,7 +378,12 @@ public class NetworkSystemPUN : NetworkSystem
 		}
 		internalState = InternalState.Searching_Joining;
 		PhotonNetwork.JoinRoom(roomName);
-		if (!(await WaitForStateCheck(InternalState.Searching_Joined, InternalState.Searching_JoinFailed, InternalState.Searching_JoinFailed_Full)))
+		if (!(await WaitForStateCheck(new InternalState[3]
+		{
+			InternalState.Searching_Joined,
+			InternalState.Searching_JoinFailed,
+			InternalState.Searching_JoinFailed_Full
+		})))
 		{
 			return false;
 		}
@@ -378,7 +418,11 @@ public class NetworkSystemPUN : NetworkSystem
 		}
 		internalState = InternalState.Searching_Creating;
 		PhotonNetwork.CreateRoom(roomName, opts.ToPUNOpts());
-		if (!(await WaitForStateCheck(InternalState.Searching_Created, InternalState.Searching_CreateFailed)))
+		if (!(await WaitForStateCheck(new InternalState[2]
+		{
+			InternalState.Searching_Created,
+			InternalState.Searching_CreateFailed
+		})))
 		{
 			return NetJoinResult.Failed_Other;
 		}
@@ -422,22 +466,35 @@ public class NetworkSystemPUN : NetworkSystem
 		{
 			PhotonNetwork.JoinRandomRoom(opts.CustomProps, opts.MaxPlayers, MatchmakingMode.FillRoom, null, null);
 		}
-		if (!(await WaitForStateCheck(InternalState.Searching_Joined, InternalState.Searching_JoinFailed)))
+		if (!(await WaitForStateCheck(new InternalState[2]
+		{
+			InternalState.Searching_Joined,
+			InternalState.Searching_JoinFailed
+		})))
 		{
 			return NetJoinResult.Failed_Other;
 		}
 		if (internalState == InternalState.Searching_JoinFailed)
 		{
 			internalState = InternalState.Searching_Creating;
+			string text = "";
+			if (opts.MaxPlayers == 20 && opts.isPublic)
+			{
+				text = ":GTFC";
+			}
 			if (opts.IsJoiningWithFriends)
 			{
-				PhotonNetwork.CreateRoom(NetworkSystem.GetRandomRoomName(), opts.ToPUNOpts(), null, opts.joinFriendIDs);
+				PhotonNetwork.CreateRoom(NetworkSystem.GetRandomRoomName() + text, opts.ToPUNOpts(), null, opts.joinFriendIDs);
 			}
 			else
 			{
-				PhotonNetwork.CreateRoom(NetworkSystem.GetRandomRoomName(), opts.ToPUNOpts());
+				PhotonNetwork.CreateRoom(NetworkSystem.GetRandomRoomName() + text, opts.ToPUNOpts());
 			}
-			if (!(await WaitForStateCheck(InternalState.Searching_Created, InternalState.Searching_CreateFailed)))
+			if (!(await WaitForStateCheck(new InternalState[2]
+			{
+				InternalState.Searching_Created,
+				InternalState.Searching_CreateFailed
+			})))
 			{
 				return NetJoinResult.Failed_Other;
 			}
@@ -514,14 +571,14 @@ public class NetworkSystemPUN : NetworkSystem
 	public override async Task JoinFriendsRoom(string userID, int actorIDToFollow, string keyToFollow, string shufflerToFollow)
 	{
 		bool foundFriend = false;
-		float searchStartTime = Time.time;
+		float searchStartTime = Time.realtimeSinceStartup;
 		float timeToSpendSearching = 15f;
 		Dictionary<string, PlayFab.ClientModels.SharedGroupDataRecord> dummyData = new Dictionary<string, PlayFab.ClientModels.SharedGroupDataRecord>();
 		bool failedToJoinFriend = false;
 		try
 		{
 			base.groupJoinInProgress = true;
-			while (!foundFriend && searchStartTime + timeToSpendSearching > Time.time)
+			while (!foundFriend && searchStartTime + timeToSpendSearching > Time.realtimeSinceStartup)
 			{
 				Dictionary<string, PlayFab.ClientModels.SharedGroupDataRecord> data = dummyData;
 				bool callbackFinished = false;
@@ -529,9 +586,9 @@ public class NetworkSystemPUN : NetworkSystem
 				{
 					Keys = new List<string> { keyToFollow },
 					SharedGroupId = userID
-				}, delegate(GetSharedGroupDataResult result)
+				}, delegate(GetSharedGroupDataResult getSharedGroupDataResult)
 				{
-					data = result.Data;
+					data = getSharedGroupDataResult.Data;
 					Debug.Log($"Got friend follow data, {data.Count} entries");
 					callbackFinished = true;
 				}, delegate(PlayFabError error)
@@ -564,7 +621,7 @@ public class NetworkSystemPUN : NetworkSystem
 					foundFriend = true;
 					if (InRoom && PhotonNetwork.CurrentRoom.Players.TryGetValue(actorIDToFollow, out var value2) && value2 != null)
 					{
-						GorillaNot.instance.SendReport("possible kick attempt", value2.UserId, value2.NickName);
+						MonkeAgent.instance.SendReport("possible kick attempt", value2.UserId, value2.NickName);
 					}
 					else if (RoomName != roomID)
 					{
@@ -575,9 +632,9 @@ public class NetworkSystemPUN : NetworkSystem
 						roomConfig.isJoinable = true;
 						Task<NetJoinResult> ConnectToRoomTask = ConnectToRoom(roomID, roomConfig, regionIndex);
 						await ConnectToRoomTask;
-						NetJoinResult result2 = ConnectToRoomTask.Result;
-						failedToJoinFriend = result2 != NetJoinResult.Success;
-						if (result2 == NetJoinResult.Success)
+						NetJoinResult result = ConnectToRoomTask.Result;
+						failedToJoinFriend = result != NetJoinResult.Success;
+						if (result == NetJoinResult.Success)
 						{
 							groupJoinOverrideGameMode = NetworkSystem.Instance.GameModeString;
 						}
@@ -687,9 +744,9 @@ public class NetworkSystemPUN : NetworkSystem
 				if (VRRigCache.Instance != null && VRRigCache.Instance.localRig != null)
 				{
 					LoudSpeakerActivator[] componentsInChildren = VRRigCache.Instance.localRig.GetComponentsInChildren<LoudSpeakerActivator>();
-					for (int i = 0; i < componentsInChildren.Length; i++)
+					for (int num = 0; num < componentsInChildren.Length; num++)
 					{
-						componentsInChildren[i].SetRecorder((GTRecorder)localRecorder);
+						componentsInChildren[num].SetRecorder((GTRecorder)localRecorder);
 					}
 				}
 			}
@@ -701,16 +758,24 @@ public class NetworkSystemPUN : NetworkSystem
 			localRecorder.AutoStart = VoiceSettings.AutoStart;
 			localRecorder.Encrypt = VoiceSettings.Encrypt;
 			localRecorder.FrameDuration = VoiceSettings.FrameDuration;
-			localRecorder.SamplingRate = VoiceSettings.SamplingRate;
 			localRecorder.InterestGroup = VoiceSettings.InterestGroup;
 			localRecorder.SourceType = VoiceSettings.InputSourceType;
 			localRecorder.MicrophoneType = VoiceSettings.MicrophoneType;
 			localRecorder.UseMicrophoneTypeFallback = VoiceSettings.UseFallback;
 			localRecorder.VoiceDetection = VoiceSettings.Detect;
 			localRecorder.VoiceDetectionThreshold = VoiceSettings.Threshold;
-			localRecorder.Bitrate = VoiceSettings.Bitrate;
 			localRecorder.VoiceDetectionDelayMs = VoiceSettings.Delay;
 			localRecorder.DebugEchoMode = VoiceSettings.DebugEcho;
+			if (!SubscriptionManager.IsLocalSubscribed())
+			{
+				localRecorder.SamplingRate = VoiceSettings.SamplingRate;
+				localRecorder.Bitrate = VoiceSettings.Bitrate;
+			}
+			else
+			{
+				localRecorder.SamplingRate = VoiceSettings.SubsSamplingRate;
+				localRecorder.Bitrate = VoiceSettings.SubsBitrate;
+			}
 			VoiceNetworkObject.AddComponent<VoiceToLoudness>();
 			punVoice.PrimaryRecorder = localRecorder;
 		}

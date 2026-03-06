@@ -145,10 +145,11 @@ public class GTPosRotConstraintManager : MonoBehaviour
 				return;
 			}
 		}
-		Range range = default(Range);
-		range.start = constraints.Count;
-		range.end = constraints.Count + component.constraints.Length - 1;
-		Range value = range;
+		Range value = new Range
+		{
+			start = constraints.Count,
+			end = constraints.Count + component.constraints.Length - 1
+		};
 		componentRanges.Add(instanceID, value);
 		constraints.AddRange(component.constraints);
 		if (instance.constraintsToDisable.Contains(component))

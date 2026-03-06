@@ -141,7 +141,7 @@ public class SeedPacketHoldable : MonoBehaviour
 		{
 			return;
 		}
-		GorillaNot.IncrementRPCCall(info, "SyncTriggerEffect");
+		MonkeAgent.IncrementRPCCall(info, "SyncTriggerEffect");
 		if (callLimiter.CheckCallTime(Time.time))
 		{
 			int num = (int)args[0];

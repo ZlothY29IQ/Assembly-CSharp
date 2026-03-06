@@ -3,7 +3,7 @@ using UnityEngine;
 namespace GorillaTag;
 
 [DefaultExecutionOrder(2000)]
-public class StaticLodGroup : MonoBehaviour
+public class StaticLodGroup : MonoBehaviour, IGorillaSimpleBackgroundWorker
 {
 	public const int k_monoDefaultExecutionOrder = 2000;
 
@@ -13,23 +13,43 @@ public class StaticLodGroup : MonoBehaviour
 
 	public float uiFadeDistanceMax = 10f;
 
-	protected void Awake()
-	{
-		index = StaticLodManager.Register(this);
-	}
+	private bool initialized;
 
 	protected void OnEnable()
 	{
-		StaticLodManager.SetEnabled(index, enable: true);
+		if (initialized)
+		{
+			StaticLodManager.SetEnabled(index, enable: true);
+		}
+		else
+		{
+			GorillaSimpleBackgroundWorkerManager.WorkerSignup(this);
+		}
 	}
 
 	protected void OnDisable()
 	{
-		StaticLodManager.SetEnabled(index, enable: false);
+		if (initialized)
+		{
+			StaticLodManager.SetEnabled(index, enable: false);
+		}
 	}
 
 	private void OnDestroy()
 	{
-		StaticLodManager.Unregister(index);
+		if (initialized)
+		{
+			StaticLodManager.Unregister(index);
+		}
+	}
+
+	public void SimpleWork()
+	{
+		if (!initialized)
+		{
+			index = StaticLodManager.Register(this);
+			StaticLodManager.SetEnabled(index, enable: true);
+			initialized = true;
+		}
 	}
 }

@@ -127,7 +127,7 @@ public class GRRecycler : MonoBehaviourTick
 			return;
 		}
 		Debug.LogFormat("GRRecycler Refunding player {0} {1} Currency and Destroying Tool.", componentInParent.gameEntity.lastHeldByActorNumber, num);
-		if (toolType != 0)
+		if (toolType != GRTool.GRToolType.None)
 		{
 			reactor.grManager.RequestRecycleItem(componentInParent.gameEntity.lastHeldByActorNumber, componentInParent.gameEntity.id, toolType);
 		}

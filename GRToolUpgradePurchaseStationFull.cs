@@ -909,9 +909,11 @@ public class GRToolUpgradePurchaseStationFull : MonoBehaviour, ITickSystemTick
 				}
 				if (desiredMagnetEntityTypeId != -1)
 				{
-					GhostReactor.ToolEntityCreateData toolEntityCreateData = default(GhostReactor.ToolEntityCreateData);
-					toolEntityCreateData.decayTime = 0f;
-					toolEntityCreateData.stationIndex = grManager.GetIndexForToolUpgradeStationFull(this);
+					GhostReactor.ToolEntityCreateData toolEntityCreateData = new GhostReactor.ToolEntityCreateData
+					{
+						decayTime = 0f,
+						stationIndex = grManager.GetIndexForToolUpgradeStationFull(this)
+					};
 					grManager.gameEntityManager.RequestCreateItem(desiredMagnetEntityTypeId, ropeEnd.position, ropeEnd.rotation, toolEntityCreateData.Pack());
 					currentMagnetEntityTypeId = desiredMagnetEntityTypeId;
 				}
@@ -983,9 +985,9 @@ public class GRToolUpgradePurchaseStationFull : MonoBehaviour, ITickSystemTick
 		GRPlayer gRPlayer2 = GRPlayer.Get(currentActivePlayerActorNumber);
 		bool flag = ControllerInputPoller.GripFloat(XRNode.LeftHand) > 0.7f;
 		bool flag2 = ControllerInputPoller.GripFloat(XRNode.RightHand) > 0.7f;
-		VRRig offlineVRRig = GorillaTagger.Instance.offlineVRRig;
-		Transform handTransform = GamePlayer.GetHandTransform(offlineVRRig, 0);
-		Transform handTransform2 = GamePlayer.GetHandTransform(offlineVRRig, 1);
+		GamePlayer gamePlayer = GamePlayerLocal.instance.gamePlayer;
+		Transform handTransform = gamePlayer.GetHandTransform(0);
+		Transform handTransform2 = gamePlayer.GetHandTransform(1);
 		Vector3 position = pageSelectionHandle.transform.position;
 		Vector3 lhs = handTransform.position - position;
 		Vector3 lhs2 = handTransform2.position - position;

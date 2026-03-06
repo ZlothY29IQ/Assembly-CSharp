@@ -63,15 +63,16 @@ public sealed class SoakTaskHitEnemy : IGhostReactorSoakTask
 			Debug.LogError("No club found for soak task hit enemy.");
 			return false;
 		}
-		GameHitData gameHitData = default(GameHitData);
-		gameHitData.hitEntityId = _enemy.id;
-		gameHitData.hitByEntityId = randomTool.id;
-		gameHitData.hitTypeId = 0;
-		gameHitData.hitEntityPosition = Vector3.zero;
-		gameHitData.hitPosition = Vector3.zero;
-		gameHitData.hitImpulse = Vector3.zero;
-		gameHitData.hitAmount = 1;
-		GameHitData hit = gameHitData;
+		GameHitData hit = new GameHitData
+		{
+			hitEntityId = _enemy.id,
+			hitByEntityId = randomTool.id,
+			hitTypeId = 0,
+			hitEntityPosition = Vector3.zero,
+			hitPosition = Vector3.zero,
+			hitImpulse = Vector3.zero,
+			hitAmount = 1
+		};
 		managerForZone.RequestHit(hit);
 		_nextHitTime = Time.time + 0.1f;
 		return true;

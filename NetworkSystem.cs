@@ -119,6 +119,8 @@ public abstract class NetworkSystem : MonoBehaviour
 
 	public abstract bool SessionIsPrivate { get; }
 
+	public abstract bool SessionIsSubscription { get; }
+
 	public abstract int LocalPlayerID { get; }
 
 	public virtual NetPlayer[] AllNetPlayers => netPlayerCache.ToArray();
@@ -317,14 +319,12 @@ public abstract class NetworkSystem : MonoBehaviour
 
 	protected async Task RefreshNonce()
 	{
-		Debug.Log("Refreshing Nonce Token.");
 		nonceRefreshed = false;
 		PlayFabAuthenticator.instance.RefreshSteamAuthTicketForPhoton(GetSteamAuthTicketSuccessCallback, GetSteamAuthTicketFailureCallback);
 		while (!nonceRefreshed)
 		{
 			await Task.Yield();
 		}
-		Debug.Log("New Nonce Token acquired");
 	}
 
 	private void GetSteamAuthTicketSuccessCallback(string ticket)
@@ -346,19 +346,18 @@ public abstract class NetworkSystem : MonoBehaviour
 
 	private IEnumerator ReGetNonce()
 	{
-		yield return new WaitForSeconds(3f);
+		yield return new WaitForSecondsRealtime(3f);
 		PlayFabAuthenticator.instance.RefreshSteamAuthTicketForPhoton(GetSteamAuthTicketSuccessCallback, GetSteamAuthTicketFailureCallback);
 		yield return null;
 	}
 
 	public void BroadcastMyRoom(bool create, string key, string shuffler)
 	{
-		string text = ShuffleRoomName(Instance.RoomName, shuffler.Substring(2, 8), encode: true) + "|" + ShuffleRoomName("ABCDEFGHIJKLMNPQRSTUVWXYZ123456789".Substring(Instance.currentRegionIndex, 1), shuffler.Substring(0, 2), encode: true);
-		Debug.Log($"Broadcasting room {Instance.RoomName} region {Instance.currentRegionIndex}({Instance.regionNames[Instance.currentRegionIndex]}). Create: {create} key: {key} (shuffler {shuffler}) shuffled: {text}");
+		string roomToJoin = ShuffleRoomName(Instance.RoomName, shuffler.Substring(2, 8), encode: true) + "|" + ShuffleRoomName("ABCDEFGHIJKLMNPQRSTUVWXYZ123456789".Substring(Instance.currentRegionIndex, 1), shuffler.Substring(0, 2), encode: true);
 		GorillaServer.Instance.BroadcastMyRoom(new BroadcastMyRoomRequest
 		{
 			KeyToFollow = key,
-			RoomToJoin = text,
+			RoomToJoin = roomToJoin,
 			Set = create
 		}, delegate
 		{
@@ -376,19 +375,12 @@ public abstract class NetworkSystem : MonoBehaviour
 			SharedGroupId = userID
 		}, delegate(GetSharedGroupDataResult result)
 		{
-			Debug.Log("Get Shared Group Data returned a success");
-			Debug.Log(result.Data.ToStringFull());
 			if (result.Data.Count > 0)
 			{
 				success = true;
 			}
-			else
-			{
-				Debug.Log("RESULT returned but no DATA");
-			}
 		}, delegate
 		{
-			Debug.Log("ERROR - no group data found");
 		});
 		return success;
 	}

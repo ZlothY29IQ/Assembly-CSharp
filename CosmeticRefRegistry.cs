@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class CosmeticRefRegistry : MonoBehaviour
 {
-	private GameObject[] partsTable = new GameObject[8];
+	private GameObject[] partsTable = new GameObject[9];
 
 	[SerializeField]
 	private CosmeticRefTarget[] builtInRefTargets;

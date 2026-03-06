@@ -207,7 +207,7 @@ public class MonkeBusinessStation : MonoBehaviourPunCallbacks
 	[PunRPC]
 	private void BroadcastRedeemQuestPoints(int redeemedPointCount, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "BroadcastRedeemQuestPoints");
+		MonkeAgent.IncrementRPCCall(info, "BroadcastRedeemQuestPoints");
 		if (new PhotonMessageInfoWrapped(info).Sender == null || !VRRigCache.Instance.TryGetVrrig(info.Sender, out var playerRig) || !FXSystem.CheckCallSpam(playerRig.Rig.fxSettings, 10, Time.unscaledTime))
 		{
 			return;

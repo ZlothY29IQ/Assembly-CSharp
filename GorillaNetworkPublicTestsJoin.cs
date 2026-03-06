@@ -47,11 +47,11 @@ public class GorillaNetworkPublicTestsJoin : GorillaTriggerBox, ITickSystemPost
 		{
 			if (PhotonNetwork.InRoom && PhotonNetwork.CurrentRoom.IsVisible)
 			{
-				if (GTPlayer.Instance.GetComponent<Rigidbody>().isKinematic && !waiting && !GorillaNot.instance.reportedPlayers.Contains(PhotonNetwork.LocalPlayer.UserId))
+				if (GTPlayer.Instance.GetComponent<Rigidbody>().isKinematic && !waiting && !MonkeAgent.instance.reportedPlayers.Contains(PhotonNetwork.LocalPlayer.UserId))
 				{
 					StartCoroutine(GracePeriod());
 				}
-				if ((GTPlayer.Instance.jumpMultiplier > GorillaGameManager.instance.fastJumpMultiplier * 2f || GTPlayer.Instance.maxJumpSpeed > GorillaGameManager.instance.fastJumpLimit * 2f) && !waiting && !GorillaNot.instance.reportedPlayers.Contains(PhotonNetwork.LocalPlayer.UserId))
+				if ((GTPlayer.Instance.jumpMultiplier > GorillaGameManager.instance.fastJumpMultiplier * 2f || GTPlayer.Instance.maxJumpSpeed > GorillaGameManager.instance.fastJumpLimit * 2f) && !waiting && !MonkeAgent.instance.reportedPlayers.Contains(PhotonNetwork.LocalPlayer.UserId))
 				{
 					StartCoroutine(GracePeriod());
 				}
@@ -75,15 +75,15 @@ public class GorillaNetworkPublicTestsJoin : GorillaTriggerBox, ITickSystemPost
 			{
 				if (GTPlayer.Instance.GetComponent<Rigidbody>().isKinematic)
 				{
-					GorillaNot.instance.SendReport("gorvity bisdabled", PhotonNetwork.LocalPlayer.UserId, PhotonNetwork.LocalPlayer.NickName);
+					MonkeAgent.instance.SendReport("gorvity bisdabled", PhotonNetwork.LocalPlayer.UserId, PhotonNetwork.LocalPlayer.NickName);
 				}
 				if (GTPlayer.Instance.jumpMultiplier > GorillaGameManager.instance.fastJumpMultiplier * 2f || GTPlayer.Instance.maxJumpSpeed > GorillaGameManager.instance.fastJumpLimit * 2f)
 				{
-					GorillaNot.instance.SendReport("jimp 2mcuh." + GTPlayer.Instance.jumpMultiplier + "." + GTPlayer.Instance.maxJumpSpeed + ".", PhotonNetwork.LocalPlayer.UserId, PhotonNetwork.LocalPlayer.NickName);
+					MonkeAgent.instance.SendReport("jimp 2mcuh." + GTPlayer.Instance.jumpMultiplier + "." + GTPlayer.Instance.maxJumpSpeed + ".", PhotonNetwork.LocalPlayer.UserId, PhotonNetwork.LocalPlayer.NickName);
 				}
 				if (GorillaTagger.Instance.sphereCastRadius > 0.04f)
 				{
-					GorillaNot.instance.SendReport("wack rad. " + GorillaTagger.Instance.sphereCastRadius, PhotonNetwork.LocalPlayer.UserId, PhotonNetwork.LocalPlayer.NickName);
+					MonkeAgent.instance.SendReport("wack rad. " + GorillaTagger.Instance.sphereCastRadius, PhotonNetwork.LocalPlayer.UserId, PhotonNetwork.LocalPlayer.NickName);
 				}
 			}
 			waiting = false;

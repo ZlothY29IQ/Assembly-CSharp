@@ -45,13 +45,14 @@ public class CustomRopeSimulation : MonoBehaviour
 
 	private void Update()
 	{
-		SolveRopeJob jobData = default(SolveRopeJob);
-		jobData.fixedDeltaTime = Time.deltaTime;
-		jobData.gravity = gravity;
-		jobData.nodes = burstNodes;
-		jobData.nodeDistance = nodeDistance;
-		jobData.rootPos = base.transform.position;
-		jobData.Run();
+		new SolveRopeJob
+		{
+			fixedDeltaTime = Time.deltaTime,
+			gravity = gravity,
+			nodes = burstNodes,
+			nodeDistance = nodeDistance,
+			rootPos = base.transform.position
+		}.Run();
 		for (int i = 0; i < burstNodes.Length; i++)
 		{
 			nodes[i].position = burstNodes[i].curPos;

@@ -457,7 +457,7 @@ public class CustomMapsTerminal : MonoBehaviour
 
 	private static void HideTerminalControlScreens()
 	{
-		if (!hasInstance || localCurrentScreen != 0)
+		if (!hasInstance || localCurrentScreen != ScreenType.TerminalControlPrompt)
 		{
 			return;
 		}

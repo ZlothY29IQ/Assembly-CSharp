@@ -56,10 +56,10 @@ public class GrabbingColorPicker : MonoBehaviour, IGorillaSliceableSimple
 	{
 		if (setPlayerColor)
 		{
-			float @float = PlayerPrefs.GetFloat("redValue", 0f);
-			float float2 = PlayerPrefs.GetFloat("greenValue", 0f);
-			float float3 = PlayerPrefs.GetFloat("blueValue", 0f);
-			LoadPlayerColor(@float, float2, float3);
+			float r = PlayerPrefs.GetFloat("redValue", 0f);
+			float g = PlayerPrefs.GetFloat("greenValue", 0f);
+			float b = PlayerPrefs.GetFloat("blueValue", 0f);
+			LoadPlayerColor(r, g, b);
 		}
 	}
 

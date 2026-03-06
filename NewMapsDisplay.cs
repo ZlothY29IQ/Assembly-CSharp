@@ -207,10 +207,11 @@ public class NewMapsDisplay : MonoBehaviour
 					await Task.Yield();
 				}
 				string info = ((mapInfoList != null && mapInfoList.Length > i2) ? mapInfoList[i2] : "");
-				NewMapData newMapData = default(NewMapData);
-				newMapData.image = lastDownloadedImage;
-				newMapData.info = info;
-				NewMapData item = newMapData;
+				NewMapData item = new NewMapData
+				{
+					image = lastDownloadedImage,
+					info = info
+				};
 				newMapDatas.Add(item);
 				lastDownloadedImage = null;
 				i = i2 + 1;

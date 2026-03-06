@@ -189,8 +189,8 @@ public class VRRigReliableState : MonoBehaviour, IWrappedSerializable, INetworkS
 	{
 		isDirty = false;
 		ReliableStateData reliableStateData = default(ReliableStateData);
-		long header2 = (reliableStateData.Header = GetHeader());
-		long[] array = GetTransferrableStates(header2).ToArray();
+		long header = (reliableStateData.Header = GetHeader());
+		long[] array = GetTransferrableStates(header).ToArray();
 		reliableStateData.TransferrableStates.CopyFrom(array, 0, array.Length);
 		reliableStateData.WearablesPackedState = wearablesPackedStates;
 		reliableStateData.LThrowableProjectileIndex = lThrowableProjectileIndex;
@@ -316,10 +316,7 @@ public class VRRigReliableState : MonoBehaviour, IWrappedSerializable, INetworkS
 				}
 			}
 		}
-		if (CosmeticsV2Spawner_Dirty.allPartsInstantiated)
-		{
-			bDock.RefreshTransferrableItems();
-		}
+		bDock.RefreshTransferrableItems();
 		bDock.myRig.UpdateFriendshipBracelet();
 		bDock.myRig.EnableBuilderResizeWatch(isBuilderWatchEnabled);
 	}

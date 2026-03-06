@@ -7,7 +7,7 @@ public class CustomMapNetworkJoinTrigger : GorillaNetworkJoinTrigger
 		return networkZone + GorillaComputer.instance.currentQueue + CustomMapLoader.LoadedMapModId.ToString() + "_" + CustomMapLoader.LoadedMapModFileId + GetDesiredGameType();
 	}
 
-	public override byte GetRoomSize()
+	public override byte GetRoomSize(bool subscribed)
 	{
 		return CustomMapLoader.GetRoomSizeForCurrentlyLoadedMap();
 	}

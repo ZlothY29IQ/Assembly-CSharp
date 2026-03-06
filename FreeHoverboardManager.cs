@@ -137,7 +137,7 @@ public class FreeHoverboardManager : NetworkSceneObject
 	[PunRPC]
 	public void DropBoard_RPC(bool boardIndex1, long positionPacked, int rotationPacked, long velocityPacked, long avelocityPacked, short colorPacked, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "DropBoard_RPC");
+		MonkeAgent.IncrementRPCCall(info, "DropBoard_RPC");
 		int boardIndex2 = (boardIndex1 ? 1 : 0);
 		DataPerPlayer orCreatePlayerData = GetOrCreatePlayerData(info.Sender.ActorNumber);
 		if ((info.Sender == PhotonNetwork.LocalPlayer || orCreatePlayerData.spamCheck.CheckCallTime(Time.unscaledTime)) && VRRigCache.Instance.TryGetVrrig(info.Sender, out var playerRig))
@@ -166,7 +166,7 @@ public class FreeHoverboardManager : NetworkSceneObject
 	[PunRPC]
 	public void GrabBoard_RPC(int ownerActorNumber, bool boardIndex1, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "GrabBoard_RPC");
+		MonkeAgent.IncrementRPCCall(info, "GrabBoard_RPC");
 		int boardIndex2 = (boardIndex1 ? 1 : 0);
 		if (NetworkSystem.Instance.GetNetPlayerByID(ownerActorNumber) == null)
 		{

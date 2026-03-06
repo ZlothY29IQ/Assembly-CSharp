@@ -19,5 +19,6 @@ public enum SceneIndex
 	MonkeBlocksShared,
 	Ranked,
 	GhostReactorDrill,
-	City
+	City,
+	GTFC
 }

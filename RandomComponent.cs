@@ -46,7 +46,7 @@ public abstract class RandomComponent<T> : MonoBehaviour
 
 	public void Reset()
 	{
-		ResetRandom(null);
+		ResetRandom();
 		_lastItem = default(T);
 		_lastItemIndex = -1;
 	}

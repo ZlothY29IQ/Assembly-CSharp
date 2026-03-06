@@ -7,7 +7,7 @@ public class PlayerCollection : MonoBehaviour
 {
 	[NonSerialized]
 	[DebugReadout]
-	public readonly List<VRRig> containedRigs = new List<VRRig>(10);
+	public readonly List<VRRig> containedRigs = new List<VRRig>(20);
 
 	private void Start()
 	{

@@ -278,15 +278,16 @@ public class BuilderConveyor : MonoBehaviour
 			BuilderPiece builderPiece = piecesOnConveyor[num];
 			if (!(builderPiece == null))
 			{
-				BuilderTable.BuilderCommand builderCommand = default(BuilderTable.BuilderCommand);
-				builderCommand.type = BuilderTable.BuilderCommandType.Recycle;
-				builderCommand.pieceId = builderPiece.pieceId;
-				builderCommand.localPosition = builderPiece.transform.position;
-				builderCommand.localRotation = builderPiece.transform.rotation;
-				builderCommand.player = NetworkSystem.Instance.LocalPlayer;
-				builderCommand.isLeft = false;
-				builderCommand.parentPieceId = -1;
-				BuilderTable.BuilderCommand cmd = builderCommand;
+				BuilderTable.BuilderCommand cmd = new BuilderTable.BuilderCommand
+				{
+					type = BuilderTable.BuilderCommandType.Recycle,
+					pieceId = builderPiece.pieceId,
+					localPosition = builderPiece.transform.position,
+					localRotation = builderPiece.transform.rotation,
+					player = NetworkSystem.Instance.LocalPlayer,
+					isLeft = false,
+					parentPieceId = -1
+				};
 				table.ExecutePieceRecycled(cmd);
 			}
 		}

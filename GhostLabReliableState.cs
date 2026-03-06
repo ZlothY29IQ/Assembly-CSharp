@@ -4,7 +4,7 @@ using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine.Scripting;
 
-[NetworkBehaviourWeaved(11)]
+[NetworkBehaviourWeaved(21)]
 public class GhostLabReliableState : NetworkComponent
 {
 	public GhostLab.EntranceDoorsState doorState;
@@ -14,12 +14,12 @@ public class GhostLabReliableState : NetworkComponent
 	public bool[] singleDoorOpen;
 
 	[WeaverGenerated]
-	[DefaultForProperty("NetData", 0, 11)]
+	[DefaultForProperty("NetData", 0, 21)]
 	[DrawIf("IsEditorWritable", true, CompareOperator.Equal, DrawIfMode.ReadOnly)]
 	private GhostLabData _NetData;
 
 	[Networked]
-	[NetworkedWeaved(0, 11)]
+	[NetworkedWeaved(0, 21)]
 	private unsafe GhostLabData NetData
 	{
 		get
@@ -161,7 +161,7 @@ public class GhostLabReliableState : NetworkComponent
 			}
 			info = RpcInfo.FromLocal(base.Runner, RpcChannel.Reliable, RpcHostMode.SourceIsServer);
 		}
-		GorillaNot.IncrementRPCCall(info, "RPC_RemoteEntranceDoorState");
+		MonkeAgent.IncrementRPCCall(info, "RPC_RemoteEntranceDoorState");
 		if (base.IsMine)
 		{
 			doorState = newState;
@@ -215,7 +215,7 @@ public class GhostLabReliableState : NetworkComponent
 			}
 			info = RpcInfo.FromLocal(base.Runner, RpcChannel.Reliable, RpcHostMode.SourceIsServer);
 		}
-		GorillaNot.IncrementRPCCall(info, "RPC_RemoteSingleDoorState");
+		MonkeAgent.IncrementRPCCall(info, "RPC_RemoteSingleDoorState");
 		if (base.IsMine && doorIndex < singleDoorCount)
 		{
 			singleDoorOpen[doorIndex] = !singleDoorOpen[doorIndex];
@@ -225,7 +225,7 @@ public class GhostLabReliableState : NetworkComponent
 	[PunRPC]
 	public void RemoteEntranceDoorState(GhostLab.EntranceDoorsState newState, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "RemoteEntranceDoorState");
+		MonkeAgent.IncrementRPCCall(info, "RemoteEntranceDoorState");
 		if (base.IsMine)
 		{
 			doorState = newState;
@@ -235,7 +235,7 @@ public class GhostLabReliableState : NetworkComponent
 	[PunRPC]
 	public void RemoteSingleDoorState(int doorIndex, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "RemoteSingleDoorState");
+		MonkeAgent.IncrementRPCCall(info, "RemoteSingleDoorState");
 		if (base.IsMine && doorIndex < singleDoorCount)
 		{
 			singleDoorOpen[doorIndex] = !singleDoorOpen[doorIndex];

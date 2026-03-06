@@ -50,7 +50,7 @@ public static class CustomSerializer
 									{
 										if (!(obj is byte value6))
 										{
-											if (!(obj is Enum @enum))
+											if (!(obj is Enum obj2))
 											{
 												if (!(obj is NetEventOptions options))
 												{
@@ -76,8 +76,8 @@ public static class CustomSerializer
 											else
 											{
 												writer.Write((byte)10);
-												writer.Write(Convert.ToInt32(@enum));
-												writer.Write(@enum.GetType().AssemblyQualifiedName);
+												writer.Write(Convert.ToInt32(obj2));
+												writer.Write(obj2.GetType().AssemblyQualifiedName);
 											}
 										}
 										else

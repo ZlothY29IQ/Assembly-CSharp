@@ -15,8 +15,6 @@ public class VRMap
 
 	public Vector3 trackingRotationOffset;
 
-	public Transform headTransform;
-
 	internal NetworkVector3 netSyncPos = new NetworkVector3();
 
 	public Quaternion syncRotation;

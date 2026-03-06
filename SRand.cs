@@ -267,8 +267,8 @@ public struct SRand
 			int index2 = num;
 			T val = list[num];
 			T val2 = list[count];
-			T val4 = (list[index] = val);
-			val4 = (list[index2] = val2);
+			T val3 = (list[index] = val);
+			val3 = (list[index2] = val2);
 		}
 	}
 

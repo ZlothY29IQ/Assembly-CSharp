@@ -24,9 +24,6 @@ public class SIGadgetAirGrab : SIGadget
 	private GameSnappable m_snappable;
 
 	[SerializeField]
-	private Transform m_yoyoDefaultPosXform;
-
-	[SerializeField]
 	private GameButtonActivatable m_buttonActivatable;
 
 	[SerializeField]
@@ -36,10 +33,13 @@ public class SIGadgetAirGrab : SIGadget
 	private float m_inputDeactivateThreshold = 0.25f;
 
 	[SerializeField]
-	private MeshRenderer m_yoyoRenderer;
+	private AudioSource m_audioSource;
 
 	[SerializeField]
-	private AudioSource m_audioSource;
+	private SoundBankPlayer onGrabSound;
+
+	[SerializeField]
+	private SoundBankPlayer rechargeSound;
 
 	[SerializeField]
 	public AudioClip[] m_clips;
@@ -62,10 +62,18 @@ public class SIGadgetAirGrab : SIGadget
 	private float _maxDashSpeed;
 
 	[SerializeField]
-	private float m_maxDashSpeedDefault = 11f;
+	private float m_maxDashSpeedDefault = 7f;
 
 	[SerializeField]
-	private float m_maxDashSpeedUpgraded = 13f;
+	private float m_maxDashSpeedUpgraded = 9f;
+
+	private float _maxHoldTime;
+
+	[SerializeField]
+	private float m_maxHoldTimeDefault = 3f;
+
+	[SerializeField]
+	private float m_maxHoldTimeUpgraded = 5f;
 
 	[Tooltip("Maps yank speed to dash speed.\nX = Yank Speed (min to max)\nY = Dash Speed (min to max).")]
 	[SerializeField]
@@ -87,7 +95,13 @@ public class SIGadgetAirGrab : SIGadget
 	private float m_cooldownDurationUpgrade = 5f;
 
 	[SerializeField]
+	private int m_maxSuperchargeUses = 2;
+
+	[SerializeField]
 	private Transform m_airGrabXform;
+
+	[SerializeField]
+	private GameObject m_canActivateIndicator;
 
 	private bool _isActivated;
 
@@ -113,6 +127,16 @@ public class SIGadgetAirGrab : SIGadget
 
 	private EState _state;
 
+	private ResettableUseCounter _groundedUseCounter;
+
+	private bool hasGravityOverride;
+
+	private float _grabStartTime;
+
+	private Vector3 _grabXformInitialScale;
+
+	private Vector3 lastRequestedPlayerPos;
+
 	private int _HandIndex
 	{
 		get
@@ -129,7 +153,7 @@ public class SIGadgetAirGrab : SIGadget
 		}
 	}
 
-	private void Start()
+	private void Awake()
 	{
 		GameEntity obj = gameEntity;
 		obj.OnGrabbed = (Action)Delegate.Combine(obj.OnGrabbed, new Action(_HandleStartInteraction));
@@ -139,6 +163,7 @@ public class SIGadgetAirGrab : SIGadget
 		obj3.OnReleased = (Action)Delegate.Combine(obj3.OnReleased, new Action(_HandleStopInteraction));
 		GameEntity obj4 = gameEntity;
 		obj4.OnUnsnapped = (Action)Delegate.Combine(obj4.OnUnsnapped, new Action(_HandleStopInteraction));
+		_groundedUseCounter = new ResettableUseCounter(1, m_maxSuperchargeUses, OnRecharge);
 		AudioClip[] clips = m_clips;
 		foreach (AudioClip audioClip in clips)
 		{
@@ -146,6 +171,15 @@ public class SIGadgetAirGrab : SIGadget
 			{
 				audioClip.LoadAudioData();
 			}
+		}
+		_grabXformInitialScale = m_airGrabXform.localScale;
+	}
+
+	private void OnRecharge(bool recharged)
+	{
+		if (recharged)
+		{
+			rechargeSound.Play();
 		}
 	}
 
@@ -164,11 +198,25 @@ public class SIGadgetAirGrab : SIGadget
 		}
 	}
 
+	private void ClearGravityOverride()
+	{
+		GTPlayer.Instance.UnsetGravityOverride(this);
+		hasGravityOverride = false;
+	}
+
+	private new void OnDisable()
+	{
+		if (hasGravityOverride)
+		{
+			ClearGravityOverride();
+		}
+	}
+
 	private void _HandleStartInteraction()
 	{
 		if (!ApplicationQuittingState.IsQuitting)
 		{
-			_attachedPlayerActorNr = GetAttachedPlayerActorNumber();
+			_attachedPlayerActorNr = gameEntity.AttachedPlayerActorNr;
 			_attachedNetPlayer = NetworkSystem.Instance.GetPlayer(_attachedPlayerActorNr);
 			if (GamePlayer.TryGetGamePlayer(_attachedPlayerActorNr, out var out_gamePlayer))
 			{
@@ -179,9 +227,14 @@ public class SIGadgetAirGrab : SIGadget
 
 	private void _HandleStopInteraction()
 	{
+		if (hasGravityOverride)
+		{
+			ClearGravityOverride();
+		}
 		_attachedPlayerActorNr = -1;
 		_attachedNetPlayer = null;
 		_attachedVRRig = null;
+		m_airGrabXform.gameObject.SetActive(value: false);
 		if (gameEntity.IsAuthority())
 		{
 			if (_state == EState.DashUsed)
@@ -203,51 +256,83 @@ public class SIGadgetAirGrab : SIGadget
 		}
 		_wasActivated = _isActivated;
 		_isActivated = _CheckInput();
+		GTPlayer instance = GTPlayer.Instance;
 		if (Time.unscaledTime < _airGrabTime + m_slipperySurfacesTime)
 		{
-			GTPlayer.Instance.SetMaximumSlipThisFrame();
+			instance.SetMaximumSlipThisFrame();
 		}
 		switch (_state)
 		{
 		case EState.Idle:
 			if (_isActivated)
 			{
-				_PlayHaptic(0.1f);
-				SetStateAuthority(EState.StartAirGrabbing);
+				if (_groundedUseCounter.TryUse())
+				{
+					UpdateUsageIndicator();
+					_PlayHaptic(2f);
+					SetStateAuthority(EState.StartAirGrabbing);
+				}
+			}
+			else if (instance.IsGroundedButt || instance.IsGroundedHand)
+			{
+				_groundedUseCounter.Reset();
+				UpdateUsageIndicator();
 			}
 			break;
 		case EState.StartAirGrabbing:
 			if (_isActivated)
 			{
+				_grabStartTime = Time.unscaledTime;
 				_airReleaseSpeed = 0f;
-				if (m_airGrabXform != null)
-				{
-					m_airGrabXform.SetParent(null, worldPositionStays: false);
-					m_airGrabXform.position = ((_HandIndex == 0) ? _attachedVRRig.leftHand.overrideTarget.position : _attachedVRRig.rightHand.overrideTarget.position);
-					m_airGrabXform.gameObject.SetActive(value: true);
-				}
+				m_airGrabXform.SetParent(null, worldPositionStays: false);
+				m_airGrabXform.position = GTPlayer.Instance.GetControllerTransform(_HandIndex == 0).position;
+				m_airGrabXform.gameObject.SetActive(value: true);
+				m_airGrabXform.transform.localScale = _grabXformInitialScale;
+				GTPlayer.Instance.SetVelocity(Vector3.zero);
+				lastRequestedPlayerPos = GTPlayer.Instance.transform.position;
+				GTPlayer.Instance.SetGravityOverride(this, GravityOverrideFunction);
+				hasGravityOverride = true;
 				SetStateAuthority(EState.PreparedToDash);
 			}
-			else if (m_airGrabXform != null)
+			else
 			{
 				m_airGrabXform.transform.parent = base.transform;
 				m_airGrabXform.gameObject.SetActive(value: false);
 			}
 			break;
 		case EState.PreparedToDash:
+		{
 			if (!_isActivated)
 			{
 				_DoDash();
+				break;
 			}
-			else
+			if (Time.unscaledTime > _grabStartTime + _maxHoldTime)
 			{
-				_DoAirGrab();
+				_DoDash();
+				break;
 			}
+			float num = (Time.unscaledTime - _grabStartTime) / _maxHoldTime;
+			m_airGrabXform.localScale = _grabXformInitialScale * (1f - num);
+			_UpdateAirGrab();
 			break;
+		}
 		case EState.DashUsed:
+			m_airGrabXform.transform.parent = base.transform;
+			m_airGrabXform.gameObject.SetActive(value: false);
+			ClearGravityOverride();
 			SetStateAuthority(EState.Idle);
 			break;
 		}
+	}
+
+	private void UpdateUsageIndicator()
+	{
+		m_canActivateIndicator?.SetActive(_groundedUseCounter.IsReady);
+	}
+
+	private void GravityOverrideFunction(GTPlayer player)
+	{
 	}
 
 	protected override void OnUpdateRemote(float dt)
@@ -257,6 +342,12 @@ public class SIGadgetAirGrab : SIGadget
 		if (eState != _state)
 		{
 			_SetStateShared(eState);
+			if (_state == EState.PreparedToDash)
+			{
+				m_airGrabXform.transform.parent = base.transform;
+				m_airGrabXform.transform.position = ((_HandIndex == 0) ? GetAttachedPlayerRig().leftHand : GetAttachedPlayerRig().rightHand).GetExtrapolatedControllerPosition();
+				m_airGrabXform.gameObject.SetActive(value: true);
+			}
 		}
 	}
 
@@ -285,16 +376,18 @@ public class SIGadgetAirGrab : SIGadget
 		_state = newState;
 		switch (_state)
 		{
+		case EState.Idle:
+			m_airGrabXform.gameObject.SetActive(value: false);
+			break;
 		case EState.StartAirGrabbing:
 			if (state != EState.PreparedToDash)
 			{
-				_PlayAudio(1);
+				onGrabSound.Play();
 			}
 			break;
 		case EState.DashUsed:
 			_PlayAudio(2);
 			break;
-		case EState.Idle:
 		case EState.PreparedToDash:
 			break;
 		}
@@ -303,26 +396,30 @@ public class SIGadgetAirGrab : SIGadget
 	private bool _CheckInput()
 	{
 		float sensitivity = (_wasActivated ? m_inputDeactivateThreshold : m_inputActivateThreshold);
-		return m_buttonActivatable.CheckInput(checkHeld: true, checkSnapped: true, sensitivity);
+		return m_buttonActivatable.CheckInput(sensitivity);
 	}
 
-	private void _DoAirGrab()
+	private void _UpdateAirGrab()
 	{
 		GTPlayer instance = GTPlayer.Instance;
-		Transform transform = ((_HandIndex == 0) ? instance.LeftHand.controllerTransform : instance.RightHand.controllerTransform);
-		Vector3 vector = m_airGrabXform.position - transform.position;
-		instance.RigidbodyMovePosition(instance.transform.position + vector);
+		Vector3 vector = instance.transform.position - lastRequestedPlayerPos;
+		m_airGrabXform.position += vector;
+		Transform controllerTransform = instance.GetControllerTransform(_HandIndex == 0);
+		Vector3 vector2 = m_airGrabXform.position - controllerTransform.position;
+		instance.SetVelocity(Vector3.zero);
+		lastRequestedPlayerPos = instance.transform.position + vector2;
+		instance.RigidbodyMovePosition(lastRequestedPlayerPos);
 		_ = GamePlayerLocal.instance.GetHandVelocity(_HandIndex).magnitude;
 	}
 
 	private void _DoDash()
 	{
 		_airGrabTime = Time.unscaledTime;
-		Vector3 handVelocity = GamePlayerLocal.instance.GetHandVelocity(_HandIndex);
-		float num = _CalculateDashSpeed(handVelocity.magnitude);
+		Vector3 averagedVelocity = GTPlayer.Instance.AveragedVelocity;
+		float num = _CalculateDashSpeed(averagedVelocity.magnitude);
 		GTPlayer instance = GTPlayer.Instance;
 		instance.SetMaximumSlipThisFrame();
-		instance.SetVelocity(handVelocity.normalized * (0f - num));
+		instance.SetVelocity(averagedVelocity.normalized * num);
 		_PlayHaptic(2f);
 		SetStateAuthority(EState.DashUsed);
 	}
@@ -351,6 +448,7 @@ public class SIGadgetAirGrab : SIGadget
 
 	public override void ApplyUpgradeNodes(SIUpgradeSet withUpgrades)
 	{
-		_maxDashSpeed = (withUpgrades.Contains(SIUpgradeType.Dash_Yoyo_Speed) ? m_maxDashSpeedUpgraded : m_maxDashSpeedDefault);
+		_maxDashSpeed = (withUpgrades.Contains(SIUpgradeType.AirControl_AirGrab_Speed) ? m_maxDashSpeedUpgraded : m_maxDashSpeedDefault);
+		_maxHoldTime = (withUpgrades.Contains(SIUpgradeType.AirControl_AirGrab_HoldTime) ? m_maxHoldTimeUpgraded : m_maxHoldTimeDefault);
 	}
 }

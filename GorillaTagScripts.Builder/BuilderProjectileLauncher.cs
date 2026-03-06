@@ -67,14 +67,15 @@ public class BuilderProjectileLauncher : MonoBehaviour, IBuilderPieceFunctional,
 				allProjectiles.Remove(num);
 			}
 			allProjectiles.Add(num, component);
-			SlingshotProjectile.AOEKnockbackConfig aOEKnockbackConfig = default(SlingshotProjectile.AOEKnockbackConfig);
-			aOEKnockbackConfig.aeoOuterRadius = knockbackConfig.aeoOuterRadius * projectileScale;
-			aOEKnockbackConfig.aeoInnerRadius = knockbackConfig.aeoInnerRadius * projectileScale;
-			aOEKnockbackConfig.applyAOEKnockback = knockbackConfig.applyAOEKnockback;
-			aOEKnockbackConfig.impactVelocityThreshold = knockbackConfig.impactVelocityThreshold * projectileScale;
-			aOEKnockbackConfig.knockbackVelocity = knockbackConfig.knockbackVelocity * projectileScale;
-			aOEKnockbackConfig.playerProximityEffect = knockbackConfig.playerProximityEffect;
-			SlingshotProjectile.AOEKnockbackConfig value = aOEKnockbackConfig;
+			SlingshotProjectile.AOEKnockbackConfig value = new SlingshotProjectile.AOEKnockbackConfig
+			{
+				aeoOuterRadius = knockbackConfig.aeoOuterRadius * projectileScale,
+				aeoInnerRadius = knockbackConfig.aeoInnerRadius * projectileScale,
+				applyAOEKnockback = knockbackConfig.applyAOEKnockback,
+				impactVelocityThreshold = knockbackConfig.impactVelocityThreshold * projectileScale,
+				knockbackVelocity = knockbackConfig.knockbackVelocity * projectileScale,
+				playerProximityEffect = knockbackConfig.playerProximityEffect
+			};
 			component.aoeKnockbackConfig = value;
 			component.gravityMultiplier = gravityMultiplier;
 			component.Launch(launchPosition.position, launchVelocity * projectileScale * launchPosition.up, this, num, projectileScale, timeStamp);

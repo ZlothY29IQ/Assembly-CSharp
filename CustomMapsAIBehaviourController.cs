@@ -27,7 +27,7 @@ public class CustomMapsAIBehaviourController : MonoBehaviour, IGameEntityCompone
 
 	public short luaAgentID;
 
-	private List<VRRig> tempRigs = new List<VRRig>(10);
+	private List<VRRig> tempRigs = new List<VRRig>(20);
 
 	private static RaycastHit[] visibilityHits = new RaycastHit[10];
 

@@ -2,7 +2,7 @@ using GorillaTag;
 using UnityEngine;
 
 [DefaultExecutionOrder(2001)]
-public class ObjectHierarchyFlattener : MonoBehaviour
+public class ObjectHierarchyFlattener : MonoBehaviour, IGorillaSimpleBackgroundWorker
 {
 	public const int k_monoDefaultExecutionOrder = 2001;
 
@@ -31,15 +31,20 @@ public class ObjectHierarchyFlattener : MonoBehaviour
 
 	private bool isAttachedToOverride;
 
+	private bool initialized;
+
+	private bool abandonWork = true;
+
 	private void ResetTransform()
 	{
-		if (!originalParentGO.activeInHierarchy)
+		if (initialized && (!(originalParentGO != null) || !originalParentGO.activeInHierarchy))
 		{
 			base.transform.SetParent(originalParentTransform);
 			isAttachedToOverride = false;
 			base.transform.localPosition = originalLocalPosition;
 			base.transform.localRotation = originalLocalRotation;
 			base.transform.localScale = originalScale;
+			initialized = false;
 		}
 	}
 
@@ -70,6 +75,39 @@ public class ObjectHierarchyFlattener : MonoBehaviour
 
 	private void OnEnable()
 	{
+		abandonWork = false;
+		GorillaSimpleBackgroundWorkerManager.WorkerSignup(this);
+	}
+
+	private void OnDisable()
+	{
+		abandonWork = true;
+		ObjectHierarchyFlattenerManager.UnregisterOHF(this);
+		if (base.enabled)
+		{
+			Invoke("ResetTransformIfStillDisabled", 0f);
+		}
+	}
+
+	private void OnDestroy()
+	{
+		CancelInvoke();
+	}
+
+	private void ResetTransformIfStillDisabled()
+	{
+		if (!base.isActiveAndEnabled)
+		{
+			ResetTransform();
+		}
+	}
+
+	public void SimpleWork()
+	{
+		if (initialized || abandonWork)
+		{
+			return;
+		}
 		if (trackTransformOfParent)
 		{
 			ObjectHierarchyFlattenerManager.RegisterOHF(this);
@@ -92,24 +130,6 @@ public class ObjectHierarchyFlattener : MonoBehaviour
 		}
 		base.transform.SetParent((overrideParentTransform != null) ? overrideParentTransform : null);
 		isAttachedToOverride = true;
-	}
-
-	private void OnDisable()
-	{
-		ObjectHierarchyFlattenerManager.UnregisterOHF(this);
-		Invoke("ResetTransformIfStillDisabled", 0f);
-	}
-
-	private void OnDestroy()
-	{
-		CancelInvoke();
-	}
-
-	private void ResetTransformIfStillDisabled()
-	{
-		if (!base.isActiveAndEnabled)
-		{
-			ResetTransform();
-		}
+		initialized = true;
 	}
 }

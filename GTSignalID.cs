@@ -50,8 +50,9 @@ public struct GTSignalID : IEquatable<GTSignalID>, IEquatable<int>
 
 	public static implicit operator GTSignalID(string s)
 	{
-		GTSignalID result = default(GTSignalID);
-		result._id = GTSignal.ComputeID(s);
-		return result;
+		return new GTSignalID
+		{
+			_id = GTSignal.ComputeID(s)
+		};
 	}
 }

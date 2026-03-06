@@ -38,15 +38,15 @@ public class GRAbilityChase : GRAbilityBase
 		{
 			int num = 8;
 			targetOffsets = new List<Vector3>(num);
-			float x2 = 1f;
+			float x = 1f;
 			for (int i = 0; i < num; i++)
 			{
-				Vector3 vector = new Vector3(x2, 0f, 0f);
+				Vector3 vector = new Vector3(x, 0f, 0f);
 				vector = Quaternion.Euler(0f, (float)i / (float)num * 360f, 0f) * vector;
 				targetOffsets.Add(vector);
 			}
 			System.Random random = new System.Random();
-			List<Vector3> collection = targetOffsets.OrderBy((Vector3 x) => random.Next()).ToList();
+			List<Vector3> collection = targetOffsets.OrderBy((Vector3 vector2) => random.Next()).ToList();
 			targetOffsets.Clear();
 			targetOffsets.AddRange(collection);
 		}

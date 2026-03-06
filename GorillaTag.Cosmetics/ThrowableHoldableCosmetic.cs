@@ -142,7 +142,7 @@ public class ThrowableHoldableCosmetic : TransferrableObject
 		{
 			return;
 		}
-		GorillaNot.IncrementRPCCall(info, "OnThrowEvent");
+		MonkeAgent.IncrementRPCCall(info, "OnThrowEvent");
 		if (firecrackerCallLimiter.CheckCallTime(Time.time) && args[0] is Vector3 v && args[1] is Quaternion q && args[2] is Vector3 inVel && args[3] is float value)
 		{
 			Vector3 velocity = targetRig.ClampVelocityRelativeToPlayerSafe(inVel, 40f);
@@ -166,7 +166,7 @@ public class ThrowableHoldableCosmetic : TransferrableObject
 		IProjectile component = ObjectPools.instance.Instantiate(currentProjectileHash).GetComponent<IProjectile>();
 		if (component is FirecrackerProjectile firecrackerProjectile)
 		{
-			if (networkedStateEvents != 0)
+			if (networkedStateEvents != SyncOptions.None)
 			{
 				int state = (int)(itemState & (ItemStates)(-65));
 				firecrackerProjectile.SetTransferrableState(networkedStateEvents, state);
@@ -197,7 +197,7 @@ public class ThrowableHoldableCosmetic : TransferrableObject
 		{
 			return;
 		}
-		if (IsLocalObject() && networkedStateEvents != 0 && resetOnDocked)
+		if (IsLocalObject() && networkedStateEvents != SyncOptions.None && resetOnDocked)
 		{
 			switch (networkedStateEvents)
 			{

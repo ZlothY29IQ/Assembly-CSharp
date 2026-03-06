@@ -154,7 +154,7 @@ public class PlayerTimerManager : MonoBehaviourPunCallbacks
 	{
 		if (info.Sender.IsMasterClient)
 		{
-			GorillaNot.IncrementRPCCall(info, "InitTimersMasterRPC");
+			MonkeAgent.IncrementRPCCall(info, "InitTimersMasterRPC");
 			if (ValidateCallLimits(RPC.InitTimersMaster, info) && !areTimersInitialized)
 			{
 				DeserializeTimerState(bytes.Length, bytes);
@@ -193,25 +193,25 @@ public class PlayerTimerManager : MonoBehaviourPunCallbacks
 		}
 		MemoryStream memoryStream = new MemoryStream(bytes);
 		BinaryReader binaryReader = new BinaryReader(memoryStream);
-		this.playerTimerData.Clear();
+		playerTimerData.Clear();
 		try
 		{
 			List<Player> list = PhotonNetwork.PlayerList.ToList();
 			if (bytes.Length < 4)
 			{
-				this.playerTimerData.Clear();
+				playerTimerData.Clear();
 				return;
 			}
 			int num = binaryReader.ReadInt32();
 			if (num < 0 || num > 10)
 			{
-				this.playerTimerData.Clear();
+				playerTimerData.Clear();
 				return;
 			}
 			int num2 = 17;
 			if (memoryStream.Position + num2 * num > bytes.Length)
 			{
-				this.playerTimerData.Clear();
+				playerTimerData.Clear();
 				return;
 			}
 			for (int i = 0; i < num; i++)
@@ -223,20 +223,21 @@ public class PlayerTimerManager : MonoBehaviourPunCallbacks
 				uint lastTimerDuration = binaryReader.ReadUInt32();
 				if (list.FindIndex((Player x) => x.ActorNumber == actorNum) >= 0)
 				{
-					PlayerTimerData playerTimerData = default(PlayerTimerData);
-					playerTimerData.startTimeStamp = startTimeStamp;
-					playerTimerData.endTimeStamp = endTimeStamp;
-					playerTimerData.isStarted = isStarted;
-					playerTimerData.lastTimerDuration = lastTimerDuration;
-					PlayerTimerData value = playerTimerData;
-					this.playerTimerData.TryAdd(actorNum, value);
+					PlayerTimerData value = new PlayerTimerData
+					{
+						startTimeStamp = startTimeStamp,
+						endTimeStamp = endTimeStamp,
+						isStarted = isStarted,
+						lastTimerDuration = lastTimerDuration
+					};
+					playerTimerData.TryAdd(actorNum, value);
 				}
 			}
 		}
 		catch (Exception value2)
 		{
 			Console.WriteLine(value2);
-			this.playerTimerData.Clear();
+			playerTimerData.Clear();
 		}
 		if (Time.time - requestSendTime < 5f && IsLocalTimerStarted() != localPlayerRequestedStart)
 		{
@@ -275,7 +276,7 @@ public class PlayerTimerManager : MonoBehaviourPunCallbacks
 		{
 			return;
 		}
-		GorillaNot.IncrementRPCCall(info, "RequestTimerToggleRPC");
+		MonkeAgent.IncrementRPCCall(info, "RequestTimerToggleRPC");
 		if (timerToggleLimiters.TryGetValue(info.Sender.ActorNumber, out var value))
 		{
 			if (!value.CheckCallTime(Time.time))
@@ -313,7 +314,7 @@ public class PlayerTimerManager : MonoBehaviourPunCallbacks
 		{
 			return;
 		}
-		GorillaNot.IncrementRPCCall(info, "TimerToggledMasterRPC");
+		MonkeAgent.IncrementRPCCall(info, "TimerToggledMasterRPC");
 		if (ValidateCallLimits(RPC.ToggleTimerMaster, info) && player != null && areTimersInitialized)
 		{
 			int num = toggleTimeStamp;
@@ -332,7 +333,7 @@ public class PlayerTimerManager : MonoBehaviourPunCallbacks
 
 	private void OnToggleTimerForPlayer(bool startTimer, Player player, int toggleTime)
 	{
-		if (this.playerTimerData.TryGetValue(player.ActorNumber, out var value))
+		if (playerTimerData.TryGetValue(player.ActorNumber, out var value))
 		{
 			if (startTimer && !value.isStarted)
 			{
@@ -351,17 +352,18 @@ public class PlayerTimerManager : MonoBehaviourPunCallbacks
 				value.lastTimerDuration = (uint)(value.endTimeStamp - value.startTimeStamp);
 				OnTimerStopped?.Invoke(player.ActorNumber, value.endTimeStamp - value.startTimeStamp);
 			}
-			this.playerTimerData[player.ActorNumber] = value;
+			playerTimerData[player.ActorNumber] = value;
 		}
 		else
 		{
-			PlayerTimerData playerTimerData = default(PlayerTimerData);
-			playerTimerData.startTimeStamp = (startTimer ? toggleTime : 0);
-			playerTimerData.endTimeStamp = ((!startTimer) ? toggleTime : 0);
-			playerTimerData.isStarted = startTimer;
-			playerTimerData.lastTimerDuration = 0u;
-			PlayerTimerData value2 = playerTimerData;
-			this.playerTimerData.TryAdd(player.ActorNumber, value2);
+			PlayerTimerData value2 = new PlayerTimerData
+			{
+				startTimeStamp = (startTimer ? toggleTime : 0),
+				endTimeStamp = ((!startTimer) ? toggleTime : 0),
+				isStarted = startTimer,
+				lastTimerDuration = 0u
+			};
+			playerTimerData.TryAdd(player.ActorNumber, value2);
 			OnTimerStartedForPlayer?.Invoke(player.ActorNumber);
 			if (player.IsLocal)
 			{

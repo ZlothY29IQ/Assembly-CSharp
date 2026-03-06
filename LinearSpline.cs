@@ -156,15 +156,15 @@ public class LinearSpline : MonoBehaviour
 		RefreshControlPoints();
 		Gizmos.color = Color.yellow;
 		int num = gizmoResolution;
-		Vector3 from = Evaluate(0f);
+		Vector3 vector = Evaluate(0f);
 		for (int i = 1; i <= num; i++)
 		{
 			float t = (float)i / (float)num;
-			Vector3 vector = Evaluate(t);
-			Gizmos.DrawLine(from, vector);
-			from = vector;
+			Vector3 vector2 = Evaluate(t);
+			Gizmos.DrawLine(vector, vector2);
+			vector = vector2;
 		}
 		Vector3 to = Evaluate(1f);
-		Gizmos.DrawLine(from, to);
+		Gizmos.DrawLine(vector, to);
 	}
 }

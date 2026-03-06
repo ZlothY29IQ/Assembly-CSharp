@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Text;
-using Newtonsoft.Json;
 using PlayFab;
 using UnityEngine;
 
@@ -30,8 +29,7 @@ public class TitleDataFeatureFlags
 	{
 		PlayFabTitleDataCache.Instance.GetTitleData(TitleDataKey, delegate(string json)
 		{
-			FeatureFlagListData featureFlagListData = JsonUtility.FromJson<FeatureFlagListData>(json);
-			FeatureFlagData[] flags = featureFlagListData.flags;
+			FeatureFlagData[] flags = JsonUtility.FromJson<FeatureFlagListData>(json).flags;
 			foreach (FeatureFlagData featureFlagData in flags)
 			{
 				if (featureFlagData.valueType == "percent")
@@ -44,7 +42,6 @@ public class TitleDataFeatureFlags
 					flagValueByUser.AddOrUpdate(featureFlagData.name, featureFlagData.alwaysOnForUsers);
 				}
 			}
-			Debug.Log($"GorillaServer: Fetched flags ({featureFlagListData})");
 			ready = true;
 		}, delegate(PlayFabError e)
 		{
@@ -55,51 +52,26 @@ public class TitleDataFeatureFlags
 
 	public bool IsEnabledForUser(string flagName)
 	{
-		logSent.TryGetValue(flagName, out var value);
+		logSent.TryGetValue(flagName, out var _);
 		logSent[flagName] = true;
 		string playFabPlayerId = PlayFabAuthenticator.instance.GetPlayFabPlayerId();
-		if (!value)
-		{
-			Debug.Log("GorillaServer: Checking flag " + flagName + " for " + playFabPlayerId + "\nFlag values:\n" + JsonConvert.SerializeObject(flagValueByName) + "\n\nDefaults:\n" + JsonConvert.SerializeObject(defaults));
-		}
 		if (flagValueByUser.TryGetValue(flagName, out var value2) && value2 != null && value2.Contains(playFabPlayerId))
 		{
 			return true;
 		}
+		bool value4;
 		if (!flagValueByName.TryGetValue(flagName, out var value3))
 		{
-			if (!value)
-			{
-				Debug.Log("GorillaServer: Returning default");
-			}
-			bool value4;
 			return defaults.TryGetValue(flagName, out value4) && value4;
-		}
-		if (!value)
-		{
-			Debug.Log($"GorillaServer: Rollout % is {value3}");
 		}
 		if (value3 <= 0)
 		{
-			if (!value)
-			{
-				Debug.Log("GorillaServer: " + flagName + " is off (<=0%).");
-			}
 			return false;
 		}
 		if (value3 >= 100)
 		{
-			if (!value)
-			{
-				Debug.Log("GorillaServer: " + flagName + " is on (>=100%).");
-			}
 			return true;
 		}
-		uint num = XXHash32.Compute(Encoding.UTF8.GetBytes(playFabPlayerId)) % 100;
-		if (!value)
-		{
-			Debug.Log($"GorillaServer: Partial rollout, seed = {num} flag value = {num < value3}");
-		}
-		return num < value3;
+		return XXHash32.Compute(Encoding.UTF8.GetBytes(playFabPlayerId)) % 100 < value3;
 	}
 }

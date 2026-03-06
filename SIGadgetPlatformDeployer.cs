@@ -37,9 +37,6 @@ public class SIGadgetPlatformDeployer : SIGadget, I_SIDisruptable, IEnergyGadget
 
 	[Header("Activation")]
 	[SerializeField]
-	private bool canActivateWhileHeld = true;
-
-	[SerializeField]
 	private bool isInstancePlace;
 
 	[SerializeField]
@@ -143,7 +140,7 @@ public class SIGadgetPlatformDeployer : SIGadget, I_SIDisruptable, IEnergyGadget
 		remainingRechargeTime = Mathf.Max(remainingRechargeTime - dt, 0f);
 		int num2 = Mathf.CeilToInt(remainingRechargeTime / chargeRecoveryTime);
 		chargeDisplay.UpdateDisplay(maxCharges - num2);
-		if (num2 != num && IsEquippedLocal())
+		if (num2 != num && gameEntity.IsHeldOrSnappedByLocalPlayer)
 		{
 			rechargeSFX.Play();
 			if (FindAttachedHand(out var isLeft))
@@ -151,15 +148,6 @@ public class SIGadgetPlatformDeployer : SIGadget, I_SIDisruptable, IEnergyGadget
 				GorillaTagger.Instance.StartVibration(isLeft, GorillaTagger.Instance.tapHapticStrength * 0.5f, GorillaTagger.Instance.tapHapticDuration * 0.5f);
 			}
 		}
-	}
-
-	protected override bool IsEquippedLocal()
-	{
-		if (!canActivateWhileHeld || !gameEntity.IsHeldByLocalPlayer())
-		{
-			return gameEntity.IsSnappedByLocalPlayer();
-		}
-		return true;
 	}
 
 	protected override void OnUpdateAuthority(float dt)
@@ -215,7 +203,7 @@ public class SIGadgetPlatformDeployer : SIGadget, I_SIDisruptable, IEnergyGadget
 			SetState(state);
 		}
 		State state2 = this.state;
-		if (state2 != 0 && state2 == State.Deploying)
+		if (state2 != State.Idle && state2 == State.Deploying)
 		{
 			UpdatePreview();
 		}
@@ -223,7 +211,7 @@ public class SIGadgetPlatformDeployer : SIGadget, I_SIDisruptable, IEnergyGadget
 
 	private bool CheckInitInputs()
 	{
-		if (!buttonActivatable.CheckInput(canActivateWhileHeld, checkSnapped: true, inputSensitivity))
+		if (!buttonActivatable.CheckInput(inputSensitivity))
 		{
 			return false;
 		}
@@ -243,7 +231,7 @@ public class SIGadgetPlatformDeployer : SIGadget, I_SIDisruptable, IEnergyGadget
 
 	private bool CheckReleaseInputs()
 	{
-		return !buttonActivatable.CheckInput(canActivateWhileHeld, checkSnapped: true, inputSensitivity);
+		return !buttonActivatable.CheckInput(inputSensitivity);
 	}
 
 	private bool IsChargeAvailable()
@@ -273,7 +261,7 @@ public class SIGadgetPlatformDeployer : SIGadget, I_SIDisruptable, IEnergyGadget
 				return;
 			}
 			int num = player.FindSnapIndex(gameEntity.id);
-			if (num == -1 && canActivateWhileHeld)
+			if (num == -1)
 			{
 				num = player.FindHandIndex(gameEntity.id);
 			}
@@ -477,7 +465,7 @@ public class SIGadgetPlatformDeployer : SIGadget, I_SIDisruptable, IEnergyGadget
 		{
 			return true;
 		}
-		if (canActivateWhileHeld && GamePlayer.TryGetGamePlayer(gameEntity.heldByActorNumber, out player))
+		if (GamePlayer.TryGetGamePlayer(gameEntity.heldByActorNumber, out player))
 		{
 			return true;
 		}

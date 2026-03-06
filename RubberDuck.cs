@@ -199,7 +199,7 @@ public class RubberDuck : TransferrableObject
 	{
 		if (sender == target)
 		{
-			GorillaNot.IncrementRPCCall(info, "OnSqueezeDeactivate");
+			MonkeAgent.IncrementRPCCall(info, "OnSqueezeDeactivate");
 			if (info.senderID == ownerRig.creator.ActorNumber)
 			{
 				SqueezeDeactivateLocal();

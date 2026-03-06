@@ -4,9 +4,9 @@ using System.Globalization;
 namespace emotitron.Compression.HalfFloat;
 
 [Serializable]
-public struct Half : IConvertible, IComparable, IComparable<Half>, IEquatable<Half>, IFormattable
+public struct Half(float value) : IConvertible, IComparable, IComparable<Half>, IEquatable<Half>, IFormattable
 {
-	private ushort value;
+	private ushort value = HalfUtilities.Pack(value);
 
 	public const int PrecisionDigits = 3;
 
@@ -37,11 +37,6 @@ public struct Half : IConvertible, IComparable, IComparable<Half>, IEquatable<Ha
 	public static readonly Half PositiveInfinity = new Half(float.PositiveInfinity);
 
 	public ushort RawValue => value;
-
-	public Half(float value)
-	{
-		this.value = HalfUtilities.Pack(value);
-	}
 
 	public static float[] ConvertToFloat(Half[] values)
 	{

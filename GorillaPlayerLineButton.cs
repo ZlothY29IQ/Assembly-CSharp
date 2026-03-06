@@ -95,7 +95,7 @@ public class GorillaPlayerLineButton : MonoBehaviour
 				isOn = !isOn;
 			}
 		}
-		if (buttonType != ButtonType.Mute && buttonType != 0 && buttonType != ButtonType.Cheating && buttonType != ButtonType.Cancel && !parentLine.canPressNextReportButton)
+		if (buttonType != ButtonType.Mute && buttonType != ButtonType.HateSpeech && buttonType != ButtonType.Cheating && buttonType != ButtonType.Cancel && !parentLine.canPressNextReportButton)
 		{
 			return;
 		}

@@ -451,15 +451,16 @@ public class GREnemyBossMoonEye : MonoBehaviour, IGameEntityComponent, IGameEnti
 		GameHittable component5 = attachedRigidbody.GetComponent<GameHittable>();
 		if (component4 != null && component5 != null)
 		{
-			GameHitData gameHitData = default(GameHitData);
-			gameHitData.hitTypeId = 0;
-			gameHitData.hitEntityId = component5.gameEntity.id;
-			gameHitData.hitByEntityId = entity.id;
-			gameHitData.hitEntityPosition = component4.transform.position;
-			gameHitData.hitImpulse = Vector3.zero;
-			gameHitData.hitPosition = component4.transform.position;
-			gameHitData.hittablePoint = component5.FindHittablePoint(collider);
-			GameHitData hitData = gameHitData;
+			GameHitData hitData = new GameHitData
+			{
+				hitTypeId = 0,
+				hitEntityId = component5.gameEntity.id,
+				hitByEntityId = entity.id,
+				hitEntityPosition = component4.transform.position,
+				hitImpulse = Vector3.zero,
+				hitPosition = component4.transform.position,
+				hittablePoint = component5.FindHittablePoint(collider)
+			};
 			component5.RequestHit(hitData);
 		}
 	}

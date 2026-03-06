@@ -121,24 +121,25 @@ public class KIDMessagingController : MonoBehaviour
 		if ((object)kIDMessagingController == null || kIDMessagingController.ShouldShowConfirmationScreen())
 		{
 			await instance.StartKIDConfirmationScreenInternal(token);
-			TelemetryData telemetryData = default(TelemetryData);
-			telemetryData.EventName = "kid_screen_shown";
-			telemetryData.CustomTags = new string[3]
+			TelemetryData telemetryData = new TelemetryData
 			{
-				"kid_setup",
-				KIDTelemetry.GameVersionCustomTag,
-				KIDTelemetry.GameEnvironment
-			};
-			telemetryData.BodyData = new Dictionary<string, string>
-			{
-				{ "screen", "setup_complete" },
+				EventName = "kid_screen_shown",
+				CustomTags = new string[3]
 				{
-					"saw_game_settings",
-					KIDUI_MainScreen.ShownSettingsScreen.ToString().ToLower() ?? ""
+					"kid_setup",
+					KIDTelemetry.GameVersionCustomTag,
+					KIDTelemetry.GameEnvironment
+				},
+				BodyData = new Dictionary<string, string>
+				{
+					{ "screen", "setup_complete" },
+					{
+						"saw_game_settings",
+						KIDUI_MainScreen.ShownSettingsScreen.ToString().ToLower() ?? ""
+					}
 				}
 			};
-			TelemetryData telemetryData2 = telemetryData;
-			GorillaTelemetry.EnqueueTelemetryEvent(telemetryData2.EventName, telemetryData2.BodyData, telemetryData2.CustomTags);
+			GorillaTelemetry.EnqueueTelemetryEvent(telemetryData.EventName, telemetryData.BodyData, telemetryData.CustomTags);
 		}
 	}
 

@@ -286,7 +286,7 @@ public class ProjectileShooterCosmetic : MonoBehaviour, ITickSystemTick
 	private void GetShootPositionAndRotation(out Vector3 position, out Quaternion rotation)
 	{
 		ShootDirection shootDirection = shootDirectionType;
-		if (shootDirection != 0 && shootDirection == ShootDirection.LineFromRigToLaunchTransform)
+		if (shootDirection != ShootDirection.LaunchTransformRotation && shootDirection == ShootDirection.LineFromRigToLaunchTransform)
 		{
 			position = shootFromTransform.position;
 			rotation = Quaternion.LookRotation(position - rig.bodyTransform.TransformPoint(offsetRigPosition));
@@ -399,7 +399,7 @@ public class ProjectileShooterCosmetic : MonoBehaviour, ITickSystemTick
 			return;
 		}
 		ShootActivator shootActivator = shootActivatorType;
-		if ((shootActivator != 0 && shootActivator != ShootActivator.ButtonReleasedFullCharge) || !TryShoot())
+		if ((shootActivator != ShootActivator.ButtonReleased && shootActivator != ShootActivator.ButtonReleasedFullCharge) || !TryShoot())
 		{
 			SetPressState(pressed: false);
 			if (allowCharging)

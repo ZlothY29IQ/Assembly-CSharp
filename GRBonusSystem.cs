@@ -21,7 +21,7 @@ public class GRBonusSystem
 
 	public void AddBonus(GRBonusEntry entry)
 	{
-		if (entry.bonusType != 0)
+		if (entry.bonusType != GRBonusEntry.GRBonusType.None)
 		{
 			if (!currentAdditiveBonuses.ContainsKey(entry.attributeType))
 			{

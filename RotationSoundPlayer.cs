@@ -34,11 +34,11 @@ public class RotationSoundPlayer : MonoBehaviour
 		initialUpAxis = new Vector3[transforms.Length];
 		lastUpAxis = new Vector3[transforms.Length];
 		lastRotationSpeeds = new float[transforms.Length];
-		for (int i = 0; i < transforms.Length; i++)
+		for (int num = 0; num < transforms.Length; num++)
 		{
-			initialUpAxis[i] = transforms[i].localRotation * Vector3.up;
-			lastUpAxis[i] = initialUpAxis[i];
-			lastRotationSpeeds[i] = 0f;
+			initialUpAxis[num] = transforms[num].localRotation * Vector3.up;
+			lastUpAxis[num] = initialUpAxis[num];
+			lastRotationSpeeds[num] = 0f;
 		}
 	}
 

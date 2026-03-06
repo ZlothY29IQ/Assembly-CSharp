@@ -76,17 +76,18 @@ public class KIDUI_ConfirmScreen : MonoBehaviour
 
 	public async void OnConfirmPressed()
 	{
-		TelemetryData telemetryData = default(TelemetryData);
-		telemetryData.EventName = "kid_email_confirm";
-		telemetryData.CustomTags = new string[3]
+		TelemetryData telemetryData = new TelemetryData
 		{
-			"kid_setup",
-			KIDTelemetry.GameVersionCustomTag,
-			KIDTelemetry.GameEnvironment
+			EventName = "kid_email_confirm",
+			CustomTags = new string[3]
+			{
+				"kid_setup",
+				KIDTelemetry.GameVersionCustomTag,
+				KIDTelemetry.GameEnvironment
+			},
+			BodyData = new Dictionary<string, string> { { "button_pressed", "confirm" } }
 		};
-		telemetryData.BodyData = new Dictionary<string, string> { { "button_pressed", "confirm" } };
-		TelemetryData telemetryData2 = telemetryData;
-		GorillaTelemetry.EnqueueTelemetryEvent(telemetryData2.EventName, telemetryData2.BodyData, telemetryData2.CustomTags);
+		GorillaTelemetry.EnqueueTelemetryEvent(telemetryData.EventName, telemetryData.BodyData, telemetryData.CustomTags);
 		_confirmButton.interactable = false;
 		_backButton.interactable = false;
 		await _animatedEllipsis.StartAnimation();
@@ -116,17 +117,18 @@ public class KIDUI_ConfirmScreen : MonoBehaviour
 
 	public async void OnBackPressed()
 	{
-		TelemetryData telemetryData = default(TelemetryData);
-		telemetryData.EventName = "kid_email_confirm";
-		telemetryData.CustomTags = new string[3]
+		TelemetryData telemetryData = new TelemetryData
 		{
-			"kid_setup",
-			KIDTelemetry.GameVersionCustomTag,
-			KIDTelemetry.GameEnvironment
+			EventName = "kid_email_confirm",
+			CustomTags = new string[3]
+			{
+				"kid_setup",
+				KIDTelemetry.GameVersionCustomTag,
+				KIDTelemetry.GameEnvironment
+			},
+			BodyData = new Dictionary<string, string> { { "button_pressed", "go_back" } }
 		};
-		telemetryData.BodyData = new Dictionary<string, string> { { "button_pressed", "go_back" } };
-		TelemetryData telemetryData2 = telemetryData;
-		GorillaTelemetry.EnqueueTelemetryEvent(telemetryData2.EventName, telemetryData2.BodyData, telemetryData2.CustomTags);
+		GorillaTelemetry.EnqueueTelemetryEvent(telemetryData.EventName, telemetryData.BodyData, telemetryData.CustomTags);
 		_cancellationTokenSource.Cancel();
 		await _animatedEllipsis.StopAnimation();
 		base.gameObject.SetActive(value: false);

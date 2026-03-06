@@ -15,27 +15,16 @@ public class ControllerInputPoller : MonoBehaviour
 		Held
 	}
 
-	private struct _InputCallback
+	private struct _InputCallback(EControllerInputPressFlags flags, Action<EHandednessFlags> callback)
 	{
-		public readonly EControllerInputPressFlags flags;
+		public readonly EControllerInputPressFlags flags = flags;
 
-		public readonly Action<EHandednessFlags> callback;
-
-		public _InputCallback(EControllerInputPressFlags flags, Action<EHandednessFlags> callback)
-		{
-			this.flags = flags;
-			this.callback = callback;
-		}
+		public readonly Action<EHandednessFlags> callback = callback;
 	}
 
-	private struct _InputCallbacksCadenceInfo
+	private struct _InputCallbacksCadenceInfo(int initialCapacity)
 	{
-		public readonly List<_InputCallback> list;
-
-		public _InputCallbacksCadenceInfo(int initialCapacity)
-		{
-			list = new List<_InputCallback>(initialCapacity);
-		}
+		public readonly List<_InputCallback> list = new List<_InputCallback>(initialCapacity);
 	}
 
 	public const int k_defaultExecutionOrder = -400;
@@ -74,6 +63,12 @@ public class ControllerInputPoller : MonoBehaviour
 	public InputDevice rightControllerDevice;
 
 	public InputDevice headDevice;
+
+	public bool leftControllerIsValid;
+
+	public bool rightControllerIsValid;
+
+	public bool handTrackingActive;
 
 	public bool leftControllerPrimaryButton;
 
@@ -139,17 +134,53 @@ public class ControllerInputPoller : MonoBehaviour
 
 	public Vector2 rightControllerPrimary2DAxis;
 
+	public AnimationCurve handTriggerCurve;
+
+	public AnimationCurve handGripCurve;
+
 	private List<Action> onUpdate = new List<Action>();
 
 	private List<Action> onUpdateNext = new List<Action>();
 
 	private bool didModifyOnUpdate;
 
+	public Vector3 leftHandOffset = new Vector3(0.01f, -0.16f, 0f);
+
+	public Quaternion leftHandRotation = Quaternion.Euler(89f, 6f, 11f);
+
+	public Vector3 rightHandOffset = new Vector3(-0.01f, -0.16f, 0f);
+
+	public Quaternion rightHandRotation = Quaternion.Euler(89f, 6f, 11f);
+
 	private static _InputCallbacksCadenceInfo _g_callbacks_onPressStart = new _InputCallbacksCadenceInfo(32);
 
 	private static _InputCallbacksCadenceInfo _g_callbacks_onPressEnd = new _InputCallbacksCadenceInfo(32);
 
 	private static _InputCallbacksCadenceInfo _g_callbacks_onPressUpdate = new _InputCallbacksCadenceInfo(32);
+
+	public bool LeftHandValid
+	{
+		get
+		{
+			if (!leftControllerIsValid)
+			{
+				return handTrackingActive;
+			}
+			return true;
+		}
+	}
+
+	public bool RightHandValid
+	{
+		get
+		{
+			if (!rightControllerIsValid)
+			{
+				return handTrackingActive;
+			}
+			return true;
+		}
+	}
 
 	[DebugReadout]
 	public bool leftIndexPressed => _leftIndexPressed;
@@ -233,10 +264,12 @@ public class ControllerInputPoller : MonoBehaviour
 
 	public void LateUpdate()
 	{
-		if (!leftControllerDevice.isValid)
+		leftControllerIsValid = leftControllerDevice.isValid;
+		if (!leftControllerIsValid)
 		{
 			leftControllerDevice = InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);
-			if (leftControllerDevice.isValid)
+			leftControllerIsValid = leftControllerDevice.isValid;
+			if (leftControllerIsValid)
 			{
 				controllerType = GorillaControllerType.OCULUS_DEFAULT;
 				if (leftControllerDevice.name.ToLower().Contains("knuckles"))
@@ -246,7 +279,8 @@ public class ControllerInputPoller : MonoBehaviour
 				Debug.Log($"Found left controller: {leftControllerDevice.name} ControllerType: {controllerType}");
 			}
 		}
-		if (!rightControllerDevice.isValid)
+		rightControllerIsValid = rightControllerDevice.isValid;
+		if (!rightControllerIsValid)
 		{
 			rightControllerDevice = InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
 		}
@@ -307,6 +341,7 @@ public class ControllerInputPoller : MonoBehaviour
 			CalculateGrabState(leftControllerGripFloat, ref leftGrab, ref leftGrabRelease, out leftGrabMomentary, out leftGrabReleaseMomentary, 0.1f, 0.01f);
 			CalculateGrabState(rightControllerGripFloat, ref rightGrab, ref rightGrabRelease, out rightGrabMomentary, out rightGrabReleaseMomentary, 0.1f, 0.01f);
 		}
+		handTrackingActive = false;
 		leftControllerDevice.TryGetFeatureValue(CommonUsages.deviceVelocity, out _leftVelocity);
 		leftControllerDevice.TryGetFeatureValue(CommonUsages.deviceAngularVelocity, out _leftAngularVelocity);
 		rightControllerDevice.TryGetFeatureValue(CommonUsages.deviceVelocity, out _rightVelocity);
@@ -567,7 +602,7 @@ public class ControllerInputPoller : MonoBehaviour
 	public static bool HasPressFlags(XRNode node, EControllerInputPressFlags inputStateFlags)
 	{
 		EControllerInputPressFlags inputStateFlags2 = GetInputStateFlags(node);
-		if (inputStateFlags != 0)
+		if (inputStateFlags != EControllerInputPressFlags.None)
 		{
 			return (inputStateFlags2 & inputStateFlags) == inputStateFlags;
 		}
@@ -601,7 +636,7 @@ public class ControllerInputPoller : MonoBehaviour
 
 	private static void _AddInputStateCallback(ref _InputCallbacksCadenceInfo ref_callbacksInfo, EControllerInputPressFlags flags, Action<EHandednessFlags> callback)
 	{
-		if (callback != null && flags != 0)
+		if (callback != null && flags != EControllerInputPressFlags.None)
 		{
 			if (ref_callbacksInfo.list.Capacity <= ref_callbacksInfo.list.Count)
 			{
@@ -653,7 +688,7 @@ public class ControllerInputPoller : MonoBehaviour
 			EControllerInputPressFlags flags = callbacksInfo.list[i].flags;
 			Action<EHandednessFlags> callback = callbacksInfo.list[i].callback;
 			EHandednessFlags eHandednessFlags = _IsHandContributingToPressCadence(EHandednessFlags.Left, cadence, flags, lFlags_now, lFlags_old) | _IsHandContributingToPressCadence(EHandednessFlags.Right, cadence, flags, rFlags_now, rFlags_old);
-			if (eHandednessFlags != 0 && callback != null)
+			if (eHandednessFlags != EHandednessFlags.None && callback != null)
 			{
 				try
 				{
@@ -670,7 +705,7 @@ public class ControllerInputPoller : MonoBehaviour
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private static EHandednessFlags _IsHandContributingToPressCadence(EHandednessFlags hand, _EPressCadence pressCadence, EControllerInputPressFlags cbFlags, EControllerInputPressFlags flags_now, EControllerInputPressFlags flags_old)
 	{
-		if ((pressCadence != _EPressCadence.Held || (cbFlags & flags_now) != cbFlags) && (pressCadence != 0 || (cbFlags & flags_now) != cbFlags || (cbFlags & flags_old) == cbFlags) && (pressCadence != _EPressCadence.End || (cbFlags & flags_now) == cbFlags || (cbFlags & flags_old) != cbFlags))
+		if ((pressCadence != _EPressCadence.Held || (cbFlags & flags_now) != cbFlags) && (pressCadence != _EPressCadence.Start || (cbFlags & flags_now) != cbFlags || (cbFlags & flags_old) == cbFlags) && (pressCadence != _EPressCadence.End || (cbFlags & flags_now) == cbFlags || (cbFlags & flags_old) != cbFlags))
 		{
 			return EHandednessFlags.None;
 		}

@@ -60,15 +60,16 @@ public sealed class SoakTaskBreakable : IGhostReactorSoakTask
 				if (Time.time >= valueOrDefault)
 				{
 					Debug.Log($"soak hit breakable {_breakable.id.index}");
-					GameHitData gameHitData = default(GameHitData);
-					gameHitData.hitEntityId = _breakable.id;
-					gameHitData.hitByEntityId = _breakable.id;
-					gameHitData.hitTypeId = 0;
-					gameHitData.hitEntityPosition = Vector3.zero;
-					gameHitData.hitPosition = Vector3.zero;
-					gameHitData.hitImpulse = Vector3.zero;
-					gameHitData.hitAmount = 1;
-					GameHitData hit = gameHitData;
+					GameHitData hit = new GameHitData
+					{
+						hitEntityId = _breakable.id,
+						hitByEntityId = _breakable.id,
+						hitTypeId = 0,
+						hitEntityPosition = Vector3.zero,
+						hitPosition = Vector3.zero,
+						hitImpulse = Vector3.zero,
+						hitAmount = 1
+					};
 					managerForZone.RequestHit(hit);
 				}
 			}

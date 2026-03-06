@@ -179,7 +179,7 @@ public class GhostReactorManager : NetworkComponent, IGameEntityZoneComponent
 
 	public bool IsPositionInZone(Vector3 pos)
 	{
-		return gameEntityManager.IsPositionInZone(pos);
+		return gameEntityManager.IsPositionInManagerBounds(pos);
 	}
 
 	public bool IsValidClientRPC(Player sender)
@@ -811,6 +811,7 @@ public class GhostReactorManager : NetworkComponent, IGameEntityZoneComponent
 		}
 	}
 
+	[PunRPC]
 	public void RequestShiftEnd()
 	{
 		if (!IsAuthority() || reactor == null)
@@ -819,7 +820,7 @@ public class GhostReactorManager : NetworkComponent, IGameEntityZoneComponent
 		}
 		GhostReactorShiftManager shiftManager = reactor.shiftManager;
 		GhostReactorLevelGenerator levelGenerator = reactor.levelGenerator;
-		if (!shiftManager.ShiftActive)
+		if (shiftManager == null || !shiftManager.ShiftActive)
 		{
 			return;
 		}
@@ -840,6 +841,11 @@ public class GhostReactorManager : NetworkComponent, IGameEntityZoneComponent
 		shiftManager.CalculateShiftTotal();
 		shiftManager.RevealJudgment(Mathf.FloorToInt((float)shiftManager.shiftStats.GetShiftStat(GRShiftStatType.EnemyDeaths) / 5f));
 		shiftManager.RequestState(GhostReactorShiftManager.State.PostShift);
+	}
+
+	public void SendRequestShiftEndRPC()
+	{
+		photonView.RPC("RequestShiftEnd", gameEntityManager.GetAuthorityPlayer());
 	}
 
 	[PunRPC]
@@ -1870,7 +1876,7 @@ public class GhostReactorManager : NetworkComponent, IGameEntityZoneComponent
 		{
 			return;
 		}
-		GorillaNot.IncrementRPCCall(info, "EntityEnteredDropZoneRPC");
+		MonkeAgent.IncrementRPCCall(info, "EntityEnteredDropZoneRPC");
 		Vector3 v = BitPackUtils.UnpackWorldPosFromNetwork(position);
 		if (v.IsValid(10000f))
 		{
@@ -2250,6 +2256,25 @@ public class GhostReactorManager : NetworkComponent, IGameEntityZoneComponent
 	public bool ValidateMigratedGameEntity(int netId, int entityTypeId, Vector3 position, Quaternion rotation, long createData, int actorNr)
 	{
 		return false;
+	}
+
+	public bool ValidateCreateMultipleItems(int zoneId, byte[] compressedStateData, int EntityCount)
+	{
+		if (EntityCount > 128)
+		{
+			return false;
+		}
+		return true;
+	}
+
+	public bool ValidateCreateItem(int nedId, int entityTypeId, Vector3 position, Quaternion rotation, long createData, int createdByEntityNetId)
+	{
+		return true;
+	}
+
+	public bool ValidateCreateItemBatchSize(int size)
+	{
+		return true;
 	}
 
 	public void SerializeZoneEntityData(BinaryWriter writer, GameEntity entity)

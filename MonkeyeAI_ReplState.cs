@@ -27,7 +27,7 @@ public class MonkeyeAI_ReplState : NetworkComponent
 	public struct MonkeyeAI_RepStateData : INetworkStruct
 	{
 		[FieldOffset(0)]
-		[FixedBufferProperty(/*Could not decode attribute arguments.*/)]
+		[FixedBufferProperty(typeof(NetworkString<_32>), typeof(UnityValueSurrogate_0040ReaderWriter_0040Fusion_NetworkString_00601_003CFusion__32_003E), 0, order = -2147483647)]
 		[WeaverGenerated]
 		[SerializeField]
 		private FixedStorage_004033 _UserId;

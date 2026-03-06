@@ -95,7 +95,7 @@ public class HandHold : MonoBehaviour, IGorillaGrabable
 		localGrabbedPosition = base.transform.InverseTransformPoint(position);
 		g.Player.AddHandHold(base.transform, localGrabbedPosition, g, g.IsLeftHand, rotatePlayerWhenHeld, out var grabbedVelocity);
 		currentGrabbers.AddIfNew(g);
-		if (handSnapMethod != 0 && HandHold.HandPositionRequestOverride != null)
+		if (handSnapMethod != HandSnapMethod.None && HandHold.HandPositionRequestOverride != null)
 		{
 			HandHold.HandPositionRequestOverride(this, g.IsLeftHand, CalculateOffset(position));
 		}
@@ -113,7 +113,7 @@ public class HandHold : MonoBehaviour, IGorillaGrabable
 		Initialize();
 		g.Player.RemoveHandHold(g, g.IsLeftHand);
 		currentGrabbers.Remove(g);
-		if (handSnapMethod != 0 && HandHold.HandPositionReleaseOverride != null)
+		if (handSnapMethod != HandSnapMethod.None && HandHold.HandPositionReleaseOverride != null)
 		{
 			HandHold.HandPositionReleaseOverride(this, g.IsLeftHand);
 		}

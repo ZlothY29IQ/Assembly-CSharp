@@ -62,14 +62,12 @@ public class LCKSocialCameraFollower : MonoBehaviour, ITickSystemTick
 		base.transform.parent = m_rigContainer.transform;
 		base.transform.localPosition = new Vector3(0f, -0.2f, 0.132f);
 		base.transform.localRotation = Quaternion.identity;
-		TickSystem<object>.AddTickCallback(this);
 	}
 
 	public void SetParentNull()
 	{
 		isParentedToRig = false;
 		base.transform.parent = null;
-		TickSystem<object>.RemoveCallbackTarget(this);
 	}
 
 	private void PostRigEnable(RigContainer _)

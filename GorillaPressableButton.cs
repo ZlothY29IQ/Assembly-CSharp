@@ -1,5 +1,6 @@
 using System;
 using GorillaExtensions;
+using GorillaTagScripts;
 using Photon.Pun;
 using TMPro;
 using UnityEngine;
@@ -52,6 +53,14 @@ public class GorillaPressableButton : MonoBehaviour, IClickable
 
 	public Text myText;
 
+	public bool isSubscriberOnlyButton;
+
+	public Material nonSubscriberMaterial;
+
+	private bool _localPlayerSubscribed;
+
+	private bool _subscriptionChecked;
+
 	[Space]
 	public UnityEvent onPressButton;
 
@@ -70,12 +79,36 @@ public class GorillaPressableButton : MonoBehaviour, IClickable
 	protected virtual void OnEnable()
 	{
 		LocalisationManager.RegisterOnLanguageChanged(RefreshText);
+		if (isSubscriberOnlyButton)
+		{
+			SubscriptionManager.OnLocalSubscriptionData = (Action)Delegate.Combine(SubscriptionManager.OnLocalSubscriptionData, new Action(CheckSubscription));
+			CheckSubscription();
+		}
 		RefreshText();
 	}
 
 	protected virtual void OnDisable()
 	{
 		LocalisationManager.UnregisterOnLanguageChanged(RefreshText);
+		if (isSubscriberOnlyButton)
+		{
+			SubscriptionManager.OnLocalSubscriptionData = (Action)Delegate.Remove(SubscriptionManager.OnLocalSubscriptionData, new Action(CheckSubscription));
+		}
+	}
+
+	private void CheckSubscription()
+	{
+		bool flag = SubscriptionManager.IsLocalSubscribed();
+		if (!_subscriptionChecked || flag != _localPlayerSubscribed)
+		{
+			UpdateSubscriptionState(flag);
+		}
+		void UpdateSubscriptionState(bool subscribed)
+		{
+			_localPlayerSubscribed = subscribed;
+			UpdateColor();
+			_subscriptionChecked = true;
+		}
 	}
 
 	protected virtual void RefreshText()
@@ -199,16 +232,19 @@ public class GorillaPressableButton : MonoBehaviour, IClickable
 
 	private void PressButton(bool isLeftHand)
 	{
-		touchTime = Time.time;
-		onPressButton?.Invoke();
-		this.onPressed?.Invoke(this, isLeftHand);
-		ButtonActivation();
-		ButtonActivationWithHand(isLeftHand);
-		GorillaTagger.Instance.offlineVRRig.PlayHandTapLocal(pressButtonSoundIndex, isLeftHand, 0.05f);
-		GorillaTagger.Instance.StartVibration(isLeftHand, GorillaTagger.Instance.tapHapticStrength / 2f, GorillaTagger.Instance.tapHapticDuration);
-		if (NetworkSystem.Instance.InRoom && GorillaTagger.Instance.myVRRig != null)
+		if (!isSubscriberOnlyButton || _localPlayerSubscribed)
 		{
-			GorillaTagger.Instance.myVRRig.SendRPC("RPC_PlayHandTap", RpcTarget.Others, 67, isLeftHand, 0.05f);
+			touchTime = Time.time;
+			onPressButton?.Invoke();
+			this.onPressed?.Invoke(this, isLeftHand);
+			ButtonActivation();
+			ButtonActivationWithHand(isLeftHand);
+			GorillaTagger.Instance.offlineVRRig.PlayHandTapLocal(pressButtonSoundIndex, isLeftHand, 0.05f);
+			GorillaTagger.Instance.StartVibration(isLeftHand, GorillaTagger.Instance.tapHapticStrength / 2f, GorillaTagger.Instance.tapHapticDuration);
+			if (NetworkSystem.Instance.InRoom && GorillaTagger.Instance.myVRRig != null)
+			{
+				GorillaTagger.Instance.myVRRig.SendRPC("RPC_PlayHandTap", RpcTarget.Others, 67, isLeftHand, 0.05f);
+			}
 		}
 	}
 
@@ -224,16 +260,41 @@ public class GorillaPressableButton : MonoBehaviour, IClickable
 
 	protected void UpdateColorWithState(bool state)
 	{
-		if (state)
+		if (isSubscriberOnlyButton && !_localPlayerSubscribed)
 		{
-			buttonRenderer.material = pressedMaterial;
+			SetUnsubscribedMaterial();
+			SetOffText(myText.IsNotNull(), myTmpText.IsNotNull(), myTmpText2.IsNotNull());
+		}
+		else if (state)
+		{
+			SetPressedMaterial();
 			SetOnText(myText.IsNotNull(), myTmpText.IsNotNull(), myTmpText2.IsNotNull());
 		}
 		else
 		{
-			buttonRenderer.material = unpressedMaterial;
+			SetUnpressedMaterial();
 			SetOffText(myText.IsNotNull(), myTmpText.IsNotNull(), myTmpText2.IsNotNull());
 		}
+	}
+
+	public void SetRendererMaterial(Material mat)
+	{
+		buttonRenderer.material = mat;
+	}
+
+	public void SetPressedMaterial()
+	{
+		SetRendererMaterial(pressedMaterial);
+	}
+
+	public void SetUnpressedMaterial()
+	{
+		SetRendererMaterial(unpressedMaterial);
+	}
+
+	public void SetUnsubscribedMaterial()
+	{
+		SetRendererMaterial(nonSubscriberMaterial ? nonSubscriberMaterial : unpressedMaterial);
 	}
 
 	public virtual void ButtonActivation()

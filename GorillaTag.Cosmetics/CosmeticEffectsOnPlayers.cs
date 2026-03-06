@@ -107,7 +107,7 @@ public class CosmeticEffectsOnPlayers : MonoBehaviour, ISpawnable
 		public bool IsGameModeAllowed()
 		{
 			GameModeType value = ((GameMode.ActiveGameMode != null) ? GameMode.ActiveGameMode.GameType() : GameModeType.Casual);
-			if (excludeForGameModes.Contains(value))
+			if (Enumerable.Contains(excludeForGameModes, value))
 			{
 				return false;
 			}
@@ -271,18 +271,17 @@ public class CosmeticEffectsOnPlayers : MonoBehaviour, ISpawnable
 			return;
 		}
 		effect.Value.EffectStartedTime = Time.time;
-		IEnumerable<VRRig> enumerable2;
+		IReadOnlyList<VRRig> readOnlyList2;
 		if (!PhotonNetwork.InRoom)
 		{
-			IEnumerable<VRRig> enumerable = new VRRig[1] { GorillaTagger.Instance.offlineVRRig };
-			enumerable2 = enumerable;
+			IReadOnlyList<VRRig> readOnlyList = new VRRig[1] { GorillaTagger.Instance.offlineVRRig };
+			readOnlyList2 = readOnlyList;
 		}
 		else
 		{
-			IEnumerable<VRRig> enumerable = GorillaParent.instance.vrrigs;
-			enumerable2 = enumerable;
+			readOnlyList2 = VRRigCache.ActiveRigs;
 		}
-		foreach (VRRig item in enumerable2)
+		foreach (VRRig item in readOnlyList2)
 		{
 			if (ShouldAffectRig(item, effect.Value.target) && (item.transform.position - position).IsShorterThan(effect.Value.effectDistanceRadius))
 			{
@@ -328,18 +327,17 @@ public class CosmeticEffectsOnPlayers : MonoBehaviour, ISpawnable
 			return;
 		}
 		effect.Value.EffectStartedTime = Time.time;
-		IEnumerable<VRRig> enumerable2;
+		IReadOnlyList<VRRig> readOnlyList2;
 		if (!PhotonNetwork.InRoom)
 		{
-			IEnumerable<VRRig> enumerable = new VRRig[1] { GorillaTagger.Instance.offlineVRRig };
-			enumerable2 = enumerable;
+			IReadOnlyList<VRRig> readOnlyList = new VRRig[1] { GorillaTagger.Instance.offlineVRRig };
+			readOnlyList2 = readOnlyList;
 		}
 		else
 		{
-			IEnumerable<VRRig> enumerable = GorillaParent.instance.vrrigs;
-			enumerable2 = enumerable;
+			readOnlyList2 = VRRigCache.ActiveRigs;
 		}
-		foreach (VRRig item in enumerable2)
+		foreach (VRRig item in readOnlyList2)
 		{
 			if (ShouldAffectRig(item, effect.Value.target) && (item.transform.position - position).IsShorterThan(effect.Value.effectDistanceRadius))
 			{
@@ -437,18 +435,17 @@ public class CosmeticEffectsOnPlayers : MonoBehaviour, ISpawnable
 			return;
 		}
 		effect.Value.EffectStartedTime = Time.time;
-		IEnumerable<VRRig> enumerable2;
+		IReadOnlyList<VRRig> readOnlyList2;
 		if (!PhotonNetwork.InRoom)
 		{
-			IEnumerable<VRRig> enumerable = new VRRig[1] { GorillaTagger.Instance.offlineVRRig };
-			enumerable2 = enumerable;
+			IReadOnlyList<VRRig> readOnlyList = new VRRig[1] { GorillaTagger.Instance.offlineVRRig };
+			readOnlyList2 = readOnlyList;
 		}
 		else
 		{
-			IEnumerable<VRRig> enumerable = GorillaParent.instance.vrrigs;
-			enumerable2 = enumerable;
+			readOnlyList2 = VRRigCache.ActiveRigs;
 		}
-		foreach (VRRig item in enumerable2)
+		foreach (VRRig item in readOnlyList2)
 		{
 			if (ShouldAffectRig(item, effect.Value.target) && (item.transform.position - position).IsShorterThan(effect.Value.effectDistanceRadius))
 			{
@@ -481,18 +478,17 @@ public class CosmeticEffectsOnPlayers : MonoBehaviour, ISpawnable
 			return;
 		}
 		effect.Value.EffectStartedTime = Time.time;
-		IEnumerable<VRRig> enumerable2;
+		IReadOnlyList<VRRig> readOnlyList2;
 		if (!PhotonNetwork.InRoom)
 		{
-			IEnumerable<VRRig> enumerable = new VRRig[1] { GorillaTagger.Instance.offlineVRRig };
-			enumerable2 = enumerable;
+			IReadOnlyList<VRRig> readOnlyList = new VRRig[1] { GorillaTagger.Instance.offlineVRRig };
+			readOnlyList2 = readOnlyList;
 		}
 		else
 		{
-			IEnumerable<VRRig> enumerable = GorillaParent.instance.vrrigs;
-			enumerable2 = enumerable;
+			readOnlyList2 = VRRigCache.ActiveRigs;
 		}
-		foreach (VRRig item in enumerable2)
+		foreach (VRRig item in readOnlyList2)
 		{
 			if (ShouldAffectRig(item, effect.Value.target) && (item.transform.position - position).IsShorterThan(effect.Value.effectDistanceRadius))
 			{

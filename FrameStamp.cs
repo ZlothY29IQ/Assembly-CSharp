@@ -10,9 +10,10 @@ public struct FrameStamp
 
 	public static FrameStamp Now()
 	{
-		FrameStamp result = default(FrameStamp);
-		result._lastFrame = Time.frameCount;
-		return result;
+		return new FrameStamp
+		{
+			_lastFrame = Time.frameCount
+		};
 	}
 
 	public override string ToString()
@@ -32,8 +33,9 @@ public struct FrameStamp
 
 	public static implicit operator FrameStamp(int framesElapsed)
 	{
-		FrameStamp result = default(FrameStamp);
-		result._lastFrame = Time.frameCount - framesElapsed;
-		return result;
+		return new FrameStamp
+		{
+			_lastFrame = Time.frameCount - framesElapsed
+		};
 	}
 }

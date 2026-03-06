@@ -41,7 +41,7 @@ public class SITechTreeNode
 		get
 		{
 			EAssetReleaseTier edReleaseTier = m_edReleaseTier;
-			if (edReleaseTier != 0 && edReleaseTier <= EAssetReleaseTier.PublicRC)
+			if (edReleaseTier != EAssetReleaseTier.Disabled && edReleaseTier <= EAssetReleaseTier.PublicRC)
 			{
 				return ((uint)excludedGameModes & (uint)GameMode.CurrentGameModeFlag) == 0;
 			}

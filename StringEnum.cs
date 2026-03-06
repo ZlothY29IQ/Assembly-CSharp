@@ -11,9 +11,10 @@ public struct StringEnum<TEnum> where TEnum : struct, Enum
 
 	public static implicit operator StringEnum<TEnum>(TEnum e)
 	{
-		StringEnum<TEnum> result = default(StringEnum<TEnum>);
-		result.m_EnumValue = e;
-		return result;
+		return new StringEnum<TEnum>
+		{
+			m_EnumValue = e
+		};
 	}
 
 	public static implicit operator TEnum(StringEnum<TEnum> se)
@@ -43,5 +44,10 @@ public struct StringEnum<TEnum> where TEnum : struct, Enum
 	public override int GetHashCode()
 	{
 		return m_EnumValue.GetHashCode();
+	}
+
+	public override string ToString()
+	{
+		return Value.ToString();
 	}
 }

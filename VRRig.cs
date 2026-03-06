@@ -12,6 +12,7 @@ using GorillaTag.Cosmetics;
 using GorillaTag.CosmeticSystem;
 using GorillaTagScripts;
 using KID.Model;
+using Newtonsoft.Json;
 using Photon.Pun;
 using Photon.Realtime;
 using Photon.Voice;
@@ -49,17 +50,11 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		Shirt
 	}
 
-	public struct VelocityTime
+	public struct VelocityTime(Vector3 velocity, double velTime)
 	{
-		public Vector3 vel;
+		public Vector3 vel = velocity;
 
-		public double time;
-
-		public VelocityTime(Vector3 velocity, double velTime)
-		{
-			vel = velocity;
-			time = velTime;
-		}
+		public double time = velTime;
 	}
 
 	private bool _isListeningFor_OnPostInstantiateAllPrefabs;
@@ -156,6 +151,12 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 	[NonSerialized]
 	public Vector3 mountedMonkeBlockOffset = Vector3.zero;
 
+	[NonSerialized]
+	public bool InOverrideSubscriptionZone;
+
+	[NonSerialized]
+	public Vector3 OverrideSubscriptionZoneLocation = Vector3.zero;
+
 	private float lastMountedSurfaceTimer;
 
 	private bool shouldLerpToMovingSurface;
@@ -245,20 +246,16 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 	[Tooltip("- True in 'Gorilla Player Networked.prefab'.\n- True in 'Local VRRig.prefab/Local Gorilla Player'.\n- False in 'Local VRRig.prefab/Actual Gorilla'")]
 	public bool showName;
 
-	public CosmeticItemRegistry cosmeticsObjectRegistry = new CosmeticItemRegistry();
+	public CosmeticItemRegistry cosmeticsObjectRegistry;
 
 	[NonSerialized]
 	public PropHuntHandFollower propHuntHandFollower;
 
-	[FormerlySerializedAs("cosmetics")]
-	public GameObject[] _cosmetics;
-
-	[FormerlySerializedAs("overrideCosmetics")]
-	public GameObject[] _overrideCosmetics;
-
 	private int taggedById;
 
 	private readonly HashSet<string> _playerOwnedCosmetics = new HashSet<string>(50);
+
+	private readonly Dictionary<string, int> _playerOwnedCosmeticsAge = new Dictionary<string, int>(50);
 
 	private bool initializedCosmetics;
 
@@ -271,6 +268,8 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 	public CosmeticsController.CosmeticSet mergedSet;
 
 	public CosmeticsController.CosmeticSet prevSet;
+
+	internal int _cosmeticsActivationVersion;
 
 	[NonSerialized]
 	public readonly List<GameObject> activeCosmetics = new List<GameObject>(16);
@@ -298,12 +297,20 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 	[NonSerialized]
 	public float HauntedRingVoicePitch;
 
-	private float cosmeticPitchShift = 1f;
+	private float cosmeticPitchShift;
 
-	private bool pitchShiftCosmeticsDirty;
+	private float cosmeticVolumeShift;
+
+	private bool cosmeticPitchActive;
+
+	private bool cosmeticVolumeActive;
+
+	private bool anyShiftedVoiceCosmetic;
+
+	private bool voiceShiftCosmeticsDirty;
 
 	[NonSerialized]
-	public List<VoicePitchShiftCosmetic> PitchShiftCosmetics = new List<VoicePitchShiftCosmetic>();
+	public List<VoiceShiftCosmetic> VoiceShiftCosmetics = new List<VoiceShiftCosmetic>();
 
 	public FriendshipBracelet friendshipBraceletLeftHand;
 
@@ -548,6 +555,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 	[SerializeField]
 	internal VRRigSerializer rigSerializer;
 
+	[Obsolete("Deprecated, this is unreliable, use Creator", false)]
 	public NetPlayer OwningNetPlayer;
 
 	[SerializeField]
@@ -573,8 +581,6 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	[SerializeField]
 	private HandEffectContext _extraRightHandEffect;
-
-	private bool _rigBuildFullyInitialized;
 
 	[SerializeField]
 	private Transform renderTransform;
@@ -644,7 +650,11 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	private const int isRightHandTentacleHoldingHand_BIT = 2097152;
 
+	private const int showSubscriber_BIT = 4194304;
+
 	private const int speakingLoudnessVal_BITSHIFT = 24;
+
+	private GorillaIK myIk;
 
 	private Vector3 tempVec;
 
@@ -692,9 +702,12 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	private RigDuplicationZone duplicationZone;
 
+	private Vector3 cachedRenderTransformPos = new Vector3(0f, -1.65f, 0f);
+
 	private bool pendingCosmeticUpdate = true;
 
-	private string rawCosmeticString = "";
+	[NonSerialized]
+	private bool showGoldNameTag;
 
 	public List<HandEffectsOverrideCosmetic> CosmeticHandEffectsOverride_Right = new List<HandEffectsOverrideCosmetic>();
 
@@ -703,6 +716,8 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 	private int loudnessCheckFrame;
 
 	private float frameScale;
+
+	private SubscriptionManager.SubscriptionDetails subDataCache;
 
 	private const bool SHOW_SCREENS = false;
 
@@ -723,29 +738,9 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	public Material myDefaultSkinMaterialInstance => bodyRenderer.myDefaultSkinMaterialInstance;
 
-	public GameObject[] cosmetics
-	{
-		get
-		{
-			return _cosmetics;
-		}
-		set
-		{
-			_cosmetics = value;
-		}
-	}
+	public List<GameObject> cosmetics => CosmeticsV2Spawner_Dirty.RigDataForRig(this).vrRig_cosmetics;
 
-	public GameObject[] overrideCosmetics
-	{
-		get
-		{
-			return _overrideCosmetics;
-		}
-		set
-		{
-			_overrideCosmetics = value;
-		}
-	}
+	public List<GameObject> overrideCosmetics => CosmeticsV2Spawner_Dirty.RigDataForRig(this).vrRig_override;
 
 	public HashSet<string> TemporaryCosmetics => _temporaryCosmetics;
 
@@ -958,8 +953,6 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	internal HandEffectContext ExtraRightHandEffect => _extraRightHandEffect;
 
-	public bool RigBuildFullyInitialized => _rigBuildFullyInitialized;
-
 	public GamePlayer GamePlayerRef
 	{
 		get
@@ -988,6 +981,18 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	public bool IsFrozen { get; set; }
 
+	public bool ShowGoldNameTag
+	{
+		get
+		{
+			return showGoldNameTag;
+		}
+		private set
+		{
+			showGoldNameTag = value;
+		}
+	}
+
 	public static VRRig LocalRig => gLocalRig;
 
 	public bool isLocal => gLocalRig == this;
@@ -1012,34 +1017,13 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	private void CosmeticsV2_Awake()
 	{
-		if (CosmeticsV2Spawner_Dirty.allPartsInstantiated)
-		{
-			Handle_CosmeticsV2_OnPostInstantiateAllPrefabs_DoEnableAllCosmetics();
-		}
-		else if (!_isListeningFor_OnPostInstantiateAllPrefabs)
-		{
-			_isListeningFor_OnPostInstantiateAllPrefabs = true;
-			CosmeticsV2Spawner_Dirty.OnPostInstantiateAllPrefabs = (Action)Delegate.Combine(CosmeticsV2Spawner_Dirty.OnPostInstantiateAllPrefabs, new Action(Handle_CosmeticsV2_OnPostInstantiateAllPrefabs_DoEnableAllCosmetics));
-		}
+		CosmeticsV2Spawner_Dirty.OnPreFinalizing = (Action)Delegate.Combine(CosmeticsV2Spawner_Dirty.OnPreFinalizing, new Action(Handle_CosmeticsV2_OnPreFinalizing));
 	}
 
-	private void CosmeticsV2_OnDestroy()
+	internal void Handle_CosmeticsV2_OnPreFinalizing()
 	{
-		if (CosmeticsV2Spawner_Dirty.allPartsInstantiated)
-		{
-			Handle_CosmeticsV2_OnPostInstantiateAllPrefabs_DoEnableAllCosmetics();
-		}
-		else
-		{
-			CosmeticsV2Spawner_Dirty.OnPostInstantiateAllPrefabs = (Action)Delegate.Remove(CosmeticsV2Spawner_Dirty.OnPostInstantiateAllPrefabs, new Action(Handle_CosmeticsV2_OnPostInstantiateAllPrefabs_DoEnableAllCosmetics));
-		}
-	}
-
-	internal void Handle_CosmeticsV2_OnPostInstantiateAllPrefabs_DoEnableAllCosmetics()
-	{
-		CosmeticsV2Spawner_Dirty.OnPostInstantiateAllPrefabs = (Action)Delegate.Remove(CosmeticsV2Spawner_Dirty.OnPostInstantiateAllPrefabs, new Action(Handle_CosmeticsV2_OnPostInstantiateAllPrefabs_DoEnableAllCosmetics));
+		CosmeticsV2Spawner_Dirty.OnPreFinalizing = (Action)Delegate.Remove(CosmeticsV2Spawner_Dirty.OnPreFinalizing, new Action(Handle_CosmeticsV2_OnPreFinalizing));
 		CheckForEarlyAccess();
-		BuildInitialize_AfterCosmeticsV2Instantiated();
 		SetCosmeticsActive(playfx: false);
 	}
 
@@ -1048,9 +1032,18 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		taggedById = taggingRig.OwningNetPlayer.ActorNumber;
 	}
 
-	public void SetPitchShiftCosmeticsDirty()
+	public int CheckCosmeticAge(string pfID)
 	{
-		pitchShiftCosmeticsDirty = true;
+		if (_playerOwnedCosmeticsAge.ContainsKey(pfID))
+		{
+			return _playerOwnedCosmeticsAge[pfID];
+		}
+		return 0;
+	}
+
+	public void SetVoiceShiftCosmeticsDirty()
+	{
+		voiceShiftCosmeticsDirty = true;
 	}
 
 	public void BreakHandLinks()
@@ -1198,36 +1191,9 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		myEyeExpressions = GetComponent<GorillaEyeExpressions>();
 	}
 
-	public void BuildInitialize_AfterCosmeticsV2Instantiated()
-	{
-		if (!_rigBuildFullyInitialized)
-		{
-			Dictionary<string, GameObject> dictionary = new Dictionary<string, GameObject>();
-			GameObject[] array = cosmetics;
-			GameObject value;
-			foreach (GameObject gameObject in array)
-			{
-				if (!dictionary.TryGetValue(gameObject.name, out value))
-				{
-					dictionary.Add(gameObject.name, gameObject);
-				}
-			}
-			array = overrideCosmetics;
-			foreach (GameObject gameObject2 in array)
-			{
-				if (dictionary.TryGetValue(gameObject2.name, out value) && value.name == gameObject2.name)
-				{
-					value.name = "OVERRIDDEN";
-				}
-			}
-			cosmetics = cosmetics.Concat(overrideCosmetics).ToArray();
-		}
-		cosmeticsObjectRegistry.Initialize(cosmetics);
-		_rigBuildFullyInitialized = true;
-	}
-
 	private void Awake()
 	{
+		cosmeticsObjectRegistry = new CosmeticItemRegistry(this);
 		CosmeticsV2_Awake();
 		PlayFabAuthenticator instance = PlayFabAuthenticator.instance;
 		instance.OnSafetyUpdate = (Action<bool>)Delegate.Combine(instance.OnSafetyUpdate, new Action<bool>(UpdateNameSafeAccount));
@@ -1242,10 +1208,10 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 	private void ApplyColorCode()
 	{
 		float defaultValue = 0f;
-		float @float = PlayerPrefs.GetFloat("redValue", defaultValue);
-		float float2 = PlayerPrefs.GetFloat("greenValue", defaultValue);
-		float float3 = PlayerPrefs.GetFloat("blueValue", defaultValue);
-		GorillaTagger.Instance.UpdateColor(@float, float2, float3);
+		float num = PlayerPrefs.GetFloat("redValue", defaultValue);
+		float num2 = PlayerPrefs.GetFloat("greenValue", defaultValue);
+		float num3 = PlayerPrefs.GetFloat("blueValue", defaultValue);
+		GorillaTagger.Instance.UpdateColor(num, num2, num3);
 	}
 
 	private void SharedStart()
@@ -1297,6 +1263,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		leftIndex.Initialize();
 		leftMiddle.Initialize();
 		leftThumb.Initialize();
+		cachedRenderTransformPos = renderTransform.localPosition;
 	}
 
 	public void SliceUpdate()
@@ -1375,7 +1342,8 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		}
 		if (voiceAudio != null)
 		{
-			float num = 1f;
+			float? num = null;
+			float? num2 = null;
 			if (IsHaunted)
 			{
 				num = HauntedVoicePitch;
@@ -1384,36 +1352,77 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 			{
 				num = HauntedRingVoicePitch;
 			}
-			else if (PitchShiftCosmetics.Count > 0)
-			{
-				if (pitchShiftCosmeticsDirty)
-				{
-					cosmeticPitchShift = 0f;
-					for (int i = 0; i < PitchShiftCosmetics.Count; i++)
-					{
-						cosmeticPitchShift += PitchShiftCosmetics[i].Pitch;
-					}
-					cosmeticPitchShift /= PitchShiftCosmetics.Count;
-					pitchShiftCosmeticsDirty = false;
-				}
-				num = cosmeticPitchShift;
-			}
 			else
 			{
-				float time = GorillaTagger.Instance.offlineVRRig.scaleFactor / scaleFactor;
-				float num2 = voicePitchForRelativeScale.Evaluate(time);
-				if (float.IsNaN(num2) || num2 <= 0f)
+				if (voiceShiftCosmeticsDirty)
 				{
-					Debug.LogError("Voice pitch curve is invalid, please fix!");
+					cosmeticPitchShift = 0f;
+					cosmeticVolumeShift = 0f;
+					anyShiftedVoiceCosmetic = false;
+					int num3 = 0;
+					int num4 = 0;
+					for (int i = 0; i < VoiceShiftCosmetics.Count; i++)
+					{
+						VoiceShiftCosmetic voiceShiftCosmetic = VoiceShiftCosmetics[i];
+						if (voiceShiftCosmetic.IsShifted)
+						{
+							anyShiftedVoiceCosmetic = true;
+							if (voiceShiftCosmetic.ModifyPitch)
+							{
+								cosmeticPitchShift += voiceShiftCosmetic.Pitch;
+								num3++;
+							}
+							if (voiceShiftCosmetic.ModifyVolume)
+							{
+								cosmeticVolumeShift += voiceShiftCosmetic.Volume;
+								num4++;
+							}
+						}
+					}
+					cosmeticPitchActive = num3 > 0;
+					cosmeticVolumeActive = num4 > 0;
+					if (cosmeticPitchActive)
+					{
+						cosmeticPitchShift /= num3;
+					}
+					if (cosmeticVolumeActive)
+					{
+						cosmeticVolumeShift /= num4;
+					}
+					voiceShiftCosmeticsDirty = false;
+				}
+				if (anyShiftedVoiceCosmetic)
+				{
+					if (cosmeticPitchActive)
+					{
+						num = cosmeticPitchShift;
+					}
+					if (cosmeticVolumeActive)
+					{
+						num2 = cosmeticVolumeShift;
+					}
 				}
 				else
 				{
-					num = num2;
+					float time = GorillaTagger.Instance.offlineVRRig.scaleFactor / scaleFactor;
+					float num5 = voicePitchForRelativeScale.Evaluate(time);
+					if (float.IsNaN(num5) || num5 <= 0f)
+					{
+						Debug.LogError("Voice pitch curve is invalid, please fix!");
+					}
+					else
+					{
+						num = num5;
+					}
 				}
 			}
-			if (!Mathf.Approximately(voiceAudio.pitch, num))
+			if (num.HasValue && !Mathf.Approximately(voiceAudio.pitch, num.Value))
 			{
-				voiceAudio.pitch = num;
+				voiceAudio.pitch = num.Value;
+			}
+			if (num2.HasValue && !Mathf.Approximately(voiceAudio.volume, num2.Value))
+			{
+				voiceAudio.volume = num2.Value;
 			}
 		}
 		jobPos = base.transform.position;
@@ -1461,6 +1470,10 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 				{
 					jobPos += zero;
 				}
+			}
+			else if (InOverrideSubscriptionZone)
+			{
+				jobPos = OverrideSubscriptionZoneLocation;
 			}
 		}
 		else
@@ -1655,7 +1668,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		}
 		if (inDuplicationZone)
 		{
-			renderTransform.position = base.transform.position + duplicationZone.VisualOffsetForRigs;
+			renderTransform.position = base.transform.position + duplicationZone.GetVisualOffsetForRigs(cachedRenderTransformPos);
 		}
 		if (frozenEffect.activeSelf && GorillaGameManager.instance is GorillaFreezeTagManager gorillaFreezeTagManager)
 		{
@@ -1847,8 +1860,21 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	private InputStruct SerializeWriteShared()
 	{
-		InputStruct result = default(InputStruct);
-		result.headRotation = BitPackUtils.PackQuaternionForNetwork(head.rigTarget.localRotation);
+		if (myIk == null)
+		{
+			myIk = GetComponent<GorillaIK>();
+		}
+		InputStruct result = new InputStruct
+		{
+			headRotation = BitPackUtils.PackQuaternionForNetwork(head.rigTarget.localRotation),
+			usingNewIK = ShouldUseNewIKMethod(myIk.usingUpdatedIK)
+		};
+		if (result.usingNewIK)
+		{
+			result.bodyRotation = BitPackUtils.PackQuaternionForNetwork(myIk.targetBodyRot);
+			result.rightUpperArmRotation = (short)BitPackUtils.PackRelativePos16(myIk.rightElbowDirection, Vector3.zero, 1f);
+			result.leftUpperArmRotation = (short)BitPackUtils.PackRelativePos16(myIk.leftElbowDirection, Vector3.zero, 1f);
+		}
 		result.rightHandLong = BitPackUtils.PackHandPosRotForNetwork(rightHand.rigTarget.localPosition, rightHand.rigTarget.localRotation);
 		result.leftHandLong = BitPackUtils.PackHandPosRotForNetwork(leftHand.rigTarget.localPosition, leftHand.rigTarget.localRotation);
 		result.position = BitPackUtils.PackWorldPosForNetwork(base.transform.position);
@@ -1859,7 +1885,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		bool flag = leftHandLink.IsLinkActive() || rightHandLink.IsLinkActive();
 		GorillaGameManager activeGameMode = GorillaGameModes.GameMode.ActiveGameMode;
 		bool flag2 = (object)activeGameMode != null && activeGameMode.GameType() == GameModeType.PropHunt;
-		int packedFields = num + (remoteUseReplacementVoice ? 512 : 0) + ((grabbedRopeIndex != -1) ? 1024 : 0) + (grabbedRopeIsPhotonView ? 2048 : 0) + (flag ? 4096 : 0) + (hoverboardVisual.IsHeld ? 8192 : 0) + (hoverboardVisual.IsLeftHanded ? 16384 : 0) + ((mountedMovingSurfaceId != -1) ? 32768 : 0) + (flag2 ? 65536 : 0) + (propHuntHandFollower.IsLeftHand ? 131072 : 0) + (leftHandLink.CanBeGrabbed() ? 262144 : 0) + (rightHandLink.CanBeGrabbed() ? 524288 : 0) + (leftHandLink.IsTentacleGrab ? 1048576 : 0) + (rightHandLink.IsTentacleGrab ? 2097152 : 0) + (num2 << 24);
+		int packedFields = num + (remoteUseReplacementVoice ? 512 : 0) + ((grabbedRopeIndex != -1) ? 1024 : 0) + (grabbedRopeIsPhotonView ? 2048 : 0) + (flag ? 4096 : 0) + (hoverboardVisual.IsHeld ? 8192 : 0) + (hoverboardVisual.IsLeftHanded ? 16384 : 0) + ((mountedMovingSurfaceId != -1) ? 32768 : 0) + (flag2 ? 65536 : 0) + (propHuntHandFollower.IsLeftHand ? 131072 : 0) + (leftHandLink.CanBeGrabbed() ? 262144 : 0) + (rightHandLink.CanBeGrabbed() ? 524288 : 0) + (leftHandLink.IsTentacleGrab ? 1048576 : 0) + (rightHandLink.IsTentacleGrab ? 2097152 : 0) + (ShowGoldNameTag ? 4194304 : 0) + (num2 << 24);
 		result.packedFields = packedFields;
 		result.packedCompetitiveData = PackCompetitiveData();
 		if (grabbedRopeIndex != -1)
@@ -1898,7 +1924,19 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	private void SerializeReadShared(InputStruct data)
 	{
+		if (myIk == null)
+		{
+			myIk = GetComponent<GorillaIK>();
+		}
 		head.syncRotation.SetValueSafe(BitPackUtils.UnpackQuaternionFromNetwork(data.headRotation));
+		bool usingUpdatedIK = ShouldUseNewIKMethod(data.usingNewIK);
+		myIk.usingUpdatedIK = usingUpdatedIK;
+		if (myIk.usingUpdatedIK)
+		{
+			myIk.targetBodyRot.SetValueSafe(BitPackUtils.UnpackQuaternionFromNetwork(data.bodyRotation));
+			myIk.leftElbowDirection.SetValueSafe(BitPackUtils.UnpackRelativePos16((ushort)data.leftUpperArmRotation, Vector3.zero, 1f));
+			myIk.rightElbowDirection.SetValueSafe(BitPackUtils.UnpackRelativePos16((ushort)data.rightUpperArmRotation, Vector3.zero, 1f));
+		}
 		BitPackUtils.UnpackHandPosRotFromNetwork(data.rightHandLong, out tempVec, out tempQuat);
 		rightHand.syncPos = tempVec;
 		rightHand.syncRotation.SetValueSafe(in tempQuat);
@@ -1911,6 +1949,14 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		int num = packedFields & 0x1FF;
 		syncRotation.eulerAngles = SanitizeVector3(new Vector3(0f, num, 0f));
 		remoteUseReplacementVoice = (packedFields & 0x200) != 0;
+		if ((packedFields & 0x400000) != 0 && SubscriptionManager.GetSubscriptionDetails(this).active)
+		{
+			playerText1.color = SubscriptionManager.SUBSCRIBER_NAME_COLOR;
+		}
+		else
+		{
+			playerText1.color = Color.white;
+		}
 		int num2 = (packedFields >> 24) & 0xFF;
 		SpeakingLoudness = (float)num2 / 255f;
 		UpdateReplacementVoice();
@@ -1978,10 +2024,32 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		AddVelocityToQueue(syncPos, data.serverTimeStamp);
 	}
 
+	private bool ShouldUseNewIKMethod(bool isReceivingNewIKData)
+	{
+		if (isOfflineVRRig)
+		{
+			bool num = SubscriptionManager.IsLocalSubscribed();
+			bool subscriptionSettingBool = SubscriptionManager.GetSubscriptionSettingBool(SubscriptionManager.SubscriptionFeatures.IOBT);
+			if (num && subscriptionSettingBool && myIk != null)
+			{
+				return myIk.usingUpdatedIK;
+			}
+			return false;
+		}
+		return isReceivingNewIKData;
+	}
+
 	void IWrappedSerializable.OnSerializeWrite(PhotonStream stream, PhotonMessageInfo info)
 	{
 		InputStruct inputStruct = SerializeWriteShared();
 		stream.SendNext(inputStruct.headRotation);
+		stream.SendNext(inputStruct.usingNewIK);
+		if (inputStruct.usingNewIK)
+		{
+			stream.SendNext(inputStruct.bodyRotation);
+			stream.SendNext(inputStruct.leftUpperArmRotation);
+			stream.SendNext(inputStruct.rightUpperArmRotation);
+		}
 		stream.SendNext(inputStruct.rightHandLong);
 		stream.SendNext(inputStruct.leftHandLong);
 		stream.SendNext(inputStruct.position);
@@ -2029,8 +2097,17 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 	void IWrappedSerializable.OnSerializeRead(PhotonStream stream, PhotonMessageInfo info)
 	{
 		_ = info.SentServerTime;
-		InputStruct data = default(InputStruct);
-		data.headRotation = (int)stream.ReceiveNext();
+		InputStruct data = new InputStruct
+		{
+			headRotation = (int)stream.ReceiveNext(),
+			usingNewIK = (bool)stream.ReceiveNext()
+		};
+		if (data.usingNewIK)
+		{
+			data.bodyRotation = (int)stream.ReceiveNext();
+			data.leftUpperArmRotation = (short)stream.ReceiveNext();
+			data.rightUpperArmRotation = (short)stream.ReceiveNext();
+		}
 		data.rightHandLong = (long)stream.ReceiveNext();
 		data.leftHandLong = (long)stream.ReceiveNext();
 		data.position = (long)stream.ReceiveNext();
@@ -2336,7 +2413,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 	public void PlayTaggedEffect()
 	{
 		TagEffectPack tagEffectPack = null;
-		quaternion quaternion = base.transform.rotation;
+		quaternion quaternion2 = base.transform.rotation;
 		TagEffectsLibrary.EffectType effectType = ((!(LocalRig == this)) ? TagEffectsLibrary.EffectType.THIRD_PERSON : TagEffectsLibrary.EffectType.FIRST_PERSON);
 		if (GorillaGameManager.instance != null && OwningNetPlayer != null)
 		{
@@ -2348,10 +2425,36 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 			tagEffectPack = playerRig.Rig.CosmeticEffectPack;
 			if ((bool)tagEffectPack && tagEffectPack.shouldFaceTagger && effectType == TagEffectsLibrary.EffectType.THIRD_PERSON)
 			{
-				quaternion = Quaternion.LookRotation((playerRig.Rig.transform.position - base.transform.position).normalized);
+				quaternion2 = Quaternion.LookRotation((playerRig.Rig.transform.position - base.transform.position).normalized);
 			}
 		}
-		TagEffectsLibrary.PlayEffect(base.transform, isLeftHand: false, scaleFactor, effectType, CosmeticEffectPack, tagEffectPack, quaternion);
+		TagEffectsLibrary.PlayEffect(base.transform, isLeftHand: false, scaleFactor, effectType, CosmeticEffectPack, tagEffectPack, quaternion2);
+	}
+
+	public void ToggleMatParticles(bool enabled)
+	{
+		if (lavaParticleSystem != null)
+		{
+			ToggleParticleSystem(lavaParticleSystem, enabled);
+		}
+		if (rockParticleSystem != null)
+		{
+			ToggleParticleSystem(rockParticleSystem, enabled);
+		}
+		if (iceParticleSystem != null)
+		{
+			ToggleParticleSystem(iceParticleSystem, enabled);
+		}
+		if (snowFlakeParticleSystem != null)
+		{
+			ToggleParticleSystem(snowFlakeParticleSystem, enabled);
+		}
+	}
+
+	private void ToggleParticleSystem(ParticleSystem ps, bool enabled)
+	{
+		ParticleSystem.EmissionModule emission = ps.emission;
+		emission.enabled = enabled;
 	}
 
 	public void UpdateMatParticles(int materialIndex)
@@ -2407,7 +2510,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		IncrementRPC(info, "RPC_InitializeNoobMaterial");
 		NetworkSystem.Instance.GetPlayer(info.senderID);
 		string userID = NetworkSystem.Instance.GetUserID(info.senderID);
-		if (info.senderID == NetworkSystem.Instance.GetOwningPlayerID(rigSerializer.gameObject) && (!initialized || (initialized && GorillaComputer.instance.friendJoinCollider.playerIDsCurrentlyTouching.Contains(userID)) || (initialized && CosmeticWardrobeProximityDetector.IsUserNearWardrobe(userID))))
+		if (info.senderID == NetworkSystem.Instance.GetOwningPlayerID(rigSerializer.gameObject) && (!initialized || (initialized && GorillaComputer.instance.friendJoinCollider.playerIDsCurrentlyTouching.Contains(userID)) || (initialized && CosmeticWardrobeProximityDetector.IsUserNearWardrobe(info.senderID))))
 		{
 			initialized = true;
 			blue = blue.ClampSafe(0f, 1f);
@@ -2561,7 +2664,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		}
 		if (drumIndex < 0 || drumIndex >= musicDrums.Length || (senderRig.transform.position - base.transform.position).sqrMagnitude > 9f || !float.IsFinite(drumVolume))
 		{
-			GorillaNot.instance.SendReport("inappropriate tag data being sent drum", player.UserId, player.NickName);
+			MonkeAgent.instance.SendReport("inappropriate tag data being sent drum", player.UserId, player.NickName);
 			return;
 		}
 		AudioSource audioSource = (netView.IsMine ? GorillaTagger.Instance.offlineVRRig.musicDrums[drumIndex] : musicDrums[drumIndex]);
@@ -2604,7 +2707,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		}
 		else
 		{
-			GorillaNot.instance.SendReport("inappropriate tag data being sent self only instrument", player.UserId, player.NickName);
+			MonkeAgent.instance.SendReport("inappropriate tag data being sent self only instrument", player.UserId, player.NickName);
 		}
 	}
 
@@ -2649,9 +2752,9 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		}
 		else
 		{
-			Quaternion quaternion = vRMap.rigTarget.parent.rotation * vRMap.syncRotation;
+			Quaternion obj = vRMap.rigTarget.parent.rotation * vRMap.syncRotation;
 			Vector3 vector3 = netSyncPos.GetPredictedFuture() - base.transform.position;
-			Vector3 vector2 = quaternion * vRMap.trackingPositionOffset * scaleFactor;
+			Vector3 vector2 = obj * vRMap.trackingPositionOffset * scaleFactor;
 			effectContext.position = vRMap.rigTarget.parent.TransformPoint(vRMap.netSyncPos.GetPredictedFuture()) - vector2 + vector + vector3;
 		}
 		GTPlayer.MaterialData handSurfaceData = GetHandSurfaceData(audioClipIndex);
@@ -2710,7 +2813,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		}
 		else
 		{
-			GorillaNot.instance.SendReport("inappropriate tag data being sent splash effect", player.UserId, player.NickName);
+			MonkeAgent.instance.SendReport("inappropriate tag data being sent splash effect", player.UserId, player.NickName);
 		}
 	}
 
@@ -2736,7 +2839,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		}
 		else
 		{
-			GorillaNot.instance.SendReport("inappropriate tag data being sent Enable Non Cosmetic Hand Item", info2.Sender.UserId, info2.Sender.NickName);
+			MonkeAgent.instance.SendReport("inappropriate tag data being sent Enable Non Cosmetic Hand Item", info2.Sender.UserId, info2.Sender.NickName);
 		}
 	}
 
@@ -2762,7 +2865,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		}
 		else
 		{
-			GorillaNot.instance.SendReport("inappropriate tag data being sent Enable Non Cosmetic Hand Item", info.Sender.UserId, info.Sender.NickName);
+			MonkeAgent.instance.SendReport("inappropriate tag data being sent Enable Non Cosmetic Hand Item", info.Sender.UserId, info.Sender.NickName);
 		}
 	}
 
@@ -2883,7 +2986,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		}
 		else
 		{
-			GorillaNot.instance.SendReport("inappropriate tag data being sent update cosmetics", info.Sender.UserId, info.Sender.NickName);
+			MonkeAgent.instance.SendReport("inappropriate tag data being sent update cosmetics", info.Sender.UserId, info.Sender.NickName);
 		}
 	}
 
@@ -2899,7 +3002,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		}
 		else
 		{
-			GorillaNot.instance.SendReport("inappropriate tag data being sent update cosmetics with tryon", player.UserId, player.NickName);
+			MonkeAgent.instance.SendReport("inappropriate tag data being sent update cosmetics with tryon", player.UserId, player.NickName);
 		}
 	}
 
@@ -2915,7 +3018,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		}
 		else
 		{
-			GorillaNot.instance.SendReport("inappropriate tag data being sent update cosmetics with tryon", player.UserId, player.NickName);
+			MonkeAgent.instance.SendReport("inappropriate tag data being sent update cosmetics with tryon", player.UserId, player.NickName);
 		}
 	}
 
@@ -2944,17 +3047,18 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		InitializedCosmetics = true;
 	}
 
-	public void SetCosmeticsActive(bool playfx)
+	public async void SetCosmeticsActive(bool playfx)
 	{
-		if (CosmeticsController.instance == null || !CosmeticsV2Spawner_Dirty.allPartsInstantiated)
+		if (CosmeticsController.instance == null)
 		{
 			return;
 		}
+		int version = ++_cosmeticsActivationVersion;
 		prevSet.CopyItems(mergedSet);
 		mergedSet.MergeSets(inTryOnRoom ? tryOnSet : null, cosmeticSet);
 		BodyDockPositions component = GetComponent<BodyDockPositions>();
-		mergedSet.ActivateCosmetics(prevSet, this, component, cosmeticsObjectRegistry);
-		if (playfx)
+		await mergedSet.ActivateCosmetics(prevSet, this, component, cosmeticsObjectRegistry, version);
+		if (_cosmeticsActivationVersion == version && playfx)
 		{
 			if (cosmeticsActivationPS != null)
 			{
@@ -2967,10 +3071,10 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		}
 	}
 
-	public void RefreshCosmetics()
+	public async void RefreshCosmetics()
 	{
-		mergedSet.ActivateCosmetics(mergedSet, this, myBodyDockPositions, cosmeticsObjectRegistry);
-		myBodyDockPositions.RefreshTransferrableItems();
+		int activationVersion = ++_cosmeticsActivationVersion;
+		await mergedSet.ActivateCosmetics(mergedSet, this, myBodyDockPositions, cosmeticsObjectRegistry, activationVersion);
 	}
 
 	public void GetCosmeticsPlayFabCatalogData()
@@ -2987,31 +3091,24 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 						dictionary[item.ItemId] = item.ItemId;
 						if (item.CatalogVersion == CosmeticsController.instance.catalog)
 						{
-							_playerOwnedCosmetics.Add(item.ItemId);
-							rawCosmeticString += item.ItemId;
+							AddCosmetic(item.ItemId);
+							if (item.PurchaseDate.HasValue)
+							{
+								_playerOwnedCosmeticsAge[item.ItemId] = (int)(DateTime.UtcNow - item.PurchaseDate.Value).TotalDays;
+							}
 						}
 					}
-				}
-				if (CosmeticsV2Spawner_Dirty.allPartsInstantiated)
-				{
-					Handle_CosmeticsV2_OnPostInstantiateAllPrefabs_DoEnableAllCosmetics();
 				}
 			}, delegate
 			{
 				initializedCosmetics = true;
-				if (CosmeticsV2Spawner_Dirty.allPartsInstantiated)
-				{
-					SetCosmeticsActive(playfx: false);
-				}
 			});
 		}
-		rawCosmeticString += "Slingshot";
-		_playerOwnedCosmetics.Add("Slingshot");
+		AddCosmetic("Slingshot");
 		foreach (BuilderPieceSet startPieceSet in BuilderSetManager.instance.StartPieceSets)
 		{
-			_playerOwnedCosmetics.Add(startPieceSet.playfabID);
+			AddCosmetic(startPieceSet.playfabID);
 		}
-		rawCosmeticString += BuilderSetManager.instance.GetStarterSetsConcat();
 	}
 
 	public void GenerateFingerAngleLookupTables()
@@ -3083,7 +3180,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 	{
 		if (GorillaGameManager.instance != null)
 		{
-			GorillaNot.IncrementRPCCall(info, sourceCall);
+			MonkeAgent.IncrementRPCCall(info, sourceCall);
 		}
 	}
 
@@ -3091,7 +3188,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 	{
 		if (GorillaGameManager.instance != null)
 		{
-			GorillaNot.IncrementRPCCall(info, sourceCall);
+			MonkeAgent.IncrementRPCCall(info, sourceCall);
 		}
 	}
 
@@ -3335,6 +3432,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 	public void OnEnable()
 	{
 		EyeScannerMono.Register(this);
+		SubscriptionManager.OnLocalSubscriptionData = (Action)Delegate.Combine(SubscriptionManager.OnLocalSubscriptionData, new Action(OnSubscriptionData));
 		GorillaComputer.RegisterOnNametagSettingChanged(UpdateName);
 		if (currentRopeSwingTarget != null)
 		{
@@ -3362,7 +3460,23 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		TickSystem<object>.AddPostTickCallback(this);
 	}
 
-	void IPreDisable.PreDisable()
+	public void OnSubscriptionData()
+	{
+		if (isOfflineVRRig)
+		{
+			showGoldNameTag = SubscriptionManager.IsLocalSubscribed() && PlayerPrefs.GetInt(SubscriptionManager.GetSubsFeatureKey(SubscriptionManager.SubscriptionFeatures.GoldenName)) > 0;
+			if (showGoldNameTag)
+			{
+				playerText1.color = SubscriptionManager.SUBSCRIBER_NAME_COLOR;
+			}
+			else
+			{
+				playerText1.color = Color.white;
+			}
+		}
+	}
+
+	async void IPreDisable.PreDisable()
 	{
 		try
 		{
@@ -3375,11 +3489,11 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 			EnablePaintbrawlCosmetics(on: false);
 			EnableSuperInfectionHands(on: false);
 			ClearPartyMemberStatus();
-			rawCosmeticString = "";
 			_playerOwnedCosmetics.Clear();
+			_playerOwnedCosmeticsAge.Clear();
 			if (cosmeticSet != null)
 			{
-				mergedSet.DeactivateAllCosmetcs(myBodyDockPositions, CosmeticsController.instance.nullItem, cosmeticsObjectRegistry);
+				await mergedSet.DeactivateAllCosmetcs(myBodyDockPositions, CosmeticsController.instance.nullItem, cosmeticsObjectRegistry);
 				mergedSet.ClearSet(CosmeticsController.instance.nullItem);
 				prevSet.ClearSet(CosmeticsController.instance.nullItem);
 				tryOnSet.ClearSet(CosmeticsController.instance.nullItem);
@@ -3402,6 +3516,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	public void OnDisable()
 	{
+		SubscriptionManager.OnLocalSubscriptionData = (Action)Delegate.Remove(SubscriptionManager.OnLocalSubscriptionData, new Action(OnSubscriptionData));
 		try
 		{
 			GorillaSkin.ApplyToRig(this, null, GorillaSkin.SkinType.gameMode);
@@ -3891,7 +4006,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		if (this.duplicationZone == duplicationZone)
 		{
 			SetDuplicationZone(null);
-			renderTransform.localPosition = Vector3.zero;
+			renderTransform.localPosition = cachedRenderTransformPos;
 		}
 	}
 
@@ -3915,16 +4030,35 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		}
 	}
 
-	bool IUserCosmeticsCallback.OnGetUserCosmetics(string cosmetics)
+	bool IUserCosmeticsCallback.OnGetUserCosmetics(string cosmeticsString)
 	{
-		if (cosmetics == rawCosmeticString && currentCosmeticTries < cosmeticRetries)
+		if (cosmeticsString == "BANNED")
+		{
+			_playerOwnedCosmetics.Clear();
+			_playerOwnedCosmeticsAge.Clear();
+			return true;
+		}
+		Dictionary<string, ItemInstance> dictionary;
+		try
+		{
+			dictionary = JsonConvert.DeserializeObject<Dictionary<string, ItemInstance>>(cosmeticsString);
+		}
+		catch (Exception ex)
+		{
+			Debug.LogError("Failed to deserialize cosmetics for " + creator?.NickName + ": " + ex.Message);
+			dictionary = null;
+		}
+		if (currentCosmeticTries < cosmeticRetries && (dictionary == null || _playerOwnedCosmetics.SetEquals(dictionary.Keys)))
 		{
 			currentCosmeticTries++;
 			return false;
 		}
-		rawCosmeticString = cosmetics ?? "";
+		if (dictionary == null)
+		{
+			dictionary = new Dictionary<string, ItemInstance>();
+		}
 		currentCosmeticTries = 0;
-		SaveOwnedCosmetics(rawCosmeticString);
+		SaveOwnedCosmetics(dictionary);
 		InitializedCosmetics = true;
 		SetCosmeticsActive(playfx: false);
 		myBodyDockPositions.RefreshTransferrableItems();
@@ -3932,23 +4066,28 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		return true;
 	}
 
-	private void SaveOwnedCosmetics(string cosmetics)
+	private void SaveOwnedCosmetics(Dictionary<string, ItemInstance> cosmetics)
 	{
-		if (!string.IsNullOrEmpty(cosmetics))
+		if (cosmetics.Count == 0)
 		{
-			_playerOwnedCosmetics.Clear();
-			string[] ts = cosmetics.Split(',');
-			_playerOwnedCosmetics.AddAll(ts);
-			CheckForEarlyAccess();
+			return;
 		}
+		_playerOwnedCosmetics.Clear();
+		_playerOwnedCosmeticsAge.Clear();
+		foreach (var (text2, itemInstance2) in cosmetics)
+		{
+			_playerOwnedCosmetics.Add(text2);
+			if (itemInstance2 != null && itemInstance2.PurchaseDate.HasValue)
+			{
+				_playerOwnedCosmeticsAge[text2] = (int)(DateTime.UtcNow - itemInstance2.PurchaseDate.Value).TotalDays;
+			}
+		}
+		CheckForEarlyAccess();
 	}
 
 	internal void AddCosmetic(string cosmeticId)
 	{
-		if (_playerOwnedCosmetics.Add(cosmeticId))
-		{
-			rawCosmeticString += cosmeticId;
-		}
+		_playerOwnedCosmetics.Add(cosmeticId);
 	}
 
 	internal bool HasCosmetic(string cosmeticId)

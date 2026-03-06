@@ -264,7 +264,7 @@ public class GhostReactorShiftManager : MonoBehaviourTick
 
 	public void EndShift()
 	{
-		grManager.RequestShiftEnd();
+		grManager.SendRequestShiftEndRPC();
 	}
 
 	public void ClearEntities()

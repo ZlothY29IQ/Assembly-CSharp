@@ -13,7 +13,7 @@ public class OwlLook : MonoBehaviour
 
 	public Collider[] overlapColliders;
 
-	public VRRig[] rigs = new VRRig[10];
+	public VRRig[] rigs = new VRRig[20];
 
 	public VRRig[] overlapRigs;
 
@@ -29,7 +29,7 @@ public class OwlLook : MonoBehaviour
 
 	private void Awake()
 	{
-		overlapRigs = new VRRig[10];
+		overlapRigs = new VRRig[20];
 		if (myRig == null)
 		{
 			myRig = GetComponentInParent<VRRig>();

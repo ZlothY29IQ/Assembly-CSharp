@@ -11,4 +11,6 @@ public struct GameEntityCreateData
 	public long createData;
 
 	public int createdByEntityId;
+
+	public int slotIndex;
 }

@@ -324,13 +324,14 @@ public class ScienceExperimentPlatformGenerator : MonoBehaviourPun, ITickSystemP
 		if (activeBubbles.Count < maxBubbleCount)
 		{
 			Vector3 position = liquidSurfacePlane.transform.position + new Vector3(surfacePosLocal.x, 0f, surfacePosLocal.y);
-			BubbleData bubbleData = default(BubbleData);
-			bubbleData.position = position;
-			bubbleData.spawnSize = spawnSize;
-			bubbleData.lifetime = lifetime;
-			bubbleData.spawnTime = spawnTime;
-			bubbleData.isTrail = false;
-			BubbleData item = bubbleData;
+			BubbleData item = new BubbleData
+			{
+				position = position,
+				spawnSize = spawnSize,
+				lifetime = lifetime,
+				spawnTime = spawnTime,
+				isTrail = false
+			};
 			item.bubble = ObjectPools.instance.Instantiate(spawnedPrefab, item.position, Quaternion.identity, 0f).GetComponent<SodaBubble>();
 			if (base.photonView.IsMine && addAsTrail)
 			{
@@ -345,7 +346,7 @@ public class ScienceExperimentPlatformGenerator : MonoBehaviourPun, ITickSystemP
 	[PunRPC]
 	public void SpawnSodaBubbleRPC(Vector2 surfacePosLocal, float spawnSize, float lifetime, double spawnTime, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "SpawnSodaBubbleRPC");
+		MonkeAgent.IncrementRPCCall(info, "SpawnSodaBubbleRPC");
 		if (info.Sender == PhotonNetwork.MasterClient && float.IsFinite(spawnSize) && float.IsFinite(lifetime) && double.IsFinite(spawnTime))
 		{
 			float time = Mathf.Clamp01(scienceExperimentManager.RiseProgressLinear);

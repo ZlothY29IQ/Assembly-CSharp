@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 
 public class GameSnappable : MonoBehaviour
@@ -38,7 +39,7 @@ public class GameSnappable : MonoBehaviour
 	{
 		foreach (SnapJointOffset snapOffset in snapOffsets)
 		{
-			if ((snapOffset.jointType & jointType) != 0)
+			if ((snapOffset.jointType & jointType) != SnapJointType.None)
 			{
 				positionOffset = snapOffset.positionOffset;
 				rotationOffset = Quaternion.Euler(snapOffset.rotationOffset);
@@ -56,44 +57,45 @@ public class GameSnappable : MonoBehaviour
 		{
 			return null;
 		}
-		SnapJointType snapJointType = (GamePlayerLocal.IsLeftHand(heldByHandIndex) ? SnapJointType.HandL : SnapJointType.HandR);
-		SnapJointType snapJointType2 = (GamePlayerLocal.IsLeftHand(heldByHandIndex) ? SnapJointType.ForearmL : SnapJointType.ForearmR);
+		bool num = GamePlayer.IsLeftHand(heldByHandIndex);
+		SnapJointType snapJointType = (num ? SnapJointType.HandL : SnapJointType.HandR);
+		SnapJointType snapJointType2 = (num ? SnapJointType.ForearmL : SnapJointType.ForearmR);
 		List<SuperInfectionSnapPoint> snapPoints = GamePlayerLocal.instance.gamePlayer.snapPointManager.SnapPoints;
-		float num = float.MaxValue;
-		int num2 = -1;
+		float num2 = float.MaxValue;
+		int num3 = -1;
 		for (int i = 0; i < snapPoints.Count; i++)
 		{
-			if (snapPoints[i].jointType != snapJointType && snapPoints[i].jointType != snapJointType2 && (snapPoints[i].jointType & snapLocationTypes) != 0 && !snapPoints[i].HasSnapped())
+			if (snapPoints[i].jointType != snapJointType && snapPoints[i].jointType != snapJointType2 && (snapPoints[i].jointType & snapLocationTypes) != SnapJointType.None && !snapPoints[i].HasSnapped())
 			{
 				GetSnapOffset(snapPoints[i].jointType, out var positionOffset, out var rotationOffset);
-				float num3 = Vector3.Distance(snapPoints[i].transform.TransformPoint(rotationOffset * positionOffset), base.transform.position);
-				float num4 = snapRadius + snapPoints[i].snapPointRadius;
-				if (num3 < num && num3 < num4)
+				float num4 = Vector3.Distance(snapPoints[i].transform.TransformPoint(rotationOffset * positionOffset), base.transform.position);
+				float num5 = snapRadius + snapPoints[i].snapPointRadius;
+				if (num4 < num2 && num4 < num5)
 				{
-					num2 = i;
-					num = num3;
+					num3 = i;
+					num2 = num4;
 				}
 			}
 		}
-		if (num2 >= 0)
+		if (num3 >= 0)
 		{
-			return snapPoints[num2];
+			return snapPoints[num3];
 		}
-		if ((snapLocationTypes & SnapJointType.Holster) != 0)
+		if ((snapLocationTypes & SnapJointType.Holster) != SnapJointType.None)
 		{
 			IEnumerable<SuperInfectionSnapPoint> points = (GamePlayerLocal.instance.currGameEntityManager?.superInfectionManager).GetPoints(SnapJointType.Holster);
 			SuperInfectionSnapPoint superInfectionSnapPoint = null;
-			float num5 = snapRadius;
+			float num6 = snapRadius;
 			foreach (SuperInfectionSnapPoint item in points)
 			{
 				if (!item.HasSnapped())
 				{
 					GetSnapOffset(item.jointType, out var positionOffset2, out var rotationOffset2);
-					float num6 = Vector3.Distance(item.transform.TransformPoint(rotationOffset2 * positionOffset2), base.transform.position);
-					if (num6 < num5)
+					float num7 = Vector3.Distance(item.transform.TransformPoint(rotationOffset2 * positionOffset2), base.transform.position);
+					if (num7 < num6)
 					{
 						superInfectionSnapPoint = item;
-						num5 = num6;
+						num6 = num7;
 					}
 				}
 			}
@@ -112,14 +114,14 @@ public class GameSnappable : MonoBehaviour
 		{
 			return GameEntityId.Invalid;
 		}
-		SnapJointType snapJointType = (GamePlayerLocal.IsLeftHand(heldByHandIndex) ? SnapJointType.HandL : SnapJointType.HandR);
-		SnapJointType snapJointType2 = (GamePlayerLocal.IsLeftHand(heldByHandIndex) ? SnapJointType.ForearmL : SnapJointType.ForearmR);
+		SnapJointType snapJointType = (GamePlayer.IsLeftHand(heldByHandIndex) ? SnapJointType.HandL : SnapJointType.HandR);
+		SnapJointType snapJointType2 = (GamePlayer.IsLeftHand(heldByHandIndex) ? SnapJointType.ForearmL : SnapJointType.ForearmR);
 		List<SuperInfectionSnapPoint> snapPoints = GamePlayerLocal.instance.gamePlayer.snapPointManager.SnapPoints;
 		float num = float.MaxValue;
 		int num2 = -1;
 		for (int i = 0; i < snapPoints.Count; i++)
 		{
-			if (snapPoints[i].jointType != snapJointType && snapPoints[i].jointType != snapJointType2 && (snapPoints[i].jointType & snapLocationTypes) != 0 && snapPoints[i].HasSnapped())
+			if (snapPoints[i].jointType != snapJointType && snapPoints[i].jointType != snapJointType2 && (snapPoints[i].jointType & snapLocationTypes) != SnapJointType.None && snapPoints[i].HasSnapped())
 			{
 				GetSnapOffset(snapPoints[i].jointType, out var positionOffset, out var rotationOffset);
 				float num3 = Vector3.Distance(snapPoints[i].transform.TransformPoint(rotationOffset * positionOffset), base.transform.position);
@@ -193,5 +195,34 @@ public class GameSnappable : MonoBehaviour
 	public void OnUnsnap()
 	{
 		unsnapSound.Play(null);
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static bool TryGetJointToSnapIndex(SnapJointType jointType, out int out_slot)
+	{
+		out_slot = GetJointToSnapIndex(jointType);
+		return out_slot != -1;
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static int GetJointToSnapIndex(SnapJointType jointType)
+	{
+		return jointType switch
+		{
+			SnapJointType.HandL => 2, 
+			SnapJointType.HandR => 3, 
+			_ => -1, 
+		};
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static SnapJointType GetSnapIndexToJoint(int snapIndex)
+	{
+		return snapIndex switch
+		{
+			2 => SnapJointType.HandL, 
+			3 => SnapJointType.HandR, 
+			_ => SnapJointType.None, 
+		};
 	}
 }

@@ -180,7 +180,7 @@ public class CrittersActorGrabber : MonoBehaviour
 					continue;
 				}
 				CrittersActor component = attachedRigidbody.GetComponent<CrittersActor>();
-				if (!(component == null) && (!(component is CrittersBag) || !CrittersManager.instance.actorById.TryGetValue(component.parentActorId, out var value) || !(value is CrittersAttachPoint) || (value as CrittersAttachPoint).rigPlayerId != PhotonNetwork.LocalPlayer.ActorNumber || (value as CrittersAttachPoint).anchorLocation != 0 || (value as CrittersAttachPoint).isLeft != isLeft) && component.usesRB && component.CanBeGrabbed(grabber))
+				if (!(component == null) && (!(component is CrittersBag) || !CrittersManager.instance.actorById.TryGetValue(component.parentActorId, out var value) || !(value is CrittersAttachPoint) || (value as CrittersAttachPoint).rigPlayerId != PhotonNetwork.LocalPlayer.ActorNumber || (value as CrittersAttachPoint).anchorLocation != CrittersAttachPoint.AnchoredLocationTypes.Arm || (value as CrittersAttachPoint).isLeft != isLeft) && component.usesRB && component.CanBeGrabbed(grabber))
 				{
 					float sqrMagnitude = (colliders[i].attachedRigidbody.position - base.transform.position).sqrMagnitude;
 					if (sqrMagnitude < num2)

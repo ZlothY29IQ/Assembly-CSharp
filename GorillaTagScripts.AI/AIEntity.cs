@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using GorillaExtensions;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -59,16 +60,16 @@ public class AIEntity : MonoBehaviour
 	protected void ChooseRandomTarget()
 	{
 		int num = -1;
-		int randomTarget = Random.Range(0, GorillaParent.instance.vrrigs.Count);
-		num = GorillaParent.instance.vrrigs.FindIndex((VRRig x) => x.creator != null && x.creator == GorillaParent.instance.vrrigs[randomTarget].creator);
+		int randomTarget = Random.Range(0, VRRigCache.ActiveRigs.Count);
+		num = VRRigCache.ActiveRigContainers.FindIndex((RigContainer x) => x.Rig.creator != null && x.Rig.creator == VRRigCache.ActiveRigContainers[randomTarget].Rig.creator);
 		if (num == -1)
 		{
-			num = Random.Range(0, GorillaParent.instance.vrrigs.Count);
+			num = Random.Range(0, VRRigCache.ActiveRigs.Count);
 		}
-		if (num < GorillaParent.instance.vrrigs.Count)
+		if (num < VRRigCache.ActiveRigContainers.Count)
 		{
-			targetPlayer = GorillaParent.instance.vrrigs[num].creator;
-			followTarget = GorillaParent.instance.vrrigs[num].head.rigTarget;
+			targetPlayer = VRRigCache.ActiveRigContainers[num].Rig.creator;
+			followTarget = VRRigCache.ActiveRigContainers[num].Rig.head.rigTarget;
 			targetIsOnNavMesh = NavMesh.SamplePosition(followTarget.position, out var _, navMeshSampleRange, 1);
 		}
 		else
@@ -82,19 +83,20 @@ public class AIEntity : MonoBehaviour
 	{
 		VRRig vRRig = null;
 		float num = float.MaxValue;
-		foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+		foreach (RigContainer activeRigContainer in VRRigCache.ActiveRigContainers)
 		{
-			if (vrrig.head != null && !(vrrig.head.rigTarget == null))
+			VRRig rig = activeRigContainer.Rig;
+			if (rig.head != null && !rig.head.rigTarget.IsNull())
 			{
-				float sqrMagnitude = (base.transform.position - vrrig.head.rigTarget.transform.position).sqrMagnitude;
+				float sqrMagnitude = (base.transform.position - rig.head.rigTarget.transform.position).sqrMagnitude;
 				if (sqrMagnitude < minChaseRange * minChaseRange && sqrMagnitude < num)
 				{
 					num = sqrMagnitude;
-					vRRig = vrrig;
+					vRRig = rig;
 				}
 			}
 		}
-		if (vRRig != null)
+		if (vRRig.IsNotNull())
 		{
 			targetPlayer = vRRig.creator;
 			followTarget = vRRig.head.rigTarget;

@@ -106,15 +106,16 @@ public class AOESender : MonoBehaviour
 					float num4 = Mathf.Clamp01(num3 / num2);
 					float num5 = EvaluateFalloff(num4);
 					float finalStrength = Mathf.Max(minStrength, strength * num5);
-					AOEReceiver.AOEContext aOEContext = default(AOEReceiver.AOEContext);
-					aOEContext.origin = worldOrigin;
-					aOEContext.radius = radius;
-					aOEContext.instigator = base.gameObject;
-					aOEContext.baseStrength = strength;
-					aOEContext.finalStrength = finalStrength;
-					aOEContext.distance = num3;
-					aOEContext.normalizedDistance = num4;
-					AOEReceiver.AOEContext AOEContext = aOEContext;
+					AOEReceiver.AOEContext AOEContext = new AOEReceiver.AOEContext
+					{
+						origin = worldOrigin,
+						radius = radius,
+						instigator = base.gameObject,
+						baseStrength = strength,
+						finalStrength = finalStrength,
+						distance = num3,
+						normalizedDistance = num4
+					};
 					componentInChildren.ReceiveAOE(in AOEContext);
 				}
 			}

@@ -397,7 +397,7 @@ public class ScienceExperimentManager : NetworkComponent, ITickSystemTick
 	{
 		get
 		{
-			if (reliableState.state != 0 && reliableState.state != RisingLiquidState.Erupting && (reliableState.state != RisingLiquidState.Rising || !(riseProgress < lavaProgressToDisableRefreshWater)))
+			if (reliableState.state != RisingLiquidState.Drained && reliableState.state != RisingLiquidState.Erupting && (reliableState.state != RisingLiquidState.Rising || !(riseProgress < lavaProgressToDisableRefreshWater)))
 			{
 				if (reliableState.state == RisingLiquidState.Draining)
 				{
@@ -1289,7 +1289,7 @@ public class ScienceExperimentManager : NetworkComponent, ITickSystemTick
 
 	private void AddLavaRock(int playerId)
 	{
-		if (!base.IsMine || reliableState.state != 0)
+		if (!base.IsMine || reliableState.state != RisingLiquidState.Drained)
 		{
 			return;
 		}
@@ -1480,7 +1480,7 @@ public class ScienceExperimentManager : NetworkComponent, ITickSystemTick
 	[PunRPC]
 	public void PlayerTouchedLavaRPC(PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "PlayerTouchedLavaRPC");
+		MonkeAgent.IncrementRPCCall(info, "PlayerTouchedLavaRPC");
 		PlayerTouchedLava(info.Sender.ActorNumber);
 	}
 
@@ -1529,7 +1529,7 @@ public class ScienceExperimentManager : NetworkComponent, ITickSystemTick
 			info = RpcInfo.FromLocal(base.Runner, RpcChannel.Reliable, RpcHostMode.SourceIsServer);
 		}
 		PhotonMessageInfoWrapped infoWrapped = new PhotonMessageInfoWrapped(info);
-		GorillaNot.IncrementRPCCall(infoWrapped, "PlayerTouchedLavaRPC");
+		MonkeAgent.IncrementRPCCall(infoWrapped, "PlayerTouchedLavaRPC");
 		PlayerTouchedLava(infoWrapped.Sender.ActorNumber);
 	}
 
@@ -1558,7 +1558,7 @@ public class ScienceExperimentManager : NetworkComponent, ITickSystemTick
 	[PunRPC]
 	private void PlayerTouchedRefreshWaterRPC(PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "PlayerTouchedRefreshWaterRPC");
+		MonkeAgent.IncrementRPCCall(info, "PlayerTouchedRefreshWaterRPC");
 		PlayerTouchedRefreshWater(info.Sender.ActorNumber);
 	}
 
@@ -1607,7 +1607,7 @@ public class ScienceExperimentManager : NetworkComponent, ITickSystemTick
 			info = RpcInfo.FromLocal(base.Runner, RpcChannel.Reliable, RpcHostMode.SourceIsServer);
 		}
 		PhotonMessageInfoWrapped infoWrapped = new PhotonMessageInfoWrapped(info);
-		GorillaNot.IncrementRPCCall(infoWrapped, "PlayerTouchedRefreshWaterRPC");
+		MonkeAgent.IncrementRPCCall(infoWrapped, "PlayerTouchedRefreshWaterRPC");
 		PlayerTouchedRefreshWater(infoWrapped.Sender.ActorNumber);
 	}
 
@@ -1633,7 +1633,7 @@ public class ScienceExperimentManager : NetworkComponent, ITickSystemTick
 	[PunRPC]
 	private void ValidateLocalPlayerWaterBalloonHitRPC(int playerId, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "ValidateLocalPlayerWaterBalloonHitRPC");
+		MonkeAgent.IncrementRPCCall(info, "ValidateLocalPlayerWaterBalloonHitRPC");
 		if (playerId == NetworkSystem.Instance.LocalPlayer.ActorNumber)
 		{
 			ValidateLocalPlayerWaterBalloonHit(playerId);
@@ -1646,7 +1646,7 @@ public class ScienceExperimentManager : NetworkComponent, ITickSystemTick
 		if (((NetworkBehaviour)this).InvokeRpc)
 		{
 			((NetworkBehaviour)this).InvokeRpc = false;
-			GorillaNot.IncrementRPCCall(new PhotonMessageInfoWrapped(info), "ValidateLocalPlayerWaterBalloonHitRPC");
+			MonkeAgent.IncrementRPCCall(new PhotonMessageInfoWrapped(info), "ValidateLocalPlayerWaterBalloonHitRPC");
 			if (playerId == NetworkSystem.Instance.LocalPlayer.ActorNumber)
 			{
 				ValidateLocalPlayerWaterBalloonHit(playerId);
@@ -1699,7 +1699,7 @@ public class ScienceExperimentManager : NetworkComponent, ITickSystemTick
 	[PunRPC]
 	private void PlayerHitByWaterBalloonRPC(int playerId, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "PlayerHitByWaterBalloonRPC");
+		MonkeAgent.IncrementRPCCall(info, "PlayerHitByWaterBalloonRPC");
 		PlayerHitByWaterBalloon(playerId);
 	}
 
@@ -1750,7 +1750,7 @@ public class ScienceExperimentManager : NetworkComponent, ITickSystemTick
 			}
 			info = RpcInfo.FromLocal(base.Runner, RpcChannel.Reliable, RpcHostMode.SourceIsServer);
 		}
-		GorillaNot.IncrementRPCCall(new PhotonMessageInfoWrapped(info), "PlayerHitByWaterBalloonRPC");
+		MonkeAgent.IncrementRPCCall(new PhotonMessageInfoWrapped(info), "PlayerHitByWaterBalloonRPC");
 		PlayerHitByWaterBalloon(playerId);
 	}
 

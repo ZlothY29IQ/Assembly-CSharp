@@ -93,7 +93,7 @@ public class SnakeInCanHoldable : TransferrableObject
 	{
 		if (info.senderID == ownerRig.creator.ActorNumber && arg.Length == 1 && arg[0] is bool && sender == target)
 		{
-			GorillaNot.IncrementRPCCall(info, "OnEnableObject");
+			MonkeAgent.IncrementRPCCall(info, "OnEnableObject");
 			if (snakeInCanCallLimiter.CheckCallTime(Time.time))
 			{
 				bool enable = (bool)arg[0];

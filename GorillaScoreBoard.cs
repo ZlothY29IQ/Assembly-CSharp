@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using GorillaGameModes;
+using GorillaTagScripts;
 using TMPro;
 using UnityEngine;
 
@@ -19,8 +20,14 @@ public class GorillaScoreBoard : MonoBehaviour
 
 	public GameObject linesParent;
 
+	public float bigRoomYOffset = 32.5f;
+
 	[SerializeField]
 	public List<GorillaPlayerScoreboardLine> lines;
+
+	private List<RectTransform> linesRTs = new List<RectTransform>();
+
+	public GameObject textsParent;
 
 	public TextMeshPro boardText;
 
@@ -72,16 +79,17 @@ public class GorillaScoreBoard : MonoBehaviour
 		}
 	}
 
-	private void OnDestroy()
+	private string GetBeginningString()
 	{
+		string text = $" ({10})";
+		if (NetworkSystem.Instance.SessionIsSubscription)
+		{
+			text = $" ({20})";
+		}
+		return "ROOM ID: " + (NetworkSystem.Instance.SessionIsPrivate ? "-PRIVATE- GAME: " : (NetworkSystem.Instance.RoomName + "   GAME: ")) + RoomType() + text + "\n  PLAYER     COLOR  MUTE   REPORT";
 	}
 
-	public string GetBeginningString()
-	{
-		return "ROOM ID: " + (NetworkSystem.Instance.SessionIsPrivate ? "-PRIVATE- GAME: " : (NetworkSystem.Instance.RoomName + "   GAME: ")) + RoomType() + "\n  PLAYER     COLOR  MUTE   REPORT";
-	}
-
-	public string RoomType()
+	private string RoomType()
 	{
 		initialGameMode = RoomSystem.RoomGameMode;
 		gmNames = GameMode.gameModeNames;
@@ -121,24 +129,54 @@ public class GorillaScoreBoard : MonoBehaviour
 		stringBuilder.Append(GetBeginningString());
 		buttonStringBuilder.Clear();
 		bool flag = KIDManager.HasPermissionToUseFeature(EKIDFeatures.Custom_Nametags);
+		int num = 0;
 		for (int i = 0; i < lines.Count; i++)
+		{
+			if (lines[i].gameObject.activeInHierarchy)
+			{
+				num++;
+			}
+		}
+		if (num > 10)
+		{
+			linesParent.transform.localScale = new Vector3(1f, 0.5f, 1f);
+			linesParent.transform.localPosition = new Vector3(0f, bigRoomYOffset, 0f);
+			textsParent.transform.localScale = new Vector3(1f, 0.5f, 1f);
+		}
+		else
+		{
+			linesParent.transform.localScale = Vector3.one;
+			linesParent.transform.localPosition = Vector3.zero;
+			textsParent.transform.localScale = Vector3.one;
+		}
+		for (int j = 0; j < lines.Count; j++)
 		{
 			try
 			{
-				if (!lines[i].gameObject.activeInHierarchy)
+				if (!lines[j].gameObject.activeInHierarchy)
 				{
 					continue;
 				}
-				lines[i].gameObject.GetComponent<RectTransform>().localPosition = new Vector3(0f, startingYValue - lineHeight * i, 0f);
-				if (lines[i].linePlayer == null || !lines[i].linePlayer.InRoom)
+				linesRTs[j].localPosition = new Vector3(0f, startingYValue - lineHeight * j, 0f);
+				if (lines[j].linePlayer == null || !lines[j].linePlayer.InRoom)
 				{
 					continue;
 				}
 				stringBuilder.Append("\n ");
-				stringBuilder.Append(flag ? lines[i].playerNameVisible : lines[i].linePlayer.DefaultName);
-				if (lines[i].linePlayer != NetworkSystem.Instance.LocalPlayer)
+				SubscriptionManager.SubscriptionDetails subscriptionDetails = SubscriptionManager.GetSubscriptionDetails(lines[j].linePlayer);
+				if (subscriptionDetails.active && subscriptionDetails.tier > 0)
 				{
-					if (lines[i].reportButton.isActiveAndEnabled)
+					stringBuilder.Append("<color=#ffc600>");
+				}
+				else
+				{
+					stringBuilder.Append("<color=#ffffff>");
+				}
+				stringBuilder.Append(flag ? lines[j].playerNameVisible : lines[j].linePlayer.DefaultName);
+				stringBuilder.Append("</color>");
+				if (lines[j].linePlayer != NetworkSystem.Instance.LocalPlayer)
+				{
+					if (lines[j].reportButton.isActiveAndEnabled)
 					{
 						buttonStringBuilder.Append("MUTE                                REPORT\n");
 					}
@@ -177,6 +215,11 @@ public class GorillaScoreBoard : MonoBehaviour
 
 	private void Start()
 	{
+		linesRTs.Clear();
+		for (int i = 0; i < lines.Count; i++)
+		{
+			linesRTs.Add(lines[i].GetComponent<RectTransform>());
+		}
 		GorillaScoreboardTotalUpdater.RegisterScoreboard(this);
 	}
 

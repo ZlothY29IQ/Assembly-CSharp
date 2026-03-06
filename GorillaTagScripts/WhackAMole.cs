@@ -38,7 +38,7 @@ public class WhackAMole : NetworkComponent
 	public struct WhackAMoleData : INetworkStruct
 	{
 		[FieldOffset(24)]
-		[FixedBufferProperty(/*Could not decode attribute arguments.*/)]
+		[FixedBufferProperty(typeof(NetworkString<_128>), typeof(UnityValueSurrogate_0040ReaderWriter_0040Fusion_NetworkString_00601_003CFusion__128_003E), 0, order = -2147483647)]
 		[WeaverGenerated]
 		[SerializeField]
 		private FixedStorage_0040129 _HighScorePlayerName;
@@ -566,7 +566,7 @@ public class WhackAMole : NetworkComponent
 	private void OnMoleTapped(MoleTypes moleType, Vector3 position, bool isLocalTap, bool isLeftHand)
 	{
 		GameState gameState = currentState;
-		if (gameState != 0 && gameState != GameState.TimesUp)
+		if (gameState != GameState.Off && gameState != GameState.TimesUp)
 		{
 			AudioClip clip = (moleType.isHazard ? whackHazardClips[UnityEngine.Random.Range(0, whackHazardClips.Length)] : whackMonkeClips[UnityEngine.Random.Range(0, whackMonkeClips.Length)]);
 			if (moleType.isHazard)
@@ -841,7 +841,7 @@ public class WhackAMole : NetworkComponent
 
 	private void WhackAMoleButtonPressedShared(PhotonMessageInfoWrapped info)
 	{
-		GorillaNot.IncrementRPCCall(info, "WhackAMoleButtonPressedShared");
+		MonkeAgent.IncrementRPCCall(info, "WhackAMoleButtonPressedShared");
 		VRRig vRRig = GorillaGameManager.StaticFindRigForPlayer(info.Sender);
 		if ((bool)vRRig)
 		{

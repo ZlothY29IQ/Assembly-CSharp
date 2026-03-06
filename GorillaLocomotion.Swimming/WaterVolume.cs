@@ -605,9 +605,10 @@ public class WaterVolume : BaseGuidedRefTargetMono, ITickSystemTick
 				return;
 			}
 		}
-		WaterOverlappingCollider waterOverlappingCollider = default(WaterOverlappingCollider);
-		waterOverlappingCollider.collider = other;
-		WaterOverlappingCollider item = waterOverlappingCollider;
+		WaterOverlappingCollider item = new WaterOverlappingCollider
+		{
+			collider = other
+		};
 		item.inVolume = true;
 		item.lastInWaterTime = Time.time - waterParams.postExitDripDuration - 10f;
 		WaterSplashOverride component2 = other.GetComponent<WaterSplashOverride>();

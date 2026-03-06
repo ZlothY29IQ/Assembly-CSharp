@@ -483,7 +483,7 @@ public class BuilderPieceDoor : MonoBehaviour, IBuilderPieceComponent, IBuilderP
 	{
 		if (myPiece != null && myPiece.state == BuilderPiece.State.AttachedAndPlaced)
 		{
-			if (!NetworkSystem.Instance.InRoom && currentState != 0)
+			if (!NetworkSystem.Instance.InRoom && currentState != DoorState.Closed)
 			{
 				CloseDoor();
 			}

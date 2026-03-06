@@ -164,7 +164,7 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 		{
 			return;
 		}
-		bool flag = RoomSystem.GetRoomSize() == NetworkSystem.Instance.RoomPlayerCount;
+		bool flag = NetworkSystem.Instance.CurrentRoom.MaxPlayers == NetworkSystem.Instance.RoomPlayerCount;
 		Debug.Log("[FriendshipGroupDetection::OnPlayerJoinedRoom] JoiningPlayer: " + joiningPlayer.NickName + ", " + joiningPlayer.UserId + " " + $"| IsLocal: {joiningPlayer.IsLocal} | Room Full: {flag}");
 		if (joiningPlayer.IsLocal)
 		{
@@ -207,9 +207,9 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 		{
 			return false;
 		}
-		foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+		foreach (RigContainer activeRigContainer in VRRigCache.ActiveRigContainers)
 		{
-			if (vrrig.IsLocalPartyMember && !GorillaComputer.instance.friendJoinCollider.playerIDsCurrentlyTouching.Contains(vrrig.creator.UserId))
+			if (activeRigContainer.Rig.IsLocalPartyMember && !GorillaComputer.instance.friendJoinCollider.playerIDsCurrentlyTouching.Contains(activeRigContainer.Creator.UserId))
 			{
 				return true;
 			}
@@ -264,20 +264,21 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 					List<int> list4 = tempIntList;
 					list4.Clear();
 					NetPlayer netPlayer = null;
-					foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+					foreach (RigContainer activeRigContainer in VRRigCache.ActiveRigContainers)
 					{
-						if (vrrig.creator.ActorNumber == playersInProvisionalGroup[0])
+						VRRig rig = activeRigContainer.Rig;
+						if (rig.creator.ActorNumber == playersInProvisionalGroup[0])
 						{
-							netPlayer = vrrig.creator;
-							if (vrrig.IsLocalPartyMember)
+							netPlayer = rig.creator;
+							if (rig.IsLocalPartyMember)
 							{
 								list4.Clear();
 								break;
 							}
 						}
-						else if (vrrig.IsLocalPartyMember)
+						else if (rig.IsLocalPartyMember)
 						{
-							list4.Add(vrrig.creator.ActorNumber);
+							list4.Add(rig.creator.ActorNumber);
 						}
 					}
 					if (list4.Count > 0)
@@ -319,11 +320,12 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 				int num = 0;
 				if (IsInParty)
 				{
-					foreach (VRRig vrrig2 in GorillaParent.instance.vrrigs)
+					foreach (RigContainer activeRigContainer2 in VRRigCache.ActiveRigContainers)
 					{
-						if (vrrig2.IsLocalPartyMember)
+						VRRig rig2 = activeRigContainer2.Rig;
+						if (rig2.IsLocalPartyMember)
 						{
-							list5.Add(vrrig2.creator.ActorNumber);
+							list5.Add(rig2.creator.ActorNumber);
 							num++;
 						}
 					}
@@ -357,7 +359,7 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 			playersInProvisionalGroup.Clear();
 			bool isLeftHand;
 			VRMap makingFist = VRRig.LocalRig.GetMakingFist(debug, out isLeftHand);
-			if (makingFist == null || !NetworkSystem.Instance.InRoom || VRRig.LocalRig.leftHandLink.IsLinkActive() || VRRig.LocalRig.rightHandLink.IsLinkActive() || GorillaParent.instance.vrrigs.Count == 0 || Time.time < suppressPartyCreationUntilTimestamp || (GorillaGameModes.GameMode.ActiveGameMode != null && !GorillaGameModes.GameMode.ActiveGameMode.CanJoinFrienship(NetworkSystem.Instance.LocalPlayer)))
+			if (makingFist == null || !NetworkSystem.Instance.InRoom || VRRig.LocalRig.leftHandLink.IsLinkActive() || VRRig.LocalRig.rightHandLink.IsLinkActive() || VRRigCache.ActiveRigs.Count == 0 || Time.time < suppressPartyCreationUntilTimestamp || (GorillaGameModes.GameMode.ActiveGameMode != null && !GorillaGameModes.GameMode.ActiveGameMode.CanJoinFrienship(NetworkSystem.Instance.LocalPlayer)))
 			{
 				midpoint = Vector3.zero;
 				return;
@@ -368,18 +370,20 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 			playersMakingFists.Clear();
 			int actorNumber = NetworkSystem.Instance.LocalPlayer.ActorNumber;
 			int num = -1;
-			foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+			foreach (RigContainer activeRigContainer in VRRigCache.ActiveRigContainers)
 			{
+				VRRig rig = activeRigContainer.Rig;
 				bool isLeftHand2;
-				VRMap makingFist2 = vrrig.GetMakingFist(debug, out isLeftHand2);
-				if (makingFist2 != null && !vrrig.leftHandLink.IsLinkActive() && !vrrig.rightHandLink.IsLinkActive() && (!(GorillaGameModes.GameMode.ActiveGameMode != null) || GorillaGameModes.GameMode.ActiveGameMode.CanJoinFrienship(vrrig.OwningNetPlayer)))
+				VRMap makingFist2 = rig.GetMakingFist(debug, out isLeftHand2);
+				if (makingFist2 != null && !rig.leftHandLink.IsLinkActive() && !rig.rightHandLink.IsLinkActive() && (!GorillaGameModes.GameMode.ActiveGameMode.IsNotNull() || GorillaGameModes.GameMode.ActiveGameMode.CanJoinFrienship(rig.OwningNetPlayer)))
 				{
-					PlayerFist playerFist = default(PlayerFist);
-					playerFist.actorNumber = vrrig.creator.ActorNumber;
-					playerFist.position = makingFist2.rigTarget.position;
-					playerFist.isLeftHand = isLeftHand2;
-					PlayerFist item = playerFist;
-					if (vrrig.isOfflineVRRig)
+					PlayerFist item = new PlayerFist
+					{
+						actorNumber = rig.creator.ActorNumber,
+						position = makingFist2.rigTarget.position,
+						isLeftHand = isLeftHand2
+					};
+					if (rig.isOfflineVRRig)
 					{
 						num = playersMakingFists.Count;
 					}
@@ -437,11 +441,12 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 		GroupJoinZoneAB groupJoinZoneAB = 0;
 		if (myPartyMemberIDs != null)
 		{
-			foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+			foreach (RigContainer activeRigContainer in VRRigCache.ActiveRigContainers)
 			{
-				if (vrrig.IsLocalPartyMember && !vrrig.isOfflineVRRig)
+				VRRig rig = activeRigContainer.Rig;
+				if (rig.IsLocalPartyMember && !rig.isOfflineVRRig)
 				{
-					groupJoinZoneAB |= vrrig.zoneEntity.GroupZone;
+					groupJoinZoneAB |= rig.zoneEntity.GroupZone;
 				}
 			}
 		}
@@ -450,11 +455,12 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 			return;
 		}
 		debugStr.Clear();
-		foreach (VRRig vrrig2 in GorillaParent.instance.vrrigs)
+		foreach (RigContainer activeRigContainer2 in VRRigCache.ActiveRigContainers)
 		{
-			if (vrrig2.IsLocalPartyMember && !vrrig2.isOfflineVRRig)
+			VRRig rig2 = activeRigContainer2.Rig;
+			if (rig2.IsLocalPartyMember && !rig2.isOfflineVRRig)
 			{
-				debugStr.Append($"{vrrig2.playerNameVisible} in {vrrig2.zoneEntity.GroupZone};");
+				debugStr.Append($"{rig2.playerNameVisible} in {rig2.zoneEntity.GroupZone};");
 			}
 		}
 		partyZone = groupJoinZoneAB;
@@ -467,7 +473,7 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 	[PunRPC]
 	private void NotifyNoPartyToMerge(PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "NotifyNoPartyToMerge");
+		MonkeAgent.IncrementRPCCall(info, "NotifyNoPartyToMerge");
 		if (info.Sender != null && partyMergeIDs != null)
 		{
 			partyMergeIDs.Remove(info.Sender.ActorNumber);
@@ -515,7 +521,7 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 	[PunRPC]
 	private void NotifyPartyMerging(int[] memberIDs, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "NotifyPartyMerging");
+		MonkeAgent.IncrementRPCCall(info, "NotifyPartyMerging");
 		if (memberIDs != null && memberIDs.Length <= 10)
 		{
 			partyMergeIDs[info.Sender.ActorNumber] = memberIDs;
@@ -577,12 +583,13 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 
 	public void SendAboutToGroupJoin()
 	{
-		foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+		foreach (RigContainer activeRigContainer in VRRigCache.ActiveRigContainers)
 		{
-			Debug.Log("Sending group join to " + GorillaParent.instance.vrrigs.Count + " players. Party member:" + vrrig.OwningNetPlayer.NickName + "Is offline rig" + vrrig.isOfflineVRRig);
-			if (vrrig.IsLocalPartyMember && !vrrig.isOfflineVRRig)
+			VRRig rig = activeRigContainer.Rig;
+			Debug.Log("Sending group join to " + VRRigCache.ActiveRigContainers.Count + " players. Party member:" + rig.OwningNetPlayer.NickName + "Is offline rig" + rig.isOfflineVRRig);
+			if (rig.IsLocalPartyMember && !rig.isOfflineVRRig)
 			{
-				photonView.RPC("PartyMemberIsAboutToGroupJoin", vrrig.Creator.GetPlayerRef());
+				photonView.RPC("PartyMemberIsAboutToGroupJoin", rig.Creator.GetPlayerRef());
 			}
 		}
 	}
@@ -590,7 +597,7 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 	[PunRPC]
 	private void PartyMemberIsAboutToGroupJoin(PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "PartyMemberIsAboutToGroupJoin");
+		MonkeAgent.IncrementRPCCall(info, "PartyMemberIsAboutToGroupJoin");
 		PartMemberIsAboutToGroupJoinWrapped(new PhotonMessageInfoWrapped(info));
 	}
 
@@ -657,11 +664,11 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 	private void SendPartyFormedRPC(short braceletColor, int[] memberIDs, bool forceDebug)
 	{
 		string text = Enum.Parse<GameModeType>(GorillaComputer.instance.currentGameMode.Value, ignoreCase: true).ToString();
-		foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+		foreach (VRRig activeRig in VRRigCache.ActiveRigs)
 		{
-			if (playersInProvisionalGroup.BinarySearch(vrrig.creator.ActorNumber) >= 0)
+			if (playersInProvisionalGroup.BinarySearch(activeRig.creator.ActorNumber) >= 0)
 			{
-				photonView.RPC("PartyFormedSuccessfully", vrrig.Creator.GetPlayerRef(), text, braceletColor, memberIDs, forceDebug);
+				photonView.RPC("PartyFormedSuccessfully", activeRig.Creator.GetPlayerRef(), text, braceletColor, memberIDs, forceDebug);
 			}
 		}
 	}
@@ -721,31 +728,32 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 			}
 			info = RpcInfo.FromLocal(runner, RpcChannel.Reliable, RpcHostMode.SourceIsServer);
 		}
-		GorillaNot.IncrementRPCCall(info, "PartyFormedSuccessfully");
+		MonkeAgent.IncrementRPCCall(info, "PartyFormedSuccessfully");
 		Instance.PartyFormedSuccesfullyWrapped(partyGameMode, braceletColor, memberIDs, forceDebug, new PhotonMessageInfoWrapped(info));
 	}
 
 	[PunRPC]
 	private void PartyFormedSuccessfully(string partyGameMode, short braceletColor, int[] memberIDs, bool forceDebug, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "PartyFormedSuccessfully");
+		MonkeAgent.IncrementRPCCall(info, "PartyFormedSuccessfully");
 		PartyFormedSuccesfullyWrapped(partyGameMode, braceletColor, memberIDs, forceDebug, new PhotonMessageInfoWrapped(info));
 	}
 
 	private void PartyFormedSuccesfullyWrapped(string partyGameMode, short braceletColor, int[] memberIDs, bool forceDebug, PhotonMessageInfoWrapped info)
 	{
-		if (memberIDs == null || memberIDs.Length > 10 || !memberIDs.Contains(info.Sender.ActorNumber) || playersInProvisionalGroup.IndexOf(info.Sender.ActorNumber) != 0 || Mathf.Abs(groupCreateAfterTimestamp - Time.time) > m_maxGroupJoinTimeDifference || !GorillaGameModes.GameMode.IsValidGameMode(partyGameMode))
+		if (memberIDs == null || memberIDs.Length > 10 || !Enumerable.Contains(memberIDs, info.Sender.ActorNumber) || playersInProvisionalGroup.IndexOf(info.Sender.ActorNumber) != 0 || Mathf.Abs(groupCreateAfterTimestamp - Time.time) > m_maxGroupJoinTimeDifference || !GorillaGameModes.GameMode.IsValidGameMode(partyGameMode))
 		{
 			return;
 		}
 		if (IsInParty)
 		{
 			string text = Enum.Parse<GameModeType>(GorillaComputer.instance.currentGameMode.Value, ignoreCase: true).ToString();
-			foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+			foreach (RigContainer activeRigContainer in VRRigCache.ActiveRigContainers)
 			{
-				if (vrrig.IsLocalPartyMember && !vrrig.isOfflineVRRig)
+				VRRig rig = activeRigContainer.Rig;
+				if (rig.IsLocalPartyMember && !rig.isOfflineVRRig)
 				{
-					photonView.RPC("AddPartyMembers", vrrig.Creator.GetPlayerRef(), text, braceletColor, memberIDs);
+					photonView.RPC("AddPartyMembers", rig.Creator.GetPlayerRef(), text, braceletColor, memberIDs);
 				}
 			}
 		}
@@ -817,10 +825,9 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 
 	private void AddPartyMembersWrapped(string partyGameMode, short braceletColor, int[] memberIDs, PhotonMessageInfoWrapped infoWrapped)
 	{
-		GorillaNot.IncrementRPCCall(infoWrapped, "AddPartyMembersWrapped");
-		if (memberIDs.Length <= 10 && IsInParty && myPartyMembersHash.Contains(NetworkSystem.Instance.GetUserID(infoWrapped.senderID)) && GorillaGameModes.GameMode.IsValidGameMode(partyGameMode))
+		MonkeAgent.IncrementRPCCall(infoWrapped, "AddPartyMembersWrapped");
+		if (IsInParty && memberIDs != null && memberIDs.Length <= 10 && myPartyMembersHash.Contains(NetworkSystem.Instance.GetUserID(infoWrapped.senderID)) && GorillaGameModes.GameMode.IsValidGameMode(partyGameMode))
 		{
-			Debug.Log("Adding party members: [" + string.Join(",", memberIDs) + "]");
 			SetNewParty(partyGameMode, braceletColor, memberIDs);
 		}
 	}
@@ -830,9 +837,9 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 		GorillaComputer.instance.SetGameModeWithoutButton(partyGameMode);
 		myPartyMemberIDs = new List<string>();
 		userIdLookup.Clear();
-		foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+		foreach (RigContainer activeRigContainer in VRRigCache.ActiveRigContainers)
 		{
-			userIdLookup.Add(vrrig.creator.ActorNumber, vrrig.creator.UserId);
+			userIdLookup.Add(activeRigContainer.Creator.ActorNumber, activeRigContainer.Creator.UserId);
 		}
 		foreach (int key in memberIDs)
 		{
@@ -853,11 +860,12 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 		{
 			return;
 		}
-		foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+		foreach (RigContainer activeRigContainer in VRRigCache.ActiveRigContainers)
 		{
-			if (vrrig.IsLocalPartyMember && !vrrig.isOfflineVRRig)
+			VRRig rig = activeRigContainer.Rig;
+			if (rig.IsLocalPartyMember && !rig.isOfflineVRRig)
 			{
-				photonView.RPC("PlayerLeftParty", vrrig.Creator.GetPlayerRef());
+				photonView.RPC("PlayerLeftParty", rig.Creator.GetPlayerRef());
 			}
 		}
 		myPartyMemberIDs = null;
@@ -943,14 +951,14 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 			}
 			info = RpcInfo.FromLocal(runner, RpcChannel.Reliable, RpcHostMode.SourceIsServer);
 		}
-		GorillaNot.IncrementRPCCall(info, "PlayerLeftParty");
+		MonkeAgent.IncrementRPCCall(info, "PlayerLeftParty");
 		Instance.PlayerLeftPartyWrapped(new PhotonMessageInfoWrapped(info));
 	}
 
 	[PunRPC]
 	private void PlayerLeftParty(PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "PlayerLeftParty");
+		MonkeAgent.IncrementRPCCall(info, "PlayerLeftParty");
 		PlayerLeftPartyWrapped(new PhotonMessageInfoWrapped(info));
 	}
 
@@ -1039,7 +1047,7 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 
 	private void VerifyPartyMemberWrapped(PhotonMessageInfoWrapped infoWrapped)
 	{
-		GorillaNot.IncrementRPCCall(infoWrapped, "VerifyPartyMemberWrapped");
+		MonkeAgent.IncrementRPCCall(infoWrapped, "VerifyPartyMemberWrapped");
 		if (VRRigCache.Instance.TryGetVrrig(infoWrapped.Sender, out var playerRig) && FXSystem.CheckCallSpam(playerRig.Rig.fxSettings, 15, infoWrapped.SentServerTime) && (myPartyMemberIDs == null || !myPartyMemberIDs.Contains(NetworkSystem.Instance.GetUserID(infoWrapped.senderID))))
 		{
 			photonView.RPC("PlayerLeftParty", infoWrapped.Sender.GetPlayerRef());
@@ -1050,12 +1058,13 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 	{
 		int num = int.MaxValue;
 		NetPlayer netPlayer = null;
-		foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+		foreach (RigContainer activeRigContainer in VRRigCache.ActiveRigContainers)
 		{
-			if (vrrig.IsLocalPartyMember && vrrig.creator.ActorNumber < num)
+			VRRig rig = activeRigContainer.Rig;
+			if (rig.IsLocalPartyMember && rig.creator.ActorNumber < num)
 			{
-				netPlayer = vrrig.creator;
-				num = vrrig.creator.ActorNumber;
+				netPlayer = rig.creator;
+				num = rig.creator.ActorNumber;
 			}
 		}
 		if (netPlayer != null)
@@ -1120,16 +1129,17 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 
 	private void RequestPartyGameModeWrapped(string gameMode, PhotonMessageInfoWrapped info)
 	{
-		GorillaNot.IncrementRPCCall(info, "RequestPartyGameModeWrapped");
+		MonkeAgent.IncrementRPCCall(info, "RequestPartyGameModeWrapped");
 		if (!IsInParty || !IsInMyGroup(info.Sender.UserId) || !GorillaGameModes.GameMode.IsValidGameMode(gameMode))
 		{
 			return;
 		}
-		foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+		foreach (RigContainer activeRigContainer in VRRigCache.ActiveRigContainers)
 		{
-			if (vrrig.IsLocalPartyMember)
+			VRRig rig = activeRigContainer.Rig;
+			if (rig.IsLocalPartyMember)
 			{
-				photonView.RPC("NotifyPartyGameModeChanged", vrrig.creator.GetPlayerRef(), gameMode);
+				photonView.RPC("NotifyPartyGameModeChanged", rig.creator.GetPlayerRef(), gameMode);
 			}
 		}
 	}
@@ -1190,7 +1200,7 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 
 	private void NotifyPartyGameModeChangedWrapped(string gameMode, PhotonMessageInfoWrapped info)
 	{
-		GorillaNot.IncrementRPCCall(info, "NotifyPartyGameModeChangedWrapped");
+		MonkeAgent.IncrementRPCCall(info, "NotifyPartyGameModeChangedWrapped");
 		if (IsInParty && IsInMyGroup(info.Sender.UserId) && GorillaGameModes.GameMode.IsValidGameMode(gameMode))
 		{
 			GorillaComputer.instance.SetGameModeWithoutButton(gameMode);
@@ -1209,12 +1219,13 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 		}
 		myBeadColors.Clear();
 		tempColorLookup.Clear();
-		foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+		foreach (RigContainer activeRigContainer in VRRigCache.ActiveRigContainers)
 		{
-			vrrig.ClearPartyMemberStatus();
-			if (vrrig.IsLocalPartyMember)
+			VRRig rig = activeRigContainer.Rig;
+			rig.ClearPartyMemberStatus();
+			if (rig.IsLocalPartyMember)
 			{
-				tempColorLookup.Add(vrrig.Creator.UserId, vrrig.playerColor);
+				tempColorLookup.Add(rig.Creator.UserId, rig.playerColor);
 			}
 		}
 		MyBraceletSelfIndex = 0;
@@ -1245,9 +1256,10 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 
 	public bool IsPartyWithinCollider(GorillaFriendCollider friendCollider)
 	{
-		foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+		foreach (RigContainer activeRigContainer in VRRigCache.ActiveRigContainers)
 		{
-			if (vrrig.IsLocalPartyMember && !vrrig.isOfflineVRRig && !friendCollider.playerIDsCurrentlyTouching.Contains(vrrig.Creator.UserId))
+			VRRig rig = activeRigContainer.Rig;
+			if (rig.IsLocalPartyMember && !rig.isOfflineVRRig && !friendCollider.playerIDsCurrentlyTouching.Contains(rig.Creator.UserId))
 			{
 				return false;
 			}
@@ -1262,11 +1274,12 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 
 	public static Color UnpackColor(short data)
 	{
-		Color result = default(Color);
-		result.r = (float)(data % 10) / 9f;
-		result.g = (float)(data / 10 % 10) / 9f;
-		result.b = (float)(data / 100 % 10) / 9f;
-		return result;
+		return new Color
+		{
+			r = (float)(data % 10) / 9f,
+			g = (float)(data / 10 % 10) / 9f,
+			b = (float)(data / 100 % 10) / 9f
+		};
 	}
 
 	[NetworkRpcStaticWeavedInvoker("System.Void GorillaTagScripts.FriendshipGroupDetection::RPC_NotifyNoPartyToMerge(Fusion.NetworkRunner,Fusion.RpcInfo)")]

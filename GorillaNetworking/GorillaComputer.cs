@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -291,8 +290,6 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 	private const string VISUALS_SCREEN_INTRO_KEY = "VISUALS_SCREEN_INTRO";
 
 	private const string VISUALS_SCREEN_OPTIONS_KEY = "VISUALS_SCREEN_OPTIONS";
-
-	private const string VISUALS_SCREEN_PERF_KEY = "VISUALS_SCREEN_PERF";
 
 	private const string VISUALS_SCREEN_CURRENT_KEY = "VISUALS_SCREEN_CURRENT";
 
@@ -662,6 +659,10 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 
 	public float instrumentVolume;
 
+	public bool perfMode;
+
+	public bool isSubcribed;
+
 	[Header("Credits")]
 	public CreditsView creditsView;
 
@@ -944,17 +945,17 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 
 	public void SliceUpdate()
 	{
-		if ((internetFailure && Time.time < lastCheckedWifi + checkIfConnectedSeconds) || (!internetFailure && Time.time < lastCheckedWifi + checkIfDisconnectedSeconds))
+		if ((internetFailure && Time.realtimeSinceStartup < lastCheckedWifi + checkIfConnectedSeconds) || (!internetFailure && Time.realtimeSinceStartup < lastCheckedWifi + checkIfDisconnectedSeconds))
 		{
-			if (!internetFailure && isConnectedToMaster && Time.time > lastUpdateTime + updateCooldown)
+			if (!internetFailure && isConnectedToMaster && Time.realtimeSinceStartup > lastUpdateTime + updateCooldown)
 			{
-				deltaTime = Time.time - lastUpdateTime;
-				lastUpdateTime = Time.time;
+				deltaTime = Time.realtimeSinceStartup - lastUpdateTime;
+				lastUpdateTime = Time.realtimeSinceStartup;
 				UpdateScreen();
 			}
 			return;
 		}
-		lastCheckedWifi = Time.time;
+		lastCheckedWifi = Time.realtimeSinceStartup;
 		stateUpdated = false;
 		if (!CheckInternetConnection())
 		{
@@ -972,10 +973,10 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 			RestoreFromFailureState();
 			UpdateScreen();
 		}
-		else if (isConnectedToMaster && Time.time > lastUpdateTime + updateCooldown)
+		else if (isConnectedToMaster && Time.realtimeSinceStartup > lastUpdateTime + updateCooldown)
 		{
-			deltaTime = Time.time - lastUpdateTime;
-			lastUpdateTime = Time.time;
+			deltaTime = Time.realtimeSinceStartup - lastUpdateTime;
+			lastUpdateTime = Time.realtimeSinceStartup;
 			UpdateScreen();
 		}
 	}
@@ -1064,22 +1065,22 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 
 	private void InitializeNameState()
 	{
-		int @int = PlayerPrefs.GetInt("nameTagsOn", -1);
+		int num = PlayerPrefs.GetInt("nameTagsOn", -1);
 		Permission permissionDataByFeature = KIDManager.GetPermissionDataByFeature(EKIDFeatures.Custom_Nametags);
 		switch (permissionDataByFeature.ManagedBy)
 		{
 		case Permission.ManagedByEnum.PLAYER:
-			if (@int == -1)
+			if (num == -1)
 			{
 				NametagsEnabled = permissionDataByFeature.Enabled;
 			}
 			else
 			{
-				NametagsEnabled = @int > 0;
+				NametagsEnabled = num > 0;
 			}
 			break;
 		case Permission.ManagedByEnum.GUARDIAN:
-			NametagsEnabled = permissionDataByFeature.Enabled && @int > 0;
+			NametagsEnabled = permissionDataByFeature.Enabled && num > 0;
 			break;
 		case Permission.ManagedByEnum.PROHIBITED:
 			NametagsEnabled = false;
@@ -1214,18 +1215,18 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 	private void InitializeVoiceState()
 	{
 		Permission permissionDataByFeature = KIDManager.GetPermissionDataByFeature(EKIDFeatures.Voice_Chat);
-		string @string = PlayerPrefs.GetString("voiceChatOn", "");
+		string text = PlayerPrefs.GetString("voiceChatOn", "");
 		string defaultValue = "FALSE";
 		switch (permissionDataByFeature.ManagedBy)
 		{
 		case Permission.ManagedByEnum.PLAYER:
-			defaultValue = ((!string.IsNullOrEmpty(@string)) ? @string : (permissionDataByFeature.Enabled ? "TRUE" : "FALSE"));
+			defaultValue = ((!string.IsNullOrEmpty(text)) ? text : (permissionDataByFeature.Enabled ? "TRUE" : "FALSE"));
 			break;
 		case Permission.ManagedByEnum.GUARDIAN:
 			if (permissionDataByFeature.Enabled)
 			{
-				@string = (string.IsNullOrEmpty(@string) ? "FALSE" : @string);
-				defaultValue = @string;
+				text = (string.IsNullOrEmpty(text) ? "FALSE" : text);
+				defaultValue = text;
 			}
 			else
 			{
@@ -1341,9 +1342,6 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 			{
 				GetCurrentTime();
 			}
-			_ = Application.platform;
-			_ = 11;
-			SaveModAccountData();
 			bool safety = PlayFabAuthenticator.instance.GetSafety();
 			if (!KIDManager.KidEnabledAndReady && !KIDManager.HasSession)
 			{
@@ -1395,34 +1393,6 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		{
 			GeneralFailureMessage(versionMismatch);
 		}
-	}
-
-	public void SaveModAccountData()
-	{
-		string path = Application.persistentDataPath + "/DoNotShareWithAnyoneEVERNoMatterWhatTheySay.txt";
-		if (File.Exists(path))
-		{
-			return;
-		}
-		GorillaServer.Instance.ReturnMyOculusHash(delegate(ExecuteFunctionResult result)
-		{
-			if (((JsonObject)result.FunctionResult).TryGetValue("oculusHash", out var value))
-			{
-				StreamWriter streamWriter = new StreamWriter(path);
-				streamWriter.Write(PlayFabAuthenticator.instance.GetPlayFabPlayerId() + "." + (string)value);
-				streamWriter.Close();
-			}
-		}, delegate(PlayFabError error)
-		{
-			if (error.Error == PlayFabErrorCode.NotAuthenticated)
-			{
-				PlayFabAuthenticator.instance.AuthenticateWithPlayFab();
-			}
-			else if (error.Error == PlayFabErrorCode.AccountBanned)
-			{
-				GorillaGameManager.ForceStopGame_DisconnectAndDestroy();
-			}
-		});
 	}
 
 	public void PressButton(GorillaKeyboardBindings buttonPressed)
@@ -1918,11 +1888,11 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 
 	private void RequestTroopPopulation(bool forceUpdate = false)
 	{
-		if (!PlayFabCloudScriptAPI.IsEntityLoggedIn() || !(!hasRequestedInitialTroopPopulation || forceUpdate) || nextPopulationCheckTime > Time.time)
+		if (!PlayFabCloudScriptAPI.IsEntityLoggedIn() || !(!hasRequestedInitialTroopPopulation || forceUpdate) || nextPopulationCheckTime > Time.realtimeSinceStartup)
 		{
 			return;
 		}
-		nextPopulationCheckTime = Time.time + troopPopulationCheckCooldown;
+		nextPopulationCheckTime = Time.realtimeSinceStartup + troopPopulationCheckCooldown;
 		hasRequestedInitialTroopPopulation = true;
 		GorillaServer.Instance.ReturnQueueStats(new ReturnQueueStatsRequest
 		{
@@ -2101,7 +2071,7 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		switch (buttonPressed)
 		{
 		case GorillaKeyboardBindings.option2:
-			if (_currentScreentState != 0)
+			if (_currentScreentState != EKidScreenState.Ready)
 			{
 				ProcessScreen_SetupKID();
 			}
@@ -2158,7 +2128,7 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 			switch (buttonPressed)
 			{
 			case GorillaKeyboardBindings.option2:
-				if (_currentScreentState != 0)
+				if (_currentScreentState != EKidScreenState.Ready)
 				{
 					ProcessScreen_SetupKID();
 				}
@@ -2227,6 +2197,8 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 			PlayerPrefs.SetString("disableParticles", "TRUE");
 			PlayerPrefs.Save();
 			GorillaTagger.Instance.ShowCosmeticParticles(!disableParticles);
+			break;
+		case GorillaKeyboardBindings.option3:
 			break;
 		}
 	}
@@ -3374,9 +3346,9 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 			}
 		}
 		array = exactOneWeek;
-		for (int i = 0; i < array.Length; i++)
+		for (int num = 0; num < array.Length; num++)
 		{
-			if (array[i] == nameToCheck)
+			if (array[num] == nameToCheck)
 			{
 				return false;
 			}
@@ -3642,12 +3614,12 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 			}
 			FunctionNames.Add(text);
 		});
-		for (int l = 0; l < FunctionsCount; l++)
+		for (int num2 = 0; num2 < FunctionsCount; num2++)
 		{
-			int num2 = highestCharacterCount - FunctionNames[l].Length;
-			for (int m = 0; m < num2; m++)
+			int num3 = highestCharacterCount - FunctionNames[num2].Length;
+			for (int num4 = 0; num4 < num3; num4++)
 			{
-				FunctionNames[l] += " ";
+				FunctionNames[num2] += " ";
 			}
 		}
 		UpdateScreen();
@@ -3752,8 +3724,8 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 			break;
 		case Permission.ManagedByEnum.GUARDIAN:
 		{
-			int @int = PlayerPrefs.GetInt(NameTagPlayerPref, 1);
-			setting = setting && @int == 1;
+			int num = PlayerPrefs.GetInt(NameTagPlayerPref, 1);
+			setting = setting && num == 1;
 			UpdateNametagSetting(setting, saveSetting: false);
 			break;
 		}
@@ -3860,7 +3832,7 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 
 	private void RequestUpdatedPermissions()
 	{
-		if (KIDManager.KidEnabledAndReady && !_waitingForUpdatedSession && !(Time.time < _nextUpdateAttemptTime))
+		if (KIDManager.KidEnabledAndReady && !_waitingForUpdatedSession && !(Time.realtimeSinceStartup < _nextUpdateAttemptTime))
 		{
 			_waitingForUpdatedSession = true;
 			UpdateSession();
@@ -3869,7 +3841,7 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 
 	private async void UpdateSession()
 	{
-		_nextUpdateAttemptTime = Time.time + _updateAttemptCooldown;
+		_nextUpdateAttemptTime = Time.realtimeSinceStartup + _updateAttemptCooldown;
 		await KIDManager.UpdateSession();
 		_waitingForUpdatedSession = false;
 	}
@@ -3901,7 +3873,7 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 			screenText.Append(result);
 			return true;
 		}
-		if (Time.time >= _nextUpdateAttemptTime)
+		if (Time.realtimeSinceStartup >= _nextUpdateAttemptTime)
 		{
 			defaultResult = "\n\nPRESS OPTION 2 TO REFRESH PERMISSIONS!";
 			LocalisationManager.TryGetKeyForCurrentLocale("KID_REFRESH_PERMISSIONS", out result, defaultResult);
@@ -3911,7 +3883,7 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		{
 			defaultResult = "CHECK AGAIN IN {time} SECONDS!";
 			LocalisationManager.TryGetKeyForCurrentLocale("KID_CHECK_AGAIN_COOLDOWN", out result, defaultResult);
-			result = result.Replace("{time}", ((int)(_nextUpdateAttemptTime - Time.time)).ToString());
+			result = result.Replace("{time}", ((int)(_nextUpdateAttemptTime - Time.realtimeSinceStartup)).ToString());
 			screenText.Append(result);
 		}
 		return false;
@@ -4014,21 +3986,21 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 	{
 		bool flag = (showCustomNames || managedBy == Permission.ManagedByEnum.PLAYER) && managedBy != Permission.ManagedByEnum.PROHIBITED;
 		SetComputerSettingsBySafety(!flag, new ComputerState[1] { ComputerState.Name }, shouldHide: false);
-		int @int = PlayerPrefs.GetInt(NameTagPlayerPref, -1);
-		bool flag2 = @int > 0;
+		int num = PlayerPrefs.GetInt(NameTagPlayerPref, -1);
+		bool flag2 = num > 0;
 		switch (managedBy)
 		{
 		case Permission.ManagedByEnum.GUARDIAN:
-			NametagsEnabled = showCustomNames && (flag2 || @int == -1);
+			NametagsEnabled = showCustomNames && (flag2 || num == -1);
 			break;
 		case Permission.ManagedByEnum.PLAYER:
 			if (showCustomNames)
 			{
-				NametagsEnabled = @int == -1 || flag2;
+				NametagsEnabled = num == -1 || flag2;
 			}
 			else
 			{
-				NametagsEnabled = @int != -1 && flag2;
+				NametagsEnabled = num != -1 && flag2;
 			}
 			break;
 		case Permission.ManagedByEnum.PROHIBITED:
@@ -4110,7 +4082,7 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		int num = 1;
 		for (int i = 0; i < count; i++)
 		{
-			if (_interestedPermissionNames.Contains(allPermissionsData[i].Name))
+			if (Enumerable.Contains(_interestedPermissionNames, allPermissionsData[i].Name))
 			{
 				string text2 = (allPermissionsData[i].Enabled ? "<color=#85ffa5>" : "<color=\"RED\">");
 				stringBuilder.AppendLine("[" + num + "] " + text2 + allPermissionsData[i].Name + "</color>");
@@ -4219,12 +4191,12 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 			}
 			FunctionNames.Add(text);
 		});
-		for (int i = 0; i < FunctionsCount; i++)
+		for (int num = 0; num < FunctionsCount; num++)
 		{
-			int num = highestCharacterCount - FunctionNames[i].Length;
-			for (int j = 0; j < num; j++)
+			int num2 = highestCharacterCount - FunctionNames[num].Length;
+			for (int num3 = 0; num3 < num2; num3++)
 			{
-				FunctionNames[i] += " ";
+				FunctionNames[num] += " ";
 			}
 		}
 	}

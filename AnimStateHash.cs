@@ -9,9 +9,10 @@ public struct AnimStateHash
 
 	public static implicit operator AnimStateHash(string s)
 	{
-		AnimStateHash result = default(AnimStateHash);
-		result._hash = Animator.StringToHash(s);
-		return result;
+		return new AnimStateHash
+		{
+			_hash = Animator.StringToHash(s)
+		};
 	}
 
 	public static implicit operator int(AnimStateHash ash)

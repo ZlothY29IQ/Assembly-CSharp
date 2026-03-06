@@ -1,9 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using ExitGames.Client.Photon;
-using GorillaLocomotion;
 using GorillaNetworking;
 using Photon.Pun;
 using Photon.Realtime;
@@ -115,8 +113,6 @@ public class BuilderSetManager : MonoBehaviour
 
 	private int attempts;
 
-	private List<string> playerIDList = new List<string>();
-
 	private static List<int> pieceTypes;
 
 	[HideInInspector]
@@ -197,15 +193,16 @@ public class BuilderSetManager : MonoBehaviour
 		{
 			dictionary.Clear();
 			int num = 0;
-			BuilderSetStoreItem builderSetStoreItem = default(BuilderSetStoreItem);
-			builderSetStoreItem.displayName = allPieceSet.SetName;
-			builderSetStoreItem.playfabID = allPieceSet.playfabID;
-			builderSetStoreItem.setID = allPieceSet.GetIntIdentifier();
-			builderSetStoreItem.cost = 0u;
-			builderSetStoreItem.setRef = allPieceSet;
-			builderSetStoreItem.displayModel = allPieceSet.displayModel;
-			builderSetStoreItem.isNullItem = false;
-			BuilderSetStoreItem value = builderSetStoreItem;
+			BuilderSetStoreItem value = new BuilderSetStoreItem
+			{
+				displayName = allPieceSet.SetName,
+				playfabID = allPieceSet.playfabID,
+				setID = allPieceSet.GetIntIdentifier(),
+				cost = 0u,
+				setRef = allPieceSet,
+				displayModel = allPieceSet.displayModel,
+				isNullItem = false
+			};
 			_setIdToStoreItem.TryAdd(allPieceSet.GetIntIdentifier(), value);
 			int num2 = -1;
 			if (!string.IsNullOrEmpty(allPieceSet.materialId))
@@ -407,7 +404,7 @@ public class BuilderSetManager : MonoBehaviour
 			{
 				OnLiveSetsUpdated.Invoke();
 			}
-			yield return new WaitForSeconds(60f);
+			yield return new WaitForSecondsRealtime(60f);
 		}
 		monitor = null;
 	}
@@ -425,11 +422,12 @@ public class BuilderSetManager : MonoBehaviour
 		}
 		else
 		{
-			BuilderPieceSetInfo builderPieceSetInfo = default(BuilderPieceSetInfo);
-			builderPieceSetInfo.pieceType = pieceType;
-			builderPieceSetInfo.materialType = pieceMaterial;
-			builderPieceSetInfo.setIds = new List<int> { setID };
-			BuilderPieceSetInfo item = builderPieceSetInfo;
+			BuilderPieceSetInfo item = new BuilderPieceSetInfo
+			{
+				pieceType = pieceType,
+				materialType = pieceMaterial,
+				setIds = new List<int> { setID }
+			};
 			pieceSetInfoMap.Add(HashCode.Combine(pieceType, pieceMaterial), pieceSetInfos.Count);
 			pieceSetInfos.Add(item);
 		}
@@ -463,18 +461,10 @@ public class BuilderSetManager : MonoBehaviour
 		}
 		foreach (ItemInstance item2 in inventoryResult.Inventory)
 		{
-			if (IsItemIDBuilderItem(item2.ItemId))
+			if (IsItemIDBuilderItem(item2.ItemId) && _setIdToStoreItem.TryGetValue(item2.ItemId.GetStaticHash(), out var value3))
 			{
-				if (_setIdToStoreItem.TryGetValue(item2.ItemId.GetStaticHash(), out var value3))
-				{
-					Debug.LogFormat("BuilderSetManager: Unlocking Inventory Item {0}", item2.ItemId);
-					_unlockedPieceSets.Add(value3.setRef);
-					CosmeticsController.instance.concatStringCosmeticsAllowed += item2.ItemId;
-				}
-				else
-				{
-					Debug.Log("BuilderSetManager: No store item found with id" + item2.ItemId);
-				}
+				_unlockedPieceSets.Add(value3.setRef);
+				CosmeticsController.instance.concatStringCosmeticsAllowed += item2.ItemId;
 			}
 		}
 		pulledStoreItems = true;
@@ -645,7 +635,6 @@ public class BuilderSetManager : MonoBehaviour
 		int num = _allPieceSets.FindIndex((BuilderPieceSet x) => setID == x.GetIntIdentifier());
 		if (num >= 0 && !_unlockedPieceSets.Contains(_allPieceSets[num]))
 		{
-			Debug.Log("BuilderSetManager: unlocking set " + _allPieceSets[num].SetName);
 			_unlockedPieceSets.Add(_allPieceSets[num]);
 		}
 		OnOwnedSetsUpdated?.Invoke();
@@ -701,89 +690,36 @@ public class BuilderSetManager : MonoBehaviour
 
 	private IEnumerator CheckIfMyCosmeticsUpdated(string itemToBuyID)
 	{
-		yield return new WaitForSeconds(1f);
+		yield return new WaitForSecondsRealtime(1f);
 		foundCosmetic = false;
 		attempts = 0;
 		while (!foundCosmetic && attempts < 10 && PhotonNetwork.InRoom)
 		{
-			playerIDList.Clear();
-			if (GorillaServer.Instance != null && GorillaServer.Instance.NewCosmeticsPath())
-			{
-				playerIDList.Add("Inventory");
-				PlayFabClientAPI.GetSharedGroupData(new PlayFab.ClientModels.GetSharedGroupDataRequest
-				{
-					Keys = playerIDList,
-					SharedGroupId = PhotonNetwork.LocalPlayer.UserId + "Inventory"
-				}, delegate(GetSharedGroupDataResult result)
-				{
-					attempts++;
-					foreach (KeyValuePair<string, PlayFab.ClientModels.SharedGroupDataRecord> datum in result.Data)
-					{
-						if (datum.Value.Value.Contains(itemToBuyID))
-						{
-							PhotonNetwork.RaiseEvent(199, null, new RaiseEventOptions
-							{
-								Receivers = ReceiverGroup.Others
-							}, SendOptions.SendReliable);
-							foundCosmetic = true;
-						}
-					}
-					_ = foundCosmetic;
-				}, delegate(PlayFabError error)
-				{
-					attempts++;
-					CosmeticsController.instance.ReauthOrBan(error);
-				});
-				yield return new WaitForSeconds(1f);
-				continue;
-			}
-			playerIDList.Add(PhotonNetwork.LocalPlayer.ActorNumber.ToString());
 			PlayFabClientAPI.GetSharedGroupData(new PlayFab.ClientModels.GetSharedGroupDataRequest
 			{
-				Keys = playerIDList,
-				SharedGroupId = PhotonNetwork.CurrentRoom.Name + Regex.Replace(PhotonNetwork.CloudRegion, "[^a-zA-Z0-9]", "").ToUpper()
+				Keys = new List<string> { "Inventory" },
+				SharedGroupId = PhotonNetwork.LocalPlayer.UserId + "Inventory"
 			}, delegate(GetSharedGroupDataResult result)
 			{
 				attempts++;
-				foreach (KeyValuePair<string, PlayFab.ClientModels.SharedGroupDataRecord> datum2 in result.Data)
+				foreach (KeyValuePair<string, PlayFab.ClientModels.SharedGroupDataRecord> datum in result.Data)
 				{
-					if (datum2.Value.Value.Contains(itemToBuyID))
+					if (datum.Value.Value.Contains(itemToBuyID))
 					{
-						Debug.Log("BuilderSetManager: found it! updating others cosmetic!");
 						PhotonNetwork.RaiseEvent(199, null, new RaiseEventOptions
 						{
 							Receivers = ReceiverGroup.Others
 						}, SendOptions.SendReliable);
 						foundCosmetic = true;
 					}
-					else
-					{
-						Debug.Log("BuilderSetManager: didnt find it, updating attempts and trying again in a bit. current attempt is " + attempts);
-					}
 				}
+				_ = foundCosmetic;
 			}, delegate(PlayFabError error)
 			{
 				attempts++;
-				if (error.Error == PlayFabErrorCode.NotAuthenticated)
-				{
-					PlayFabAuthenticator.instance.AuthenticateWithPlayFab();
-				}
-				else if (error.Error == PlayFabErrorCode.AccountBanned)
-				{
-					Application.Quit();
-					PhotonNetwork.Disconnect();
-					UnityEngine.Object.DestroyImmediate(PhotonNetworkController.Instance);
-					UnityEngine.Object.DestroyImmediate(GTPlayer.Instance);
-					GameObject[] array = UnityEngine.Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
-					for (int i = 0; i < array.Length; i++)
-					{
-						UnityEngine.Object.Destroy(array[i]);
-					}
-				}
-				Debug.Log("BuilderSetManager: Got error retrieving user data, on attempt " + attempts);
-				Debug.Log(error.GenerateErrorReport());
+				CosmeticsController.instance.ReauthOrBan(error);
 			});
-			yield return new WaitForSeconds(1f);
+			yield return new WaitForSecondsRealtime(1f);
 		}
 		Debug.Log("BuilderSetManager: done!");
 	}

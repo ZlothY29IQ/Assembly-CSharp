@@ -175,7 +175,7 @@ public class TryOnBundlesStand : MonoBehaviour, IBuildValidation
 		}
 	}
 
-	private void TryOnBundle(string BundleID)
+	private async void TryOnBundle(string BundleID)
 	{
 		CosmeticsController.CosmeticItem itemFromDict = CosmeticsController.instance.GetItemFromDict(BundleID);
 		if (itemFromDict.isNullItem)
@@ -196,22 +196,28 @@ public class TryOnBundlesStand : MonoBehaviour, IBuildValidation
 		{
 			if (!CosmeticsController.instance.tryOnSet.HasItem(itemID))
 			{
-				CosmeticsController.instance.ApplyCosmeticItemToSet(CosmeticsController.instance.tryOnSet, CosmeticsController.instance.GetItemFromDict(itemID), isLeftHand: false, applyToPlayerPrefs: false);
+				await CosmeticsController.instance.ApplyCosmeticItemToSet(CosmeticsController.instance.tryOnSet, CosmeticsController.instance.GetItemFromDict(itemID), isLeftHand: false, applyToPlayerPrefs: false);
 			}
 		}
 	}
 
-	public void PressTryOnBundleButton(TryOnBundleButton pressedTryOnBundleButton, bool isLeftHand)
+	public async void PressTryOnBundleButton(TryOnBundleButton pressedTryOnBundleButton, bool isLeftHand)
 	{
 		if (pressedTryOnBundleButton.playfabBundleID == "NULL")
 		{
 			Debug.LogError("TryOnBundlesStand - PressTryOnBundleButton - Invalid bundle ID");
 			return;
 		}
-		if (CosmeticsController.instance.GetItemFromDict(pressedTryOnBundleButton.playfabBundleID).isNullItem)
+		CosmeticsController.CosmeticItem BundleToTry = CosmeticsController.instance.GetItemFromDict(pressedTryOnBundleButton.playfabBundleID);
+		if (BundleToTry.isNullItem)
 		{
 			Debug.LogError("TryOnBundlesStand - PressTryOnBundleButton - Bundle is Null + " + pressedTryOnBundleButton.playfabBundleID);
 			return;
+		}
+		CosmeticItemRegistry registry = VRRig.LocalRig.cosmeticsObjectRegistry;
+		for (int i = 0; i < BundleToTry.bundledItems.Length; i++)
+		{
+			await registry.AwaitCosmetic(BundleToTry.bundledItems[i]);
 		}
 		if (SelectedButtonIndex != pressedTryOnBundleButton.buttonIndex)
 		{

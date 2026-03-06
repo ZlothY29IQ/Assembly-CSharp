@@ -129,6 +129,19 @@ public class NetworkSystemFusion : NetworkSystem
 		}
 	}
 
+	public override bool SessionIsSubscription
+	{
+		get
+		{
+			NetworkRunner networkRunner = runner;
+			if ((object)networkRunner == null)
+			{
+				return false;
+			}
+			return networkRunner.SessionInfo?.MaxPlayers > 10;
+		}
+	}
+
 	public override int LocalPlayerID => runner.LocalPlayer.PlayerId;
 
 	public override string CurrentPhotonBackend => "Fusion";
@@ -204,7 +217,7 @@ public class NetworkSystemFusion : NetworkSystem
 		GameModeSerializer.FusionGameModeOwnerChanged = (Action<NetPlayer>)Delegate.Combine(GameModeSerializer.FusionGameModeOwnerChanged, new Action<NetPlayer>(base.OnMasterClientSwitchedCallback));
 		OnMasterClientSwitchedEvent += new Action<NetPlayer>(OnMasterSwitch);
 		base.netState = NetSystemState.Idle;
-		playerPool = new ObjectPool<FusionNetPlayer>(10);
+		playerPool = new ObjectPool<FusionNetPlayer>(20);
 		UpdatePlayers();
 	}
 
@@ -438,13 +451,13 @@ public class NetworkSystemFusion : NetworkSystem
 	public override async Task JoinFriendsRoom(string userID, int actorIDToFollow, string keyToFollow, string shufflerToFollow)
 	{
 		bool foundFriend = false;
-		float searchStartTime = Time.time;
+		float searchStartTime = Time.realtimeSinceStartup;
 		float timeToSpendSearching = 15f;
 		Dictionary<string, PlayFab.ClientModels.SharedGroupDataRecord> dummyData = new Dictionary<string, PlayFab.ClientModels.SharedGroupDataRecord>();
 		try
 		{
 			base.groupJoinInProgress = true;
-			while (!foundFriend && searchStartTime + timeToSpendSearching > Time.time)
+			while (!foundFriend && searchStartTime + timeToSpendSearching > Time.realtimeSinceStartup)
 			{
 				Dictionary<string, PlayFab.ClientModels.SharedGroupDataRecord> data = dummyData;
 				bool callbackFinished = false;
@@ -486,7 +499,7 @@ public class NetworkSystemFusion : NetworkSystem
 						NetPlayer player = GetPlayer(actorIDToFollow);
 						if (InRoom && GetPlayer(actorIDToFollow) != null)
 						{
-							GorillaNot.instance.SendReport("possible kick attempt", player.UserId, player.NickName);
+							MonkeAgent.instance.SendReport("possible kick attempt", player.UserId, player.NickName);
 						}
 						else if (RoomName != roomID)
 						{
@@ -1005,9 +1018,9 @@ public class NetworkSystemFusion : NetworkSystem
 		foreach (PlayerRef activePlayer in runner.ActivePlayers)
 		{
 			bool flag2 = false;
-			for (int j = 0; j < netPlayerCache.Count; j++)
+			for (int num2 = 0; num2 < netPlayerCache.Count; num2++)
 			{
-				if (activePlayer == ((FusionNetPlayer)netPlayerCache[j]).PlayerRef)
+				if (activePlayer == ((FusionNetPlayer)netPlayerCache[num2]).PlayerRef)
 				{
 					flag2 = true;
 				}

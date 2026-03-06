@@ -438,7 +438,7 @@ public class SecondLookSkeleton : MonoBehaviour
 
 	private void CheckActivateGhost()
 	{
-		if (!tapped || currentState != 0 || playerTransform == null)
+		if (!tapped || currentState != GhostState.Unactivated || playerTransform == null)
 		{
 			return;
 		}

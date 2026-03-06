@@ -5,7 +5,7 @@ using UnityEngine;
 [RequireComponent(typeof(CompositeTriggerEvents))]
 public class VRRigCollection : MonoBehaviour
 {
-	public readonly List<RigContainer> containedRigs = new List<RigContainer>(10);
+	public readonly List<RigContainer> containedRigs = new List<RigContainer>(20);
 
 	[SerializeField]
 	private CompositeTriggerEvents collisionTriggerEvents;

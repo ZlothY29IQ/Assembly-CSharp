@@ -14,34 +14,36 @@ public class KIDUI_EmailSuccess : MonoBehaviour
 	{
 		_emailTxt.text = email;
 		base.gameObject.SetActive(value: true);
-		TelemetryData telemetryData = default(TelemetryData);
-		telemetryData.EventName = "kid_screen_shown";
-		telemetryData.CustomTags = new string[3]
+		TelemetryData telemetryData = new TelemetryData
 		{
-			"kid_setup",
-			KIDTelemetry.GameVersionCustomTag,
-			KIDTelemetry.GameEnvironment
+			EventName = "kid_screen_shown",
+			CustomTags = new string[3]
+			{
+				"kid_setup",
+				KIDTelemetry.GameVersionCustomTag,
+				KIDTelemetry.GameEnvironment
+			},
+			BodyData = new Dictionary<string, string> { { "screen", "email_sent" } }
 		};
-		telemetryData.BodyData = new Dictionary<string, string> { { "screen", "email_sent" } };
-		TelemetryData telemetryData2 = telemetryData;
-		GorillaTelemetry.EnqueueTelemetryEvent(telemetryData2.EventName, telemetryData2.BodyData, telemetryData2.CustomTags);
+		GorillaTelemetry.EnqueueTelemetryEvent(telemetryData.EventName, telemetryData.BodyData, telemetryData.CustomTags);
 	}
 
 	public void ShowSuccessScreenAppeal(string email)
 	{
 		_emailTxt.text = email;
 		base.gameObject.SetActive(value: true);
-		TelemetryData telemetryData = default(TelemetryData);
-		telemetryData.EventName = "kid_screen_shown";
-		telemetryData.CustomTags = new string[3]
+		TelemetryData telemetryData = new TelemetryData
 		{
-			"kid_age_appeal",
-			KIDTelemetry.GameVersionCustomTag,
-			KIDTelemetry.GameEnvironment
+			EventName = "kid_screen_shown",
+			CustomTags = new string[3]
+			{
+				"kid_age_appeal",
+				KIDTelemetry.GameVersionCustomTag,
+				KIDTelemetry.GameEnvironment
+			},
+			BodyData = new Dictionary<string, string> { { "screen", "age_appeal_email_sent" } }
 		};
-		telemetryData.BodyData = new Dictionary<string, string> { { "screen", "age_appeal_email_sent" } };
-		TelemetryData telemetryData2 = telemetryData;
-		GorillaTelemetry.EnqueueTelemetryEvent(telemetryData2.EventName, telemetryData2.BodyData, telemetryData2.CustomTags);
+		GorillaTelemetry.EnqueueTelemetryEvent(telemetryData.EventName, telemetryData.BodyData, telemetryData.CustomTags);
 	}
 
 	public void OnClose()

@@ -15,18 +15,6 @@ public class RigDuplicationZone : MonoBehaviour
 
 	public string Id => id;
 
-	public Vector3 VisualOffsetForRigs
-	{
-		get
-		{
-			if (!otherZone.playerInZone)
-			{
-				return Vector3.zero;
-			}
-			return offsetToOtherZone;
-		}
-	}
-
 	public bool IsApplyingDisplacement => otherZone.playerInZone;
 
 	public static event RigDuplicationZoneAction OnEnabled;
@@ -49,12 +37,12 @@ public class RigDuplicationZone : MonoBehaviour
 	{
 		if (!(z == this) && !(z.id != id))
 		{
-			setOtherZone(z);
-			z.setOtherZone(this);
+			SetOtherZone(z);
+			z.SetOtherZone(this);
 		}
 	}
 
-	private void setOtherZone(RigDuplicationZone z)
+	private void SetOtherZone(RigDuplicationZone z)
 	{
 		otherZone = z;
 		offsetToOtherZone = z.transform.position - base.transform.position;
@@ -90,5 +78,19 @@ public class RigDuplicationZone : MonoBehaviour
 				component.ClearDuplicationZone(this);
 			}
 		}
+	}
+
+	public Vector3 GetVisualOffsetForRigs(Vector3 cachedOffset)
+	{
+		if (otherZone == null)
+		{
+			Debug.LogError("RigDuplicationZone doesn't have an other zone!", base.gameObject);
+			return cachedOffset;
+		}
+		if (!otherZone.playerInZone)
+		{
+			return cachedOffset;
+		}
+		return offsetToOtherZone + cachedOffset;
 	}
 }

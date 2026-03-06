@@ -101,7 +101,7 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 
 		public bool SharesKeyWith(InteractionSetting other)
 		{
-			if (mode != 0)
+			if (mode != InteractionMode.CosmeticToCosmetic)
 			{
 				return false;
 			}
@@ -109,7 +109,7 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 			{
 				return false;
 			}
-			if (other.mode != 0)
+			if (other.mode != InteractionMode.CosmeticToCosmetic)
 			{
 				return false;
 			}
@@ -272,7 +272,7 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 		sharedKeysCache.Clear();
 		foreach (InteractionSetting block in blocks)
 		{
-			if (block.mode != 0 || block.interactionKeys == null || block.interactionKeys.Count == 0)
+			if (block.mode != InteractionMode.CosmeticToCosmetic || block.interactionKeys == null || block.interactionKeys.Count == 0)
 			{
 				continue;
 			}
@@ -301,7 +301,7 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 	{
 		foreach (InteractionSetting block in blocks)
 		{
-			if (block.mode == InteractionMode.GorillaBodyToCosmetic && block.gorillaBodyMask != 0)
+			if (block.mode == InteractionMode.GorillaBodyToCosmetic && block.gorillaBodyMask != GorillaBodyPart.None)
 			{
 				return true;
 			}
@@ -327,7 +327,7 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 		float num = float.MaxValue;
 		foreach (InteractionSetting block in blocks)
 		{
-			if (block.mode != 0 || !block.AllowsRig(MyRig, other.MyRig))
+			if (block.mode != InteractionMode.CosmeticToCosmetic || !block.AllowsRig(MyRig, other.MyRig))
 			{
 				continue;
 			}
@@ -372,7 +372,7 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 		bool flag = false;
 		foreach (InteractionSetting block in blocks)
 		{
-			if (block.mode != 0 || !block.AllowsRig(MyRig, other.MyRig))
+			if (block.mode != InteractionMode.CosmeticToCosmetic || !block.AllowsRig(MyRig, other.MyRig))
 			{
 				continue;
 			}
@@ -405,7 +405,7 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 	{
 		foreach (InteractionSetting block in blocks)
 		{
-			if (block.mode != 0 || !block.isMatched || !block.AllowsRig(MyRig, other.MyRig))
+			if (block.mode != InteractionMode.CosmeticToCosmetic || !block.isMatched || !block.AllowsRig(MyRig, other.MyRig))
 			{
 				continue;
 			}

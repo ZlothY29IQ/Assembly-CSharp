@@ -4,31 +4,22 @@ using UnityEngine;
 namespace GorillaTag.GuidedRefs;
 
 [Serializable]
-public struct GuidedRefReceiverArrayInfo
+public struct GuidedRefReceiverArrayInfo(bool useRecommendedDefaults)
 {
 	[Tooltip("Controls whether the array should be overridden by the guided refs.")]
 	[SerializeField]
-	public GRef.EResolveModes resolveModes;
+	public GRef.EResolveModes resolveModes = (useRecommendedDefaults ? (GRef.EResolveModes.Runtime | GRef.EResolveModes.SceneProcessing) : GRef.EResolveModes.None);
 
 	[Tooltip("(Required) Used to filter down which relay the target can belong to. Only one GuidedRefRelayHub will be used.")]
 	[SerializeField]
-	public GuidedRefHubIdSO hubId;
+	public GuidedRefHubIdSO hubId = null;
 
 	[SerializeField]
-	public GuidedRefTargetIdSO[] targets;
+	public GuidedRefTargetIdSO[] targets = Array.Empty<GuidedRefTargetIdSO>();
 
 	[NonSerialized]
-	public int fieldId;
+	public int fieldId = 0;
 
 	[NonSerialized]
-	public int resolveCount;
-
-	public GuidedRefReceiverArrayInfo(bool useRecommendedDefaults)
-	{
-		resolveModes = (useRecommendedDefaults ? (GRef.EResolveModes.Runtime | GRef.EResolveModes.SceneProcessing) : GRef.EResolveModes.None);
-		targets = Array.Empty<GuidedRefTargetIdSO>();
-		hubId = null;
-		fieldId = 0;
-		resolveCount = 0;
-	}
+	public int resolveCount = 0;
 }

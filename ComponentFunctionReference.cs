@@ -8,17 +8,11 @@ using UnityEngine;
 public sealed class ComponentFunctionReference<TResult>
 {
 	[Serializable]
-	private struct MethodRef
+	private struct MethodRef(UnityEngine.Object obj, MethodInfo m)
 	{
-		public UnityEngine.Object component;
+		public UnityEngine.Object component = obj;
 
-		public string methodName;
-
-		public MethodRef(UnityEngine.Object obj, MethodInfo m)
-		{
-			component = obj;
-			methodName = m.Name;
-		}
+		public string methodName = m.Name;
 	}
 
 	[SerializeField]

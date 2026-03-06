@@ -41,7 +41,7 @@ public class BuilderMovingSnapPiece : MonoBehaviour, IBuilderPieceComponent, IBu
 
 	public int GetTimeOffset()
 	{
-		if (myPiece.state != 0)
+		if (myPiece.state != BuilderPiece.State.AttachedAndPlaced)
 		{
 			return 0;
 		}
@@ -152,7 +152,7 @@ public class BuilderMovingSnapPiece : MonoBehaviour, IBuilderPieceComponent, IBu
 
 	public void OnStateChanged(byte newState, NetPlayer instigator, int timeStamp)
 	{
-		if (!IsStateValid(newState) || myPiece.state != 0 || !activated)
+		if (!IsStateValid(newState) || myPiece.state != BuilderPiece.State.AttachedAndPlaced || !activated)
 		{
 			return;
 		}

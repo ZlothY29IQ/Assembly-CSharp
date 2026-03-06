@@ -8,7 +8,6 @@ public enum UnityLayerMask
 	Default = 1,
 	TransparentFX = 2,
 	IgnoreRaycast = 4,
-	Zone = 8,
 	Water = 0x10,
 	UI = 0x20,
 	MeshBakerAtlas = 0x40,

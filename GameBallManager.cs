@@ -75,7 +75,7 @@ public class GameBallManager : NetworkComponent
 
 	private void ReportRPCCall(RPC rpcCall, PhotonMessageInfo info, string susReason)
 	{
-		GorillaNot.instance.SendReport($"Reason: {susReason}   RPC: {rpcCall}", info.Sender.UserId, info.Sender.NickName);
+		MonkeAgent.instance.SendReport($"Reason: {susReason}   RPC: {rpcCall}", info.Sender.UserId, info.Sender.NickName);
 	}
 
 	public GameBallId AddGameBall(GameBall gameBall)
@@ -134,7 +134,7 @@ public class GameBallManager : NetworkComponent
 	[PunRPC]
 	private void RequestGrabBallRPC(int gameBallIndex, bool isLeftHand, long packedPosRot, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "RequestGrabBallRPC");
+		MonkeAgent.IncrementRPCCall(info, "RequestGrabBallRPC");
 		if (!PhotonNetwork.IsMasterClient || !ValidateCallLimits(RPC.RequestGrabBall, info))
 		{
 			return;
@@ -192,7 +192,7 @@ public class GameBallManager : NetworkComponent
 		{
 			return;
 		}
-		GorillaNot.IncrementRPCCall(info, "GrabBallRPC");
+		MonkeAgent.IncrementRPCCall(info, "GrabBallRPC");
 		if (!ValidateCallLimits(RPC.GrabBall, info))
 		{
 			return;
@@ -292,7 +292,7 @@ public class GameBallManager : NetworkComponent
 	[PunRPC]
 	private void RequestThrowBallRPC(int gameBallIndex, bool isLeftHand, Vector3 position, Quaternion rotation, Vector3 velocity, Vector3 angVelocity, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "RequestThrowBallRPC");
+		MonkeAgent.IncrementRPCCall(info, "RequestThrowBallRPC");
 		if (!PhotonNetwork.IsMasterClient || !ValidateCallLimits(RPC.RequestThrowBall, info))
 		{
 			return;
@@ -335,7 +335,7 @@ public class GameBallManager : NetworkComponent
 		{
 			return;
 		}
-		GorillaNot.IncrementRPCCall(info, "ThrowBallRPC");
+		MonkeAgent.IncrementRPCCall(info, "ThrowBallRPC");
 		if (!ValidateCallLimits(RPC.ThrowBall, info))
 		{
 			return;
@@ -445,7 +445,7 @@ public class GameBallManager : NetworkComponent
 	[PunRPC]
 	private void RequestLaunchBallRPC(int gameBallIndex, Vector3 position, Quaternion rotation, Vector3 velocity, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "RequestLaunchBallRPC");
+		MonkeAgent.IncrementRPCCall(info, "RequestLaunchBallRPC");
 		if (!PhotonNetwork.IsMasterClient || !ValidateCallLimits(RPC.RequestLaunchBall, info))
 		{
 			return;
@@ -475,7 +475,7 @@ public class GameBallManager : NetworkComponent
 		{
 			return;
 		}
-		GorillaNot.IncrementRPCCall(info, "LaunchBallRPC");
+		MonkeAgent.IncrementRPCCall(info, "LaunchBallRPC");
 		if (!ValidateCallLimits(RPC.ThrowBall, info))
 		{
 			return;
@@ -540,7 +540,7 @@ public class GameBallManager : NetworkComponent
 		{
 			return;
 		}
-		GorillaNot.IncrementRPCCall(info, "TeleportBallRPC");
+		MonkeAgent.IncrementRPCCall(info, "TeleportBallRPC");
 		if (ValidateCallLimits(RPC.TeleportBall, info))
 		{
 			if (gameBallIndex < 0 || gameBallIndex >= gameBalls.Count)
@@ -600,7 +600,7 @@ public class GameBallManager : NetworkComponent
 	[PunRPC]
 	private void RequestSetBallPositionRPC(int gameBallIndex, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "RequestSetBallPositionRPC");
+		MonkeAgent.IncrementRPCCall(info, "RequestSetBallPositionRPC");
 		if (!PhotonNetwork.IsMasterClient || !ValidateCallLimits(RPC.RequestSetBallPosition, info))
 		{
 			return;

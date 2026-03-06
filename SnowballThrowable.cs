@@ -71,7 +71,7 @@ public class SnowballThrowable : HoldableObject
 		}
 	}
 
-	internal int ProjectileHash => PoolUtils.GameObjHashCode(randomModelSelection ? localModels[randModelIndex].GetProjectilePrefab() : projectilePrefab);
+	internal int ProjectileHash => PoolUtils.GameObjHashCode((randomModelSelection && localModels != null && randModelIndex >= 0 && randModelIndex <= localModels.Count && localModels[randModelIndex] != null) ? localModels[randModelIndex].GetProjectilePrefab() : projectilePrefab);
 
 	protected virtual void Awake()
 	{
@@ -353,6 +353,7 @@ public class SnowballThrowable : HoldableObject
 	{
 		SlingshotProjectile component = ObjectPools.instance.Instantiate(randomModelSelection ? localModels[randModelIndex].GetProjectilePrefab() : projectilePrefab).GetComponent<SlingshotProjectile>();
 		component.Launch(projectileCount: ProjectileTracker.AddAndIncrementLocalProjectile(component, velocity, location, scale), position: location, velocity: velocity, player: NetworkSystem.Instance.LocalPlayer, blueTeam: false, orangeTeam: false, scale: scale, shouldOverrideColor: randomColour, overrideColor: colour);
+		GorillaTagger.Instance.StartVibration(isLeftHanded, GorillaTagger.Instance.tapHapticStrength * 0.5f, GorillaTagger.Instance.tapHapticDuration * 0.5f);
 		if (string.IsNullOrEmpty(throwEventName))
 		{
 			PlayerGameEvents.LaunchedProjectile(projectilePrefab.name);
@@ -378,6 +379,11 @@ public class SnowballThrowable : HoldableObject
 			if (instance != null && projectilePrefab != null && projectilePrefab == instance.waterBalloonPrefab)
 			{
 				instance.OnWaterBalloonHitPlayer(hitPlayer);
+			}
+			if (hitPlayer.IsLocal)
+			{
+				GorillaTagger.Instance.StartVibration(forLeftController: true, GorillaTagger.Instance.tapHapticStrength * 0.5f, GorillaTagger.Instance.tapHapticDuration * 0.5f);
+				GorillaTagger.Instance.StartVibration(forLeftController: true, GorillaTagger.Instance.tapHapticStrength * 0.5f, GorillaTagger.Instance.tapHapticDuration * 0.5f);
 			}
 		}
 	}

@@ -181,7 +181,7 @@ public class FortuneTeller : MonoBehaviourPunCallbacks
 	[PunRPC]
 	private void RequestFortuneRPC(PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "RequestFortune");
+		MonkeAgent.IncrementRPCCall(info, "RequestFortune");
 		if (NetworkSystem.Instance.IsMasterClient && info.Sender != null && VRRigCache.Instance.TryGetVrrig(info.Sender, out var playerRig))
 		{
 			CallLimitType<CallLimiter> callLimitType = playerRig.Rig.fxSettings.callSettings[(int)limiterType];
@@ -208,10 +208,10 @@ public class FortuneTeller : MonoBehaviourPunCallbacks
 	[PunRPC]
 	private void TriggerUpdateFortuneRPC(int fortuneType, int resultIndex, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "TriggerUpdateFortune");
+		MonkeAgent.IncrementRPCCall(info, "TriggerUpdateFortune");
 		if (info.Sender != PhotonNetwork.MasterClient)
 		{
-			GorillaNot.instance.SendReport("Sent TriggerUpdateFortune when they weren't the master client", info.Sender.UserId, info.Sender.NickName);
+			MonkeAgent.instance.SendReport("Sent TriggerUpdateFortune when they weren't the master client", info.Sender.UserId, info.Sender.NickName);
 		}
 		else if (triggerUpdateFortuneLimiter.CheckCallTime(Time.time))
 		{
@@ -223,10 +223,10 @@ public class FortuneTeller : MonoBehaviourPunCallbacks
 	[PunRPC]
 	private void TriggerNewFortuneRPC(int fortuneType, int resultIndex, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "TriggerNewFortune");
+		MonkeAgent.IncrementRPCCall(info, "TriggerNewFortune");
 		if (info.Sender != PhotonNetwork.MasterClient)
 		{
-			GorillaNot.instance.SendReport("Sent TriggerNewFortune when they weren't the master client", info.Sender.UserId, info.Sender.NickName);
+			MonkeAgent.instance.SendReport("Sent TriggerNewFortune when they weren't the master client", info.Sender.UserId, info.Sender.NickName);
 		}
 		else if (triggerNewFortuneLimiter.CheckCallTime(Time.time))
 		{
@@ -268,10 +268,10 @@ public class FortuneTeller : MonoBehaviourPunCallbacks
 	[PunRPC]
 	private void TriggerAttractAnimRPC(PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "TriggerAttractAnim");
+		MonkeAgent.IncrementRPCCall(info, "TriggerAttractAnim");
 		if (info.Sender != PhotonNetwork.MasterClient)
 		{
-			GorillaNot.instance.SendReport("Sent TriggerAttractAnim when they weren't the master client", info.Sender.UserId, info.Sender.NickName);
+			MonkeAgent.instance.SendReport("Sent TriggerAttractAnim when they weren't the master client", info.Sender.UserId, info.Sender.NickName);
 			return;
 		}
 		animator.SetTrigger(trigger_attract);

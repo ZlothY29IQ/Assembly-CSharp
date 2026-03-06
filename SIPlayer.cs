@@ -103,8 +103,9 @@ public class SIPlayer : MonoBehaviour, ITickSystemTick
 
 	private int lastQuestsAvailableToClaim;
 
-	[NonSerialized]
-	public int totalGadgetLimit = 3;
+	private const int STANDARD_GADGET_LIMIT = 3;
+
+	private const int SUBSCRIBER_GADGET_LIMIT = 6;
 
 	[NonSerialized]
 	public int exclusionZoneCount;
@@ -116,6 +117,18 @@ public class SIPlayer : MonoBehaviour, ITickSystemTick
 	public List<int> activePlayerGadgets = new List<int>();
 
 	public static SIPlayer LocalPlayer => Get(NetworkSystem.Instance.LocalPlayer.ActorNumber);
+
+	public int TotalGadgetLimit
+	{
+		get
+		{
+			if (!gamePlayer.IsSubscribed)
+			{
+				return 3;
+			}
+			return 6;
+		}
+	}
 
 	public bool TickRunning { get; set; }
 
@@ -670,22 +683,30 @@ public class SIPlayer : MonoBehaviour, ITickSystemTick
 
 	public void Tick()
 	{
-		ProcessHandRecharge(0);
-		ProcessHandRecharge(1);
+		bool isSupercharged = SuperInfectionManager.activeSuperInfectionManager?.IsSupercharged ?? false;
+		if (!_TryUpdateSlotEntityCharge(gamePlayer, 0, isSupercharged))
+		{
+			_TryUpdateSlotEntityCharge(gamePlayer, 2, isSupercharged);
+		}
+		if (!_TryUpdateSlotEntityCharge(gamePlayer, 1, isSupercharged))
+		{
+			_TryUpdateSlotEntityCharge(gamePlayer, 3, isSupercharged);
+		}
 	}
 
-	private void ProcessHandRecharge(int handIndex)
+	private static bool _TryUpdateSlotEntityCharge(GamePlayer gamePlayer, int slotIndex, bool isSupercharged)
 	{
-		IEnergyGadget energyGadget = gamePlayer.GetGrabbedGameEntity(handIndex)?.GetComponent<IEnergyGadget>();
-		if (energyGadget != null && energyGadget.UsesEnergy && !energyGadget.IsFull)
+		if (!gamePlayer.TryGetSlotEntity(slotIndex, out var out_entity))
 		{
-			energyGadget.UpdateRecharge(Time.deltaTime);
-			return;
+			return false;
 		}
-		IEnergyGadget energyGadget2 = gamePlayer.GetSnappedGameEntity(handIndex)?.GetComponent<IEnergyGadget>();
-		if (energyGadget2 != null && energyGadget2.UsesEnergy && !energyGadget2.IsFull)
+		IEnergyGadget component = out_entity.GetComponent<IEnergyGadget>();
+		if (component == null || !component.UsesEnergy || component.IsFull)
 		{
-			energyGadget2.UpdateRecharge(Time.deltaTime);
+			return false;
 		}
+		float dt = Time.deltaTime * (isSupercharged ? 5f : 1f);
+		component.UpdateRecharge(dt);
+		return true;
 	}
 }

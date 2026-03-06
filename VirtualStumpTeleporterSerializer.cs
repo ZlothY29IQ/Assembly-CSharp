@@ -46,7 +46,7 @@ internal class VirtualStumpTeleporterSerializer : GorillaSerializer
 	[PunRPC]
 	private void ActivateTeleportVFX(bool returning, short teleporterIdx, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "ActivateTeleportVFX");
+		MonkeAgent.IncrementRPCCall(info, "ActivateTeleportVFX");
 		if (teleporterIdx >= teleporters.Count)
 		{
 			return;

@@ -108,7 +108,7 @@ public class SIGadgetPumpBlaster : MonoBehaviour, SIGadgetBlasterType
 	public void OnUpdateRemote(float dt)
 	{
 		SIGadgetBlasterState currentState = blaster.currentState;
-		if (currentState != 0 && currentState == SIGadgetBlasterState.Pumping)
+		if (currentState != SIGadgetBlasterState.Idle && currentState == SIGadgetBlasterState.Pumping)
 		{
 			Vector3 vector = pumpFullyOpen.position - pumpFullyClosed.position;
 			Vector3 vector2 = pumpingTransform.position - pumpFullyClosed.position;
@@ -133,16 +133,15 @@ public class SIGadgetPumpBlaster : MonoBehaviour, SIGadgetBlasterType
 			break;
 		case SIGadgetBlasterState.Pumping:
 		{
-			if (blaster.FindAttachedHand(out var isLeft))
+			GameEntity gameEntity = blaster.gameEntity;
+			if (GamePlayer.TryGetGamePlayer(gameEntity.AttachedPlayerActorNr, out var out_gamePlayer))
 			{
-				if (isLeft)
+				pumpingTransform = gameEntity.EquippedHandedness switch
 				{
-					pumpingTransform = SIPlayer.Get(blaster.GetAttachedPlayerActorNumber()).gamePlayer.rightHand;
-				}
-				else
-				{
-					pumpingTransform = SIPlayer.Get(blaster.GetAttachedPlayerActorNumber()).gamePlayer.leftHand;
-				}
+					EHandedness.Left => out_gamePlayer.rightHand, 
+					EHandedness.Right => out_gamePlayer.leftHand, 
+					_ => pumpingTransform, 
+				};
 			}
 			break;
 		}

@@ -32,6 +32,8 @@ public class GorillaNetworkJoinTrigger : GorillaTriggerBox
 
 	public bool ignoredIfInParty;
 
+	public bool isSubsOnly;
+
 	private JoinTriggerUI ui;
 
 	private bool didRegisterForCallbacks;
@@ -40,16 +42,11 @@ public class GorillaNetworkJoinTrigger : GorillaTriggerBox
 
 	private static bool triggerJoinsDisabled;
 
-	public GroupJoinZoneAB groupJoinRequiredZonesAB
+	public GroupJoinZoneAB groupJoinRequiredZonesAB => new GroupJoinZoneAB
 	{
-		get
-		{
-			GroupJoinZoneAB result = default(GroupJoinZoneAB);
-			result.a = groupJoinRequiredZones;
-			result.b = groupJoinRequiredZonesB;
-			return result;
-		}
-	}
+		a = groupJoinRequiredZones,
+		b = groupJoinRequiredZonesB
+	};
 
 	private void Start()
 	{
@@ -150,12 +147,20 @@ public class GorillaNetworkJoinTrigger : GorillaTriggerBox
 
 	public string GetDesiredGameType()
 	{
-		return GameMode.GameModeZoneMapping.VerifyModeForZone(zone, Enum.Parse<GameModeType>(GorillaComputer.instance.currentGameMode.Value, ignoreCase: true), NetworkSystem.Instance.SessionIsPrivate).ToString();
+		GameModeType result;
+		return GameMode.GameModeZoneMapping.VerifyModeForZone(zone, Enum.TryParse<GameModeType>(GorillaComputer.instance.currentGameMode.Value, ignoreCase: true, out result) ? result : GameModeType.Casual, NetworkSystem.Instance.SessionIsPrivate).ToString();
+	}
+
+	public GameModeType GetDesiredGameModeType()
+	{
+		GameModeType result;
+		return GameMode.GameModeZoneMapping.VerifyModeForZone(zone, Enum.TryParse<GameModeType>(GorillaComputer.instance.currentGameMode.Value, ignoreCase: true, out result) ? result : GameModeType.Casual, NetworkSystem.Instance.SessionIsPrivate);
 	}
 
 	public string GetDesiredGameTypeLocalized()
 	{
-		return GorillaGameManager.GameModeEnumToName(GameMode.GameModeZoneMapping.VerifyModeForZone(zone, Enum.Parse<GameModeType>(GorillaComputer.instance.currentGameMode.Value, ignoreCase: true), NetworkSystem.Instance.SessionIsPrivate));
+		GameModeType result;
+		return GorillaGameManager.GameModeEnumToName(GameMode.GameModeZoneMapping.VerifyModeForZone(zone, Enum.TryParse<GameModeType>(GorillaComputer.instance.currentGameMode.Value, ignoreCase: true, out result) ? result : GameModeType.Casual, NetworkSystem.Instance.SessionIsPrivate));
 	}
 
 	public virtual string GetFullDesiredGameModeString()
@@ -168,9 +173,9 @@ public class GorillaNetworkJoinTrigger : GorillaTriggerBox
 		return NetworkSystem.Instance.groupJoinOverrideGameMode.StartsWith(networkZone);
 	}
 
-	public virtual byte GetRoomSize()
+	public virtual byte GetRoomSize(bool subscribed)
 	{
-		return RoomSystem.GetRoomSizeForCreate(networkZone);
+		return RoomSystem.GetRoomSizeForCreate(zone, GetDesiredGameModeType(), privateRoom: false, subscribed);
 	}
 
 	public bool CanPartyJoin()
@@ -186,6 +191,14 @@ public class GorillaNetworkJoinTrigger : GorillaTriggerBox
 	public override void OnBoxTriggered()
 	{
 		base.OnBoxTriggered();
+		if (isSubsOnly)
+		{
+			if (SubscriptionManager.IsLocalSubscribed())
+			{
+				SubsPublicJoin();
+			}
+			return;
+		}
 		if (triggerJoinsDisabled)
 		{
 			Debug.Log("GorillaNetworkJoinTrigger::OnBoxTriggered - blocking join call");
@@ -245,6 +258,18 @@ public class GorillaNetworkJoinTrigger : GorillaTriggerBox
 			PhotonNetworkController.Instance.ClearDeferredJoin();
 		}
 		PhotonNetworkController.Instance.AttemptToJoinPublicRoom(this, JoinType.Solo, list);
+	}
+
+	public void SubsPublicJoin()
+	{
+		if (triggerJoinsDisabled)
+		{
+			Debug.Log("GorillaNetworkJoinTrigger::SubsPublicJoin - blocking join call");
+			return;
+		}
+		GorillaComputer.instance.allowedMapsToJoin = myCollider.myAllowedMapsToJoin;
+		PhotonNetworkController.Instance.ClearDeferredJoin();
+		PhotonNetworkController.Instance.AttemptToJoinPublicRoom(this, JoinType.Solo, null, SubscriptionManager.IsLocalSubscribed());
 	}
 
 	public static void DisableTriggerJoins()

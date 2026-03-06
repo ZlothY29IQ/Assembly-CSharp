@@ -58,7 +58,7 @@ internal class GameModeSerializer : GorillaSerializerMasterOnly, IStateAuthority
 		NetPlayer player = NetworkSystem.Instance.GetPlayer(wrappedInfo.senderID);
 		if (player != null)
 		{
-			GorillaNot.IncrementRPCCall(wrappedInfo, "OnSpawnSetupCheck");
+			MonkeAgent.IncrementRPCCall(wrappedInfo, "OnSpawnSetupCheck");
 		}
 		GameModeSerializer activeNetworkHandler = GorillaGameModes.GameMode.ActiveNetworkHandler;
 		if (player != null && player.InRoom)
@@ -66,19 +66,19 @@ internal class GameModeSerializer : GorillaSerializerMasterOnly, IStateAuthority
 			if (!player.IsMasterClient)
 			{
 				GTDev.LogError("SPAWN FAIL NOT MASTER :" + player.UserId + player.NickName);
-				GorillaNot.instance.SendReport("trying to inappropriately create game managers", player.UserId, player.NickName);
+				MonkeAgent.instance.SendReport("trying to inappropriately create game managers", player.UserId, player.NickName);
 				return false;
 			}
 			if (!netView.IsRoomView)
 			{
 				GTDev.LogError("SPAWN FAIL ROOM VIEW" + player.UserId + player.NickName);
-				GorillaNot.instance.SendReport("creating game manager as player object", player.UserId, player.NickName);
+				MonkeAgent.instance.SendReport("creating game manager as player object", player.UserId, player.NickName);
 				return false;
 			}
 			if (activeNetworkHandler.IsNotNull() && activeNetworkHandler != this)
 			{
 				GTDev.LogError("DUPLICATE CHECK" + player.UserId + player.NickName);
-				GorillaNot.instance.SendReport("trying to create multiple game managers", player.UserId, player.NickName);
+				MonkeAgent.instance.SendReport("trying to create multiple game managers", player.UserId, player.NickName);
 				return false;
 			}
 		}
@@ -231,14 +231,14 @@ internal class GameModeSerializer : GorillaSerializerMasterOnly, IStateAuthority
 
 	private void ReportTag(NetPlayer taggedPlayer, PhotonMessageInfoWrapped info)
 	{
-		GorillaNot.IncrementRPCCall(info, "ReportTag");
+		MonkeAgent.IncrementRPCCall(info, "ReportTag");
 		NetPlayer sender = info.Sender;
 		gameModeInstance.ReportTag(taggedPlayer, sender);
 	}
 
 	private void ReportHit(PhotonMessageInfoWrapped info)
 	{
-		GorillaNot.IncrementRPCCall(info, "ReportContactWithLavaRPC");
+		MonkeAgent.IncrementRPCCall(info, "ReportContactWithLavaRPC");
 		bool num = ZoneManagement.instance.IsZoneActive(GTZone.customMaps);
 		bool flag = false;
 		if (VRRigCache.Instance.TryGetVrrig(info.Sender, out var playerRig))
@@ -260,7 +260,7 @@ internal class GameModeSerializer : GorillaSerializerMasterOnly, IStateAuthority
 
 	private void BroadcastRoundComplete(PhotonMessageInfoWrapped info)
 	{
-		GorillaNot.IncrementRPCCall(info, "BroadcastRoundComplete");
+		MonkeAgent.IncrementRPCCall(info, "BroadcastRoundComplete");
 		if (info.Sender.IsMasterClient)
 		{
 			gameModeInstance.HandleRoundComplete();
@@ -275,7 +275,7 @@ internal class GameModeSerializer : GorillaSerializerMasterOnly, IStateAuthority
 
 	private void BroadcastTag(NetPlayer taggedPlayer, NetPlayer taggingPlayer, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "BroadcastTag");
+		MonkeAgent.IncrementRPCCall(info, "BroadcastTag");
 		if (info.Sender.IsMasterClient && taggedPlayer != null && taggingPlayer != null && broadcastTagCallLimit.CheckCallTime(Time.time))
 		{
 			gameModeInstance.HandleTagBroadcast(taggedPlayer, taggingPlayer);

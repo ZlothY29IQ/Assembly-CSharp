@@ -2,16 +2,10 @@ using System;
 using UnityEngine;
 
 [Serializable]
-public struct KeyValueStringPair
+public struct KeyValueStringPair(string key, string value)
 {
-	public string Key;
+	public string Key = key;
 
 	[Multiline]
-	public string Value;
-
-	public KeyValueStringPair(string key, string value)
-	{
-		Key = key;
-		Value = value;
-	}
+	public string Value = value;
 }

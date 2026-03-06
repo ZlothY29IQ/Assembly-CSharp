@@ -236,7 +236,6 @@ public class VirtualStumpOptionsTerminal : MonoBehaviour, IWssAuthPrompter
 
 	private void UpdateScreen()
 	{
-		Debug.Log("[VirtualStumpOptionsTerminal::UpdateScreen] State: " + currentState.ToString() + " | CachedError: " + !cachedError.IsNullOrEmpty());
 		mainScreenText.text = "";
 		if (!cachedError.IsNullOrEmpty())
 		{
@@ -259,13 +258,11 @@ public class VirtualStumpOptionsTerminal : MonoBehaviour, IWssAuthPrompter
 
 	private void OnModIOLoginStarted()
 	{
-		Debug.Log("[VirtualStumpOptionsTerminal::OnModIOLoginStarted]...");
 		UpdateScreen();
 	}
 
 	private void OnModIOLoggedIn()
 	{
-		Debug.Log("[VirtualStumpOptionsTerminal::OnModIOLoggedIn]...");
 		ModIOManager.OnModIOLoggedOut.RemoveListener(OnModIOLoggedOut);
 		ModIOManager.OnModIOLoggedOut.AddListener(OnModIOLoggedOut);
 		processingAccountLink = false;
@@ -279,13 +276,11 @@ public class VirtualStumpOptionsTerminal : MonoBehaviour, IWssAuthPrompter
 			MothershipToken = MothershipClientContext.Token
 		}, delegate
 		{
-			Debug.Log("[VirtualStumpOptionsTerminal::OnModIOLoggedIn]... Mothership Account Association Created/Updated");
 		}));
 	}
 
 	private void OnModIOLoggedOut()
 	{
-		Debug.Log("[VirtualStumpOptionsTerminal::OnModIOLoggedOut]...");
 		ModIOManager.OnModIOLoggedOut.RemoveListener(OnModIOLoggedOut);
 		processingAccountLink = false;
 		UpdateScreen();
@@ -293,7 +288,6 @@ public class VirtualStumpOptionsTerminal : MonoBehaviour, IWssAuthPrompter
 
 	private void OnModIOLoginFailed(string error)
 	{
-		Debug.Log("[VirtualStumpOptionsTerminal::OnModIOLoginFailed] Error: " + error);
 		processingAccountLink = false;
 		cachedError = error;
 		UpdateScreen();
@@ -301,7 +295,6 @@ public class VirtualStumpOptionsTerminal : MonoBehaviour, IWssAuthPrompter
 
 	private void OnModIOUserChanged(User user)
 	{
-		Debug.Log("[VirtualStumpOptionsTerminal::OnModIOUserChanged] Username: " + ModIOManager.GetCurrentUsername());
 		UpdateScreen();
 	}
 
@@ -433,6 +426,7 @@ public class VirtualStumpOptionsTerminal : MonoBehaviour, IWssAuthPrompter
 		{
 			IncrementRoomSize();
 		}
+		UpdateScreen();
 	}
 
 	private void DecrementRoomSize()

@@ -297,16 +297,17 @@ public class GRToolFlash : MonoBehaviour, IGameEntityDebugComponent, IGameEntity
 				GameHittable component = attachedRigidbody.GetComponent<GameHittable>();
 				if (component != null && gameHitter != null)
 				{
-					GameHitData gameHitData = default(GameHitData);
-					gameHitData.hitTypeId = 1;
-					gameHitData.hitEntityId = component.gameEntity.id;
-					gameHitData.hitByEntityId = gameEntity.id;
-					gameHitData.hitEntityPosition = component.gameEntity.transform.position;
-					gameHitData.hitPosition = ((raycastHit.distance == 0f) ? shootFrom.position : raycastHit.point);
-					gameHitData.hitImpulse = Vector3.zero;
-					gameHitData.hitAmount = gameHitter.CalcHitAmount(GameHitType.Flash, component, gameEntity);
-					gameHitData.hittablePoint = component.FindHittablePoint(raycastHit.collider);
-					GameHitData hitData = gameHitData;
+					GameHitData hitData = new GameHitData
+					{
+						hitTypeId = 1,
+						hitEntityId = component.gameEntity.id,
+						hitByEntityId = gameEntity.id,
+						hitEntityPosition = component.gameEntity.transform.position,
+						hitPosition = ((raycastHit.distance == 0f) ? shootFrom.position : raycastHit.point),
+						hitImpulse = Vector3.zero,
+						hitAmount = gameHitter.CalcHitAmount(GameHitType.Flash, component, gameEntity),
+						hittablePoint = component.FindHittablePoint(raycastHit.collider)
+					};
 					component.RequestHit(hitData);
 				}
 			}

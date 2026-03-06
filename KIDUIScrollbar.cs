@@ -33,7 +33,7 @@ public class KIDUIScrollbar : Scrollbar, IPointerEnterHandler, IEventSystemHandl
 	{
 		get
 		{
-			if (base.direction != 0 && base.direction != Direction.RightToLeft)
+			if (base.direction != Direction.LeftToRight && base.direction != Direction.RightToLeft)
 			{
 				return Axis.Vertical;
 			}

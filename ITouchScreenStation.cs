@@ -9,4 +9,6 @@ public interface ITouchScreenStation
 	void AddButton(SITouchscreenButton button, bool isPopupButton = false);
 
 	void TouchscreenButtonPressed(SITouchscreenButton.SITouchscreenButtonType buttonType, int data, int actorNr);
+
+	void TouchscreenToggleButtonPressed(SITouchscreenButton.SITouchscreenButtonType buttonType, int data, int actorNr, bool isToggledOn);
 }

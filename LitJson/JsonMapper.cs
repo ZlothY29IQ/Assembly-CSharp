@@ -69,8 +69,10 @@ public class JsonMapper
 		{
 			return;
 		}
-		ArrayMetadata value = default(ArrayMetadata);
-		value.IsArray = type.IsArray;
+		ArrayMetadata value = new ArrayMetadata
+		{
+			IsArray = type.IsArray
+		};
 		if (type.GetInterface("System.Collections.IList") != null)
 		{
 			value.IsList = true;
@@ -124,19 +126,23 @@ public class JsonMapper
 			}
 			else
 			{
-				PropertyMetadata value2 = default(PropertyMetadata);
-				value2.Info = propertyInfo;
-				value2.Type = propertyInfo.PropertyType;
+				PropertyMetadata value2 = new PropertyMetadata
+				{
+					Info = propertyInfo,
+					Type = propertyInfo.PropertyType
+				};
 				value.Properties.Add(propertyInfo.Name, value2);
 			}
 		}
 		FieldInfo[] fields = type.GetFields();
 		foreach (FieldInfo fieldInfo in fields)
 		{
-			PropertyMetadata value3 = default(PropertyMetadata);
-			value3.Info = fieldInfo;
-			value3.IsField = true;
-			value3.Type = fieldInfo.FieldType;
+			PropertyMetadata value3 = new PropertyMetadata
+			{
+				Info = fieldInfo,
+				IsField = true,
+				Type = fieldInfo.FieldType
+			};
 			value.Properties.Add(fieldInfo.Name, value3);
 		}
 		lock (object_metadata_lock)
@@ -163,19 +169,21 @@ public class JsonMapper
 		{
 			if (!(propertyInfo.Name == "Item"))
 			{
-				PropertyMetadata item = default(PropertyMetadata);
-				item.Info = propertyInfo;
-				item.IsField = false;
-				list.Add(item);
+				list.Add(new PropertyMetadata
+				{
+					Info = propertyInfo,
+					IsField = false
+				});
 			}
 		}
 		FieldInfo[] fields = type.GetFields();
 		foreach (FieldInfo info in fields)
 		{
-			PropertyMetadata item2 = default(PropertyMetadata);
-			item2.Info = info;
-			item2.IsField = true;
-			list.Add(item2);
+			list.Add(new PropertyMetadata
+			{
+				Info = info,
+				IsField = true
+			});
 		}
 		lock (type_properties_lock)
 		{

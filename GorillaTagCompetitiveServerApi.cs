@@ -190,7 +190,6 @@ public class GorillaTagCompetitiveServerApi : MonoBehaviour
 		bool flag;
 		if (request.result == UnityWebRequest.Result.Success)
 		{
-			GTDev.Log("GetRankInformation Success: raw response: " + request.downloadHandler.text);
 			OnCompleteGetRankInformation(request.downloadHandler.text, callback);
 		}
 		else
@@ -202,30 +201,30 @@ public class GorillaTagCompetitiveServerApi : MonoBehaviour
 				{
 					if (responseCode < 600)
 					{
-						goto IL_0151;
+						goto IL_0131;
 					}
 				}
 				else if (responseCode == 408 || responseCode == 429)
 				{
-					goto IL_0151;
+					goto IL_0131;
 				}
 				flag = false;
-				goto IL_0159;
+				goto IL_0139;
 			}
 			retry = true;
 		}
-		goto IL_0173;
-		IL_0151:
+		goto IL_0153;
+		IL_0131:
 		flag = true;
-		goto IL_0159;
-		IL_0173:
+		goto IL_0139;
+		IL_0153:
 		if (retry)
 		{
 			if (GetRankInformationRetryCount < MAX_SERVER_RETRIES)
 			{
-				float seconds = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, GetRankInformationRetryCount + 1));
+				float time = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, GetRankInformationRetryCount + 1));
 				GetRankInformationRetryCount++;
-				yield return new WaitForSeconds(seconds);
+				yield return new WaitForSecondsRealtime(time);
 				GetRankInformationInProgress = false;
 				RequestGetRankInformation(data.playfabIds, callback);
 			}
@@ -236,7 +235,7 @@ public class GorillaTagCompetitiveServerApi : MonoBehaviour
 			}
 		}
 		yield break;
-		IL_0159:
+		IL_0139:
 		if (flag)
 		{
 			retry = true;
@@ -245,7 +244,7 @@ public class GorillaTagCompetitiveServerApi : MonoBehaviour
 		{
 			OnCompleteGetRankInformation(null, callback);
 		}
-		goto IL_0173;
+		goto IL_0153;
 	}
 
 	private void OnCompleteGetRankInformation([CanBeNull] string response, Action<RankedModeProgressionData> callback)
@@ -345,9 +344,9 @@ public class GorillaTagCompetitiveServerApi : MonoBehaviour
 		{
 			if (CreateMatchIdRetryCount < MAX_SERVER_RETRIES)
 			{
-				float seconds = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, CreateMatchIdRetryCount + 1));
+				float time = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, CreateMatchIdRetryCount + 1));
 				CreateMatchIdRetryCount++;
-				yield return new WaitForSeconds(seconds);
+				yield return new WaitForSecondsRealtime(time);
 				CreateMatchIdInProgress = false;
 				RequestCreateMatchId(callback);
 			}
@@ -450,9 +449,9 @@ public class GorillaTagCompetitiveServerApi : MonoBehaviour
 		{
 			if (ValidateMatchJoinRetryCount < MAX_SERVER_RETRIES)
 			{
-				float seconds = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, ValidateMatchJoinRetryCount + 1));
+				float time = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, ValidateMatchJoinRetryCount + 1));
 				ValidateMatchJoinRetryCount++;
-				yield return new WaitForSeconds(seconds);
+				yield return new WaitForSecondsRealtime(time);
 				ValidateMatchJoinInProgress = false;
 				RequestValidateMatchJoin(data.matchId, callback);
 			}
@@ -570,9 +569,9 @@ public class GorillaTagCompetitiveServerApi : MonoBehaviour
 		{
 			if (SubmitMatchScoresRetryCount < MAX_SERVER_RETRIES)
 			{
-				float seconds = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, SubmitMatchScoresRetryCount + 1));
+				float time = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, SubmitMatchScoresRetryCount + 1));
 				SubmitMatchScoresRetryCount++;
-				yield return new WaitForSeconds(seconds);
+				yield return new WaitForSecondsRealtime(time);
 				SubmitMatchScoresInProgress = false;
 				RequestSubmitMatchScores(data.matchId, data.playerScores);
 			}
@@ -712,9 +711,9 @@ public class GorillaTagCompetitiveServerApi : MonoBehaviour
 		{
 			if (PingMatchRetryCount < MAX_SERVER_RETRIES)
 			{
-				float seconds = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, PingMatchRetryCount + 1));
+				float time = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, PingMatchRetryCount + 1));
 				ValidateMatchJoinRetryCount++;
-				yield return new WaitForSeconds(seconds);
+				yield return new WaitForSecondsRealtime(time);
 				PingMatchInProgress = false;
 				RequestPingRoom(data.matchId, callback);
 			}
@@ -818,9 +817,9 @@ public class GorillaTagCompetitiveServerApi : MonoBehaviour
 		{
 			if (UnlockCompetitiveQueueRetryCount < MAX_SERVER_RETRIES)
 			{
-				float seconds = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, UnlockCompetitiveQueueRetryCount + 1));
+				float time = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, UnlockCompetitiveQueueRetryCount + 1));
 				ValidateMatchJoinRetryCount++;
-				yield return new WaitForSeconds(seconds);
+				yield return new WaitForSecondsRealtime(time);
 				UnlockCompetitiveQueueInProgress = false;
 				RequestUnlockCompetitiveQueue(data.unlocked, callback);
 			}

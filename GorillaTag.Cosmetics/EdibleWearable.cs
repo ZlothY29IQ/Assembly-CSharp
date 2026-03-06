@@ -135,15 +135,16 @@ public class EdibleWearable : MonoBehaviour
 			{
 				flag = true;
 			}
-			foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+			foreach (RigContainer activeRigContainer in VRRigCache.ActiveRigContainers)
 			{
+				VRRig rig = activeRigContainer.Rig;
 				if (!flag)
 				{
-					if (vrrig.head == null || vrrig.head.rigTarget == null)
+					if (rig.head == null || rig.head.rigTarget.IsNull())
 					{
 						break;
 					}
-					if ((vrrig.head.rigTarget.transform.TransformPoint(gorillaHeadMouthOffset) - vector).sqrMagnitude < num)
+					if ((rig.head.rigTarget.transform.TransformPoint(gorillaHeadMouthOffset) - vector).sqrMagnitude < num)
 					{
 						flag = true;
 					}

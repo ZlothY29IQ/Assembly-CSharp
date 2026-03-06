@@ -3,11 +3,11 @@ using Fusion;
 using UnityEngine;
 using UnityEngine.Scripting;
 
-[NetworkBehaviourWeaved(31)]
+[NetworkBehaviourWeaved(61)]
 public class BattleGameModeData : FusionGameModeData
 {
 	[WeaverGenerated]
-	[DefaultForProperty("PaintbrawlData", 0, 31)]
+	[DefaultForProperty("PaintbrawlData", 0, 61)]
 	[DrawIf("IsEditorWritable", true, CompareOperator.Equal, DrawIfMode.ReadOnly)]
 	private PaintbrawlData _PaintbrawlData;
 
@@ -16,7 +16,7 @@ public class BattleGameModeData : FusionGameModeData
 	private GameModeSerializer serializer;
 
 	[Networked]
-	[NetworkedWeaved(0, 31)]
+	[NetworkedWeaved(0, 61)]
 	private unsafe PaintbrawlData PaintbrawlData
 	{
 		get
@@ -106,7 +106,7 @@ public class BattleGameModeData : FusionGameModeData
 			rpcInfo = RpcInfo.FromLocal(base.Runner, RpcChannel.Reliable, RpcHostMode.SourceIsServer);
 		}
 		PhotonMessageInfoWrapped photonMessageInfoWrapped = new PhotonMessageInfoWrapped(rpcInfo);
-		GorillaNot.IncrementRPCCall(photonMessageInfoWrapped, "RPC_ReportSlinshotHit");
+		MonkeAgent.IncrementRPCCall(photonMessageInfoWrapped, "RPC_ReportSlinshotHit");
 		if (NetworkSystem.Instance.IsMasterClient)
 		{
 			NetPlayer player = NetworkSystem.Instance.GetPlayer(taggedPlayerID);

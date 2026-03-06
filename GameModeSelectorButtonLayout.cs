@@ -45,7 +45,7 @@ public class GameModeSelectorButtonLayout : MonoBehaviour
 		}
 	}
 
-	public virtual async void SetupButtons()
+	protected virtual async void SetupButtons()
 	{
 		int count = 0;
 		while (GorillaComputer.instance == null)
@@ -65,7 +65,7 @@ public class GameModeSelectorButtonLayout : MonoBehaviour
 			{
 				foreach (GameModeType item in modesForZone)
 				{
-					if (item != 0 && item != GameModeType.Infection)
+					if (item != GameModeType.Casual && item != GameModeType.Infection)
 					{
 						value.Add(item);
 					}
@@ -91,7 +91,13 @@ public class GameModeSelectorButtonLayout : MonoBehaviour
 				modeSelectButton.transform.localPosition = new Vector3((float)count * -0.15f, 0f, 0f);
 				modeSelectButton.transform.localRotation = Quaternion.Euler(0f, 0f, -90f);
 				modeSelectButton.WarningScreen = warningScreen;
-				modeSelectButton.SetInfo(item3.ToString(), GameMode.GameModeZoneMapping.GetModeName(item3), GameMode.GameModeZoneMapping.IsNew(item3), GameMode.GameModeZoneMapping.GetCountdown(item3));
+				string empty = string.Empty;
+				if (NetworkSystem.Instance.SessionIsSubscription)
+				{
+					GameMode.GameModeZoneMapping.IsBigRoomMode(item3);
+				}
+				string mode = item3.ToString() + empty;
+				modeSelectButton.SetInfo(mode, GameMode.GameModeZoneMapping.GetModeName(item3), GameMode.GameModeZoneMapping.IsNew(item3), GameMode.GameModeZoneMapping.GetCountdown(item3));
 				modeSelectButton.gameObject.SetActive(value: true);
 				count++;
 				flag |= string.Equals(GorillaComputer.instance.currentGameMode.Value, item3.ToString(), StringComparison.CurrentCultureIgnoreCase);

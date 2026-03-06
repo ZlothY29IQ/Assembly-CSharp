@@ -224,11 +224,17 @@ public class PlayFabAuthenticator : MonoBehaviour
 			MothershipAuthenticator obj2 = instance.mothershipAuthenticator;
 			obj2.OnLoginFailure = (Action<string, string, string>)Delegate.Combine(obj2.OnLoginFailure, (Action<string, string, string>)delegate(string errorMessage, string errorCode, string traceId)
 			{
-				loginFailed = true;
+				SetLoginFailed();
 				ShowMothershipAuthErrorMessage(errorMessage, errorCode, traceId);
 			});
 			instance.mothershipAuthenticator.BeginLoginFlow();
 		}
+	}
+
+	private void SetLoginFailed()
+	{
+		loginFailed = true;
+		NetworkSystem.Instance?.FinishAuthenticating();
 	}
 
 	private void Start()
@@ -465,7 +471,7 @@ public class PlayFabAuthenticator : MonoBehaviour
 	{
 		LogMessage(obj.ErrorMessage);
 		Debug.Log("OnPlayFabError(): " + obj.ErrorMessage);
-		loginFailed = true;
+		SetLoginFailed();
 		if (obj.ErrorMessage == "The account making this request is currently banned")
 		{
 			using (Dictionary<string, List<string>>.Enumerator enumerator = obj.ErrorDetails.GetEnumerator())
@@ -534,7 +540,7 @@ public class PlayFabAuthenticator : MonoBehaviour
 
 	public void SetDisplayName(string playerName)
 	{
-		if (_displayName == null || (_displayName.Length > 4 && _displayName.Substring(0, _displayName.Length - 4) != playerName))
+		if (_displayName == null || (_displayName.Length > 4 && _displayName.Substring(0, _displayName.Length - 4) != playerName && _displayName != playerName))
 		{
 			PlayFabClientAPI.UpdateUserTitleDisplayName(new UpdateUserTitleDisplayNameRequest
 			{
@@ -544,7 +550,7 @@ public class PlayFabAuthenticator : MonoBehaviour
 				_displayName = playerName;
 			}, delegate(PlayFabError error)
 			{
-				Debug.LogError(error.GenerateErrorReport());
+				Debug.LogError("Error with name: " + playerName + ". Error is " + error.GenerateErrorReport());
 			});
 		}
 	}
@@ -611,7 +617,7 @@ public class PlayFabAuthenticator : MonoBehaviour
 				int num = (int)Mathf.Pow(2f, playFabAuthRetryCount + 1);
 				Debug.LogWarning($"Retrying PlayFab auth... Retry attempt #{playFabAuthRetryCount + 1}, waiting for {num} seconds");
 				playFabAuthRetryCount++;
-				yield return new WaitForSeconds(num);
+				yield return new WaitForSecondsRealtime(num);
 			}
 			else
 			{
@@ -722,7 +728,7 @@ public class PlayFabAuthenticator : MonoBehaviour
 				int num = (int)Mathf.Pow(2f, playFabCacheRetryCount + 1);
 				Debug.LogWarning($"Retrying PlayFab auth... Retry attempt #{playFabCacheRetryCount + 1}, waiting for {num} seconds");
 				playFabCacheRetryCount++;
-				yield return new WaitForSeconds(num);
+				yield return new WaitForSecondsRealtime(num);
 				StartCoroutine(CachePlayFabId(new CachePlayFabIdRequest
 				{
 					Platform = platform.ToString(),

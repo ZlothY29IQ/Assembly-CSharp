@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using GorillaExtensions;
 using UnityEngine;
@@ -192,12 +191,12 @@ public class PickupableCosmetic : PickupableVariant
 
 	protected internal override void DelayedPickup()
 	{
-		StartCoroutine(DelayedPickup_Internal());
+		DelayedPickup_Internal();
 	}
 
-	private IEnumerator DelayedPickup_Internal()
+	private async void DelayedPickup_Internal()
 	{
-		yield return new WaitForSeconds(1f);
+		await Awaitable.WaitForSecondsAsync(1f);
 		Pickup();
 	}
 

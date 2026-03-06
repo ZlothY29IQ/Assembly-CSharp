@@ -3,17 +3,11 @@ using UnityEngine;
 [RequireComponent(typeof(LineRenderer))]
 public class HangingClaw : MonoBehaviourPostTick
 {
-	public struct RopeSegment
+	public struct RopeSegment(Vector3 p)
 	{
-		public Vector3 pos;
+		public Vector3 pos = p;
 
-		public Vector3 posOld;
-
-		public RopeSegment(Vector3 p)
-		{
-			pos = p;
-			posOld = p;
-		}
+		public Vector3 posOld = p;
 	}
 
 	public Transform endTransform;
@@ -45,8 +39,6 @@ public class HangingClaw : MonoBehaviourPostTick
 	private float targetSegLenScaled;
 
 	private float[] invMass;
-
-	public new bool PostTickRunning { get; set; }
 
 	protected void Awake()
 	{

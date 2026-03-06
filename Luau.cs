@@ -471,7 +471,7 @@ public class Luau
 			}
 		}
 		FixedString32Bytes output2 = "\"Invalid Type\"";
-		luaL_errorL(L, (sbyte*)((byte*)UnsafeUtility.AddressOf(ref output2) + 2));
+		luaL_errorL(L, (sbyte*)UnsafeUtility.AddressOf(ref output2) + 2);
 		return null;
 	}
 
@@ -510,7 +510,7 @@ public class Luau
 			}
 		}
 		FixedString32Bytes output2 = "\"Invalid Type\"";
-		luaL_errorL(L, (sbyte*)((byte*)UnsafeUtility.AddressOf(ref output2) + 2));
+		luaL_errorL(L, (sbyte*)UnsafeUtility.AddressOf(ref output2) + 2);
 		return null;
 	}
 
@@ -549,7 +549,7 @@ public class Luau
 			}
 		}
 		FixedString32Bytes output2 = "\"Invalid Type\"";
-		luaL_errorL(L, (sbyte*)((byte*)UnsafeUtility.AddressOf(ref output2) + 2));
+		luaL_errorL(L, (sbyte*)UnsafeUtility.AddressOf(ref output2) + 2);
 		return null;
 	}
 

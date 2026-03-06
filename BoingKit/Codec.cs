@@ -93,8 +93,10 @@ public class Codec
 
 	private static int IntReinterpret(float f)
 	{
-		IntFloat intFloat = default(IntFloat);
-		intFloat.FloatValue = f;
+		IntFloat intFloat = new IntFloat
+		{
+			FloatValue = f
+		};
 		return intFloat.IntValue;
 	}
 

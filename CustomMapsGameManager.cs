@@ -78,13 +78,15 @@ public class CustomMapsGameManager : MonoBehaviour, IGameEntityZoneComponent
 				Debug.LogErrorFormat("[CustomMapsManager::CreateAIAgents] Cannot Find Entity in Factory {0} {1}", entities[i].gameObject.name, num2);
 				continue;
 			}
-			GameEntityCreateData gameEntityCreateData = default(GameEntityCreateData);
-			gameEntityCreateData.entityTypeId = num2;
-			gameEntityCreateData.position = entities[i].transform.position;
-			gameEntityCreateData.rotation = entities[i].transform.rotation;
-			gameEntityCreateData.createData = entities[i].GetPackedCreateData();
-			gameEntityCreateData.createdByEntityId = -1;
-			GameEntityCreateData item = gameEntityCreateData;
+			GameEntityCreateData item = new GameEntityCreateData
+			{
+				entityTypeId = num2,
+				position = entities[i].transform.position,
+				rotation = entities[i].transform.rotation,
+				createData = entities[i].GetPackedCreateData(),
+				createdByEntityId = -1,
+				slotIndex = -1
+			};
 			tempCreateEntitiesList.Add(item);
 		}
 		if (tempCreateEntitiesList.Count > 0)
@@ -191,6 +193,25 @@ public class CustomMapsGameManager : MonoBehaviour, IGameEntityZoneComponent
 	public bool ValidateMigratedGameEntity(int netId, int entityTypeId, Vector3 position, Quaternion rotation, long createData, int actorNr)
 	{
 		return false;
+	}
+
+	public bool ValidateCreateMultipleItems(int zoneId, byte[] compressedStateData, int EntityCount)
+	{
+		if (EntityCount > GT_CustomMapSupportRuntime.Constants.aiAgentLimit)
+		{
+			return false;
+		}
+		return true;
+	}
+
+	public bool ValidateCreateItemBatchSize(int size)
+	{
+		return true;
+	}
+
+	public bool ValidateCreateItem(int nedId, int entityTypeId, Vector3 position, Quaternion rotation, long createData, int createdByEntityNetId)
+	{
+		return true;
 	}
 
 	private bool IsAuthority()

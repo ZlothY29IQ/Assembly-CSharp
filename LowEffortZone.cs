@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Events;
 
 public class LowEffortZone : GorillaTriggerBox
 {
@@ -7,6 +8,8 @@ public class LowEffortZone : GorillaTriggerBox
 	public GameObject[] objectsToDisable;
 
 	public bool triggerOnAwake;
+
+	public UnityEvent onTriggeredEvents;
 
 	private void Awake()
 	{
@@ -32,5 +35,6 @@ public class LowEffortZone : GorillaTriggerBox
 				objectsToDisable[j].SetActive(value: false);
 			}
 		}
+		onTriggeredEvents?.Invoke();
 	}
 }

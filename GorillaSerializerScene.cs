@@ -66,7 +66,7 @@ internal class GorillaSerializerScene : GorillaSerializer, IOnPhotonViewPreNetDe
 
 	public override void OnPhotonInstantiate(PhotonMessageInfo info)
 	{
-		GorillaNot.instance.SendReport("bad net obj creation", info.Sender.UserId, info.Sender.NickName);
+		MonkeAgent.instance.SendReport("bad net obj creation", info.Sender.UserId, info.Sender.NickName);
 		if (info.photonView.IsMine)
 		{
 			PhotonNetwork.Destroy(info.photonView);

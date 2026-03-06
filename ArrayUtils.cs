@@ -45,8 +45,8 @@ public static class ArrayUtils
 	{
 		T val = list[from];
 		T val2 = list[to];
-		T val4 = (list[to] = val);
-		val4 = (list[from] = val2);
+		T val3 = (list[to] = val);
+		val3 = (list[from] = val2);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]

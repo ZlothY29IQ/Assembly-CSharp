@@ -103,7 +103,6 @@ public class LckEntitlementsManager : MonoBehaviour
 		{
 			_currentState = (flag ? FeatureState.Enabled : FeatureState.Disabled);
 			LckEntitlementsEnabled = flag;
-			Debug.Log("LCK: Entitlements feature is " + (LckEntitlementsEnabled ? "Enabled" : "Disabled") + ".");
 		}
 	}
 
@@ -123,10 +122,7 @@ public class LckEntitlementsManager : MonoBehaviour
 		}
 		lock (_remotePlayersToGetEntitlementsFor)
 		{
-			if (_remotePlayersToGetEntitlementsFor.Add(remoteUserId))
-			{
-				Debug.Log("LCK: Queued remote player " + remoteUserId + " for batched entitlements check.");
-			}
+			_remotePlayersToGetEntitlementsFor.Add(remoteUserId);
 		}
 	}
 
@@ -149,7 +145,6 @@ public class LckEntitlementsManager : MonoBehaviour
 		value.LastSeenTimestamp = Time.time;
 		if (Time.time < value.TimeoutUntilTimestamp)
 		{
-			Debug.LogWarning("LCK: Player " + userId + " is on a timeout. Entitlements Manager will ignore spawn event.");
 			return false;
 		}
 		if (value.AttemptCount > 3)
@@ -160,10 +155,8 @@ public class LckEntitlementsManager : MonoBehaviour
 		if (value.AttemptCount > 3)
 		{
 			value.TimeoutUntilTimestamp = Time.time + 60f;
-			Debug.LogWarning($"LCK: Player {userId} exceeded max attempts. Applying a {1f}-minute timeout.");
 			return false;
 		}
-		Debug.Log($"LCK: Processing player {userId} (Attempt {value.AttemptCount}/{3}).");
 		return true;
 	}
 
@@ -204,7 +197,6 @@ public class LckEntitlementsManager : MonoBehaviour
 			yield break;
 		}
 		string sessionId = "DefaultSessionId";
-		Debug.Log("LCK: Announcing Presence for local player with UserId: " + localPlayerId + " + Session ID: " + sessionId + ".");
 		for (int attempt = 1; attempt <= 2; attempt++)
 		{
 			Task<Result<bool>> announcementAsync = _lckCosmeticsCoordinator.AnnouncePlayerPresenceForSessionAsync(localPlayerId, sessionId);
@@ -215,7 +207,6 @@ public class LckEntitlementsManager : MonoBehaviour
 				Debug.LogError($"LCK: Error setting session entitlement (Attempt {attempt}/{2}): {arg}");
 				continue;
 			}
-			Debug.Log("LCK: Successfully set session entitlement.");
 			yield break;
 		}
 		Debug.LogError("LCK: All attempts to set session entitlement failed.");
@@ -237,13 +228,11 @@ public class LckEntitlementsManager : MonoBehaviour
 			string sessionId = "DefaultSessionId";
 			await Task.Run(async delegate
 			{
-				Debug.Log($"LCK: Calling {methodNameForLogging} for session: {sessionId} for {userIdList.Count} players.");
 				for (int attempt = 1; attempt <= 2; attempt++)
 				{
 					Result<bool> result = await _lckCosmeticsCoordinator.GetUserCosmeticsForSessionAsync(userIdList, sessionId);
 					if (result.IsOk)
 					{
-						Debug.Log("LCK: Successfully called " + methodNameForLogging + " endpoint.");
 						return;
 					}
 					Debug.LogError($"LCK: Error in {methodNameForLogging} (Attempt {attempt}/{2}): {result.Message}");
@@ -280,7 +269,6 @@ public class LckEntitlementsManager : MonoBehaviour
 			{
 				continue;
 			}
-			Debug.Log($"LCK: Cleaning up {playersToRemove.Count} stale player records.");
 			foreach (string item in playersToRemove)
 			{
 				_processedPlayers.Remove(item);

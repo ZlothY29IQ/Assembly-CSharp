@@ -15,7 +15,7 @@ internal class GorillaTagCompetitiveRPCs : RPCNetworkBase
 	[PunRPC]
 	public void SendScoresToLateJoinerRPC(int[] playerId, int[] numTags, float[] pointsOnDefense, float[] joinTime, bool[] infected, float[] taggedTime, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "SendScoresToLateJoinerRPC");
+		MonkeAgent.IncrementRPCCall(info, "SendScoresToLateJoinerRPC");
 		if (info.Sender == null || !info.Sender.IsMasterClient)
 		{
 			return;

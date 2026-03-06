@@ -175,7 +175,7 @@ public class StickyCosmetic : MonoBehaviour
 		{
 			onUnstick.Invoke();
 		}
-		if (lastState != 0 && newState == ObjectState.Extending)
+		if (lastState != ObjectState.Extending && newState == ObjectState.Extending)
 		{
 			extendingStartedTime = Time.time;
 		}

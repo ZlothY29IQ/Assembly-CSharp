@@ -246,7 +246,7 @@ public class RigContainer : MonoBehaviour
 	{
 		if ((bool)vrrig.netView)
 		{
-			GorillaNot.instance.SendReport("inappropriate tag data being sent creating multiple vrrigs", Creator.UserId, Creator.NickName);
+			MonkeAgent.instance.SendReport("inappropriate tag data being sent creating multiple vrrigs", Creator.UserId, Creator.NickName);
 			if (vrrig.netView.IsMine)
 			{
 				NetworkSystem.Instance.NetDestroy(vrrig.gameObject);
@@ -387,8 +387,8 @@ public class RigContainer : MonoBehaviour
 
 	private void ProcessAutomute()
 	{
-		int @int = PlayerPrefs.GetInt("autoMute", 1);
-		bPlayerAutoMuted = !hasManualMute && playerChatQuality < @int;
+		int num = PlayerPrefs.GetInt("autoMute", 1);
+		bPlayerAutoMuted = !hasManualMute && playerChatQuality < num;
 	}
 
 	public void RefreshVoiceChat()

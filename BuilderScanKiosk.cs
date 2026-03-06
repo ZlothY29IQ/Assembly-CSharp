@@ -234,8 +234,8 @@ public class BuilderScanKiosk : MonoBehaviourTick
 
 	private void LoadPlayerPrefs()
 	{
-		int @int = PlayerPrefs.GetInt(playerPrefKey, -1);
-		targetTable.CurrentSaveSlot = @int;
+		int currentSaveSlot = PlayerPrefs.GetInt(playerPrefKey, -1);
+		targetTable.CurrentSaveSlot = currentSaveSlot;
 		UpdateUI();
 	}
 

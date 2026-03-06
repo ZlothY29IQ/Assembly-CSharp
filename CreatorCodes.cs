@@ -164,12 +164,12 @@ public static class CreatorCodes
 
 	private static void LoadData()
 	{
-		string @string = PlayerPrefs.GetString("CreatorCodes_Store", string.Empty);
-		if (@string.Length == 0)
+		string text = PlayerPrefs.GetString("CreatorCodes_Store", string.Empty);
+		if (text.Length == 0)
 		{
 			return;
 		}
-		data = JsonConvert.DeserializeObject<CreatorCodesData>(@string);
+		data = JsonConvert.DeserializeObject<CreatorCodesData>(text);
 		foreach (string key in data.currentCreatorCode.Keys)
 		{
 			if (data.codeFirstUsedTime.ContainsKey(key) && DateTime.UtcNow.Subtract(data.codeFirstUsedTime[key]).Days > 14)

@@ -1,31 +1,20 @@
 using UnityEngine;
 
-public struct TexFormatInfo
+public struct TexFormatInfo(Texture2D tex2d)
 {
-	public bool isValid;
+	public bool isValid = true;
 
-	public int width;
+	public int width = tex2d.width;
 
-	public int height;
+	public int height = tex2d.height;
 
-	public TextureFormat format;
+	public TextureFormat format = tex2d.format;
 
-	public FilterMode filterMode;
+	public FilterMode filterMode = tex2d.filterMode;
 
-	public int mipmapCount;
+	public int mipmapCount = tex2d.mipmapCount;
 
-	public bool isLinearColor;
-
-	public TexFormatInfo(Texture2D tex2d)
-	{
-		width = tex2d.width;
-		height = tex2d.height;
-		format = tex2d.format;
-		filterMode = tex2d.filterMode;
-		isLinearColor = !tex2d.isDataSRGB;
-		mipmapCount = tex2d.mipmapCount;
-		isValid = true;
-	}
+	public bool isLinearColor = !tex2d.isDataSRGB;
 
 	public override string ToString()
 	{

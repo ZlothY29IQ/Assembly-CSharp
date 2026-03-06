@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class DisableOtherObjectsWhileActive : MonoBehaviour
 {
+	public const string preErr = "[GT/DisableOtherObjectsWhileActive]  ERROR!!!  ";
+
 	public GameObject[] otherObjects;
 
 	public XSceneRef[] otherXSceneObjects;
@@ -18,18 +20,18 @@ public class DisableOtherObjectsWhileActive : MonoBehaviour
 
 	private void SetAllActive(bool active)
 	{
-		GameObject[] array = otherObjects;
-		foreach (GameObject gameObject in array)
+		for (int i = 0; i < otherObjects.Length; i++)
 		{
+			GameObject gameObject = otherObjects[i];
 			if (gameObject != null)
 			{
 				gameObject.SetActive(active);
 			}
 		}
-		XSceneRef[] array2 = otherXSceneObjects;
-		foreach (XSceneRef xSceneRef in array2)
+		for (int j = 0; j < otherXSceneObjects.Length; j++)
 		{
-			if (xSceneRef.TryResolve(out GameObject result))
+			XSceneRef xSceneRef = otherXSceneObjects[j];
+			if (xSceneRef.TryResolve(out GameObject result) && result != null)
 			{
 				result.SetActive(active);
 			}

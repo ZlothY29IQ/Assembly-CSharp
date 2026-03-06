@@ -1,11 +1,11 @@
 using System;
 using Fusion;
 
-[NetworkBehaviourWeaved(12)]
+[NetworkBehaviourWeaved(22)]
 public class TagGameModeData : FusionGameModeData
 {
 	[WeaverGenerated]
-	[DefaultForProperty("tagData", 0, 12)]
+	[DefaultForProperty("tagData", 0, 22)]
 	[DrawIf("IsEditorWritable", true, CompareOperator.Equal, DrawIfMode.ReadOnly)]
 	private TagData _tagData;
 
@@ -22,7 +22,7 @@ public class TagGameModeData : FusionGameModeData
 	}
 
 	[Networked]
-	[NetworkedWeaved(0, 12)]
+	[NetworkedWeaved(0, 22)]
 	private unsafe TagData tagData
 	{
 		get

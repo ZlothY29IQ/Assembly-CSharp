@@ -311,7 +311,7 @@ public class EvolvingCosmetic : MonoBehaviour, ITickSystemTick
 	{
 		if (sender == target)
 		{
-			GorillaNot.IncrementRPCCall(info, "ReceiveElapsedTime");
+			MonkeAgent.IncrementRPCCall(info, "ReceiveElapsedTime");
 			if (info.senderID == myRig.creator.ActorNumber && callLimiter.CheckCallServerTime(Time.unscaledTime) && args.Length == 1 && args[0] is float num && float.IsFinite(num) && !(num > totalDuration) && !(num < 0f))
 			{
 				totalElapsedTime = num;

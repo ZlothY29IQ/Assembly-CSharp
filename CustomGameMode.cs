@@ -347,7 +347,7 @@ public sealed class CustomGameMode : GorillaGameManager
 				Luau.lua_rawseti(l, -2, i + 1);
 			}
 		}
-		for (int j = playerList.Length; j <= 10; j++)
+		for (int j = playerList.Length; j <= 20; j++)
 		{
 			Luau.lua_pushnil(l);
 			Luau.lua_rawseti(l, -2, j + 1);

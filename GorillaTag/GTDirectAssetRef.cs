@@ -40,9 +40,10 @@ public struct GTDirectAssetRef<T> : IEquatable<T> where T : UnityEngine.Object
 
 	public static implicit operator GTDirectAssetRef<T>(T other)
 	{
-		GTDirectAssetRef<T> result = default(GTDirectAssetRef<T>);
-		result.obj = other;
-		return result;
+		return new GTDirectAssetRef<T>
+		{
+			obj = other
+		};
 	}
 
 	public bool Equals(T other)

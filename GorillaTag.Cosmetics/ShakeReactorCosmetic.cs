@@ -316,7 +316,7 @@ public class ShakeReactorCosmetic : MonoBehaviour, ISpawnable
 		{
 			return;
 		}
-		GorillaNot.IncrementRPCCall(info, "OnShake");
+		MonkeAgent.IncrementRPCCall(info, "OnShake");
 		if (!callLimiter.CheckCallTime(Time.time) || args.Length != 1)
 		{
 			return;

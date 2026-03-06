@@ -48,9 +48,9 @@ public class HeartRingCosmetic : MonoBehaviour
 		particleSystem = effects.GetComponentInChildren<ParticleSystem>(includeInactive: true);
 		audioSource = effects.GetComponentInChildren<AudioSource>(includeInactive: true);
 		ownerRig = GetComponentInParent<VRRig>();
-		bool flag2 = (base.enabled = ownerRig != null && ownerRig.head != null && ownerRig.head.rigTarget != null);
-		effects.SetActive(flag2);
-		if (!flag2)
+		bool flag = (base.enabled = ownerRig != null && ownerRig.head != null && ownerRig.head.rigTarget != null);
+		effects.SetActive(flag);
+		if (!flag)
 		{
 			Debug.LogError("Disabling HeartRingCosmetic. Could not find owner head. Scene path: " + base.transform.GetPath(), this);
 			return;

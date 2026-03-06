@@ -362,7 +362,7 @@ public class LckBodyCameraSpawner : MonoBehaviourTick
 	[ContextMenu("Put tablet on neck")]
 	public void ManuallySetCameraOnNeck()
 	{
-		if (cameraState != CameraState.CameraOnNeck && cameraState != 0 && _tabletSpawnInstance.isSpawned)
+		if (cameraState != CameraState.CameraOnNeck && cameraState != CameraState.CameraDisabled && _tabletSpawnInstance.isSpawned)
 		{
 			cameraState = CameraState.CameraOnNeck;
 			_tabletSpawnInstance.SetParent(_cameraModelTransform);

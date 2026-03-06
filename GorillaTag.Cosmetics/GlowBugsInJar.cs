@@ -77,7 +77,7 @@ public class GlowBugsInJar : MonoBehaviour
 		{
 			return;
 		}
-		GorillaNot.IncrementRPCCall(info, "OnShakeEvent");
+		MonkeAgent.IncrementRPCCall(info, "OnShakeEvent");
 		if (!callLimiter.CheckCallTime(Time.time) || args == null || args.Length != 1)
 		{
 			return;

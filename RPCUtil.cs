@@ -4,21 +4,15 @@ using UnityEngine;
 
 internal class RPCUtil
 {
-	private struct RPCCallID : IEquatable<RPCCallID>
+	private struct RPCCallID(string nameOfFunction, int senderId) : IEquatable<RPCCallID>
 	{
-		private int _senderID;
+		private int _senderID = senderId;
 
-		private string _nameOfFunction;
+		private string _nameOfFunction = nameOfFunction;
 
 		public readonly int SenderID => _senderID;
 
 		public readonly string NameOfFunction => _nameOfFunction;
-
-		public RPCCallID(string nameOfFunction, int senderId)
-		{
-			_senderID = senderId;
-			_nameOfFunction = nameOfFunction;
-		}
 
 		bool IEquatable<RPCCallID>.Equals(RPCCallID other)
 		{

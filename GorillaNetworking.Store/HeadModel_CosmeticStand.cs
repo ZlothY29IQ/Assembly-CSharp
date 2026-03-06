@@ -132,12 +132,13 @@ public class HeadModel_CosmeticStand : HeadModel
 				CosmeticAttachInfo attachInfo = attachAnchors[j];
 				if ((!forRightSide || !(attachInfo.selectSide == ECosmeticSelectSide.Left)) && (forRightSide || !(attachInfo.selectSide == ECosmeticSelectSide.Right)))
 				{
-					_CosmeticPartLoadInfo cosmeticPartLoadInfo = default(_CosmeticPartLoadInfo);
-					cosmeticPartLoadInfo.playFabId = cosmeticInfo.info.playFabID;
-					cosmeticPartLoadInfo.prefabAssetRef = cosmeticPart2.prefabAssetRef;
-					cosmeticPartLoadInfo.attachInfo = attachInfo;
-					cosmeticPartLoadInfo.xform = null;
-					_CosmeticPartLoadInfo partLoadInfo = cosmeticPartLoadInfo;
+					_CosmeticPartLoadInfo partLoadInfo = new _CosmeticPartLoadInfo
+					{
+						playFabId = cosmeticInfo.info.playFabID,
+						prefabAssetRef = cosmeticPart2.prefabAssetRef,
+						attachInfo = attachInfo,
+						xform = null
+					};
 					GameObject gameObject = LoadAndInstantiatePrefab(cosmeticPart2.prefabAssetRef, base.transform);
 					partLoadInfo.xform = gameObject.transform;
 					_manuallySpawnedCosmeticParts.Add(gameObject);
@@ -226,13 +227,14 @@ public class HeadModel_CosmeticStand : HeadModel
 				CosmeticAttachInfo attachInfo = attachAnchors[j];
 				if ((!forRightSide || !(attachInfo.selectSide == ECosmeticSelectSide.Left)) && (forRightSide || !(attachInfo.selectSide == ECosmeticSelectSide.Right)))
 				{
-					_CosmeticPartLoadInfo cosmeticPartLoadInfo = default(_CosmeticPartLoadInfo);
-					cosmeticPartLoadInfo.playFabId = playFabId;
-					cosmeticPartLoadInfo.prefabAssetRef = cosmeticPart.prefabAssetRef;
-					cosmeticPartLoadInfo.attachInfo = attachInfo;
-					cosmeticPartLoadInfo.loadOp = cosmeticPart.prefabAssetRef.InstantiateAsync(base.transform);
-					cosmeticPartLoadInfo.xform = null;
-					_CosmeticPartLoadInfo item = cosmeticPartLoadInfo;
+					_CosmeticPartLoadInfo item = new _CosmeticPartLoadInfo
+					{
+						playFabId = playFabId,
+						prefabAssetRef = cosmeticPart.prefabAssetRef,
+						attachInfo = attachInfo,
+						loadOp = cosmeticPart.prefabAssetRef.InstantiateAsync(base.transform),
+						xform = null
+					};
 					item.loadOp.Completed += _HandleLoadCosmeticPartsV2;
 					_loadOp_to_partInfoIndex[item.loadOp] = _currentPartLoadInfos.Count;
 					_currentPartLoadInfos.Add(item);
@@ -312,13 +314,14 @@ public class HeadModel_CosmeticStand : HeadModel
 				CosmeticAttachInfo attachInfo = attachAnchors[j];
 				if ((!forRightSide || !(attachInfo.selectSide == ECosmeticSelectSide.Left)) && (forRightSide || !(attachInfo.selectSide == ECosmeticSelectSide.Right)))
 				{
-					_CosmeticPartLoadInfo cosmeticPartLoadInfo = default(_CosmeticPartLoadInfo);
-					cosmeticPartLoadInfo.playFabId = playFabId;
-					cosmeticPartLoadInfo.prefabAssetRef = cosmeticPart.prefabAssetRef;
-					cosmeticPartLoadInfo.attachInfo = attachInfo;
-					cosmeticPartLoadInfo.loadOp = cosmeticPart.prefabAssetRef.InstantiateAsync(base.transform);
-					cosmeticPartLoadInfo.xform = null;
-					_CosmeticPartLoadInfo item = cosmeticPartLoadInfo;
+					_CosmeticPartLoadInfo item = new _CosmeticPartLoadInfo
+					{
+						playFabId = playFabId,
+						prefabAssetRef = cosmeticPart.prefabAssetRef,
+						attachInfo = attachInfo,
+						loadOp = cosmeticPart.prefabAssetRef.InstantiateAsync(base.transform),
+						xform = null
+					};
 					item.loadOp.Completed += _HandleLoadCosmeticPartsV2Fur;
 					_loadOp_to_partInfoIndex[item.loadOp] = _currentPartLoadInfos.Count;
 					_currentPartLoadInfos.Add(item);

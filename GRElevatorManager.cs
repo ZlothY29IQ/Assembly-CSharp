@@ -293,8 +293,8 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 	{
 		if (NetworkSystem.Instance.InRoom)
 		{
-			sourceFriendCollider.RefreshPlayersInSphere();
-			destinationFriendCollider.RefreshPlayersInSphere();
+			sourceFriendCollider.RefreshPlayersWithinBounds();
+			destinationFriendCollider.RefreshPlayersWithinBounds();
 			PhotonNetworkController.Instance.FriendIDList = new List<string>(sourceFriendCollider.playerIDsCurrentlyTouching);
 			PhotonNetworkController.Instance.FriendIDList.AddRange(destinationFriendCollider.playerIDsCurrentlyTouching);
 			foreach (string friendID in PhotonNetworkController.Instance.FriendIDList)
@@ -312,8 +312,8 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 
 	public static void LeadShuttleJoin(GorillaFriendCollider sourceFriendCollider, GorillaFriendCollider destinationFriendCollider, GorillaNetworkJoinTrigger destinationJoinTrigger, int targetLevel)
 	{
-		sourceFriendCollider.RefreshPlayersInSphere();
-		destinationFriendCollider.RefreshPlayersInSphere();
+		sourceFriendCollider.RefreshPlayersWithinBounds();
+		destinationFriendCollider.RefreshPlayersWithinBounds();
 		GorillaComputer.instance.friendJoinCollider = destinationFriendCollider;
 		GorillaComputer.instance.UpdateScreen();
 		if (NetworkSystem.Instance.InRoom)
@@ -326,17 +326,15 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 			}
 			PhotonNetworkController.Instance.shuffler = UnityEngine.Random.Range(0, 99).ToString().PadLeft(2, '0') + UnityEngine.Random.Range(0, 99999999).ToString().PadLeft(8, '0');
 			PhotonNetworkController.Instance.keyStr = UnityEngine.Random.Range(0, 99999999).ToString().PadLeft(8, '0');
-			Debug.Log("Send Shuttle Join");
 			RoomSystem.SendShuttleFollowCommand(PhotonNetworkController.Instance.shuffler, PhotonNetworkController.Instance.keyStr, sourceFriendCollider, destinationFriendCollider);
 			PhotonNetwork.SendAllOutgoingCommands();
-			List<(string, string)> list = null;
+			List<(string, string)> additionalCustomProperties = null;
 			if (targetLevel >= 0)
 			{
 				int joinDepthSectionFromLevel = GhostReactor.GetJoinDepthSectionFromLevel(targetLevel);
-				list = new List<(string, string)> { ("ghostReactorDepth", joinDepthSectionFromLevel.ToString()) };
-				Debug.LogFormat("GR Room Param Join {0} {1}", list[0].Item1, list[0].Item2);
+				additionalCustomProperties = new List<(string, string)> { ("ghostReactorDepth", joinDepthSectionFromLevel.ToString()) };
 			}
-			PhotonNetworkController.Instance.AttemptToJoinPublicRoom(destinationJoinTrigger, JoinType.JoinWithElevator, list);
+			PhotonNetworkController.Instance.AttemptToJoinPublicRoom(destinationJoinTrigger, JoinType.JoinWithElevator, additionalCustomProperties);
 		}
 		PhotonNetworkController.Instance.AttemptToJoinPublicRoom(destinationJoinTrigger);
 	}
@@ -757,7 +755,7 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 		{
 			return;
 		}
-		gRElevator.friendCollider.RefreshPlayersInSphere();
+		gRElevator.friendCollider.RefreshPlayersWithinBounds();
 		if (!PhotonNetwork.InRoom)
 		{
 			RefreshTeleportingPlayersJoinTime();
@@ -861,8 +859,8 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 		GorillaFriendCollider friendCollider2 = _instance.elevatorByLocation[_instance.lastTeleportSource].friendCollider;
 		if ((double)Time.time < _instance.timeLastTeleported + 3.0)
 		{
-			friendCollider.RefreshPlayersInSphere();
-			friendCollider2.RefreshPlayersInSphere();
+			friendCollider.RefreshPlayersWithinBounds();
+			friendCollider2.RefreshPlayersWithinBounds();
 		}
 		NetPlayer netPlayer = NetPlayer.Get(actorNr);
 		if (netPlayer == null)
@@ -916,8 +914,8 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 		}
 		GorillaFriendCollider friendCollider = shuttle2.friendCollider;
 		GorillaFriendCollider friendCollider2 = shuttle.friendCollider;
-		friendCollider.RefreshPlayersInSphere();
-		friendCollider2.RefreshPlayersInSphere();
+		friendCollider.RefreshPlayersWithinBounds();
+		friendCollider2.RefreshPlayersWithinBounds();
 		if (!friendCollider.playerIDsCurrentlyTouching.Contains(netPlayer.UserId))
 		{
 			return friendCollider2.playerIDsCurrentlyTouching.Contains(netPlayer.UserId);
@@ -942,7 +940,7 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 			GorillaFriendCollider friendCollider = currShuttle.friendCollider;
 			if (friendCollider != null)
 			{
-				friendCollider.RefreshPlayersInSphere();
+				friendCollider.RefreshPlayersWithinBounds();
 			}
 			flag = friendCollider.playerIDsCurrentlyTouching.Contains(netPlayer.UserId);
 		}
@@ -952,7 +950,7 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 			GorillaFriendCollider friendCollider2 = targetShuttle.friendCollider;
 			if (friendCollider2 != null)
 			{
-				friendCollider2.RefreshPlayersInSphere();
+				friendCollider2.RefreshPlayersWithinBounds();
 			}
 			friendCollider2.playerIDsCurrentlyTouching.Contains(netPlayer.UserId);
 		}
@@ -963,8 +961,8 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 	{
 		GorillaFriendCollider friendCollider = _instance.elevatorByLocation[_instance.currentLocation].friendCollider;
 		GorillaFriendCollider friendCollider2 = _instance.elevatorByLocation[_instance.destination].friendCollider;
-		friendCollider.RefreshPlayersInSphere();
-		friendCollider2.RefreshPlayersInSphere();
+		friendCollider.RefreshPlayersWithinBounds();
+		friendCollider2.RefreshPlayersWithinBounds();
 		int num = int.MaxValue;
 		NetPlayer[] allNetPlayers = NetworkSystem.Instance.AllNetPlayers;
 		for (int i = 0; i < allNetPlayers.Length; i++)
@@ -979,8 +977,8 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 
 	public static int LowestActorNumberInElevator(GorillaFriendCollider sourceFriendCollider, GorillaFriendCollider destinationFriendCollider)
 	{
-		sourceFriendCollider.RefreshPlayersInSphere();
-		destinationFriendCollider.RefreshPlayersInSphere();
+		sourceFriendCollider.RefreshPlayersWithinBounds();
+		destinationFriendCollider.RefreshPlayersWithinBounds();
 		int num = int.MaxValue;
 		NetPlayer[] allNetPlayers = NetworkSystem.Instance.AllNetPlayers;
 		for (int i = 0; i < allNetPlayers.Length; i++)

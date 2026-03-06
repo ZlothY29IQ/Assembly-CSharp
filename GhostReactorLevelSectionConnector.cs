@@ -71,13 +71,15 @@ public class GhostReactorLevelSectionConnector : MonoBehaviour
 					Debug.LogErrorFormat("Cannot Find Entity in Factory {0} {1}", prePlacedGameEntities[i].gameObject.name, staticHash);
 					continue;
 				}
-				GameEntityCreateData gameEntityCreateData = default(GameEntityCreateData);
-				gameEntityCreateData.entityTypeId = staticHash;
-				gameEntityCreateData.position = prePlacedGameEntities[i].transform.position;
-				gameEntityCreateData.rotation = prePlacedGameEntities[i].transform.rotation;
-				gameEntityCreateData.createData = 0L;
-				gameEntityCreateData.createdByEntityId = -1;
-				GameEntityCreateData item = gameEntityCreateData;
+				GameEntityCreateData item = new GameEntityCreateData
+				{
+					entityTypeId = staticHash,
+					position = prePlacedGameEntities[i].transform.position,
+					rotation = prePlacedGameEntities[i].transform.rotation,
+					createData = 0L,
+					createdByEntityId = -1,
+					slotIndex = -1
+				};
 				GhostReactorLevelSection.tempCreateEntitiesList.Add(item);
 			}
 		}

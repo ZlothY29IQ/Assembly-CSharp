@@ -42,6 +42,10 @@ public class InteractionPoint : MonoBehaviour, ISpawnable, IBuildValidation
 
 	public void OnSpawn(VRRig rig)
 	{
+		if (!IsSpawned)
+		{
+			IsSpawned = true;
+		}
 		interactor = EquipmentInteractor.instance;
 		myCollider = GetComponent<Collider>();
 		if (parentHoldableObject != null)
@@ -95,6 +99,10 @@ public class InteractionPoint : MonoBehaviour, ISpawnable, IBuildValidation
 
 	protected void LateUpdate()
 	{
+		if (!IsSpawned)
+		{
+			return;
+		}
 		if (!forLocalPlayer)
 		{
 			base.enabled = false;

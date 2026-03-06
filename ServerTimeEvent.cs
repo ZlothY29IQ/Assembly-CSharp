@@ -6,17 +6,11 @@ using UnityEngine;
 public class ServerTimeEvent : TimeEvent
 {
 	[Serializable]
-	public struct EventTime
+	public struct EventTime(int h, int m)
 	{
-		public int hour;
+		public int hour = h;
 
-		public int minute;
-
-		public EventTime(int h, int m)
-		{
-			hour = h;
-			minute = m;
-		}
+		public int minute = m;
 	}
 
 	[SerializeField]

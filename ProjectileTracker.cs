@@ -6,29 +6,19 @@ using UnityEngine;
 
 internal static class ProjectileTracker
 {
-	public struct ProjectileInfo
+	public struct ProjectileInfo(double newTime, Vector3 newVel, Vector3 origin, float newScale, SlingshotProjectile projectile)
 	{
-		public double timeLaunched;
+		public double timeLaunched = newTime;
 
-		public Vector3 shotVelocity;
+		public Vector3 shotVelocity = newVel;
 
-		public Vector3 launchOrigin;
+		public Vector3 launchOrigin = origin;
 
-		public float scale;
+		public float scale = newScale;
 
-		public SlingshotProjectile projectileInstance;
+		public SlingshotProjectile projectileInstance = projectile;
 
-		public bool hasImpactOverride;
-
-		public ProjectileInfo(double newTime, Vector3 newVel, Vector3 origin, float newScale, SlingshotProjectile projectile)
-		{
-			timeLaunched = newTime;
-			shotVelocity = newVel;
-			launchOrigin = origin;
-			scale = newScale;
-			projectileInstance = projectile;
-			hasImpactOverride = projectile.playerImpactEffectPrefab.IsNotNull();
-		}
+		public bool hasImpactOverride = projectile.playerImpactEffectPrefab.IsNotNull();
 	}
 
 	private static LoopingArray<ProjectileInfo>.Pool m_projectileInfoPool;
@@ -103,7 +93,7 @@ internal static class ProjectileTracker
 		}
 		if (projectileIndex < 0 || projectileIndex >= loopingArray.Length)
 		{
-			GorillaNot.instance.SendReport("invlProj", player.UserId, player.NickName);
+			MonkeAgent.instance.SendReport("invlProj", player.UserId, player.NickName);
 			return;
 		}
 		SlingshotProjectile projectileInstance = loopingArray[projectileIndex].projectileInstance;

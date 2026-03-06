@@ -246,7 +246,7 @@ public class DecorativeItemsManager : NetworkComponent
 	{
 		if (index >= 0 && index <= itemsList.Count - 1 && _transformPos.IsValid(10000f) && _transformRot.IsValid() && info.Sender == NetworkSystem.Instance.MasterClient)
 		{
-			GorillaNot.IncrementRPCCall(info, "RespawnItemRPC");
+			MonkeAgent.IncrementRPCCall(info, "RespawnItemRPC");
 			itemsList[index].Respawn(_transformPos, _transformRot);
 		}
 	}

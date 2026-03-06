@@ -33,21 +33,22 @@ public class KIDAgeAppeal : MonoBehaviour
 		_monkeLoader.SetActive(value: true);
 		if (KIDManager.TryGetAgeStatusTypeFromAge(_ageSlider.CurrentAge, out var ageType))
 		{
-			TelemetryData telemetryData = default(TelemetryData);
-			telemetryData.EventName = "kid_age_appeal_age_gate";
-			telemetryData.CustomTags = new string[3]
+			TelemetryData telemetryData = new TelemetryData
 			{
-				"kid_age_appeal",
-				KIDTelemetry.GameVersionCustomTag,
-				KIDTelemetry.GameEnvironment
+				EventName = "kid_age_appeal_age_gate",
+				CustomTags = new string[3]
+				{
+					"kid_age_appeal",
+					KIDTelemetry.GameVersionCustomTag,
+					KIDTelemetry.GameEnvironment
+				},
+				BodyData = new Dictionary<string, string> { 
+				{
+					"correct_age",
+					ageType.ToString()
+				} }
 			};
-			telemetryData.BodyData = new Dictionary<string, string> { 
-			{
-				"correct_age",
-				ageType.ToString()
-			} };
-			TelemetryData telemetryData2 = telemetryData;
-			GorillaTelemetry.EnqueueTelemetryEvent(telemetryData2.EventName, telemetryData2.BodyData, telemetryData2.CustomTags);
+			GorillaTelemetry.EnqueueTelemetryEvent(telemetryData.EventName, telemetryData.BodyData, telemetryData.CustomTags);
 		}
 		AttemptAgeUpdateData attemptAgeUpdateData = await KIDManager.TryAttemptAgeUpdate(_ageSlider.CurrentAge);
 		if (attemptAgeUpdateData.status == SessionStatus.PROHIBITED)

@@ -6,17 +6,11 @@ using UnityEngine;
 public class SIResource : MonoBehaviour, IGorillaSliceableSimple
 {
 	[Serializable]
-	public struct ResourceCost : IComparable<ResourceCost>, IEquatable<ResourceCost>
+	public struct ResourceCost(ResourceType type, int amount) : IComparable<ResourceCost>, IEquatable<ResourceCost>
 	{
-		public ResourceType type;
+		public ResourceType type = type;
 
-		public int amount;
-
-		public ResourceCost(ResourceType type, int amount)
-		{
-			this.type = type;
-			this.amount = amount;
-		}
+		public int amount = amount;
 
 		public int CompareTo(ResourceCost other)
 		{
@@ -57,17 +51,11 @@ public class SIResource : MonoBehaviour, IGorillaSliceableSimple
 		}
 	}
 
-	public struct ResourceCategoryCost : IComparable<ResourceCategoryCost>, IEquatable<ResourceCategoryCost>
+	public struct ResourceCategoryCost(int techPoints, int misc) : IComparable<ResourceCategoryCost>, IEquatable<ResourceCategoryCost>
 	{
-		public int techPoints;
+		public int techPoints = techPoints;
 
-		public int misc;
-
-		public ResourceCategoryCost(int techPoints, int misc)
-		{
-			this.techPoints = techPoints;
-			this.misc = misc;
-		}
+		public int misc = misc;
 
 		public int CompareTo(ResourceCategoryCost other)
 		{

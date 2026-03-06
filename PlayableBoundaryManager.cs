@@ -140,9 +140,9 @@ public class PlayableBoundaryManager : MonoBehaviour
 		float smoothFactor = GetSmoothFactor();
 		for (int i = 0; i < 8; i++)
 		{
-			float3 @float = ((float4)_cylinders_centers[i]).xyz - tracked_center;
+			float3 float5 = ((float4)_cylinders_centers[i]).xyz - tracked_center;
 			float x = _cylinders_radiusHeights[i].x;
-			float signedDist = math.length(@float.xz) - x;
+			float signedDist = math.length(float5.xz) - x;
 			num = SDFSmoothMerge(num, signedDist, smoothFactor);
 		}
 		return num - tracked_radius;

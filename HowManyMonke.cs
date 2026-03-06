@@ -75,7 +75,7 @@ public class HowManyMonke : MonoBehaviour
 	{
 		state = State.TD_LOOKUP;
 		PlayFabTitleDataCache.Instance.GetTitleData(titleDataKey, onTD, onTDError);
-		while (state != 0)
+		while (state != State.READY)
 		{
 			await Task.Yield();
 		}

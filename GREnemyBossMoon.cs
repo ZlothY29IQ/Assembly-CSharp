@@ -1298,15 +1298,16 @@ public class GREnemyBossMoon : MonoBehaviour, IGameEntityComponent, IGameEntityS
 		GameHittable component6 = attachedRigidbody.GetComponent<GameHittable>();
 		if (component5 != null && component6 != null)
 		{
-			GameHitData gameHitData = default(GameHitData);
-			gameHitData.hitTypeId = 0;
-			gameHitData.hitEntityId = component6.gameEntity.id;
-			gameHitData.hitByEntityId = entity.id;
-			gameHitData.hitEntityPosition = component5.transform.position;
-			gameHitData.hitImpulse = Vector3.zero;
-			gameHitData.hitPosition = component5.transform.position;
-			gameHitData.hittablePoint = component6.FindHittablePoint(collider);
-			GameHitData hitData = gameHitData;
+			GameHitData hitData = new GameHitData
+			{
+				hitTypeId = 0,
+				hitEntityId = component6.gameEntity.id,
+				hitByEntityId = entity.id,
+				hitEntityPosition = component5.transform.position,
+				hitImpulse = Vector3.zero,
+				hitPosition = component5.transform.position,
+				hittablePoint = component6.FindHittablePoint(collider)
+			};
 			component6.RequestHit(hitData);
 		}
 	}
@@ -1379,7 +1380,7 @@ public class GREnemyBossMoon : MonoBehaviour, IGameEntityComponent, IGameEntityS
 
 	public void ShockPlayer()
 	{
-		if (currBodyState != 0 && tryShockPlayerCoroutine == null)
+		if (currBodyState != BodyState.Destroyed && tryShockPlayerCoroutine == null)
 		{
 			tryShockPlayerCoroutine = StartCoroutine(TryShockPlayer());
 		}

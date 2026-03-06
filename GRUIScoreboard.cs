@@ -97,7 +97,7 @@ public class GRUIScoreboard : MonoBehaviour, IGorillaSliceableSimple
 
 	public static bool ValidPage(ScoreboardScreen screen)
 	{
-		if (screen != 0)
+		if (screen != ScoreboardScreen.DefaultInfo)
 		{
 			return screen == ScoreboardScreen.ShiftCutCalculation;
 		}

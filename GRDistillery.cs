@@ -109,10 +109,10 @@ public class GRDistillery : MonoBehaviour
 
 	private void RestoreStartTime()
 	{
-		string @string = PlayerPrefs.GetString("_grDistilleryStartTime", string.Empty);
-		if (@string != string.Empty)
+		string text = PlayerPrefs.GetString("_grDistilleryStartTime", string.Empty);
+		if (text != string.Empty)
 		{
-			startTime = DateTime.ParseExact(@string, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+			startTime = DateTime.ParseExact(text, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
 		}
 	}
 

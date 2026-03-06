@@ -209,16 +209,17 @@ public class GameHitter : MonoBehaviour, IGameEntityComponent
 			a = Mathf.Min(a, maxImpulseSpeed);
 			vector *= a;
 			Vector3 position = parentEnemy.transform.position;
-			GameHitData gameHitData = default(GameHitData);
-			gameHitData.hitTypeId = (int)hitType;
-			gameHitData.hitEntityId = parentEnemy.gameEntity.id;
-			gameHitData.hitByEntityId = gameEntity.id;
-			gameHitData.hitEntityPosition = position;
-			gameHitData.hitImpulse = vector * knockbackMultiplier;
-			gameHitData.hitPosition = collision.GetContact(0).point;
-			gameHitData.hitAmount = CalcHitAmount(hitType, parentEnemy, gameEntity);
-			gameHitData.hittablePoint = parentEnemy.FindHittablePoint(collider);
-			GameHitData hitData = gameHitData;
+			GameHitData hitData = new GameHitData
+			{
+				hitTypeId = (int)hitType,
+				hitEntityId = parentEnemy.gameEntity.id,
+				hitByEntityId = gameEntity.id,
+				hitEntityPosition = position,
+				hitImpulse = vector * knockbackMultiplier,
+				hitPosition = collision.GetContact(0).point,
+				hitAmount = CalcHitAmount(hitType, parentEnemy, gameEntity),
+				hittablePoint = parentEnemy.FindHittablePoint(collider)
+			};
 			if (parentEnemy.IsHitValid(hitData))
 			{
 				parentEnemy.RequestHit(hitData);

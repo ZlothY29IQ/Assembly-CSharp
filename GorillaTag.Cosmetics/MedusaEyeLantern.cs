@@ -177,7 +177,7 @@ public class MedusaEyeLantern : MonoBehaviour
 	public void HandleOnNewPlayerDetected(VRRig target, float distance)
 	{
 		targetRig = target;
-		if (currentState != 0)
+		if (currentState != State.SLOSHING)
 		{
 			SwitchState(State.TRACKING);
 		}

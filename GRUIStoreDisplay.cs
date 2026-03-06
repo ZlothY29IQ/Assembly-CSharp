@@ -161,7 +161,7 @@ public class GRUIStoreDisplay : MonoBehaviour
 		}
 		if (unlocked)
 		{
-			if (slot.drillUpgradeLevel != 0)
+			if (slot.drillUpgradeLevel != ProgressionManager.DrillUpgradeLevel.None)
 			{
 				slot.Price.color = colorCanBuyCredits;
 				slot.Price.fontSize = ((text.Length <= 8) ? 2.25f : 1.6f);

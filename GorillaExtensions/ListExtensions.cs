@@ -20,8 +20,8 @@ public static class ListExtensions
 			int index2 = num2;
 			TVal val = list2[num2];
 			TVal val2 = list2[num];
-			TVal val4 = (list3[index] = val);
-			val4 = (list4[index2] = val2);
+			TVal val3 = (list3[index] = val);
+			val3 = (list4[index2] = val2);
 		}
 		foreach (TVal item in list2)
 		{

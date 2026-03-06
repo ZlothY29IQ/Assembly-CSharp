@@ -84,10 +84,10 @@ public class SITechTreeUIPage : MonoBehaviour
 				float num8 = 0f;
 				if (count2 > 1)
 				{
-					int index2 = 0;
+					int index = 0;
 					for (int j = 0; j < count2; j++)
 					{
-						float num9 = subtreeWidths[index2];
+						float num9 = subtreeWidths[index];
 						float num10 = ((j == 0 || j == count2 - 1) ? (num9 / 2f) : num9);
 						num8 -= num10 / 2f;
 					}
@@ -105,12 +105,12 @@ public class SITechTreeUIPage : MonoBehaviour
 				sITechTreeUINode.imageFlattener.enabled = true;
 				sITechTreeUINode.textFlattener.enabled = true;
 			}
-			float GetSpacing(int index, int childCount)
+			float GetSpacing(int num12, int childCount)
 			{
-				int num11 = index + 1;
-				float num12 = ((index >= 0 && index < childCount) ? subtreeWidths[index] : 0f);
-				float num13 = ((num11 >= 0 && num11 < childCount) ? subtreeWidths[num11] : 0f);
-				return (num12 + num13) / 2f;
+				int num11 = num12 + 1;
+				float num13 = ((num12 >= 0 && num12 < childCount) ? subtreeWidths[num12] : 0f);
+				float num14 = ((num11 >= 0 && num11 < childCount) ? subtreeWidths[num11] : 0f);
+				return (num13 + num14) / 2f;
 			}
 		}
 		void AddUpgradeLines(SITechTreeUINode uiNode)
@@ -136,10 +136,10 @@ public class SITechTreeUIPage : MonoBehaviour
 		}
 		SITechTreeUINode GetOrInstantiateUINode(SIUpgradeType upgradeType)
 		{
-			SITechTreeUINode uINode2 = GetUINode(upgradeType);
-			if ((bool)uINode2)
+			SITechTreeUINode uINode = GetUINode(upgradeType);
+			if ((bool)uINode)
 			{
-				return uINode2;
+				return uINode;
 			}
 			return Object.Instantiate(nodePrefab, nodeContainer);
 		}

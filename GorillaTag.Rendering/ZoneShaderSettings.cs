@@ -288,8 +288,7 @@ public class ZoneShaderSettings : MonoBehaviour, ITickSystemPost
 		hasMainWaterSurfacePlane = mainWaterSurfacePlane != null && (mainWaterSurfacePlane_overrideMode == EOverrideMode.ApplyNewValue || isDefaultValues);
 		hasDynamicWaterSurfacePlane = hasMainWaterSurfacePlane && !mainWaterSurfacePlane.gameObject.isStatic;
 		hasLiquidBottomTransform = liquidBottomTransform != null && (liquidBottomTransform_overrideMode == EOverrideMode.ApplyNewValue || isDefaultValues);
-		CheckDefaultsInstance();
-		if (_activateOnAwake)
+		if (CheckDefaultsInstance() && _activateOnAwake)
 		{
 			BecomeActiveInstance();
 		}
@@ -360,23 +359,23 @@ public class ZoneShaderSettings : MonoBehaviour, ITickSystemPost
 		}
 	}
 
-	private void CheckDefaultsInstance()
+	private bool CheckDefaultsInstance()
 	{
-		if (isDefaultValues)
+		if (!isDefaultValues)
 		{
-			if (hasDefaultsInstance && defaultsInstance != null && defaultsInstance != this)
-			{
-				string path = defaultsInstance.transform.GetPath();
-				Debug.LogError("ZoneShaderSettings: Destroying conflicting defaults instance.\n- keeping: \"" + path + "\"\n- destroying (this): \"" + base.transform.GetPath() + "\"", this);
-				Object.Destroy(base.gameObject);
-			}
-			else
-			{
-				defaultsInstance = this;
-				hasDefaultsInstance = true;
-				BecomeActiveInstance();
-			}
+			return true;
 		}
+		if (hasDefaultsInstance && defaultsInstance != null && defaultsInstance != this)
+		{
+			string path = defaultsInstance.transform.GetPath();
+			Debug.LogError("ZoneShaderSettings: Destroying conflicting defaults instance.\n- keeping: \"" + path + "\"\n- destroying (this): \"" + base.transform.GetPath() + "\"", this);
+			Object.Destroy(base.gameObject);
+			return false;
+		}
+		defaultsInstance = this;
+		hasDefaultsInstance = true;
+		BecomeActiveInstance();
+		return true;
 	}
 
 	public void BecomeActiveInstance(bool force = false)
@@ -428,7 +427,7 @@ public class ZoneShaderSettings : MonoBehaviour, ITickSystemPost
 		ApplyFloat(groundFogDepthFadeSq_shaderProp, groundFogDepthFade_overrideMode, GroundFogDepthFadeSq, defaultsInstance.GroundFogDepthFadeSq);
 		ApplyFloat(groundFogHeight_shaderProp, groundFogHeight_overrideMode, groundFogHeight, defaultsInstance.groundFogHeight);
 		ApplyFloat(groundFogHeightFade_shaderProp, groundFogHeightFade_overrideMode, GroundFogHeightFade, defaultsInstance.GroundFogHeightFade);
-		if (zoneLiquidType_overrideMode != 0)
+		if (zoneLiquidType_overrideMode != EOverrideMode.LeaveUnchanged)
 		{
 			EZoneLiquidType eZoneLiquidType = ((zoneLiquidType_overrideMode == EOverrideMode.ApplyNewValue) ? zoneLiquidType : defaultsInstance.zoneLiquidType);
 			if (eZoneLiquidType != liquidType_previousValue || !isInitialized)
@@ -437,7 +436,7 @@ public class ZoneShaderSettings : MonoBehaviour, ITickSystemPost
 				liquidType_previousValue = eZoneLiquidType;
 			}
 		}
-		if (liquidShape_overrideMode != 0)
+		if (liquidShape_overrideMode != EOverrideMode.LeaveUnchanged)
 		{
 			ELiquidShape eLiquidShape = ((liquidShape_overrideMode == EOverrideMode.ApplyNewValue) ? liquidShape : defaultsInstance.liquidShape);
 			if (eLiquidShape != liquidShape_previousValue || !isInitialized)

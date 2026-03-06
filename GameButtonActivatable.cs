@@ -30,36 +30,29 @@ public class GameButtonActivatable : MonoBehaviour, IGameActivatable
 		};
 	}
 
-	public bool CheckInput(bool checkHeld = true, bool checkSnapped = true, float sensitivity = 0.25f, bool checkHeldActivatable = true, bool checkTriggerInteractable = true)
+	public bool CheckInput(float sensitivity = 0.25f)
 	{
-		int num = -1;
-		if (checkHeld && GamePlayer.TryGetGamePlayer(gameEntity.heldByActorNumber, out var out_gamePlayer))
-		{
-			num = out_gamePlayer.FindHandIndex(gameEntity.id);
-		}
-		if (num == -1 && checkSnapped && GamePlayer.TryGetGamePlayer(gameEntity.snappedByActorNumber, out var out_gamePlayer2))
-		{
-			num = out_gamePlayer2.FindSnapIndex(gameEntity.id);
-		}
-		if (num == -1)
+		int equippedSlotIndex = gameEntity.EquippedSlotIndex;
+		if (equippedSlotIndex == -1 || !gameEntity.IsHeldOrSnappedByLocalPlayer)
 		{
 			return false;
 		}
-		if (gameEntity.IsSnappedByLocalPlayer() && (checkHeldActivatable || checkTriggerInteractable))
+		GamePlayer gamePlayer = GamePlayerLocal.instance.gamePlayer;
+		if (gameEntity.IsSnappedToHand)
 		{
-			GamePlayer out_gamePlayer3;
-			bool flag = GamePlayer.TryGetGamePlayer(gameEntity.snappedByActorNumber, out out_gamePlayer3);
-			if (flag && checkHeldActivatable)
+			int num = equippedSlotIndex switch
 			{
-				GameEntity grabbedGameEntity = out_gamePlayer3.GetGrabbedGameEntity(num);
-				if (grabbedGameEntity != null && grabbedGameEntity.GetComponent<IGameActivatable>() != null)
-				{
-					return false;
-				}
+				2 => 0, 
+				3 => 1, 
+				_ => -1, 
+			};
+			if (gamePlayer.TryGetSlotEntity(num, out var out_entity) && out_entity.TryGetComponent<IGameActivatable>(out var _))
+			{
+				return false;
 			}
-			if (flag && checkTriggerInteractable && inputButton == InputButton.Trigger && GameTriggerInteractable.LocalInteractableTriggers.Count > 0)
+			if (inputButton == InputButton.Trigger && GameTriggerInteractable.LocalInteractableTriggers.Count > 0)
 			{
-				Vector3 position = GamePlayerLocal.instance.GetHandTransform(num).position;
+				Vector3 position = gamePlayer.GetHandTransform(num).position;
 				for (int i = 0; i < GameTriggerInteractable.LocalInteractableTriggers.Count; i++)
 				{
 					if (GameTriggerInteractable.LocalInteractableTriggers[i].PointWithinInteractableArea(position))
@@ -69,61 +62,6 @@ public class GameButtonActivatable : MonoBehaviour, IGameActivatable
 				}
 			}
 		}
-		XRNode xrNode = (GamePlayer.IsLeftHand(num) ? XRNode.LeftHand : XRNode.RightHand);
-		return CheckInput(xrNode, sensitivity);
-	}
-
-	private float GetFloatInput(XRNode xrNode, float sensitivity = 0.25f)
-	{
-		float num = inputButton switch
-		{
-			InputButton.Trigger => ControllerInputPoller.TriggerFloat(xrNode), 
-			InputButton.ButtonA => ControllerInputPoller.PrimaryButtonPress(xrNode) ? 1 : 0, 
-			InputButton.ButtonB => ControllerInputPoller.SecondaryButtonPress(xrNode) ? 1 : 0, 
-			InputButton.Grip => ControllerInputPoller.GripFloat(xrNode), 
-			InputButton.Joystick => ControllerInputPoller.TriggerFloat(xrNode), 
-			_ => 0f, 
-		};
-		if (!(num >= sensitivity))
-		{
-			return 0f;
-		}
-		return num;
-	}
-
-	public float GetFloatInput(bool checkHeld = true, bool checkSnapped = true, float sensitivity = 0.25f, bool checkHeldActivatable = true)
-	{
-		int num = -1;
-		if (checkHeld && GamePlayer.TryGetGamePlayer(gameEntity.heldByActorNumber, out var out_gamePlayer))
-		{
-			num = out_gamePlayer.FindHandIndex(gameEntity.id);
-		}
-		if (num == -1 && checkSnapped && GamePlayer.TryGetGamePlayer(gameEntity.snappedByActorNumber, out var out_gamePlayer2))
-		{
-			num = out_gamePlayer2.FindSnapIndex(gameEntity.id);
-		}
-		if (num == -1)
-		{
-			return 0f;
-		}
-		if (checkHeldActivatable && gameEntity.IsSnappedByLocalPlayer() && GamePlayer.TryGetGamePlayer(gameEntity.snappedByActorNumber, out var out_gamePlayer3))
-		{
-			GameEntity grabbedGameEntity = out_gamePlayer3.GetGrabbedGameEntity(num);
-			if (grabbedGameEntity != null && grabbedGameEntity.GetComponent<IGameActivatable>() != null)
-			{
-				return 0f;
-			}
-		}
-		XRNode xrNode = (GamePlayer.IsLeftHand(num) ? XRNode.LeftHand : XRNode.RightHand);
-		return GetFloatInput(xrNode, sensitivity);
-	}
-
-	protected bool IsEquippedLocal()
-	{
-		if (!gameEntity.IsHeldByLocalPlayer())
-		{
-			return gameEntity.IsSnappedByLocalPlayer();
-		}
-		return true;
+		return CheckInput(gameEntity.EquippedHandXRNode, sensitivity);
 	}
 }

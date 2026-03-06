@@ -164,13 +164,13 @@ public class CatmullRomSpline : MonoBehaviour
 		RefreshControlPoints();
 		Gizmos.color = Color.yellow;
 		int num = 128;
-		Vector3 from = Evaluate(0f);
+		Vector3 vector2 = Evaluate(0f);
 		for (int i = 1; i <= num; i++)
 		{
 			float t = (float)i / (float)num;
-			Vector3 vector2 = Evaluate(t);
-			Gizmos.DrawLine(from, vector2);
-			from = vector2;
+			Vector3 vector3 = Evaluate(t);
+			Gizmos.DrawLine(vector2, vector3);
+			vector2 = vector3;
 		}
 		if (!(debugTransform != null))
 		{
@@ -185,12 +185,12 @@ public class CatmullRomSpline : MonoBehaviour
 		if (controlPoints.Count > 3)
 		{
 			Gizmos.color = Color.green;
-			from = controlPoints[1];
+			vector2 = controlPoints[1];
 			for (int j = 2; j < controlPoints.Count - 2; j++)
 			{
-				Vector3 vector3 = controlPoints[j];
-				Gizmos.DrawLine(from, vector3);
-				from = vector3;
+				Vector3 vector4 = controlPoints[j];
+				Gizmos.DrawLine(vector2, vector4);
+				vector2 = vector4;
 			}
 		}
 	}

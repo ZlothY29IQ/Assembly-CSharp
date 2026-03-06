@@ -22,17 +22,11 @@ public class FortuneResults : ScriptableObject
 		public string[] textResults;
 	}
 
-	public struct FortuneResult
+	public struct FortuneResult(FortuneCategoryType fortuneType, int resultIndex)
 	{
-		public FortuneCategoryType fortuneType;
+		public FortuneCategoryType fortuneType = fortuneType;
 
-		public int resultIndex;
-
-		public FortuneResult(FortuneCategoryType fortuneType, int resultIndex)
-		{
-			this.fortuneType = fortuneType;
-			this.resultIndex = resultIndex;
-		}
+		public int resultIndex = resultIndex;
 	}
 
 	[SerializeField]

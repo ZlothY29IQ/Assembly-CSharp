@@ -12,6 +12,8 @@ public static class Network
 
 	public const byte COSMETIC_EVENT = 176;
 
+	public const byte GT_SIGNAL = 186;
+
 	public const byte COSMETICS_LOOKUP = 199;
 
 	public const double MAX_PHOTON_SERVER_TIME = 4294967.295;

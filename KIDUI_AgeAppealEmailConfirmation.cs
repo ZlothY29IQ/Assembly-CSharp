@@ -56,24 +56,25 @@ public class KIDUI_AgeAppealEmailConfirmation : MonoBehaviour
 
 	public void OnConfirmPressed()
 	{
-		TelemetryData telemetryData = default(TelemetryData);
-		telemetryData.EventName = "kid_age_appeal_confirm_email";
-		telemetryData.CustomTags = new string[3]
+		TelemetryData telemetryData = new TelemetryData
 		{
-			"kid_age_appeal",
-			KIDTelemetry.GameVersionCustomTag,
-			KIDTelemetry.GameEnvironment
-		};
-		telemetryData.BodyData = new Dictionary<string, string>
-		{
+			EventName = "kid_age_appeal_confirm_email",
+			CustomTags = new string[3]
 			{
-				"email_type",
-				hasChallenge ? "under_dac" : "over_dac"
+				"kid_age_appeal",
+				KIDTelemetry.GameVersionCustomTag,
+				KIDTelemetry.GameEnvironment
 			},
-			{ "button_pressed", "confirm" }
+			BodyData = new Dictionary<string, string>
+			{
+				{
+					"email_type",
+					hasChallenge ? "under_dac" : "over_dac"
+				},
+				{ "button_pressed", "confirm" }
+			}
 		};
-		TelemetryData telemetryData2 = telemetryData;
-		GorillaTelemetry.EnqueueTelemetryEvent(telemetryData2.EventName, telemetryData2.BodyData, telemetryData2.CustomTags);
+		GorillaTelemetry.EnqueueTelemetryEvent(telemetryData.EventName, telemetryData.BodyData, telemetryData.CustomTags);
 		if (hasChallenge)
 		{
 			StartAgeAppealChallengeEmail();
@@ -86,24 +87,25 @@ public class KIDUI_AgeAppealEmailConfirmation : MonoBehaviour
 
 	public void OnBackPressed()
 	{
-		TelemetryData telemetryData = default(TelemetryData);
-		telemetryData.EventName = "kid_age_appeal_confirm_email";
-		telemetryData.CustomTags = new string[3]
+		TelemetryData telemetryData = new TelemetryData
 		{
-			"kid_age_appeal",
-			KIDTelemetry.GameVersionCustomTag,
-			KIDTelemetry.GameEnvironment
-		};
-		telemetryData.BodyData = new Dictionary<string, string>
-		{
+			EventName = "kid_age_appeal_confirm_email",
+			CustomTags = new string[3]
 			{
-				"email_type",
-				hasChallenge ? "under_dac" : "over_dac"
+				"kid_age_appeal",
+				KIDTelemetry.GameVersionCustomTag,
+				KIDTelemetry.GameEnvironment
 			},
-			{ "button_pressed", "go_back" }
+			BodyData = new Dictionary<string, string>
+			{
+				{
+					"email_type",
+					hasChallenge ? "under_dac" : "over_dac"
+				},
+				{ "button_pressed", "go_back" }
+			}
 		};
-		TelemetryData telemetryData2 = telemetryData;
-		GorillaTelemetry.EnqueueTelemetryEvent(telemetryData2.EventName, telemetryData2.BodyData, telemetryData2.CustomTags);
+		GorillaTelemetry.EnqueueTelemetryEvent(telemetryData.EventName, telemetryData.BodyData, telemetryData.CustomTags);
 		base.gameObject.SetActive(value: false);
 		_ageAppealEmailScreen.ShowAgeAppealEmailScreen(hasChallenge, newAgeToAppeal);
 	}

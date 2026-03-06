@@ -108,7 +108,6 @@ public class PlayFabTitleDataTextDisplay : MonoBehaviour, IBuildValidation
 				text = text.Substring(1, text.Length - 2);
 			}
 			textBox.text = text;
-			Debug.Log("PlayFabTitleDataTextDisplay: text: " + text);
 		}
 	}
 

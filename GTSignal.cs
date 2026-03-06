@@ -107,15 +107,15 @@ public static class GTSignal
 		gSendOptions = SendOptions.SendReliable;
 		gSendOptions.Encrypt = true;
 		gTargetsToOptions = new Dictionary<EmitMode, RaiseEventOptions>(3);
-		RaiseEventOptions @default = RaiseEventOptions.Default;
-		@default.Receivers = ReceiverGroup.All;
-		gTargetsToOptions.Add(EmitMode.All, @default);
-		RaiseEventOptions default2 = RaiseEventOptions.Default;
-		default2.Receivers = ReceiverGroup.Others;
-		gTargetsToOptions.Add(EmitMode.Others, default2);
-		RaiseEventOptions default3 = RaiseEventOptions.Default;
-		default3.Receivers = ReceiverGroup.MasterClient;
-		gTargetsToOptions.Add(EmitMode.Host, default3);
+		RaiseEventOptions raiseEventOptions = RaiseEventOptions.Default;
+		raiseEventOptions.Receivers = ReceiverGroup.All;
+		gTargetsToOptions.Add(EmitMode.All, raiseEventOptions);
+		RaiseEventOptions raiseEventOptions2 = RaiseEventOptions.Default;
+		raiseEventOptions2.Receivers = ReceiverGroup.Others;
+		gTargetsToOptions.Add(EmitMode.Others, raiseEventOptions2);
+		RaiseEventOptions raiseEventOptions3 = RaiseEventOptions.Default;
+		raiseEventOptions3.Receivers = ReceiverGroup.MasterClient;
+		gTargetsToOptions.Add(EmitMode.Host, raiseEventOptions3);
 	}
 
 	public static void Emit(string signal, params object[] data)

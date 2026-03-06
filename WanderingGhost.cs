@@ -11,18 +11,12 @@ using UnityEngine.Events;
 public class WanderingGhost : NetworkComponent
 {
 	[Serializable]
-	public struct Waypoint
+	public struct Waypoint(bool visible, Transform tr)
 	{
 		[Tooltip("The ghost will be visible when its reached to this waypoint")]
-		public bool _visible;
+		public bool _visible = visible;
 
-		public Transform _transform;
-
-		public Waypoint(bool visible, Transform tr)
-		{
-			_visible = visible;
-			_transform = tr;
-		}
+		public Transform _transform = tr;
 	}
 
 	private enum ghostState

@@ -337,20 +337,20 @@ public static class PropHuntPools
 		List<Transform> list = new List<Transform>(gameObject.GetComponentsInChildren<Transform>(includeInactive: true));
 		list.Sort((Transform a, Transform b) => -a.GetDepth().CompareTo(b.GetDepth()));
 		Transform transform2 = gameObject.transform;
-		for (int j = 0; j < list.Count; j++)
+		for (int num = 0; num < list.Count; num++)
 		{
-			Transform transform3 = list[j];
+			Transform transform3 = list[num];
 			if (transform3.childCount == 0 && !(transform3 == transform2))
 			{
 				Component[] components = transform3.GetComponents<Component>();
-				int num = 0;
-				for (int k = 0; k < components.Length; k++)
+				int num2 = 0;
+				for (int num3 = 0; num3 < components.Length; num3++)
 				{
-					int num2 = num;
-					Component component3 = components[k];
-					num = num2 + ((!(component3 is Transform) && !(component3 is MeshRenderer) && !(component3 is MeshFilter)) ? 1 : 0);
+					int num4 = num2;
+					Component component3 = components[num3];
+					num2 = num4 + ((!(component3 is Transform) && !(component3 is MeshRenderer) && !(component3 is MeshFilter)) ? 1 : 0);
 				}
-				if (num == 0)
+				if (num2 == 0)
 				{
 					UnityEngine.Object.Destroy(transform3.gameObject);
 				}
@@ -369,10 +369,10 @@ public static class PropHuntPools
 			propPlacementRB.gameObject.SetActive(value: false);
 			gameObject2.transform.SetParent(propPlacementRB.transform);
 			_cosmeticId_to_decoyTemplate[cosmeticId] = propPlacementRB;
-			int num3 = _cosmeticId_to_decoyInitialCount[cosmeticId];
-			Queue<PropPlacementRB> queue = new Queue<PropPlacementRB>(num3);
+			int num5 = _cosmeticId_to_decoyInitialCount[cosmeticId];
+			Queue<PropPlacementRB> queue = new Queue<PropPlacementRB>(num5);
 			string name = "__PropHuntPoolProp_Decoy__" + cosmeticSO.name + "__";
-			for (int l = 0; l < num3; l++)
+			for (int num6 = 0; num6 < num5; num6++)
 			{
 				PropPlacementRB propPlacementRB2 = UnityEngine.Object.Instantiate(propPlacementRB, _decoyInactivePropsParent);
 				propPlacementRB2.name = name;
@@ -390,7 +390,7 @@ public static class PropHuntPools
 			_cosmeticId_to_grabbableTemplate[cosmeticId] = grabbableProp;
 			Queue<PropHuntGrabbableProp> queue2 = new Queue<PropHuntGrabbableProp>(1);
 			string name2 = "__PropHuntPoolProp_Grabbable__" + cosmeticSO.name + "__";
-			for (int m = 0; m < 1; m++)
+			for (int num7 = 0; num7 < 1; num7++)
 			{
 				GameObject gameObject3 = UnityEngine.Object.Instantiate(grabbableProp.gameObject, _grabbableInactivePropsParent);
 				gameObject3.name = name2;
@@ -409,7 +409,7 @@ public static class PropHuntPools
 			_cosmeticId_to_taggableTemplate[cosmeticId] = taggableProp2;
 			Queue<PropHuntTaggableProp> queue3 = new Queue<PropHuntTaggableProp>(2);
 			string name3 = "__PropHuntPoolProp_Taggable__" + cosmeticSO.name + "__";
-			for (int n = 0; n < 2; n++)
+			for (int num8 = 0; num8 < 2; num8++)
 			{
 				GameObject gameObject4 = UnityEngine.Object.Instantiate(taggableProp2.gameObject, _taggableInactivePropsParent);
 				gameObject4.name = name3;

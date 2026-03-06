@@ -35,6 +35,9 @@ public class VODTarget : ObservableBehavior, IBuildValidation
 	[SerializeField]
 	private TMP_Text upNext;
 
+	[SerializeField]
+	private VODPlayer.VODStream.VODStreamChannel[] channel;
+
 	public static Action<VODTarget> AlertEnabled;
 
 	public static Action<VODTarget> AlertDisabled;
@@ -46,6 +49,22 @@ public class VODTarget : ObservableBehavior, IBuildValidation
 	public TMP_Text UpNextText => upNext;
 
 	public Material StandbyOverride => standbyOverride;
+
+	public bool VerifyChannel(VODPlayer.VODStream.VODStreamChannel ch)
+	{
+		if (channel.Length == 0 && ch == VODPlayer.VODStream.VODStreamChannel.DEFAULT)
+		{
+			return true;
+		}
+		for (int i = 0; i < channel.Length; i++)
+		{
+			if (channel[i] == ch)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
 
 	protected override void OnLostObservable()
 	{

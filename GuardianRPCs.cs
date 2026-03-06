@@ -23,7 +23,7 @@ internal class GuardianRPCs : RPCNetworkBase
 	[PunRPC]
 	public void GuardianRequestEject(PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "GuardianRequestEject");
+		MonkeAgent.IncrementRPCCall(info, "GuardianRequestEject");
 		PhotonMessageInfoWrapped photonMessageInfoWrapped = new PhotonMessageInfoWrapped(info);
 		if (photonMessageInfoWrapped.Sender != null)
 		{
@@ -34,11 +34,11 @@ internal class GuardianRPCs : RPCNetworkBase
 	[PunRPC]
 	public void GuardianLaunchPlayer(Vector3 velocity, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "GuardianLaunchPlayer");
+		MonkeAgent.IncrementRPCCall(info, "GuardianLaunchPlayer");
 		PhotonMessageInfoWrapped photonMessageInfoWrapped = new PhotonMessageInfoWrapped(info);
 		if (!guardianManager.IsPlayerGuardian(photonMessageInfoWrapped.Sender))
 		{
-			GorillaNot.instance.SendReport("Sent LaunchPlayer when not a guardian", photonMessageInfoWrapped.Sender.UserId, photonMessageInfoWrapped.Sender.NickName);
+			MonkeAgent.instance.SendReport("Sent LaunchPlayer when not a guardian", photonMessageInfoWrapped.Sender.UserId, photonMessageInfoWrapped.Sender.NickName);
 		}
 		else if (velocity.IsValid(10000f) && launchCallLimit.CheckCallTime(Time.time))
 		{
@@ -49,11 +49,11 @@ internal class GuardianRPCs : RPCNetworkBase
 	[PunRPC]
 	public void ShowSlapEffects(Vector3 location, Vector3 direction, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "ShowSlapEffects");
+		MonkeAgent.IncrementRPCCall(info, "ShowSlapEffects");
 		PhotonMessageInfoWrapped photonMessageInfoWrapped = new PhotonMessageInfoWrapped(info);
 		if (!guardianManager.IsPlayerGuardian(photonMessageInfoWrapped.Sender))
 		{
-			GorillaNot.instance.SendReport("Sent ShowSlapEffects when not a guardian", photonMessageInfoWrapped.Sender.UserId, photonMessageInfoWrapped.Sender.NickName);
+			MonkeAgent.instance.SendReport("Sent ShowSlapEffects when not a guardian", photonMessageInfoWrapped.Sender.UserId, photonMessageInfoWrapped.Sender.NickName);
 		}
 		else if (location.IsValid(10000f) && direction.IsValid(10000f) && slapFXCallLimit.CheckCallTime(Time.time))
 		{
@@ -64,11 +64,11 @@ internal class GuardianRPCs : RPCNetworkBase
 	[PunRPC]
 	public void ShowSlamEffect(Vector3 location, Vector3 direction, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "ShowSlamEffect");
+		MonkeAgent.IncrementRPCCall(info, "ShowSlamEffect");
 		PhotonMessageInfoWrapped photonMessageInfoWrapped = new PhotonMessageInfoWrapped(info);
 		if (!guardianManager.IsPlayerGuardian(photonMessageInfoWrapped.Sender))
 		{
-			GorillaNot.instance.SendReport("Sent ShowSlamEffect when not a guardian", photonMessageInfoWrapped.Sender.UserId, photonMessageInfoWrapped.Sender.NickName);
+			MonkeAgent.instance.SendReport("Sent ShowSlamEffect when not a guardian", photonMessageInfoWrapped.Sender.UserId, photonMessageInfoWrapped.Sender.NickName);
 		}
 		else if (location.IsValid(10000f) && direction.IsValid(10000f) && slamFXCallLimit.CheckCallTime(Time.time))
 		{

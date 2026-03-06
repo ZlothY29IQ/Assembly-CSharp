@@ -213,7 +213,7 @@ public class GRToolClub : MonoBehaviourTick, IGameHitter, IGameEntityDebugCompon
 		{
 			return;
 		}
-		if (state != 0)
+		if (state != State.Idle)
 		{
 			_ = 1;
 		}

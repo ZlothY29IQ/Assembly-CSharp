@@ -59,8 +59,9 @@ public struct GTSturdyComponentRef<T> where T : Component
 
 	public static implicit operator GTSturdyComponentRef<T>(T component)
 	{
-		GTSturdyComponentRef<T> result = default(GTSturdyComponentRef<T>);
-		result.Value = component;
-		return result;
+		return new GTSturdyComponentRef<T>
+		{
+			Value = component
+		};
 	}
 }

@@ -318,17 +318,18 @@ public class RuntimeMeshCombiner : MonoBehaviour
 				num += gameObjectWithMesh2.meshFilter.sharedMesh.vertexCount;
 			}
 			List<Mesh> list = new List<Mesh>();
-			foreach (KeyValuePair<Material, List<SubMeshToCombine>> item3 in dictionary)
+			foreach (KeyValuePair<Material, List<SubMeshToCombine>> item in dictionary)
 			{
-				List<SubMeshToCombine> value = item3.Value;
+				List<SubMeshToCombine> value = item.Value;
 				List<CombineInstance> list2 = new List<CombineInstance>();
 				for (int l = 0; l < value.Count; l++)
 				{
-					CombineInstance item = default(CombineInstance);
-					item.mesh = value[l].meshFilter.sharedMesh;
-					item.subMeshIndex = value[l].subMeshIndex;
-					item.transform = value[l].transform.localToWorldMatrix;
-					list2.Add(item);
+					list2.Add(new CombineInstance
+					{
+						mesh = value[l].meshFilter.sharedMesh,
+						subMeshIndex = value[l].subMeshIndex,
+						transform = value[l].transform.localToWorldMatrix
+					});
 				}
 				Mesh mesh = new Mesh();
 				if (num <= MAX_VERTICES_FOR_16BITS_MESH)
@@ -343,13 +344,14 @@ public class RuntimeMeshCombiner : MonoBehaviour
 				list.Add(mesh);
 			}
 			List<CombineInstance> list3 = new List<CombineInstance>();
-			foreach (Mesh item4 in list)
+			foreach (Mesh item2 in list)
 			{
-				CombineInstance item2 = default(CombineInstance);
-				item2.mesh = item4;
-				item2.subMeshIndex = 0;
-				item2.transform = Matrix4x4.identity;
-				list3.Add(item2);
+				list3.Add(new CombineInstance
+				{
+					mesh = item2,
+					subMeshIndex = 0,
+					transform = Matrix4x4.identity
+				});
 			}
 			Mesh mesh2 = new Mesh();
 			if (num <= MAX_VERTICES_FOR_16BITS_MESH)
@@ -377,9 +379,9 @@ public class RuntimeMeshCombiner : MonoBehaviour
 			}
 			meshFilter.sharedMesh = mesh2;
 			List<Material> list4 = new List<Material>();
-			foreach (KeyValuePair<Material, List<SubMeshToCombine>> item5 in dictionary)
+			foreach (KeyValuePair<Material, List<SubMeshToCombine>> item3 in dictionary)
 			{
-				list4.Add(item5.Key);
+				list4.Add(item3.Key);
 			}
 			meshRenderer.sharedMaterials = list4.ToArray();
 			if (afterMerge == AfterMerge.DeactiveOriginalGameObjects)

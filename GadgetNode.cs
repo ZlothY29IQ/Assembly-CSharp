@@ -36,7 +36,7 @@ public class GadgetNode : TechTreeNodeBase
 		get
 		{
 			EAssetReleaseTier eAssetReleaseTier = releaseTier;
-			if (eAssetReleaseTier != 0)
+			if (eAssetReleaseTier != EAssetReleaseTier.Disabled)
 			{
 				return eAssetReleaseTier <= EAssetReleaseTier.PublicRC;
 			}

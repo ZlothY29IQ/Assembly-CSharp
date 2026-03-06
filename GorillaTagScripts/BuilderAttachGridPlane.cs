@@ -329,7 +329,7 @@ public class BuilderAttachGridPlane : MonoBehaviour
 
 	public bool IsAttachedToMovingGrid()
 	{
-		if (piece.state != 0)
+		if (piece.state != BuilderPiece.State.AttachedAndPlaced)
 		{
 			return false;
 		}

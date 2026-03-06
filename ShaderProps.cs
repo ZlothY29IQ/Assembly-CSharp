@@ -312,6 +312,8 @@ public static class ShaderProps
 
 	public static readonly int _Darken = Shader.PropertyToID("_Darken");
 
+	public static readonly int _DAY_CYCLE_BRIGHTNESS_ = Shader.PropertyToID("_DAY_CYCLE_BRIGHTNESS_");
+
 	public static readonly int _DayNightLightmapArray = Shader.PropertyToID("_DayNightLightmapArray");
 
 	public static readonly int _DayNightLightmapArray_AtlasSlice = Shader.PropertyToID("_DayNightLightmapArray_AtlasSlice");
@@ -664,6 +666,8 @@ public static class ShaderProps
 
 	public static readonly int _HandleZWrite = Shader.PropertyToID("_HandleZWrite");
 
+	public static readonly int _Height = Shader.PropertyToID("_Height");
+
 	public static readonly int _HeightBasedWaterEffect = Shader.PropertyToID("_HeightBasedWaterEffect");
 
 	public static readonly int _HeightTransition = Shader.PropertyToID("_HeightTransition");
@@ -920,8 +924,6 @@ public static class ShaderProps
 
 	public static readonly int _MouthMap_Atlas = Shader.PropertyToID("_MouthMap_Atlas");
 
-	public static readonly int _MouthMap_AtlasSlice = Shader.PropertyToID("_MouthMap_AtlasSlice");
-
 	public static readonly int _MouthMap_ST = Shader.PropertyToID("_MouthMap_ST");
 
 	public static readonly int _N = Shader.PropertyToID("_N");
@@ -993,6 +995,10 @@ public static class ShaderProps
 	public static readonly int _OffsetFactor = Shader.PropertyToID("_OffsetFactor");
 
 	public static readonly int _OffsetUnits = Shader.PropertyToID("_OffsetUnits");
+
+	public static readonly int _OfsX = Shader.PropertyToID("_OfsX");
+
+	public static readonly int _OfsY = Shader.PropertyToID("_OfsY");
 
 	public static readonly int _OldHueVarBehavior = Shader.PropertyToID("_OldHueVarBehavior");
 
@@ -1067,6 +1073,8 @@ public static class ShaderProps
 	public static readonly int _ParallaxSamplesMinMax = Shader.PropertyToID("_ParallaxSamplesMinMax");
 
 	public static readonly int _ParallaxToggle = Shader.PropertyToID("_ParallaxToggle");
+
+	public static readonly int _Pass = Shader.PropertyToID("_Pass");
 
 	public static readonly int _PassthroughAmount = Shader.PropertyToID("_PassthroughAmount");
 
@@ -1307,10 +1315,6 @@ public static class ShaderProps
 	public static readonly int _SimpleLitStencilRef = Shader.PropertyToID("_SimpleLitStencilRef");
 
 	public static readonly int _SimpleLitStencilWriteMask = Shader.PropertyToID("_SimpleLitStencilWriteMask");
-
-	public static readonly int _SingleLightmap = Shader.PropertyToID("_SingleLightmap");
-
-	public static readonly int _SingleLightmap_ST = Shader.PropertyToID("_SingleLightmap_ST");
 
 	public static readonly int _SinTime = Shader.PropertyToID("_SinTime");
 
@@ -1817,6 +1821,8 @@ public static class ShaderProps
 	public static readonly int _WetMap = Shader.PropertyToID("_WetMap");
 
 	public static readonly int _WetMapUV = Shader.PropertyToID("_WetMapUV");
+
+	public static readonly int _Width = Shader.PropertyToID("_Width");
 
 	public static readonly int _WIND_BRANCH1 = Shader.PropertyToID("_WIND_BRANCH1");
 

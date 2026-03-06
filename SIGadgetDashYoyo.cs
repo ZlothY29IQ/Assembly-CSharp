@@ -251,7 +251,7 @@ public class SIGadgetDashYoyo : SIGadget
 		{
 			return;
 		}
-		_attachedPlayerActorNr = GetAttachedPlayerActorNumber();
+		_attachedPlayerActorNr = gameEntity.AttachedPlayerActorNr;
 		_attachedNetPlayer = NetworkSystem.Instance.GetPlayer(_attachedPlayerActorNr);
 		if (GamePlayer.TryGetGamePlayer(_attachedPlayerActorNr, out var out_gamePlayer))
 		{
@@ -361,7 +361,7 @@ public class SIGadgetDashYoyo : SIGadget
 				GTPlayer.Instance.ResetRigidbodyInterpolation();
 				break;
 			}
-			if (GTPlayer.Instance.RigidbodyInterpolation != 0)
+			if (GTPlayer.Instance.RigidbodyInterpolation != RigidbodyInterpolation.None)
 			{
 				GTPlayer.Instance.RigidbodyInterpolation = RigidbodyInterpolation.None;
 			}
@@ -474,7 +474,7 @@ public class SIGadgetDashYoyo : SIGadget
 	private bool _CheckInput()
 	{
 		float sensitivity = (_wasActivated ? m_inputDeactivateThreshold : m_inputActivateThreshold);
-		return m_buttonActivatable.CheckInput(checkHeld: true, checkSnapped: true, sensitivity);
+		return m_buttonActivatable.CheckInput(sensitivity);
 	}
 
 	private bool _ThrowYoYoTarget()
@@ -575,14 +575,14 @@ public class SIGadgetDashYoyo : SIGadget
 		_maxEncounteredYankSpeed = Mathf.Max(_maxEncounteredYankSpeed, handVelocity.magnitude);
 		Vector3 vector = _yankBeginPos - m_yoyoDefaultPosXform.position;
 		Vector3 normalized = (-handVelocity.normalized + vector.normalized).normalized;
-		Vector3 from = m_yoyoTarget.position - m_yoyoDefaultPosXform.position;
-		if (!(vector.magnitude < m_yankMinDistance) && !(_maxEncounteredYankSpeed < m_yankMinSpeed) && !(Vector3.Angle(from, normalized) > m_yankMaxAngle))
+		Vector3 vector2 = m_yoyoTarget.position - m_yoyoDefaultPosXform.position;
+		if (!(vector.magnitude < m_yankMinDistance) && !(_maxEncounteredYankSpeed < m_yankMinSpeed) && !(Vector3.Angle(vector2, normalized) > m_yankMaxAngle))
 		{
 			_successfulYankTime = Time.unscaledTime;
 			float num = _CalculateDashSpeed(handVelocity.magnitude);
 			GTPlayer instance = GTPlayer.Instance;
 			instance.SetMaximumSlipThisFrame();
-			instance.SetVelocity(Vector3.RotateTowards(from.normalized, normalized, _maxInfluenceAngle * (MathF.PI / 180f), 0f) * num);
+			instance.SetVelocity(Vector3.RotateTowards(vector2.normalized, normalized, _maxInfluenceAngle * (MathF.PI / 180f), 0f) * num);
 			_PlayHaptic(2f);
 			SetStateAuthority(EState.DashUsed);
 		}

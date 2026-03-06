@@ -45,7 +45,7 @@ public class MagicRingCosmetic : MonoBehaviour
 			fadeInSounds.Play();
 			fadeState = FadeState.FadedIn;
 		}
-		else if (celsius <= fadeOutTemperatureThreshold && fadeState != 0)
+		else if (celsius <= fadeOutTemperatureThreshold && fadeState != FadeState.FadedOut)
 		{
 			fadeOutSounds.Play();
 			fadeState = FadeState.FadedOut;

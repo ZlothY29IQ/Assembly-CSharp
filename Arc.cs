@@ -23,12 +23,13 @@ public struct Arc
 
 	public static Arc From(Vector3 start, Vector3 end)
 	{
-		Vector3 vector = DeriveArcControlPoint(start, end, null, null);
-		Arc result = default(Arc);
-		result.start = start;
-		result.end = end;
-		result.control = vector;
-		return result;
+		Vector3 vector = DeriveArcControlPoint(start, end);
+		return new Arc
+		{
+			start = start,
+			end = end,
+			control = vector
+		};
 	}
 
 	public static Vector3[] ComputeArcPoints(Vector3 a, Vector3 b, Vector3? c = null, int count = 12)
@@ -38,7 +39,7 @@ public struct Arc
 		Vector3 valueOrDefault = c.GetValueOrDefault();
 		if (!c.HasValue)
 		{
-			valueOrDefault = DeriveArcControlPoint(a, b, null, null);
+			valueOrDefault = DeriveArcControlPoint(a, b);
 			c = valueOrDefault;
 		}
 		for (int i = 0; i < count; i++)

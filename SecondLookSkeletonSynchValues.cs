@@ -156,7 +156,7 @@ public class SecondLookSkeletonSynchValues : NetworkComponent
 			}
 			info = RpcInfo.FromLocal(base.Runner, RpcChannel.Reliable, RpcHostMode.SourceIsServer);
 		}
-		GorillaNot.IncrementRPCCall(info, "RPC_RemoteActiveGhost");
+		MonkeAgent.IncrementRPCCall(info, "RPC_RemoteActiveGhost");
 		if (base.IsMine)
 		{
 			mySkeleton.RemoteActivateGhost();
@@ -204,7 +204,7 @@ public class SecondLookSkeletonSynchValues : NetworkComponent
 			}
 			info = RpcInfo.FromLocal(base.Runner, RpcChannel.Reliable, RpcHostMode.SourceIsServer);
 		}
-		GorillaNot.IncrementRPCCall(info, "RPC_RemotePlayerSeen");
+		MonkeAgent.IncrementRPCCall(info, "RPC_RemotePlayerSeen");
 		NetPlayer player = NetworkSystem.Instance.GetPlayer(info.Source);
 		if (!mySkeleton.playersSeen.Contains(player))
 		{
@@ -256,7 +256,7 @@ public class SecondLookSkeletonSynchValues : NetworkComponent
 			}
 			info = RpcInfo.FromLocal(base.Runner, RpcChannel.Reliable, RpcHostMode.SourceIsServer);
 		}
-		GorillaNot.IncrementRPCCall(info, "RPC_RemotePlayerCaught");
+		MonkeAgent.IncrementRPCCall(info, "RPC_RemotePlayerCaught");
 		if (base.IsMine)
 		{
 			NetPlayer player = NetworkSystem.Instance.GetPlayer(info.Source);
@@ -270,7 +270,7 @@ public class SecondLookSkeletonSynchValues : NetworkComponent
 	[PunRPC]
 	public void RemoteActivateGhost(PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "RemoteActivateGhost");
+		MonkeAgent.IncrementRPCCall(info, "RemoteActivateGhost");
 		if (base.IsMine)
 		{
 			mySkeleton.RemoteActivateGhost();
@@ -280,7 +280,7 @@ public class SecondLookSkeletonSynchValues : NetworkComponent
 	[PunRPC]
 	public void RemotePlayerSeen(PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "RemotePlayerSeen");
+		MonkeAgent.IncrementRPCCall(info, "RemotePlayerSeen");
 		NetPlayer player = NetworkSystem.Instance.GetPlayer(info.Sender);
 		if (!mySkeleton.playersSeen.Contains(player))
 		{
@@ -291,7 +291,7 @@ public class SecondLookSkeletonSynchValues : NetworkComponent
 	[PunRPC]
 	public void RemotePlayerCaught(PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "RemotePlayerCaught");
+		MonkeAgent.IncrementRPCCall(info, "RemotePlayerCaught");
 		if (base.IsMine)
 		{
 			NetPlayer player = NetworkSystem.Instance.GetPlayer(info.Sender);

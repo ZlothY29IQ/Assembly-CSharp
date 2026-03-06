@@ -97,13 +97,14 @@ public class HeadModel : MonoBehaviour, IDelayedExecListener
 				CosmeticAttachInfo attachInfo = attachAnchors[j];
 				if ((!forRightSide || !(attachInfo.selectSide == ECosmeticSelectSide.Left)) && (forRightSide || !(attachInfo.selectSide == ECosmeticSelectSide.Right)))
 				{
-					_CosmeticPartLoadInfo cosmeticPartLoadInfo = default(_CosmeticPartLoadInfo);
-					cosmeticPartLoadInfo.playFabId = playFabId;
-					cosmeticPartLoadInfo.prefabAssetRef = cosmeticPart.prefabAssetRef;
-					cosmeticPartLoadInfo.attachInfo = attachInfo;
-					cosmeticPartLoadInfo.loadOp = cosmeticPart.prefabAssetRef.InstantiateAsync(base.transform);
-					cosmeticPartLoadInfo.xform = null;
-					_CosmeticPartLoadInfo item = cosmeticPartLoadInfo;
+					_CosmeticPartLoadInfo item = new _CosmeticPartLoadInfo
+					{
+						playFabId = playFabId,
+						prefabAssetRef = cosmeticPart.prefabAssetRef,
+						attachInfo = attachInfo,
+						loadOp = cosmeticPart.prefabAssetRef.InstantiateAsync(base.transform),
+						xform = null
+					};
 					item.loadOp.Completed += _HandleLoadOpOnCompleted;
 					_loadOp_to_partInfoIndex[item.loadOp] = _currentPartLoadInfos.Count;
 					_currentPartLoadInfos.Add(item);

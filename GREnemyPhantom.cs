@@ -607,15 +607,16 @@ public class GREnemyPhantom : MonoBehaviour, IGameEntityComponent, IGameEntitySe
 			GameHittable component3 = attachedRigidbody.GetComponent<GameHittable>();
 			if (component2 != null && component3 != null)
 			{
-				GameHitData gameHitData = default(GameHitData);
-				gameHitData.hitTypeId = 0;
-				gameHitData.hitEntityId = component3.gameEntity.id;
-				gameHitData.hitByEntityId = entity.id;
-				gameHitData.hitEntityPosition = component2.transform.position;
-				gameHitData.hitImpulse = Vector3.zero;
-				gameHitData.hitPosition = component2.transform.position;
-				gameHitData.hittablePoint = component3.FindHittablePoint(collider);
-				GameHitData hitData = gameHitData;
+				GameHitData hitData = new GameHitData
+				{
+					hitTypeId = 0,
+					hitEntityId = component3.gameEntity.id,
+					hitByEntityId = entity.id,
+					hitEntityPosition = component2.transform.position,
+					hitImpulse = Vector3.zero,
+					hitPosition = component2.transform.position,
+					hittablePoint = component3.FindHittablePoint(collider)
+				};
 				component3.RequestHit(hitData);
 			}
 		}

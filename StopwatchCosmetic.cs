@@ -78,7 +78,7 @@ public class StopwatchCosmetic : TransferrableObject
 	{
 		if (_photonID != -1 && info.senderID == ownerRig.creator.ActorNumber && sender == target)
 		{
-			GorillaNot.IncrementRPCCall(info, "OnWatchToggle");
+			MonkeAgent.IncrementRPCCall(info, "OnWatchToggle");
 			if ((int)args[0] == _photonID)
 			{
 				_ = (bool)args[1];
@@ -93,7 +93,7 @@ public class StopwatchCosmetic : TransferrableObject
 	{
 		if (_photonID != -1 && info.senderID == ownerRig.creator.ActorNumber && sender == target)
 		{
-			GorillaNot.IncrementRPCCall(info, "OnWatchReset");
+			MonkeAgent.IncrementRPCCall(info, "OnWatchReset");
 			if ((int)args[0] == _photonID)
 			{
 				_watchFace.WatchReset();

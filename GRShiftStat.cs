@@ -57,7 +57,7 @@ public class GRShiftStat
 
 	public void IncrementEnemyKills(GREnemyType type)
 	{
-		if (type != 0)
+		if (type != GREnemyType.None)
 		{
 			if (!enemyKills.TryAdd(type, 1))
 			{

@@ -191,9 +191,9 @@ public class Api
 			}
 			return;
 		}
-		string @string = Encoding.UTF8.GetString(Convert.FromBase64String(message.Substring(message.IndexOf("\n", StringComparison.Ordinal) + 1)));
-		JsonData jsonData2 = JsonMapper.ToObject(@string);
-		Logger.Log("License: " + @string);
+		string text = Encoding.UTF8.GetString(Convert.FromBase64String(message.Substring(message.IndexOf("\n", StringComparison.Ordinal) + 1)));
+		JsonData jsonData2 = JsonMapper.ToObject(text);
+		Logger.Log("License: " + text);
 		long issueTime = -1L;
 		long expirationTime = -1L;
 		int latestVersion = -1;

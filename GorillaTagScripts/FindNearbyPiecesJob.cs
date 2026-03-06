@@ -85,7 +85,7 @@ internal struct FindNearbyPiecesJob : IJobParallelForTransform
 	public bool CanPlayerAttachToRootPiece(int playerActorNumber, int attachToPieceRootIndex, bool isLeft)
 	{
 		BuilderPieceData builderPieceData = pieceData[attachToPieceRootIndex];
-		if (builderPieceData.state != 0 && builderPieceData.privatePlotIndex < 0 && builderPieceData.state != BuilderPiece.State.AttachedToArm)
+		if (builderPieceData.state != BuilderPiece.State.AttachedAndPlaced && builderPieceData.privatePlotIndex < 0 && builderPieceData.state != BuilderPiece.State.AttachedToArm)
 		{
 			return true;
 		}
@@ -160,7 +160,7 @@ internal struct FindNearbyPiecesJob : IJobParallelForTransform
 		{
 			return pieceIndex;
 		}
-		if (builderPieceData.state != 0)
+		if (builderPieceData.state != BuilderPiece.State.AttachedAndPlaced)
 		{
 			return -1;
 		}

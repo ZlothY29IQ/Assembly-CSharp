@@ -1,5 +1,6 @@
 using System;
 using GorillaExtensions;
+using GorillaTag;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
@@ -58,7 +59,7 @@ internal class GorillaSerializer : MonoBehaviour, IPunObservable, IPunInstantiat
 		}
 		if (PhotonNetwork.InRoom && photonView.IsMine)
 		{
-			PhotonNetwork.Destroy(photonView);
+			MonkeAgentCleanup.RegisterForDestroy(photonView);
 		}
 		else
 		{

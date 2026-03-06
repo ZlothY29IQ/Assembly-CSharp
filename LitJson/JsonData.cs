@@ -567,7 +567,7 @@ public class JsonData : IJsonWrapper, IList, ICollection, IEnumerable, IOrderedD
 		{
 			return (IDictionary)inst_object;
 		}
-		if (type != 0)
+		if (type != JsonType.None)
 		{
 			throw new InvalidOperationException("Instance of JsonData is not a dictionary");
 		}
@@ -583,7 +583,7 @@ public class JsonData : IJsonWrapper, IList, ICollection, IEnumerable, IOrderedD
 		{
 			return (IList)inst_array;
 		}
-		if (type != 0)
+		if (type != JsonType.None)
 		{
 			throw new InvalidOperationException("Instance of JsonData is not a list");
 		}

@@ -143,15 +143,16 @@ public class GRToolDirectionalShield : MonoBehaviour, IGameHitter
 				hitImpulse = direction * component.projectileSpeed;
 			}
 		}
-		GameHitData gameHitData = default(GameHitData);
-		gameHitData.hitTypeId = 2;
-		gameHitData.hitEntityId = hittable.gameEntity.id;
-		gameHitData.hitByEntityId = gameEntity.id;
-		gameHitData.hitEntityPosition = enemyPosition;
-		gameHitData.hitImpulse = hitImpulse;
-		gameHitData.hitPosition = enemyPosition;
-		gameHitData.hitAmount = hitter.CalcHitAmount(GameHitType.Shield, hittable, gameEntity);
-		GameHitData hitData = gameHitData;
+		GameHitData hitData = new GameHitData
+		{
+			hitTypeId = 2,
+			hitEntityId = hittable.gameEntity.id,
+			hitByEntityId = gameEntity.id,
+			hitEntityPosition = enemyPosition,
+			hitImpulse = hitImpulse,
+			hitPosition = enemyPosition,
+			hitAmount = hitter.CalcHitAmount(GameHitType.Shield, hittable, gameEntity)
+		};
 		if (hittable.IsHitValid(hitData))
 		{
 			hittable.RequestHit(hitData);
@@ -240,7 +241,7 @@ public class GRToolDirectionalShield : MonoBehaviour, IGameHitter
 		{
 			return;
 		}
-		if (state != 0)
+		if (state != State.Closed)
 		{
 			_ = 1;
 		}

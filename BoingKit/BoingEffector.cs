@@ -32,13 +32,12 @@ public class BoingEffector : BoingBase
 
 		public float AngularImpulse;
 
-		public Bits32 Bits;
+		public Bits32 Bits = default(Bits32);
 
 		private int m_padding3;
 
 		public Params(BoingEffector effector)
 		{
-			Bits = default(Bits32);
 			Bits.SetBit(0, effector.ContinuousMotion);
 			float num = ((effector.MaxImpulseSpeed > MathUtil.Epsilon) ? Mathf.Min(1f, effector.LinearSpeed / effector.MaxImpulseSpeed) : 1f);
 			PrevPosition = effector.m_prevPosition;

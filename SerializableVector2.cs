@@ -2,17 +2,11 @@ using System;
 using UnityEngine;
 
 [Serializable]
-public struct SerializableVector2
+public struct SerializableVector2(float x, float y)
 {
-	public float x;
+	public float x = x;
 
-	public float y;
-
-	public SerializableVector2(float x, float y)
-	{
-		this.x = x;
-		this.y = y;
-	}
+	public float y = y;
 
 	public static implicit operator SerializableVector2(Vector2 v)
 	{

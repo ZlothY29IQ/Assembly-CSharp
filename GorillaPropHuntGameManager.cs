@@ -72,7 +72,7 @@ public sealed class GorillaPropHuntGameManager : GorillaTagManager
 	[SerializeField]
 	private GameObject m_ph_blindfold_forAvatarPrefab;
 
-	private readonly Dictionary<int, GameObject> _ph_vrRig_to_blindfolds = new Dictionary<int, GameObject>(10);
+	private readonly Dictionary<int, GameObject> _ph_vrRig_to_blindfolds = new Dictionary<int, GameObject>(20);
 
 	[Tooltip("A randomly picked sound in this soundbank will be played when the hide state starts.")]
 	[FormerlySerializedAs("m_propHunt_hideState_startSoundBank")]
@@ -210,7 +210,7 @@ public sealed class GorillaPropHuntGameManager : GorillaTagManager
 	private static float _g_ph_hapticsLastImpulseEndTime;
 
 	[OnEnterPlay_Clear]
-	private static readonly List<VRRig> _g_ph_activePlayerRigs = new List<VRRig>(10);
+	private static readonly List<VRRig> _g_ph_activePlayerRigs = new List<VRRig>(20);
 
 	[OnEnterPlay_Clear]
 	private static readonly List<PropHuntPropZone> _g_ph_allPropZones = new List<PropHuntPropZone>();
@@ -334,10 +334,10 @@ public sealed class GorillaPropHuntGameManager : GorillaTagManager
 		base.StopPlaying();
 		_ph_gameState = EPropHuntGameState.StoppedGameMode;
 		GameMode.ParticipatingPlayersChanged -= _OnParticipatingPlayersChanged;
-		foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+		foreach (VRRig activeRig in VRRigCache.ActiveRigs)
 		{
-			GorillaSkin.ApplyToRig(vrrig, null, GorillaSkin.SkinType.gameMode);
-			_ResetRigAppearance(vrrig);
+			GorillaSkin.ApplyToRig(activeRig, null, GorillaSkin.SkinType.gameMode);
+			_ResetRigAppearance(activeRig);
 		}
 		CosmeticsController.instance.SetHideCosmeticsFromRemotePlayers(hideCosmetics: false);
 		EquipmentInteractor.instance.ForceDropAnyEquipment();

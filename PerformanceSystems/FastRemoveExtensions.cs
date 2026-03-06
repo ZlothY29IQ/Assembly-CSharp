@@ -6,7 +6,7 @@ public static class FastRemoveExtensions
 {
 	public static bool FastRemove<T>(this List<T> list, T itemToRemove)
 	{
-		EqualityComparer<T> @default = EqualityComparer<T>.Default;
+		EqualityComparer<T> equalityComparer = EqualityComparer<T>.Default;
 		int count = list.Count;
 		if (count == 0)
 		{
@@ -15,7 +15,7 @@ public static class FastRemoveExtensions
 		int index = count - 1;
 		for (int i = 0; i < count; i++)
 		{
-			if (@default.Equals(list[i], itemToRemove))
+			if (equalityComparer.Equals(list[i], itemToRemove))
 			{
 				list[i] = list[index];
 				list.RemoveAt(index);

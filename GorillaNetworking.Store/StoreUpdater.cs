@@ -61,7 +61,6 @@ public class StoreUpdater : MonoBehaviour
 		OVRManager.HMDUnmounted += HandleHMDUnmounted;
 		OVRManager.HMDLost += HandleHMDUnmounted;
 		OVRManager.HMDAcquired += HandleHMDMounted;
-		Debug.Log("StoreUpdater - Starting");
 		if (bLoadFromJSON)
 		{
 			GetEventsFromTitleData();
@@ -114,10 +113,11 @@ public class StoreUpdater : MonoBehaviour
 			if (cosmeticItemPrefabsDictionary.ContainsKey(cosmeticItemPrefab.PedestalID))
 			{
 				Debug.LogWarning("StoreUpdater - Duplicate Pedestal ID " + cosmeticItemPrefab.PedestalID);
-				continue;
 			}
-			Debug.Log("StoreUpdater - Adding Pedestal " + cosmeticItemPrefab.PedestalID);
-			cosmeticItemPrefabsDictionary.Add(cosmeticItemPrefab.PedestalID, cosmeticItemPrefab);
+			else
+			{
+				cosmeticItemPrefabsDictionary.Add(cosmeticItemPrefab.PedestalID, cosmeticItemPrefab);
+			}
 		}
 	}
 
@@ -250,7 +250,6 @@ public class StoreUpdater : MonoBehaviour
 
 	private void GetEventsFromTitleData()
 	{
-		Debug.Log("StoreUpdater - GetEventsFromTitleData");
 		if (bUsePlaceHolderJSON)
 		{
 			DateTime startTime = new DateTime(2024, 2, 13, 16, 0, 0, DateTimeKind.Utc);
@@ -260,7 +259,6 @@ public class StoreUpdater : MonoBehaviour
 		}
 		PlayFabTitleDataCache.Instance.GetTitleData("TOTD", delegate(string result)
 		{
-			Debug.Log("StoreUpdater - Recieved TitleData : " + result);
 			List<StoreUpdateEvent> updateEvents2 = StoreUpdateEvent.DeserializeFromJSonList(result);
 			HandleRecievingEventsFromTitleData(updateEvents2);
 		}, delegate(PlayFabError error)
@@ -271,7 +269,6 @@ public class StoreUpdater : MonoBehaviour
 
 	private void HandleRecievingEventsFromTitleData(List<StoreUpdateEvent> updateEvents)
 	{
-		Debug.Log("StoreUpdater - HandleRecievingEventsFromTitleData");
 		CheckEvents(updateEvents);
 		if (CosmeticsController.instance.GetItemFromDict("LBAEY.").isNullItem)
 		{
@@ -289,12 +286,10 @@ public class StoreUpdater : MonoBehaviour
 			pedestalUpdateEvents.Add(updateEvent.PedestalID, new List<StoreUpdateEvent>());
 			pedestalUpdateEvents[updateEvent.PedestalID].Add(updateEvent);
 		}
-		Debug.Log("StoreUpdater - Starting Events");
 		foreach (string key in pedestalUpdateEvents.Keys)
 		{
 			if (cosmeticItemPrefabsDictionary.ContainsKey(key))
 			{
-				Debug.Log("StoreUpdater - Starting Event " + key);
 				StartNextEvent(key, playFX: false);
 			}
 		}
@@ -302,7 +297,6 @@ public class StoreUpdater : MonoBehaviour
 		{
 			if (!pedestalUpdateEvents.ContainsKey(key2))
 			{
-				Debug.Log("StoreUpdater - Adding PlaceHolder Events " + key2);
 				GetStoreUpdateEventsPlaceHolder(key2);
 				StartNextEvent(key2, playFX: false);
 			}
@@ -311,13 +305,12 @@ public class StoreUpdater : MonoBehaviour
 
 	private void PrintJSONEvents()
 	{
-		string text = StoreUpdateEvent.SerializeArrayAsJSon(CreateTempEvents("Pedestal1", 5, 28).ToArray());
-		foreach (StoreUpdateEvent item in StoreUpdateEvent.DeserializeFromJSonList(text))
+		string json = StoreUpdateEvent.SerializeArrayAsJSon(CreateTempEvents("Pedestal1", 5, 28).ToArray());
+		foreach (StoreUpdateEvent item in StoreUpdateEvent.DeserializeFromJSonList(json))
 		{
-			Debug.Log("Event : " + item.ItemName + " : " + item.StartTimeUTC.ToString() + " : " + item.EndTimeUTC);
+			_ = item;
 		}
-		Debug.Log("NewEvents :\n" + text);
-		tempJson = text;
+		tempJson = json;
 	}
 
 	private List<StoreUpdateEvent> CreateTempEvents(string PedestalID, int minuteDelay, int totalEvents)

@@ -176,11 +176,6 @@ public class DeepLinkHandler : MonoBehaviour
 
 	private IEnumerator CheckProcessExternalUnlock(string[] itemIDs, bool autoEquip, bool isLeftHand, bool destroyOnFinish)
 	{
-		GTDev.Log("[DeepLinkHandler::CheckProcessExternalUnlock] Checking if we can process external cosmetic unlock...");
-		while (!CosmeticsController.instance.allCosmeticsDict_isInitialized || !CosmeticsV2Spawner_Dirty.allPartsInstantiated)
-		{
-			yield return null;
-		}
 		GTDev.Log("[DeepLinkHandler::CheckProcessExternalUnlock] Cosmetics initialized, proceeding to process external unlock...");
 		foreach (string itemID in itemIDs)
 		{
@@ -190,5 +185,6 @@ public class DeepLinkHandler : MonoBehaviour
 		{
 			UnityEngine.Object.Destroy(this);
 		}
+		yield return null;
 	}
 }

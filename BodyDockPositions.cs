@@ -200,7 +200,7 @@ public class BodyDockPositions : MonoBehaviour
 		}
 		for (int i = 0; i < myRig.ActiveTransferrableObjectIndexLength(); i++)
 		{
-			if (myRig.ActiveTransferrableObjectIndex(i) >= 0 && allObjects[myRig.ActiveTransferrableObjectIndex(i)].gameObject.activeInHierarchy && allObjects[myRig.ActiveTransferrableObjectIndex(i)].storedZone == dropPosition)
+			if (myRig.ActiveTransferrableObjectIndex(i) >= 0 && allObjects[myRig.ActiveTransferrableObjectIndex(i)] != null && allObjects[myRig.ActiveTransferrableObjectIndex(i)].gameObject.activeInHierarchy && allObjects[myRig.ActiveTransferrableObjectIndex(i)].storedZone == dropPosition)
 			{
 				return myRig.ActiveTransferrableObjectIndex(i);
 			}
@@ -263,6 +263,42 @@ public class BodyDockPositions : MonoBehaviour
 				}
 			}
 		}
+		else if (myRig != null)
+		{
+			string itemNameFromDisplayName2 = CosmeticsController.instance.GetItemNameFromDisplayName(allObjects[allItemsIndex].gameObject.name);
+			if (!myRig.IsItemAllowed(itemNameFromDisplayName2))
+			{
+				return -1;
+			}
+			int num = -1;
+			for (int k = 0; k < myRig.ActiveTransferrableObjectIndexLength(); k++)
+			{
+				if (myRig.ActiveTransferrableObjectIndex(k) == allItemsIndex)
+				{
+					num = k;
+					break;
+				}
+			}
+			if (num >= 0)
+			{
+				myRig.SetTransferrablePosStates(num, startingState);
+				myRig.SetTransferrableDockPosition(num, startingPosition);
+				EnableTransferrableGameObject(allItemsIndex, startingPosition, startingState);
+				return num;
+			}
+			for (int l = 0; l < myRig.ActiveTransferrableObjectIndexLength(); l++)
+			{
+				if (myRig.ActiveTransferrableObjectIndex(l) == -1)
+				{
+					myRig.SetActiveTransferrableObjectIndex(l, allItemsIndex);
+					myRig.SetTransferrablePosStates(l, startingState);
+					myRig.SetTransferrableItemStates(l, (TransferrableObject.ItemStates)0);
+					myRig.SetTransferrableDockPosition(l, startingPosition);
+					EnableTransferrableGameObject(allItemsIndex, startingPosition, startingState);
+					return l;
+				}
+			}
+		}
 		return -1;
 	}
 
@@ -287,7 +323,7 @@ public class BodyDockPositions : MonoBehaviour
 		{
 			return DropPositions.None;
 		}
-		if (!bodyDockPositions.allObjects[allItemsIndex].gameObject.activeSelf)
+		if (bodyDockPositions.allObjects[allItemsIndex] == null || !bodyDockPositions.allObjects[allItemsIndex].gameObject.activeSelf)
 		{
 			return DropPositions.None;
 		}
@@ -317,18 +353,17 @@ public class BodyDockPositions : MonoBehaviour
 
 	public void DisableAllTransferableItems()
 	{
-		if (!CosmeticsV2Spawner_Dirty.allPartsInstantiated)
-		{
-			return;
-		}
 		for (int i = 0; i < myRig.ActiveTransferrableObjectIndexLength(); i++)
 		{
 			int num = myRig.ActiveTransferrableObjectIndex(i);
 			if (num >= 0 && num < allObjects.Length)
 			{
-				TransferrableObject obj = allObjects[num];
-				obj.gameObject.Disable();
-				obj.storedZone = DropPositions.None;
+				TransferrableObject transferrableObject = allObjects[num];
+				if (transferrableObject != null)
+				{
+					transferrableObject.gameObject?.Disable();
+					transferrableObject.storedZone = DropPositions.None;
+				}
 				myRig.SetActiveTransferrableObjectIndex(i, -1);
 				myRig.SetTransferrableItemStates(i, (TransferrableObject.ItemStates)0);
 				myRig.SetTransferrablePosStates(i, TransferrableObject.PositionState.None);
@@ -356,7 +391,7 @@ public class BodyDockPositions : MonoBehaviour
 		for (int i = 0; i < 5; i++)
 		{
 			DropPositions dropPositions = (DropPositions)(1 << i);
-			if ((allObjects[allItemIndex].dockPositions & dropPositions) != 0)
+			if ((allObjects[allItemIndex].dockPositions & dropPositions) != DropPositions.None)
 			{
 				return dropPositions;
 			}
@@ -366,7 +401,7 @@ public class BodyDockPositions : MonoBehaviour
 
 	public int TransferrableItemDisable(int allItemsIndex)
 	{
-		if (OfflineItemActive(allItemsIndex) != 0)
+		if (OfflineItemActive(allItemsIndex) != DropPositions.None)
 		{
 			DisableTransferrableItem(allItemsIndex);
 		}
@@ -429,7 +464,7 @@ public class BodyDockPositions : MonoBehaviour
 		foreach (int item in list)
 		{
 			DropPositions dropPositions = TransferrableItemPosition(item);
-			if (dropPositions != 0 && dropPositions == dropPosition)
+			if (dropPositions != DropPositions.None && dropPositions == dropPosition)
 			{
 				return true;
 			}
@@ -489,7 +524,7 @@ public class BodyDockPositions : MonoBehaviour
 		{
 			return new DockingResult();
 		}
-		DropPositions startingPos = ((!isLeftHand) ? (((allObjects[list[0]].dockPositions & DropPositions.LeftArm) != 0) ? DropPositions.LeftArm : DropPositions.RightBack) : (((allObjects[list[0]].dockPositions & DropPositions.RightArm) != 0) ? DropPositions.RightArm : DropPositions.LeftBack));
+		DropPositions startingPos = ((!isLeftHand) ? (((allObjects[list[0]].dockPositions & DropPositions.LeftArm) != DropPositions.None) ? DropPositions.LeftArm : DropPositions.RightBack) : (((allObjects[list[0]].dockPositions & DropPositions.RightArm) != DropPositions.None) ? DropPositions.RightArm : DropPositions.LeftBack));
 		return ToggleTransferrableItem(transferrableItemName, startingPos, bothHands);
 	}
 
@@ -507,7 +542,7 @@ public class BodyDockPositions : MonoBehaviour
 			{
 				int allItemsIndex = list[i];
 				DropPositions dropPositions = OfflineItemActive(allItemsIndex);
-				if (dropPositions != 0)
+				if (dropPositions != DropPositions.None)
 				{
 					TransferrableItemDisable(allItemsIndex);
 					dockingResult.positionsDisabled.Add(dropPositions);
@@ -567,6 +602,10 @@ public class BodyDockPositions : MonoBehaviour
 
 	public void EnableTransferrableGameObject(int allItemsIndex, DropPositions dropZone, TransferrableObject.PositionState startingPosition)
 	{
+		if (allObjects[allItemsIndex] == null)
+		{
+			return;
+		}
 		GameObject gameObject = allObjects[allItemsIndex].gameObject;
 		TransferrableObject component = gameObject.GetComponent<TransferrableObject>();
 		if ((component.dockPositions & dropZone) == 0 || !component.ValidateState(startingPosition))
@@ -597,7 +636,6 @@ public class BodyDockPositions : MonoBehaviour
 		objectsToDisable.Clear();
 		for (int i = 0; i < myRig.ActiveTransferrableObjectIndexLength(); i++)
 		{
-			bool flag = true;
 			int num = myRig.ActiveTransferrableObjectIndex(i);
 			if (num == -1)
 			{
@@ -609,41 +647,41 @@ public class BodyDockPositions : MonoBehaviour
 			}
 			else
 			{
-				if (!myRig.IsItemAllowed(CosmeticsController.instance.GetItemNameFromDisplayName(allObjects[num].gameObject.name)))
+				if (!myRig.IsItemAllowed(CosmeticsController.instance.GetItemNameFromDisplayName(allObjects[num]?.gameObject.name)))
 				{
 					continue;
 				}
-				for (int j = 0; j < allObjects.Length; j++)
+				int num2 = myRig.ActiveTransferrableObjectIndex(i);
+				if (!(allObjects[num2] == null))
 				{
-					if (j == myRig.ActiveTransferrableObjectIndex(i) && allObjects[j].gameObject.activeSelf)
+					if (allObjects[num2].gameObject.activeSelf)
 					{
-						allObjects[j].objectIndex = i;
-						flag = false;
+						allObjects[num2].objectIndex = i;
 					}
-				}
-				if (flag)
-				{
-					objectsToEnable.Add(i);
+					else
+					{
+						objectsToEnable.Add(i);
+					}
 				}
 			}
 		}
-		for (int k = 0; k < allObjects.Length; k++)
+		for (int j = 0; j < allObjects.Length; j++)
 		{
-			if (!(allObjects[k] != null) || !allObjects[k].gameObject.activeSelf)
+			if (!(allObjects[j] != null) || !allObjects[j].gameObject.activeSelf)
 			{
 				continue;
 			}
-			bool flag2 = true;
-			for (int l = 0; l < myRig.ActiveTransferrableObjectIndexLength(); l++)
+			bool flag = true;
+			for (int k = 0; k < myRig.ActiveTransferrableObjectIndexLength(); k++)
 			{
-				if (myRig.ActiveTransferrableObjectIndex(l) == k && myRig.IsItemAllowed(CosmeticsController.instance.GetItemNameFromDisplayName(allObjects[myRig.ActiveTransferrableObjectIndex(l)].gameObject.name)))
+				if (myRig.ActiveTransferrableObjectIndex(k) == j && myRig.IsItemAllowed(CosmeticsController.instance.GetItemNameFromDisplayName(allObjects[myRig.ActiveTransferrableObjectIndex(k)].gameObject.name)))
 				{
-					flag2 = false;
+					flag = false;
 				}
 			}
-			if (flag2)
+			if (flag)
 			{
-				objectsToDisable.Add(k);
+				objectsToDisable.Add(j);
 			}
 		}
 		foreach (int item in objectsToDisable)
@@ -694,25 +732,34 @@ public class BodyDockPositions : MonoBehaviour
 		};
 	}
 
-	private void UpdateHandState()
+	private async void UpdateHandState()
 	{
-		for (int i = 0; i < 2; i++)
+		int i = 0;
+		while (i < 2)
 		{
-			GameObject[] array = ((i == 0) ? leftHandThrowables : rightHandThrowables);
-			int num = ((i == 0) ? myRig.LeftThrowableProjectileIndex : myRig.RightThrowableProjectileIndex);
-			for (int j = 0; j < array.Length; j++)
+			GameObject[] throwableGObjs = ((i == 0) ? leftHandThrowables : rightHandThrowables);
+			int activeThrowableIndex = ((i == 0) ? myRig.LeftThrowableProjectileIndex : myRig.RightThrowableProjectileIndex);
+			if (activeThrowableIndex > -1 && CosmeticsV2Spawner_Dirty.GetPlayfabIdFromThrowableIndex(i == 0, activeThrowableIndex, out var playfabId))
 			{
-				GameObject obj = array[j];
-				_ = obj == null;
-				bool activeSelf = obj.activeSelf;
-				bool flag = j == num;
-				array[j].SetActive(flag);
-				if (activeSelf && !flag)
+				await myRig.cosmeticsObjectRegistry.AwaitCosmetic(playfabId);
+			}
+			for (int j = 0; j < throwableGObjs.Length; j++)
+			{
+				GameObject gameObject = throwableGObjs[j];
+				if (!(gameObject == null))
 				{
-					throwableDisabledIndex[i] = j;
-					throwableDisabledTime[i] = Time.time + 0.02f;
+					bool activeSelf = gameObject.activeSelf;
+					bool flag = gameObject.GetComponent<SnowballThrowable>().throwableMakerIndex == activeThrowableIndex;
+					throwableGObjs[j].SetActive(flag);
+					if (activeSelf && !flag)
+					{
+						throwableDisabledIndex[i] = j;
+						throwableDisabledTime[i] = Time.time + 0.02f;
+					}
 				}
 			}
+			int num = i + 1;
+			i = num;
 		}
 	}
 

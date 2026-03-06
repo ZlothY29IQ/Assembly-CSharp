@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using GorillaExtensions;
 using GT_CustomMapSupportRuntime;
 using TMPro;
@@ -108,14 +110,33 @@ public class DynamicCosmeticStand : MonoBehaviour, iFlagForBaking
 
 	public void AddStandToStoreController()
 	{
+		StartCoroutine(ConnectToStoreController());
+	}
+
+	private IEnumerator ConnectToStoreController()
+	{
+		int i = 0;
+		while (i < 30 && !(StoreController.instance != null))
+		{
+			if (i == 29)
+			{
+				UnityEngine.Object.Destroy(this);
+				throw new Exception("Could not connect to store controller.");
+			}
+			yield return null;
+			int num = i + 1;
+			i = num;
+		}
 		if (!StoreController.instance.cosmeticsInitialized)
 		{
 			AsyncAddStandToStoreController();
+			yield break;
 		}
-		else
+		while (Application.isPlaying && (!CosmeticsController.hasInstance || !CosmeticsController.instance.v2_allCosmeticsInfoAssetRef_isLoaded))
 		{
-			_AddStandToStoreController();
+			yield return null;
 		}
+		_AddStandToStoreController();
 	}
 
 	public async void AsyncAddStandToStoreController()

@@ -412,19 +412,21 @@ public class SharedBlocksManager : MonoBehaviour
 			localPublishData[slotID] = value;
 			return;
 		}
-		LocalPublishInfo localPublishInfo = default(LocalPublishInfo);
-		localPublishInfo.mapID = null;
-		localPublishInfo.publishTime = time.ToBinary();
-		LocalPublishInfo value2 = localPublishInfo;
+		LocalPublishInfo value2 = new LocalPublishInfo
+		{
+			mapID = null,
+			publishTime = time.ToBinary()
+		};
 		localPublishData.Add(slotID, value2);
 	}
 
 	private static void SetMapIDAndPublishTimeForSlot(int slotID, string mapID, DateTime time)
 	{
-		LocalPublishInfo localPublishInfo = default(LocalPublishInfo);
-		localPublishInfo.mapID = mapID;
-		localPublishInfo.publishTime = time.ToBinary();
-		LocalPublishInfo value = localPublishInfo;
+		LocalPublishInfo value = new LocalPublishInfo
+		{
+			mapID = mapID,
+			publishTime = time.ToBinary()
+		};
 		localPublishData.AddOrUpdate(slotID, value);
 	}
 
@@ -434,23 +436,24 @@ public class SharedBlocksManager : MonoBehaviour
 		{
 			return value;
 		}
-		LocalPublishInfo result = default(LocalPublishInfo);
-		result.mapID = null;
-		result.publishTime = DateTime.MinValue.ToBinary();
-		return result;
+		return new LocalPublishInfo
+		{
+			mapID = null,
+			publishTime = DateTime.MinValue.ToBinary()
+		};
 	}
 
 	private void LoadPlayerPrefs()
 	{
 		string recentVotesPrefsKey = serializationConfig.recentVotesPrefsKey;
 		string localMapsPrefsKey = serializationConfig.localMapsPrefsKey;
-		string @string = PlayerPrefs.GetString(recentVotesPrefsKey, null);
-		string string2 = PlayerPrefs.GetString(localMapsPrefsKey, null);
-		if (!@string.IsNullOrEmpty())
+		string text = PlayerPrefs.GetString(recentVotesPrefsKey, null);
+		string text2 = PlayerPrefs.GetString(localMapsPrefsKey, null);
+		if (!text.IsNullOrEmpty())
 		{
 			try
 			{
-				recentUpVotes = JsonConvert.DeserializeObject<LinkedList<string>>(@string);
+				recentUpVotes = JsonConvert.DeserializeObject<LinkedList<string>>(text);
 				while (recentUpVotes.Count > 10)
 				{
 					recentUpVotes.RemoveLast();
@@ -466,13 +469,13 @@ public class SharedBlocksManager : MonoBehaviour
 		{
 			recentUpVotes.Clear();
 		}
-		if (!string2.IsNullOrEmpty())
+		if (!text2.IsNullOrEmpty())
 		{
 			localPublishData.Clear();
 			localMapIds.Clear();
 			try
 			{
-				localPublishData = JsonConvert.DeserializeObject<Dictionary<int, LocalPublishInfo>>(string2);
+				localPublishData = JsonConvert.DeserializeObject<Dictionary<int, LocalPublishInfo>>(text2);
 			}
 			catch (Exception ex2)
 			{
@@ -608,9 +611,9 @@ public class SharedBlocksManager : MonoBehaviour
 		{
 			if (voteRetryCount < maxRetriesOnFail)
 			{
-				float seconds = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, voteRetryCount + 1));
+				float time = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, voteRetryCount + 1));
 				voteRetryCount++;
-				yield return new WaitForSeconds(seconds);
+				yield return new WaitForSecondsRealtime(time);
 				voteInProgress = false;
 				RequestVote(data.mapId, data.vote == 1, callback);
 			}
@@ -737,9 +740,9 @@ public class SharedBlocksManager : MonoBehaviour
 		{
 			if (postPublishMapRetryCount < maxRetriesOnFail)
 			{
-				float seconds = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, postPublishMapRetryCount + 1));
+				float time = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, postPublishMapRetryCount + 1));
 				postPublishMapRetryCount++;
-				yield return new WaitForSeconds(seconds);
+				yield return new WaitForSecondsRealtime(time);
 				publishRequestInProgress = false;
 				RequestPublishMap(data.userdataMetadataKey);
 			}
@@ -838,9 +841,9 @@ public class SharedBlocksManager : MonoBehaviour
 		{
 			if (getMapDataFromIDRetryCount < maxRetriesOnFail)
 			{
-				float seconds = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, getMapDataFromIDRetryCount + 1));
+				float time = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, getMapDataFromIDRetryCount + 1));
 				getMapDataFromIDRetryCount++;
-				yield return new WaitForSeconds(seconds);
+				yield return new WaitForSecondsRealtime(time);
 				getMapDataFromIDInProgress = false;
 				RequestMapDataFromID(data.mapId, callback);
 			}
@@ -893,7 +896,7 @@ public class SharedBlocksManager : MonoBehaviour
 			return false;
 		}
 		getTopMapsInProgress = true;
-		lastGetTopMapsTime = Time.timeAsDouble;
+		lastGetTopMapsTime = Time.realtimeSinceStartupAsDouble;
 		StartCoroutine(GetTopMaps(new GetMapsRequest
 		{
 			mothershipId = MothershipClientContext.MothershipId,
@@ -956,9 +959,9 @@ public class SharedBlocksManager : MonoBehaviour
 		{
 			if (getTopMapsRetryCount < maxRetriesOnFail)
 			{
-				float seconds = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, getTopMapsRetryCount + 1));
+				float time = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, getTopMapsRetryCount + 1));
 				getTopMapsRetryCount++;
-				yield return new WaitForSeconds(seconds);
+				yield return new WaitForSecondsRealtime(time);
 				getTopMapsInProgress = false;
 				RequestGetTopMaps(data.page, data.pageSize, data.sort);
 			}
@@ -1093,9 +1096,9 @@ public class SharedBlocksManager : MonoBehaviour
 		{
 			if (updateMapActiveRetryCount < maxRetriesOnFail)
 			{
-				float seconds = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, updateMapActiveRetryCount + 1));
+				float time = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, updateMapActiveRetryCount + 1));
 				updateMapActiveRetryCount++;
-				yield return new WaitForSeconds(seconds);
+				yield return new WaitForSecondsRealtime(time);
 				updateMapActiveInProgress = false;
 				RequestUpdateMapActive(data.userdataMetadataKey, data.setActive);
 			}
@@ -1178,7 +1181,7 @@ public class SharedBlocksManager : MonoBehaviour
 
 	private IEnumerator RetryAfterWaitTime(float waitTime, Action function)
 	{
-		yield return new WaitForSeconds(waitTime);
+		yield return new WaitForSecondsRealtime(waitTime);
 		function?.Invoke();
 	}
 
@@ -1202,7 +1205,7 @@ public class SharedBlocksManager : MonoBehaviour
 	{
 		while (!PlayFabSettings.staticPlayer.IsClientLoggedIn())
 		{
-			yield return new WaitForSeconds(5f);
+			yield return new WaitForSecondsRealtime(5f);
 		}
 		PlayFabClientAPI.GetTitleData(request, successCallback, failCallback);
 	}
@@ -1328,7 +1331,7 @@ public class SharedBlocksManager : MonoBehaviour
 	{
 		while (!PlayFabSettings.staticPlayer.IsClientLoggedIn())
 		{
-			yield return new WaitForSeconds(5f);
+			yield return new WaitForSecondsRealtime(5f);
 		}
 		try
 		{

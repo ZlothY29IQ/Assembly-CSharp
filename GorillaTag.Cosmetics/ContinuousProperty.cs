@@ -367,7 +367,7 @@ public class ContinuousProperty
 				{
 					if (!(o is AudioSource))
 					{
-						if (!(o is VoicePitchShiftCosmetic))
+						if (!(o is VoiceShiftCosmetic))
 						{
 							if (!(o is Rigidbody))
 							{
@@ -429,11 +429,11 @@ public class ContinuousProperty
 		objects.Clear();
 		objects.Add(t.gameObject);
 		Component[] components = t.GetComponents<Component>();
-		foreach (UnityEngine.Object @object in components)
+		foreach (UnityEngine.Object obj in components)
 		{
-			if (IsValidObject(@object.GetType()))
+			if (IsValidObject(obj.GetType()))
 			{
-				objects.Add(@object);
+				objects.Add(obj);
 			}
 		}
 	}
@@ -563,7 +563,7 @@ public class ContinuousProperty
 		if (!HasAllFlags(DataFlags.IsShaderProperty))
 		{
 			Type myType = MyType;
-			if (myType != 0 && myType != Type.BlendShape)
+			if (myType != Type.Color && myType != Type.BlendShape)
 			{
 				return "Int Value";
 			}
@@ -710,7 +710,7 @@ public class ContinuousProperty
 				((AudioSource)target).pitch = Mathf.Clamp(curve.Evaluate(f), -3f, 3f);
 				return;
 			case 11278:
-				((VoicePitchShiftCosmetic)target).Pitch = curve.Evaluate(f);
+				((VoiceShiftCosmetic)target).Pitch = curve.Evaluate(f);
 				return;
 			case 1051663:
 				((ParticleSystem)target).Play();

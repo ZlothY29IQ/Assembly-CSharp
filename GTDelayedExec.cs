@@ -3,17 +3,11 @@ using UnityEngine;
 
 public class GTDelayedExec : ITickSystemTick
 {
-	private struct Listener
+	private struct Listener(IDelayedExecListener listener, int contextId)
 	{
-		public readonly IDelayedExecListener listener;
+		public readonly IDelayedExecListener listener = listener;
 
-		public readonly int contextId;
-
-		public Listener(IDelayedExecListener listener, int contextId)
-		{
-			this.listener = listener;
-			this.contextId = contextId;
-		}
+		public readonly int contextId = contextId;
 	}
 
 	public const int k_defaultMaxListenersCount = 1024;

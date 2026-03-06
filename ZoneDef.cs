@@ -22,16 +22,11 @@ public class ZoneDef : MonoBehaviour
 
 	public bool trackStay = true;
 
-	public GroupJoinZoneAB groupZoneAB
+	public GroupJoinZoneAB groupZoneAB => new GroupJoinZoneAB
 	{
-		get
-		{
-			GroupJoinZoneAB result = default(GroupJoinZoneAB);
-			result.a = groupZone;
-			result.b = groupZoneB;
-			return result;
-		}
-	}
+		a = groupZone,
+		b = groupZoneB
+	};
 
 	public bool IsSameZone(ZoneDef other)
 	{

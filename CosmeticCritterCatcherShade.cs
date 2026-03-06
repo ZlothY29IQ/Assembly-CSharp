@@ -75,22 +75,22 @@ public class CosmeticCritterCatcherShade : CosmeticCritterCatcher
 		}
 		if (critter is CosmeticCritterShadeFleeing)
 		{
-			if ((catchAction & CosmeticCritterAction.Despawn) != 0 && (critter.transform.position - catchOrigin.position).sqrMagnitude <= catchRadius * catchRadius + 1f && targetHoldTime >= minSecondsLockedToCatch * 0.8f)
+			if ((catchAction & CosmeticCritterAction.Despawn) != CosmeticCritterAction.None && (critter.transform.position - catchOrigin.position).sqrMagnitude <= catchRadius * catchRadius + 1f && targetHoldTime >= minSecondsLockedToCatch * 0.8f)
 			{
 				return true;
 			}
-			if ((catchAction & CosmeticCritterAction.ShadeHeartbeat) != 0 && shadeRevealer.CritterWithinBeamThreshold(critter, ShadeRevealer.State.LOCKED, 2f))
+			if ((catchAction & CosmeticCritterAction.ShadeHeartbeat) != CosmeticCritterAction.None && shadeRevealer.CritterWithinBeamThreshold(critter, ShadeRevealer.State.LOCKED, 2f))
 			{
 				return true;
 			}
 		}
 		else if (critter is CosmeticCritterShadeHidden)
 		{
-			if ((catchAction & (CosmeticCritterAction.Despawn | CosmeticCritterAction.SpawnLinked)) != 0 && targetHoldTime >= secondsToReveal * 0.8f)
+			if ((catchAction & (CosmeticCritterAction.Despawn | CosmeticCritterAction.SpawnLinked)) != CosmeticCritterAction.None && targetHoldTime >= secondsToReveal * 0.8f)
 			{
 				return true;
 			}
-			if ((catchAction & CosmeticCritterAction.ShadeHeartbeat) != 0 && shadeRevealer.CritterWithinBeamThreshold(critter, ShadeRevealer.State.TRACKING, 2f))
+			if ((catchAction & CosmeticCritterAction.ShadeHeartbeat) != CosmeticCritterAction.None && shadeRevealer.CritterWithinBeamThreshold(critter, ShadeRevealer.State.TRACKING, 2f))
 			{
 				return true;
 			}
@@ -107,7 +107,7 @@ public class CosmeticCritterCatcherShade : CosmeticCritterCatcher
 		if (critter is CosmeticCritterShadeFleeing)
 		{
 			maxHoldTime = minSecondsLockedToCatch;
-			if ((catchAction & CosmeticCritterAction.Despawn) != 0)
+			if ((catchAction & CosmeticCritterAction.Despawn) != CosmeticCritterAction.None)
 			{
 				shadeRevealer.ShadeCaught();
 				currentTarget = null;
@@ -121,7 +121,7 @@ public class CosmeticCritterCatcherShade : CosmeticCritterCatcher
 		else if (critter is CosmeticCritterShadeHidden)
 		{
 			maxHoldTime = secondsToReveal;
-			if ((catchAction & (CosmeticCritterAction.Despawn | CosmeticCritterAction.SpawnLinked)) != 0)
+			if ((catchAction & (CosmeticCritterAction.Despawn | CosmeticCritterAction.SpawnLinked)) != CosmeticCritterAction.None)
 			{
 				(optionalLinkedSpawner as CosmeticCritterSpawnerShadeFleeing).SetSpawnPosition(critter.transform.position);
 				currentTarget = null;

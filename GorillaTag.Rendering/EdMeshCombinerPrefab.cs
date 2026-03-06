@@ -214,17 +214,19 @@ public class EdMeshCombinerPrefab : MonoBehaviour
 						vector8 = -vector8;
 						vector4.w = 0f - vector4.w;
 					}
-					GTVertexDataStream0 gTVertexDataStream = default(GTVertexDataStream0);
-					gTVertexDataStream.position = vector6;
-					gTVertexDataStream.color = new Color(color2.r * color.r, color2.g * color.g, color2.b * color.b, isCandleFlame ? num6 : (color2.a * color.a));
-					gTVertexDataStream.uv1 = new half4((half)(vector5.x + vector2.x), (half)(vector5.y + vector2.y), (half)num5, (half)num6);
-					gTVertexDataStream.lightmapUv = new half2((half)(outUVs2[num7].x * lightmapScaleOffsets[i].x + lightmapScaleOffsets[i].z), (half)(outUVs2[num7].y * lightmapScaleOffsets[i].y + lightmapScaleOffsets[i].w));
-					GTVertexDataStream0 value = gTVertexDataStream;
+					GTVertexDataStream0 value = new GTVertexDataStream0
+					{
+						position = vector6,
+						color = new Color(color2.r * color.r, color2.g * color.g, color2.b * color.b, isCandleFlame ? num6 : (color2.a * color.a)),
+						uv1 = new half4((half)(vector5.x + vector2.x), (half)(vector5.y + vector2.y), (half)num5, (half)num6),
+						lightmapUv = new half2((half)(outUVs2[num7].x * lightmapScaleOffsets[i].x + lightmapScaleOffsets[i].z), (half)(outUVs2[num7].y * lightmapScaleOffsets[i].y + lightmapScaleOffsets[i].w))
+					};
 					dst0[num + num7] = value;
-					GTVertexDataStream1 gTVertexDataStream2 = default(GTVertexDataStream1);
-					gTVertexDataStream2.normal = vector7;
-					gTVertexDataStream2.tangent = new Color(vector8.x, vector8.y, vector8.z, vector4.w);
-					GTVertexDataStream1 value2 = gTVertexDataStream2;
+					GTVertexDataStream1 value2 = new GTVertexDataStream1
+					{
+						normal = vector7,
+						tangent = new Color(vector8.x, vector8.y, vector8.z, vector4.w)
+					};
 					dst1[num + num7] = value2;
 				}
 				if (use32BitIndices)
@@ -404,7 +406,7 @@ public class EdMeshCombinerPrefab : MonoBehaviour
 			int num4 = 0;
 			for (int j = 0; j < num2; j++)
 			{
-				num3 += ((sharedMesh.GetSubMesh(j).topology != 0) ? 1 : 0);
+				num3 += ((sharedMesh.GetSubMesh(j).topology != MeshTopology.Triangles) ? 1 : 0);
 				num4 += ((item4.sharedMaterials[j] == null) ? 1 : 0);
 			}
 			if (num3 > 0)
@@ -422,17 +424,19 @@ public class EdMeshCombinerPrefab : MonoBehaviour
 			{
 				Material mat = item4.sharedMaterials[k];
 				int layer = item4.gameObject.layer;
-				key = default(CombinerCriteria);
-				key.mat = mat;
-				key.staticFlags = staticFlags;
-				key.lightmapIndex = item4.lightmapIndex;
-				key.hasMeshCollider = !flag && flag3;
-				key.meshCollPhysicsMat = (flag ? null : (flag3 ? component.sharedMaterial : null));
-				key.surfOverrideIndex = ((!flag) ? num : 0);
-				key.surfExtraVelMultiplier = (flag ? 0f : ((component2 != null) ? component2.extraVelMultiplier : 1f));
-				key.surfExtraVelMaxMultiplier = (flag ? 0f : ((component2 != null) ? component2.extraVelMaxMultiplier : 1f));
-				key.surfSendOnTapEvent = !flag && component2 != null && component2.sendOnTapEvent;
-				key.objectLayer = ((layer == 27) ? UnityLayer.NoMirror : UnityLayer.Default);
+				key = new CombinerCriteria
+				{
+					mat = mat,
+					staticFlags = staticFlags,
+					lightmapIndex = item4.lightmapIndex,
+					hasMeshCollider = (!flag && flag3),
+					meshCollPhysicsMat = (flag ? null : (flag3 ? component.sharedMaterial : null)),
+					surfOverrideIndex = ((!flag) ? num : 0),
+					surfExtraVelMultiplier = (flag ? 0f : ((component2 != null) ? component2.extraVelMultiplier : 1f)),
+					surfExtraVelMaxMultiplier = (flag ? 0f : ((component2 != null) ? component2.extraVelMaxMultiplier : 1f)),
+					surfSendOnTapEvent = (!flag && component2 != null && component2.sendOnTapEvent),
+					objectLayer = ((layer == 27) ? UnityLayer.NoMirror : UnityLayer.Default)
+				};
 				CombinerCriteria key2 = key;
 				if (!dictionary.TryGetValue(key2, out var value))
 				{
@@ -558,22 +562,23 @@ public class EdMeshCombinerPrefab : MonoBehaviour
 				{
 					idxDst2 = writeData.GetIndexData<ushort>();
 				}
-				CopyMeshJob copyMeshJob = default(CopyMeshJob);
-				copyMeshJob.meshDataArray = meshDataArray;
-				copyMeshJob.sourceSubmeshIndices = new NativeArray<int>(list6.ToArray(), Allocator.TempJob);
-				copyMeshJob.sourceTransforms = new NativeArray<Matrix4x4>(list7.ToArray(), Allocator.TempJob);
-				copyMeshJob.lightmapScaleOffsets = new NativeArray<float4>(list10.ToArray(), Allocator.TempJob);
-				copyMeshJob.baseColors = new NativeArray<Color>(list8.ToArray(), Allocator.TempJob);
-				copyMeshJob.atlasSlices = new NativeArray<int>(list9.ToArray(), Allocator.TempJob);
-				copyMeshJob.uvModifiersMinMax = new NativeArray<float4>(list11.ToArray(), Allocator.TempJob);
-				copyMeshJob.isCandleFlame = isCandleFlame;
-				copyMeshJob.randSeed = 6746u;
-				copyMeshJob.dst0 = writeData.GetVertexData<GTVertexDataStream0>();
-				copyMeshJob.dst1 = writeData.GetVertexData<GTVertexDataStream1>(1);
-				copyMeshJob.idxDst32 = idxDst;
-				copyMeshJob.idxDst16 = idxDst2;
-				copyMeshJob.use32BitIndices = indexFormat == IndexFormat.UInt32;
-				CopyMeshJob jobData = copyMeshJob;
+				CopyMeshJob jobData = new CopyMeshJob
+				{
+					meshDataArray = meshDataArray,
+					sourceSubmeshIndices = new NativeArray<int>(list6.ToArray(), Allocator.TempJob),
+					sourceTransforms = new NativeArray<Matrix4x4>(list7.ToArray(), Allocator.TempJob),
+					lightmapScaleOffsets = new NativeArray<float4>(list10.ToArray(), Allocator.TempJob),
+					baseColors = new NativeArray<Color>(list8.ToArray(), Allocator.TempJob),
+					atlasSlices = new NativeArray<int>(list9.ToArray(), Allocator.TempJob),
+					uvModifiersMinMax = new NativeArray<float4>(list11.ToArray(), Allocator.TempJob),
+					isCandleFlame = isCandleFlame,
+					randSeed = 6746u,
+					dst0 = writeData.GetVertexData<GTVertexDataStream0>(),
+					dst1 = writeData.GetVertexData<GTVertexDataStream1>(1),
+					idxDst32 = idxDst,
+					idxDst16 = idxDst2,
+					use32BitIndices = (indexFormat == IndexFormat.UInt32)
+				};
 				jobData.Schedule().Complete();
 				jobData.sourceSubmeshIndices.Dispose();
 				jobData.sourceTransforms.Dispose();

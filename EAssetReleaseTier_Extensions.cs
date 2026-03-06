@@ -2,7 +2,7 @@ public static class EAssetReleaseTier_Extensions
 {
 	public static bool ShouldIncludeInBuild(this EAssetReleaseTier assetTier, EBuildReleaseTier buildTier)
 	{
-		if (assetTier != 0)
+		if (assetTier != EAssetReleaseTier.Disabled)
 		{
 			return (int)assetTier <= (int)buildTier;
 		}

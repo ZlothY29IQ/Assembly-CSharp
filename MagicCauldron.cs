@@ -401,7 +401,7 @@ public class MagicCauldron : NetworkComponent
 
 	private void OnIngredientAddShared(int _ingredientIndex, PhotonMessageInfoWrapped info)
 	{
-		GorillaNot.IncrementRPCCall(info, "OnIngredientAdd");
+		MonkeAgent.IncrementRPCCall(info, "OnIngredientAdd");
 		if (VRRigCache.Instance.TryGetVrrig(info.Sender, out var playerRig))
 		{
 			reusableFXContext.playerSettings = playerRig.Rig.fxSettings;

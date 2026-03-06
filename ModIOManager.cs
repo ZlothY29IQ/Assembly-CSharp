@@ -176,15 +176,12 @@ public class ModIOManager : MonoBehaviour, ISteamCredentialProvider, IOculusCred
 
 	public static async Task<Error> Initialize()
 	{
-		GTDev.Log("[ModIOManager::Initialize] Initializing mo.io...");
 		if (UGCPermissionManager.IsUGCDisabled)
 		{
-			GTDev.Log("[ModIOManager::Initialize] Not initializing, UGC is disabled by K-ID");
 			return new Error(ErrorCode.UNKNOWN, "MOD.IO FUNCTIONALITY IS CURRENTLY DISABLED.");
 		}
 		if (initialized)
 		{
-			GTDev.Log("[ModIOManager::Initialize] Already initialized");
 			return Error.None;
 		}
 		return await InitInternal();
@@ -192,15 +189,12 @@ public class ModIOManager : MonoBehaviour, ISteamCredentialProvider, IOculusCred
 
 	private static async Task<Error> InitInternal()
 	{
-		GTDev.Log("[ModIOManager::InitInternal] Initializing mod.io...");
 		if (UGCPermissionManager.IsUGCDisabled)
 		{
-			GTDev.Log("[ModIOManager::InitInternal] Not initializing, UGC is disabled by K-ID");
 			return new Error(ErrorCode.UNKNOWN, "MOD.IO FUNCTIONALITY IS CURRENTLY DISABLED.");
 		}
 		if (initialized)
 		{
-			GTDev.Log("[ModIOManager::InitInternal] Already initialized");
 			return Error.None;
 		}
 		User.OnUserChanged -= ModIOUserChanged;
@@ -215,7 +209,6 @@ public class ModIOManager : MonoBehaviour, ISteamCredentialProvider, IOculusCred
 		}
 		EnableModManagement();
 		initialized = true;
-		GTDev.Log("[ModIOManager::InitInternal] ModIO plugin initialized!");
 		await GetFavoriteMods();
 		return Error.None;
 	}
@@ -1074,12 +1067,12 @@ public class ModIOManager : MonoBehaviour, ISteamCredentialProvider, IOculusCred
 
 	public static ModIOAuthMethod GetLastAuthMethod()
 	{
-		int @int = PlayerPrefs.GetInt("modIOLassSuccessfulAuthMethod", -1);
-		if (@int == -1)
+		int num = PlayerPrefs.GetInt("modIOLassSuccessfulAuthMethod", -1);
+		if (num == -1)
 		{
 			return ModIOAuthMethod.Invalid;
 		}
-		return (ModIOAuthMethod)@int;
+		return (ModIOAuthMethod)num;
 	}
 
 	public static async Task<(Error, Mod[])> GetSubscribedMods()
@@ -1327,7 +1320,7 @@ public class ModIOManager : MonoBehaviour, ISteamCredentialProvider, IOculusCred
 				int num = (int)Mathf.Pow(2f, currentAssociationRetries + 1);
 				Debug.LogWarning($"Retrying Account Association... Retry attempt #{currentAssociationRetries + 1}, waiting for {num} seconds");
 				currentAssociationRetries++;
-				yield return new WaitForSeconds(num);
+				yield return new WaitForSecondsRealtime(num);
 				AssociateMothershipAndModIOAccounts(data, callback);
 			}
 			else

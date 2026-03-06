@@ -641,16 +641,17 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 			}
 			piece.transform.SetPositionAndRotation(worldPosition, worldRotation);
 			BuilderPiece.State state = BuilderPiece.State.AttachedToDropped;
-			state = ((!(piece2 == null)) ? ((!piece2.isArmShelf && piece2.state != BuilderPiece.State.AttachedToArm) ? ((!piece2.isBuiltIntoTable && piece2.state != 0) ? ((piece2.state == BuilderPiece.State.Grabbed) ? BuilderPiece.State.Grabbed : ((piece2.state != BuilderPiece.State.GrabbedLocal) ? BuilderPiece.State.AttachedToDropped : BuilderPiece.State.GrabbedLocal)) : BuilderPiece.State.AttachedAndPlaced) : BuilderPiece.State.AttachedToArm) : BuilderPiece.State.AttachedAndPlaced);
+			state = ((!(piece2 == null)) ? ((!piece2.isArmShelf && piece2.state != BuilderPiece.State.AttachedToArm) ? ((!piece2.isBuiltIntoTable && piece2.state != BuilderPiece.State.AttachedAndPlaced) ? ((piece2.state == BuilderPiece.State.Grabbed) ? BuilderPiece.State.Grabbed : ((piece2.state != BuilderPiece.State.GrabbedLocal) ? BuilderPiece.State.AttachedToDropped : BuilderPiece.State.GrabbedLocal)) : BuilderPiece.State.AttachedAndPlaced) : BuilderPiece.State.AttachedToArm) : BuilderPiece.State.AttachedAndPlaced);
 			BuilderPiece rootPiece = piece2.GetRootPiece();
 			gridPlaneData.Clear();
 			checkGridPlaneData.Clear();
 			allPotentialPlacements.Clear();
 			tempPieceSet.Clear();
-			QueryParameters queryParameters = default(QueryParameters);
-			queryParameters.layerMask = allPiecesMask;
-			QueryParameters queryParameters2 = queryParameters;
-			OverlapSphereCommand value = new OverlapSphereCommand(worldPosition, 1f, queryParameters2);
+			QueryParameters queryParameters = new QueryParameters
+			{
+				layerMask = allPiecesMask
+			};
+			OverlapSphereCommand value = new OverlapSphereCommand(worldPosition, 1f, queryParameters);
 			nearbyPiecesCommands[0] = value;
 			OverlapSphereCommand.ScheduleBatch(nearbyPiecesCommands, nearbyPiecesResults, 1, 1024).Complete();
 			for (int i = 0; i < 1024 && nearbyPiecesResults[i].instanceID != 0; i++)
@@ -671,30 +672,31 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 				}
 			}
 			BuilderTableJobs.BuildTestPieceListForJob(piece, gridPlaneData);
-			BuilderPotentialPlacement builderPotentialPlacement = default(BuilderPotentialPlacement);
-			builderPotentialPlacement.localPosition = localPosition;
-			builderPotentialPlacement.localRotation = localRotation;
-			builderPotentialPlacement.attachIndex = action.attachIndex;
-			builderPotentialPlacement.parentAttachIndex = action.parentAttachIndex;
-			builderPotentialPlacement.attachPiece = piece;
-			builderPotentialPlacement.parentPiece = piece2;
-			BuilderPotentialPlacement potentialPlacement = builderPotentialPlacement;
+			BuilderPotentialPlacement potentialPlacement = new BuilderPotentialPlacement
+			{
+				localPosition = localPosition,
+				localRotation = localRotation,
+				attachIndex = action.attachIndex,
+				parentAttachIndex = action.parentAttachIndex,
+				attachPiece = piece,
+				parentPiece = piece2
+			};
 			CalcAllPotentialPlacements(gridPlaneData, checkGridPlaneData, potentialPlacement, allPotentialPlacements);
 			piece.SetParentPiece(action.attachIndex, piece2, action.parentAttachIndex);
 			for (int k = 0; k < allPotentialPlacements.Count; k++)
 			{
-				BuilderPotentialPlacement builderPotentialPlacement2 = allPotentialPlacements[k];
-				BuilderAttachGridPlane builderAttachGridPlane = builderPotentialPlacement2.attachPiece.gridPlanes[builderPotentialPlacement2.attachIndex];
-				BuilderAttachGridPlane builderAttachGridPlane2 = builderPotentialPlacement2.parentPiece.gridPlanes[builderPotentialPlacement2.parentAttachIndex];
+				BuilderPotentialPlacement builderPotentialPlacement = allPotentialPlacements[k];
+				BuilderAttachGridPlane builderAttachGridPlane = builderPotentialPlacement.attachPiece.gridPlanes[builderPotentialPlacement.attachIndex];
+				BuilderAttachGridPlane builderAttachGridPlane2 = builderPotentialPlacement.parentPiece.gridPlanes[builderPotentialPlacement.parentAttachIndex];
 				BuilderAttachGridPlane movingParentGrid = builderAttachGridPlane.GetMovingParentGrid();
 				bool flag2 = movingParentGrid != null;
 				BuilderAttachGridPlane movingParentGrid2 = builderAttachGridPlane2.GetMovingParentGrid();
 				bool flag3 = movingParentGrid2 != null;
 				if (flag2 == flag3 && (!flag2 || !(movingParentGrid != movingParentGrid2)))
 				{
-					SnapOverlap newOverlap = builderPool.CreateSnapOverlap(builderAttachGridPlane2, builderPotentialPlacement2.attachBounds);
+					SnapOverlap newOverlap = builderPool.CreateSnapOverlap(builderAttachGridPlane2, builderPotentialPlacement.attachBounds);
 					builderAttachGridPlane.AddSnapOverlap(newOverlap);
-					SnapOverlap newOverlap2 = builderPool.CreateSnapOverlap(builderAttachGridPlane, builderPotentialPlacement2.parentAttachBounds);
+					SnapOverlap newOverlap2 = builderPool.CreateSnapOverlap(builderAttachGridPlane, builderPotentialPlacement.parentAttachBounds);
 					builderAttachGridPlane2.AddSnapOverlap(newOverlap2);
 				}
 			}
@@ -1187,11 +1189,12 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 		foreach (BoxCollider boxCollider in array)
 		{
 			boxCollider.enabled = true;
-			BoxCheckParams boxCheckParams = default(BoxCheckParams);
-			boxCheckParams.center = boxCollider.transform.TransformPoint(boxCollider.center);
-			boxCheckParams.halfExtents = Vector3.Scale(boxCollider.transform.lossyScale, boxCollider.size) / 2f;
-			boxCheckParams.rotation = boxCollider.transform.rotation;
-			BoxCheckParams item = boxCheckParams;
+			BoxCheckParams item = new BoxCheckParams
+			{
+				center = boxCollider.transform.TransformPoint(boxCollider.center),
+				halfExtents = Vector3.Scale(boxCollider.transform.lossyScale, boxCollider.size) / 2f,
+				rotation = boxCollider.transform.rotation
+			};
 			noBlocksAreas.Add(item);
 			boxCollider.enabled = false;
 		}
@@ -1580,7 +1583,7 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 			SetTableState(TableState.WaitingForInitalBuild);
 			builderNetworking.PlayerEnterBuilder();
 		}
-		else if (!flag && tableState != 0 && !builderNetworking.IsPrivateMasterClient())
+		else if (!flag && tableState != TableState.WaitingForZoneAndRoom && !builderNetworking.IsPrivateMasterClient())
 		{
 			SetTableState(TableState.WaitingForZoneAndRoom);
 			builderNetworking.PlayerExitBuilder();
@@ -1624,7 +1627,7 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 			SetTableState(TableState.WaitingForInitalBuild);
 			builderNetworking.PlayerEnterBuilder();
 		}
-		else if (!flag && tableState != 0 && !builderNetworking.IsPrivateMasterClient())
+		else if (!flag && tableState != TableState.WaitingForZoneAndRoom && !builderNetworking.IsPrivateMasterClient())
 		{
 			SetTableState(TableState.WaitingForZoneAndRoom);
 			builderNetworking.PlayerExitBuilder();
@@ -2002,18 +2005,19 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 	{
 		if (shelfID >= 0 && shelfID < conveyors.Count && !(conveyors[shelfID] == null))
 		{
-			BuilderCommand builderCommand = default(BuilderCommand);
-			builderCommand.type = BuilderCommandType.Create;
-			builderCommand.pieceType = pieceType;
-			builderCommand.pieceId = pieceId;
-			builderCommand.localPosition = position;
-			builderCommand.localRotation = rotation;
-			builderCommand.materialType = materialType;
-			builderCommand.state = BuilderPiece.State.OnConveyor;
-			builderCommand.parentPieceId = shelfID;
-			builderCommand.parentAttachIndex = sendTimestamp;
-			builderCommand.player = NetworkSystem.Instance.MasterClient;
-			BuilderCommand cmd = builderCommand;
+			BuilderCommand cmd = new BuilderCommand
+			{
+				type = BuilderCommandType.Create,
+				pieceType = pieceType,
+				pieceId = pieceId,
+				localPosition = position,
+				localRotation = rotation,
+				materialType = materialType,
+				state = BuilderPiece.State.OnConveyor,
+				parentPieceId = shelfID,
+				parentAttachIndex = sendTimestamp,
+				player = NetworkSystem.Instance.MasterClient
+			};
 			RouteNewCommand(cmd, force: false);
 		}
 	}
@@ -2022,18 +2026,19 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 	{
 		if (shelfID >= 0 && shelfID < dispenserShelves.Count && !(dispenserShelves[shelfID] == null))
 		{
-			BuilderCommand builderCommand = default(BuilderCommand);
-			builderCommand.type = BuilderCommandType.Create;
-			builderCommand.pieceType = pieceType;
-			builderCommand.pieceId = pieceId;
-			builderCommand.localPosition = position;
-			builderCommand.localRotation = rotation;
-			builderCommand.materialType = materialType;
-			builderCommand.state = BuilderPiece.State.OnShelf;
-			builderCommand.parentPieceId = shelfID;
-			builderCommand.isLeft = true;
-			builderCommand.player = NetworkSystem.Instance.MasterClient;
-			BuilderCommand cmd = builderCommand;
+			BuilderCommand cmd = new BuilderCommand
+			{
+				type = BuilderCommandType.Create,
+				pieceType = pieceType,
+				pieceId = pieceId,
+				localPosition = position,
+				localRotation = rotation,
+				materialType = materialType,
+				state = BuilderPiece.State.OnShelf,
+				parentPieceId = shelfID,
+				isLeft = true,
+				player = NetworkSystem.Instance.MasterClient
+			};
 			RouteNewCommand(cmd, force: false);
 		}
 	}
@@ -2103,13 +2108,14 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 
 	public void ChangeSetSelection(int shelfID, int setID, bool isConveyor)
 	{
-		BuilderCommand builderCommand = default(BuilderCommand);
-		builderCommand.type = BuilderCommandType.SetSelection;
-		builderCommand.parentPieceId = shelfID;
-		builderCommand.pieceType = setID;
-		builderCommand.isLeft = isConveyor;
-		builderCommand.player = NetworkSystem.Instance.MasterClient;
-		BuilderCommand cmd = builderCommand;
+		BuilderCommand cmd = new BuilderCommand
+		{
+			type = BuilderCommandType.SetSelection,
+			parentPieceId = shelfID,
+			pieceType = setID,
+			isLeft = isConveyor,
+			player = NetworkSystem.Instance.MasterClient
+		};
 		RouteNewCommand(cmd, force: false);
 	}
 
@@ -2157,13 +2163,14 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 
 	public void SetFunctionalPieceState(int pieceID, byte state, NetPlayer player, int timeStamp)
 	{
-		BuilderCommand builderCommand = default(BuilderCommand);
-		builderCommand.type = BuilderCommandType.FunctionalStateChange;
-		builderCommand.pieceId = pieceID;
-		builderCommand.twist = state;
-		builderCommand.player = player;
-		builderCommand.serverTimeStamp = timeStamp;
-		BuilderCommand cmd = builderCommand;
+		BuilderCommand cmd = new BuilderCommand
+		{
+			type = BuilderCommandType.FunctionalStateChange,
+			pieceId = pieceID,
+			twist = state,
+			player = player,
+			serverTimeStamp = timeStamp
+		};
 		RouteNewCommand(cmd, force: false);
 	}
 
@@ -2214,16 +2221,17 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 
 	public void CreatePiece(int pieceType, int pieceId, Vector3 position, Quaternion rotation, int materialType, BuilderPiece.State state, Player player)
 	{
-		BuilderCommand builderCommand = default(BuilderCommand);
-		builderCommand.type = BuilderCommandType.Create;
-		builderCommand.pieceType = pieceType;
-		builderCommand.pieceId = pieceId;
-		builderCommand.localPosition = position;
-		builderCommand.localRotation = rotation;
-		builderCommand.materialType = materialType;
-		builderCommand.state = state;
-		builderCommand.player = NetPlayer.Get(player);
-		BuilderCommand cmd = builderCommand;
+		BuilderCommand cmd = new BuilderCommand
+		{
+			type = BuilderCommandType.Create,
+			pieceType = pieceType,
+			pieceId = pieceId,
+			localPosition = position,
+			localRotation = rotation,
+			materialType = materialType,
+			state = state,
+			player = NetPlayer.Get(player)
+		};
 		RouteNewCommand(cmd, force: false);
 	}
 
@@ -2234,15 +2242,16 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 
 	public void RecyclePiece(int pieceId, Vector3 position, Quaternion rotation, bool playFX, int recyclerID, Player player)
 	{
-		BuilderCommand builderCommand = default(BuilderCommand);
-		builderCommand.type = BuilderCommandType.Recycle;
-		builderCommand.pieceId = pieceId;
-		builderCommand.localPosition = position;
-		builderCommand.localRotation = rotation;
-		builderCommand.player = NetPlayer.Get(player);
-		builderCommand.isLeft = playFX;
-		builderCommand.parentPieceId = recyclerID;
-		BuilderCommand cmd = builderCommand;
+		BuilderCommand cmd = new BuilderCommand
+		{
+			type = BuilderCommandType.Recycle,
+			pieceId = pieceId,
+			localPosition = position,
+			localRotation = rotation,
+			player = NetPlayer.Get(player),
+			isLeft = playFX,
+			parentPieceId = recyclerID
+		};
 		RouteNewCommand(cmd, force: false);
 	}
 
@@ -2874,21 +2883,22 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 	{
 		if (force || placedByPlayer != NetworkSystem.Instance.LocalPlayer || !HasRollForwardCommand(localCommandId) || !TryRollbackAndReExecute(localCommandId))
 		{
-			BuilderCommand builderCommand = default(BuilderCommand);
-			builderCommand.type = BuilderCommandType.Place;
-			builderCommand.pieceId = pieceId;
-			builderCommand.bumpOffsetX = bumpOffsetX;
-			builderCommand.bumpOffsetZ = bumpOffsetZ;
-			builderCommand.twist = twist;
-			builderCommand.attachPieceId = attachPieceId;
-			builderCommand.parentPieceId = parentPieceId;
-			builderCommand.attachIndex = attachIndex;
-			builderCommand.parentAttachIndex = parentAttachIndex;
-			builderCommand.player = placedByPlayer;
-			builderCommand.canRollback = force;
-			builderCommand.localCommandId = localCommandId;
-			builderCommand.serverTimeStamp = timeStamp;
-			BuilderCommand cmd = builderCommand;
+			BuilderCommand cmd = new BuilderCommand
+			{
+				type = BuilderCommandType.Place,
+				pieceId = pieceId,
+				bumpOffsetX = bumpOffsetX,
+				bumpOffsetZ = bumpOffsetZ,
+				twist = twist,
+				attachPieceId = attachPieceId,
+				parentPieceId = parentPieceId,
+				attachIndex = attachIndex,
+				parentAttachIndex = parentAttachIndex,
+				player = placedByPlayer,
+				canRollback = force,
+				localCommandId = localCommandId,
+				serverTimeStamp = timeStamp
+			};
 			RouteNewCommand(cmd, force);
 		}
 	}
@@ -3047,17 +3057,18 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 	{
 		if (force || grabbedByPlayer != NetworkSystem.Instance.LocalPlayer || !HasRollForwardCommand(localCommandId) || !TryRollbackAndReExecute(localCommandId))
 		{
-			BuilderCommand builderCommand = default(BuilderCommand);
-			builderCommand.type = BuilderCommandType.Grab;
-			builderCommand.pieceId = pieceId;
-			builderCommand.attachPieceId = -1;
-			builderCommand.isLeft = isLeftHand;
-			builderCommand.localPosition = localPosition;
-			builderCommand.localRotation = localRotation;
-			builderCommand.player = grabbedByPlayer;
-			builderCommand.canRollback = force;
-			builderCommand.localCommandId = localCommandId;
-			BuilderCommand cmd = builderCommand;
+			BuilderCommand cmd = new BuilderCommand
+			{
+				type = BuilderCommandType.Grab,
+				pieceId = pieceId,
+				attachPieceId = -1,
+				isLeft = isLeftHand,
+				localPosition = localPosition,
+				localRotation = localRotation,
+				player = grabbedByPlayer,
+				canRollback = force,
+				localCommandId = localCommandId
+			};
 			RouteNewCommand(cmd, force);
 		}
 	}
@@ -3244,18 +3255,19 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 	{
 		if (force || droppedByPlayer != NetworkSystem.Instance.LocalPlayer || !HasRollForwardCommand(localCommandId) || !TryRollbackAndReExecute(localCommandId))
 		{
-			BuilderCommand builderCommand = default(BuilderCommand);
-			builderCommand.type = BuilderCommandType.Drop;
-			builderCommand.pieceId = pieceId;
-			builderCommand.parentPieceId = pieceId;
-			builderCommand.localPosition = position;
-			builderCommand.localRotation = rotation;
-			builderCommand.velocity = velocity;
-			builderCommand.angVelocity = angVelocity;
-			builderCommand.player = droppedByPlayer;
-			builderCommand.canRollback = force;
-			builderCommand.localCommandId = localCommandId;
-			BuilderCommand cmd = builderCommand;
+			BuilderCommand cmd = new BuilderCommand
+			{
+				type = BuilderCommandType.Drop,
+				pieceId = pieceId,
+				parentPieceId = pieceId,
+				localPosition = position,
+				localRotation = rotation,
+				velocity = velocity,
+				angVelocity = angVelocity,
+				player = droppedByPlayer,
+				canRollback = force,
+				localCommandId = localCommandId
+			};
 			RouteNewCommand(cmd, force);
 		}
 	}
@@ -3485,11 +3497,12 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 
 	public void PlotClaimed(int plotPieceId, Player claimingPlayer)
 	{
-		BuilderCommand builderCommand = default(BuilderCommand);
-		builderCommand.type = BuilderCommandType.ClaimPlot;
-		builderCommand.pieceId = plotPieceId;
-		builderCommand.player = NetPlayer.Get(claimingPlayer);
-		BuilderCommand cmd = builderCommand;
+		BuilderCommand cmd = new BuilderCommand
+		{
+			type = BuilderCommandType.ClaimPlot,
+			pieceId = plotPieceId,
+			player = NetPlayer.Get(claimingPlayer)
+		};
 		RouteNewCommand(cmd, force: false);
 	}
 
@@ -3514,11 +3527,12 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 
 	public void PlayerLeftRoom(int playerActorNumber)
 	{
-		BuilderCommand builderCommand = default(BuilderCommand);
-		builderCommand.type = BuilderCommandType.PlayerLeftRoom;
-		builderCommand.pieceId = playerActorNumber;
-		builderCommand.player = null;
-		BuilderCommand cmd = builderCommand;
+		BuilderCommand cmd = new BuilderCommand
+		{
+			type = BuilderCommandType.PlayerLeftRoom,
+			pieceId = playerActorNumber,
+			player = null
+		};
 		bool force = tableState == TableState.WaitForMasterResync;
 		RouteNewCommand(cmd, force);
 	}
@@ -3541,11 +3555,12 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 
 	public void PlotFreed(int plotPieceId, Player claimingPlayer)
 	{
-		BuilderCommand builderCommand = default(BuilderCommand);
-		builderCommand.type = BuilderCommandType.FreePlot;
-		builderCommand.pieceId = plotPieceId;
-		builderCommand.player = NetPlayer.Get(claimingPlayer);
-		BuilderCommand cmd = builderCommand;
+		BuilderCommand cmd = new BuilderCommand
+		{
+			type = BuilderCommandType.FreePlot,
+			pieceId = plotPieceId,
+			player = NetPlayer.Get(claimingPlayer)
+		};
 		RouteNewCommand(cmd, force: false);
 	}
 
@@ -3597,12 +3612,13 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 	{
 		if (force || paintingPlayer != PhotonNetwork.LocalPlayer)
 		{
-			BuilderCommand builderCommand = default(BuilderCommand);
-			builderCommand.type = BuilderCommandType.Paint;
-			builderCommand.pieceId = pieceId;
-			builderCommand.materialType = materialType;
-			builderCommand.player = NetPlayer.Get(paintingPlayer);
-			BuilderCommand cmd = builderCommand;
+			BuilderCommand cmd = new BuilderCommand
+			{
+				type = BuilderCommandType.Paint,
+				pieceId = pieceId,
+				materialType = materialType,
+				player = NetPlayer.Get(paintingPlayer)
+			};
 			RouteNewCommand(cmd, force);
 		}
 	}
@@ -3740,21 +3756,23 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 
 	public void CreateArmShelf(int pieceIdLeft, int pieceIdRight, int pieceType, Player player)
 	{
-		BuilderCommand builderCommand = default(BuilderCommand);
-		builderCommand.type = BuilderCommandType.CreateArmShelf;
-		builderCommand.pieceId = pieceIdLeft;
-		builderCommand.pieceType = pieceType;
-		builderCommand.player = NetPlayer.Get(player);
-		builderCommand.isLeft = true;
-		BuilderCommand cmd = builderCommand;
+		BuilderCommand cmd = new BuilderCommand
+		{
+			type = BuilderCommandType.CreateArmShelf,
+			pieceId = pieceIdLeft,
+			pieceType = pieceType,
+			player = NetPlayer.Get(player),
+			isLeft = true
+		};
 		RouteNewCommand(cmd, force: false);
-		builderCommand = default(BuilderCommand);
-		builderCommand.type = BuilderCommandType.CreateArmShelf;
-		builderCommand.pieceId = pieceIdRight;
-		builderCommand.pieceType = pieceType;
-		builderCommand.player = NetPlayer.Get(player);
-		builderCommand.isLeft = false;
-		BuilderCommand cmd2 = builderCommand;
+		BuilderCommand cmd2 = new BuilderCommand
+		{
+			type = BuilderCommandType.CreateArmShelf,
+			pieceId = pieceIdRight,
+			pieceType = pieceType,
+			player = NetPlayer.Get(player),
+			isLeft = false
+		};
 		RouteNewCommand(cmd2, force: false);
 	}
 
@@ -3850,18 +3868,19 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 	public void PieceEnteredDropZone(int pieceId, Vector3 worldPos, Quaternion worldRot, int dropZoneId)
 	{
 		Vector3 velocity = (roomCenter.position - worldPos).normalized * DROP_ZONE_REPEL;
-		BuilderCommand builderCommand = default(BuilderCommand);
-		builderCommand.type = BuilderCommandType.Repel;
-		builderCommand.pieceId = pieceId;
-		builderCommand.parentPieceId = pieceId;
-		builderCommand.attachPieceId = dropZoneId;
-		builderCommand.localPosition = worldPos;
-		builderCommand.localRotation = worldRot;
-		builderCommand.velocity = velocity;
-		builderCommand.angVelocity = Vector3.zero;
-		builderCommand.player = NetworkSystem.Instance.MasterClient;
-		builderCommand.canRollback = false;
-		BuilderCommand cmd = builderCommand;
+		BuilderCommand cmd = new BuilderCommand
+		{
+			type = BuilderCommandType.Repel,
+			pieceId = pieceId,
+			parentPieceId = pieceId,
+			attachPieceId = dropZoneId,
+			localPosition = worldPos,
+			localRotation = worldRot,
+			velocity = velocity,
+			angVelocity = Vector3.zero,
+			player = NetworkSystem.Instance.MasterClient,
+			canRollback = false
+		};
 		RouteNewCommand(cmd, force: false);
 	}
 
@@ -4312,17 +4331,18 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 		}
 		currSnapParams = pushAndEaseParams;
 		NativeQueue<BuilderPotentialPlacementData> nativeQueue = new NativeQueue<BuilderPotentialPlacementData>(Allocator.TempJob);
-		BuilderFindPotentialSnaps jobData = default(BuilderFindPotentialSnaps);
-		jobData.gridSize = gridSize;
-		jobData.currSnapParams = currSnapParams;
-		jobData.gridPlanes = gridPlaneData;
-		jobData.checkGridPlanes = checkGridPlaneData;
-		jobData.worldToLocalPos = Vector3.zero;
-		jobData.worldToLocalRot = Quaternion.identity;
-		jobData.localToWorldPos = Vector3.zero;
-		jobData.localToWorldRot = Quaternion.identity;
-		jobData.potentialPlacements = nativeQueue.AsParallelWriter();
-		IJobParallelForExtensions.Schedule(jobData, gridPlaneData.Length, 32).Complete();
+		IJobParallelForExtensions.Schedule(new BuilderFindPotentialSnaps
+		{
+			gridSize = gridSize,
+			currSnapParams = currSnapParams,
+			gridPlanes = gridPlaneData,
+			checkGridPlanes = checkGridPlaneData,
+			worldToLocalPos = Vector3.zero,
+			worldToLocalRot = Quaternion.identity,
+			localToWorldPos = Vector3.zero,
+			localToWorldRot = Quaternion.identity,
+			potentialPlacements = nativeQueue.AsParallelWriter()
+		}, gridPlaneData.Length, 32).Complete();
 		BuilderPotentialPlacementData builderPotentialPlacementData = default(BuilderPotentialPlacementData);
 		bool flag = false;
 		while (!nativeQueue.IsEmpty())
@@ -4347,17 +4367,18 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 			BuilderAttachGridPlane builderAttachGridPlane = potentialPlacement.parentPiece.gridPlanes[potentialPlacement.parentAttachIndex];
 			Quaternion localToWorldRot = builderAttachGridPlane.transform.rotation * potentialPlacement.localRotation;
 			Vector3 localToWorldPos = builderAttachGridPlane.transform.TransformPoint(potentialPlacement.localPosition);
-			jobData = default(BuilderFindPotentialSnaps);
-			jobData.gridSize = gridSize;
-			jobData.currSnapParams = currSnapParams;
-			jobData.gridPlanes = gridPlaneData;
-			jobData.checkGridPlanes = checkGridPlaneData;
-			jobData.worldToLocalPos = worldToLocalPos;
-			jobData.worldToLocalRot = worldToLocalRot;
-			jobData.localToWorldPos = localToWorldPos;
-			jobData.localToWorldRot = localToWorldRot;
-			jobData.potentialPlacements = nativeQueue.AsParallelWriter();
-			IJobParallelForExtensions.Schedule(jobData, gridPlaneData.Length, 32).Complete();
+			IJobParallelForExtensions.Schedule(new BuilderFindPotentialSnaps
+			{
+				gridSize = gridSize,
+				currSnapParams = currSnapParams,
+				gridPlanes = gridPlaneData,
+				checkGridPlanes = checkGridPlaneData,
+				worldToLocalPos = worldToLocalPos,
+				worldToLocalRot = worldToLocalRot,
+				localToWorldPos = localToWorldPos,
+				localToWorldRot = localToWorldRot,
+				potentialPlacements = nativeQueue.AsParallelWriter()
+			}, gridPlaneData.Length, 32).Complete();
 			while (!nativeQueue.IsEmpty())
 			{
 				BuilderPotentialPlacementData builderPotentialPlacementData3 = nativeQueue.Dequeue();
@@ -4386,17 +4407,18 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 		BuilderAttachGridPlane builderAttachGridPlane = potentialPlacement.parentPiece.gridPlanes[potentialPlacement.parentAttachIndex];
 		Quaternion localToWorldRot = builderAttachGridPlane.transform.rotation * potentialPlacement.localRotation;
 		Vector3 localToWorldPos = builderAttachGridPlane.transform.TransformPoint(potentialPlacement.localPosition);
-		BuilderFindPotentialSnaps jobData = default(BuilderFindPotentialSnaps);
-		jobData.gridSize = gridSize;
-		jobData.currSnapParams = currSnapParams;
-		jobData.gridPlanes = gridPlaneData;
-		jobData.checkGridPlanes = checkGridPlaneData;
-		jobData.worldToLocalPos = worldToLocalPos;
-		jobData.worldToLocalRot = worldToLocalRot;
-		jobData.localToWorldPos = localToWorldPos;
-		jobData.localToWorldRot = localToWorldRot;
-		jobData.potentialPlacements = nativeQueue.AsParallelWriter();
-		IJobParallelForExtensions.Schedule(jobData, gridPlaneData.Length, 32).Complete();
+		IJobParallelForExtensions.Schedule(new BuilderFindPotentialSnaps
+		{
+			gridSize = gridSize,
+			currSnapParams = currSnapParams,
+			gridPlanes = gridPlaneData,
+			checkGridPlanes = checkGridPlaneData,
+			worldToLocalPos = worldToLocalPos,
+			worldToLocalRot = worldToLocalRot,
+			localToWorldPos = localToWorldPos,
+			localToWorldRot = localToWorldRot,
+			potentialPlacements = nativeQueue.AsParallelWriter()
+		}, gridPlaneData.Length, 32).Complete();
 		while (!nativeQueue.IsEmpty())
 		{
 			BuilderPotentialPlacementData builderPotentialPlacementData = nativeQueue.Dequeue();
@@ -5271,7 +5293,7 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 		tempDuplicateOverlaps.Clear();
 		for (int i = 0; i < pieces.Count; i++)
 		{
-			if (pieces[i].state != 0)
+			if (pieces[i].state != BuilderPiece.State.AttachedAndPlaced)
 			{
 				continue;
 			}
@@ -5344,8 +5366,10 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 
 	private static SnapOverlapKey BuildOverlapKey(int pieceId, int otherPieceId, int attachGridIndex, int otherAttachGridIndex)
 	{
-		SnapOverlapKey result = default(SnapOverlapKey);
-		result.piece = pieceId;
+		SnapOverlapKey result = new SnapOverlapKey
+		{
+			piece = pieceId
+		};
 		result.piece <<= 32;
 		result.piece |= attachGridIndex;
 		result.otherPiece = otherPieceId;

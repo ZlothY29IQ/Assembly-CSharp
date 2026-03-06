@@ -1,4 +1,5 @@
 using System;
+using GorillaExtensions;
 using GorillaTag;
 using UnityEngine;
 using UnityEngine.Events;
@@ -126,20 +127,20 @@ public class EdibleHoldable : TransferrableObject
 			}
 			VRRig vRRig = null;
 			VRRig vRRig2 = null;
-			for (int i = 0; i < GorillaParent.instance.vrrigs.Count; i++)
+			for (int i = 0; i < VRRigCache.ActiveRigContainers.Count; i++)
 			{
-				VRRig vRRig3 = GorillaParent.instance.vrrigs[i];
-				if (!vRRig3.isOfflineVRRig)
+				VRRig rig = VRRigCache.ActiveRigContainers[i].Rig;
+				if (!rig.isOfflineVRRig)
 				{
-					if (vRRig3.head == null || vRRig3.head.rigTarget == null)
+					if (rig.head == null || rig.head.rigTarget.IsNull())
 					{
 						break;
 					}
-					Transform transform = vRRig3.head.rigTarget.transform;
+					Transform transform = rig.head.rigTarget.transform;
 					if ((transform.position + transform.rotation * biteOffset - biteSpot.position).sqrMagnitude < num)
 					{
 						flag = true;
-						vRRig2 = vRRig3;
+						vRRig2 = rig;
 					}
 				}
 			}
@@ -236,22 +237,22 @@ public class EdibleHoldable : TransferrableObject
 		{
 			VRRig vRRig = null;
 			float num3 = float.PositiveInfinity;
-			for (int j = 0; j < GorillaParent.instance.vrrigs.Count; j++)
+			for (int j = 0; j < VRRigCache.ActiveRigContainers.Count; j++)
 			{
-				VRRig vRRig2 = GorillaParent.instance.vrrigs[j];
-				if (vRRig2.head == null || vRRig2.head.rigTarget == null)
+				VRRig rig = VRRigCache.ActiveRigContainers[j].Rig;
+				if (rig.head == null || rig.head.rigTarget.IsNull())
 				{
 					break;
 				}
-				Transform transform = vRRig2.head.rigTarget.transform;
+				Transform transform = rig.head.rigTarget.transform;
 				float sqrMagnitude = (transform.position + transform.rotation * biteOffset - biteSpot.position).sqrMagnitude;
 				if (sqrMagnitude < num3)
 				{
 					num3 = sqrMagnitude;
-					vRRig = vRRig2;
+					vRRig = rig;
 				}
 			}
-			if (vRRig != null)
+			if (vRRig.IsNotNull())
 			{
 				(vRRig.isOfflineVRRig ? onBiteView : onBiteWorld)?.Invoke(vRRig, (int)itemState);
 				if (vRRig.isOfflineVRRig && itemState != ItemStates.State0)

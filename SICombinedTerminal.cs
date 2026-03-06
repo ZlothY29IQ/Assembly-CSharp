@@ -90,7 +90,7 @@ public class SICombinedTerminal : MonoBehaviour, IGorillaSliceableSimple
 			if (activeUserBounds.bounds.Contains(rigs[i].transform.position))
 			{
 				isOccupied = true;
-				if (rigs[i].OwningNetPlayer.IsLocal)
+				if (rigs[i].Creator.IsLocal)
 				{
 					isOccupiedByActivePlayer = true;
 					break;

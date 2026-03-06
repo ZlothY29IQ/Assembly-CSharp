@@ -34,6 +34,13 @@ public sealed class GorillaPaintbrawlManager : GorillaGameManager
 		GameRunning
 	}
 
+	private enum DefaultSlingshotState
+	{
+		Inactive,
+		Activating,
+		Active
+	}
+
 	private float playerMin = 2f;
 
 	public float tagCoolDown = 5f;
@@ -90,6 +97,8 @@ public sealed class GorillaPaintbrawlManager : GorillaGameManager
 
 	private PaintbrawlState currentState;
 
+	private DefaultSlingshotState _defaultSlingshotState;
+
 	private void ActivatePaintbrawlBalloons(bool enable)
 	{
 		if (GorillaTagger.Instance.offlineVRRig != null)
@@ -127,13 +136,23 @@ public sealed class GorillaPaintbrawlManager : GorillaGameManager
 		return result;
 	}
 
-	private void ActivateDefaultSlingShot()
+	private async void ActivateDefaultSlingShot()
 	{
-		VRRig offlineVRRig = GorillaTagger.Instance.offlineVRRig;
-		if (offlineVRRig != null && !Slingshot.IsSlingShotEnabled())
+		if (_defaultSlingshotState != DefaultSlingshotState.Activating)
 		{
-			CosmeticsController cosmeticsController = CosmeticsController.instance;
-			cosmeticsController.ApplyCosmeticItemToSet(newItem: cosmeticsController.GetItemFromDict("Slingshot"), set: offlineVRRig.cosmeticSet, isLeftHand: true, applyToPlayerPrefs: false);
+			if (_defaultSlingshotState == DefaultSlingshotState.Active && !Slingshot.IsSlingShotEnabled())
+			{
+				_defaultSlingshotState = DefaultSlingshotState.Inactive;
+			}
+			if (_defaultSlingshotState == DefaultSlingshotState.Inactive && GorillaTagger.Instance.offlineVRRig != null && !Slingshot.IsSlingShotEnabled())
+			{
+				_defaultSlingshotState = DefaultSlingshotState.Activating;
+				CosmeticsController controller = CosmeticsController.instance;
+				CosmeticsController.CosmeticItem itemFromDict = controller.GetItemFromDict("Slingshot");
+				await controller.ApplyCosmeticItemToSet(controller.currentWornSet, itemFromDict, isLeftHand: true, applyToPlayerPrefs: false);
+				controller.UpdateWornCosmetics(sync: true);
+				_defaultSlingshotState = (Slingshot.IsSlingShotEnabled() ? DefaultSlingshotState.Active : DefaultSlingshotState.Inactive);
+			}
 		}
 	}
 
@@ -147,6 +166,7 @@ public sealed class GorillaPaintbrawlManager : GorillaGameManager
 	public override void StartPlaying()
 	{
 		base.StartPlaying();
+		_defaultSlingshotState = DefaultSlingshotState.Inactive;
 		ActivatePaintbrawlBalloons(enable: true);
 		VerifyPlayersInDict(playerLives);
 		VerifyPlayersInDict(playerStatusDict);
@@ -159,16 +179,16 @@ public sealed class GorillaPaintbrawlManager : GorillaGameManager
 	public override void StopPlaying()
 	{
 		base.StopPlaying();
-		if (Slingshot.IsSlingShotEnabled())
+		if (_defaultSlingshotState == DefaultSlingshotState.Active)
 		{
 			CosmeticsController cosmeticsController = CosmeticsController.instance;
-			VRRig offlineVRRig = GorillaTagger.Instance.offlineVRRig;
-			CosmeticsController.CosmeticItem itemFromDict = cosmeticsController.GetItemFromDict("Slingshot");
-			if (offlineVRRig.cosmeticSet.HasItem("Slingshot"))
+			if (cosmeticsController.currentWornSet.HasItem("Slingshot"))
 			{
-				cosmeticsController.ApplyCosmeticItemToSet(offlineVRRig.cosmeticSet, itemFromDict, isLeftHand: true, applyToPlayerPrefs: false);
+				cosmeticsController.RemoveCosmeticItemFromSet(cosmeticsController.currentWornSet, "Slingshot", applyToPlayerPrefs: false);
 			}
+			cosmeticsController.UpdateWornCosmetics(sync: true);
 		}
+		_defaultSlingshotState = DefaultSlingshotState.Inactive;
 		ActivatePaintbrawlBalloons(enable: false);
 		StopAllCoroutines();
 		coroutineRunning = false;
@@ -528,7 +548,7 @@ public sealed class GorillaPaintbrawlManager : GorillaGameManager
 	public override int MyMatIndex(NetPlayer forPlayer)
 	{
 		tempStatus = GetPlayerStatus(forPlayer);
-		if (tempStatus != 0)
+		if (tempStatus != PaintbrawlStatus.None)
 		{
 			if (OnRedTeam(tempStatus))
 			{
@@ -861,10 +881,10 @@ public sealed class GorillaPaintbrawlManager : GorillaGameManager
 		int[] array2 = array.OrderBy((int x) => rand.Next()).ToArray();
 		PaintbrawlStatus paintbrawlStatus = ((rand.Next(0, 2) == 0) ? PaintbrawlStatus.RedTeam : PaintbrawlStatus.BlueTeam);
 		PaintbrawlStatus paintbrawlStatus2 = ((paintbrawlStatus != PaintbrawlStatus.RedTeam) ? PaintbrawlStatus.RedTeam : PaintbrawlStatus.BlueTeam);
-		for (int j = 0; j < RoomSystem.PlayersInRoom.Count; j++)
+		for (int num = 0; num < RoomSystem.PlayersInRoom.Count; num++)
 		{
-			PaintbrawlStatus value = ((array2[j] % 2 == 0) ? paintbrawlStatus2 : paintbrawlStatus);
-			playerStatusDict[RoomSystem.PlayersInRoom[j].ActorNumber] = value;
+			PaintbrawlStatus value = ((array2[num] % 2 == 0) ? paintbrawlStatus2 : paintbrawlStatus);
+			playerStatusDict[RoomSystem.PlayersInRoom[num].ActorNumber] = value;
 		}
 	}
 

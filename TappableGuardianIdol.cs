@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using GorillaExtensions;
 using Photon.Pun;
 using UnityEngine;
 
@@ -301,16 +302,16 @@ public class TappableGuardianIdol : Tappable
 			Vector3 position = base.transform.position;
 			float num = float.MaxValue;
 			Transform result = null;
-			foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+			foreach (RigContainer activeRigContainer in VRRigCache.ActiveRigContainers)
 			{
-				if (!(vrrig == null))
+				if (!activeRigContainer.IsNull())
 				{
-					bool flag = vrrig.OwningNetPlayer == zoneManager.CurrentGuardian;
-					float num2 = Vector3.SqrMagnitude(vrrig.transform.position - position) * (float)((!flag) ? 1 : 100);
+					bool flag = activeRigContainer.Creator == zoneManager.CurrentGuardian;
+					float num2 = Vector3.SqrMagnitude(activeRigContainer.transform.position - position) * (float)((!flag) ? 1 : 100);
 					if (num2 < num)
 					{
 						num = num2;
-						result = vrrig.transform;
+						result = activeRigContainer.transform;
 					}
 				}
 			}

@@ -118,6 +118,12 @@ public class FireManager : ITickSystemPost
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	internal static void SpawnFire(SinglePool pool, Vector3 pos, Vector3 normal, float scale)
 	{
+		SpawnFire(pool, pos, normal, scale, null);
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	internal static void SpawnFire(SinglePool pool, Vector3 pos, Vector3 normal, float scale, Quaternion? rotationOverride)
+	{
 		if (_fireSpatialGrid.TryGetValue(GetSpatialGridPos(pos), out var value))
 		{
 			ResetFireValues(_kGObjInstId_to_fire[value]);
@@ -125,7 +131,14 @@ public class FireManager : ITickSystemPost
 		}
 		GameObject gameObject = pool.Instantiate(setActive: false);
 		gameObject.transform.position = pos;
-		gameObject.transform.up = normal;
+		if (rotationOverride.HasValue)
+		{
+			gameObject.transform.rotation = rotationOverride.Value;
+		}
+		else
+		{
+			gameObject.transform.up = normal;
+		}
 		gameObject.transform.localScale = Vector3.one * scale;
 		gameObject.SetActive(value: true);
 	}

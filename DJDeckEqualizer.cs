@@ -32,10 +32,12 @@ public class DJDeckEqualizer : MonoBehaviour
 
 	private void Update()
 	{
-		Color value = default(Color);
-		value.r = 0.25f;
-		value.g = 0.25f;
-		value.b = 0.5f;
+		Color value = new Color
+		{
+			r = 0.25f,
+			g = 0.25f,
+			b = 0.5f
+		};
 		for (int i = 0; i < redTracks.Length; i++)
 		{
 			AudioSource audioSource = redTracks[i];

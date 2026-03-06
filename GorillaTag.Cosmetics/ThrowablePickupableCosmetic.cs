@@ -160,7 +160,7 @@ public class ThrowablePickupableCosmetic : TransferrableObject
 		{
 			return;
 		}
-		GorillaNot.IncrementRPCCall(info, "OnReleaseEvent");
+		MonkeAgent.IncrementRPCCall(info, "OnReleaseEvent");
 		if (!callLimiterRelease.CheckCallTime(Time.time))
 		{
 			return;
@@ -195,7 +195,7 @@ public class ThrowablePickupableCosmetic : TransferrableObject
 	{
 		if (sender == target && info.senderID == ownerRig.creator.ActorNumber)
 		{
-			GorillaNot.IncrementRPCCall(info, "OnReturnToDockEvent");
+			MonkeAgent.IncrementRPCCall(info, "OnReturnToDockEvent");
 			if (callLimiterReturn.CheckCallTime(Time.time))
 			{
 				OnReturnToDockPositionShared?.Invoke();

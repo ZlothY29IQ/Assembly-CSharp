@@ -174,7 +174,7 @@ public class GRShuttle : MonoBehaviour, IGorillaSliceableSimple
 
 	public static void TeleportLocalPlayer(GRShuttle sourceShuttle, GRShuttle destShuttle)
 	{
-		sourceShuttle.friendCollider.RefreshPlayersInSphere();
+		sourceShuttle.friendCollider.RefreshPlayersWithinBounds();
 		if (sourceShuttle.friendCollider.playerIDsCurrentlyTouching.Contains(NetworkSystem.Instance.LocalPlayer.UserId))
 		{
 			GTPlayer instance = GTPlayer.Instance;
@@ -611,7 +611,7 @@ public class GRShuttle : MonoBehaviour, IGorillaSliceableSimple
 		}
 		double timeAsDouble = Time.timeAsDouble;
 		double num = shuttleData.stateStartTime;
-		if (shuttleData.state != 0 && timeAsDouble > num + 10.0)
+		if (shuttleData.state != GRPlayer.ShuttleState.Idle && timeAsDouble > num + 10.0)
 		{
 			CancelPlayerShuttle(player);
 			return;
@@ -736,7 +736,6 @@ public class GRShuttle : MonoBehaviour, IGorillaSliceableSimple
 	public static void SetPlayerShuttleState(GRPlayer player, GRPlayer.ShuttleState newState)
 	{
 		GRPlayer.ShuttleData shuttleData = player.shuttleData;
-		_ = shuttleData.state;
 		shuttleData.state = newState;
 		shuttleData.stateStartTime = Time.timeAsDouble;
 		switch (shuttleData.state)

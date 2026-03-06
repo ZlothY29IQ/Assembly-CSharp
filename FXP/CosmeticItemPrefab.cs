@@ -10,6 +10,7 @@ using UnityEngine;
 
 namespace FXP;
 
+[Obsolete("CosmeticItemPrefab is deprecated, if we want to use this we need services to re-activate a webservice that was called gt-featureditem-dev.")]
 public class CosmeticItemPrefab : MonoBehaviour
 {
 	[SerializeField]

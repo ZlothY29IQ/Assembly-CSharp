@@ -331,8 +331,6 @@ public class TransferrableObject : HoldableObject, ISelfValidator, IRequestableO
 
 	private AudioSource audioSrc;
 
-	private bool _isListeningFor_OnPostInstantiateAllPrefabs2;
-
 	protected Transform _defaultAnchor;
 
 	protected bool _isDefaultAnchorSet;
@@ -478,6 +476,7 @@ public class TransferrableObject : HoldableObject, ISelfValidator, IRequestableO
 				}
 				myRig = (rig.isOfflineVRRig ? rig : null);
 				myOnlineRig = (rig.isOfflineVRRig ? null : rig);
+				targetDockPositions = rig.myBodyDockPositions;
 			}
 			else
 			{
@@ -486,7 +485,10 @@ public class TransferrableObject : HoldableObject, ISelfValidator, IRequestableO
 			}
 			isMyRigValid = true;
 			isMyOnlineRigValid = true;
-			targetDockPositions = GetComponentInParent<BodyDockPositions>();
+			if (isSceneObject)
+			{
+				targetDockPositions = GetComponentInParent<BodyDockPositions>();
+			}
 			anchor = base.transform.parent;
 			if (rigidbodyInstance == null)
 			{
@@ -606,19 +608,7 @@ public class TransferrableObject : HoldableObject, ISelfValidator, IRequestableO
 			}
 			RoomSystem.JoinedRoomEvent += new Action(OnJoinedRoom);
 			RoomSystem.LeftRoomEvent += new Action(OnLeftRoom);
-			if (!isSceneObject && !CosmeticsV2Spawner_Dirty.allPartsInstantiated)
-			{
-				Debug.LogError("`TransferrableObject.OnEnable()` was called before allPartsInstantiated was true. Path: " + base.transform.GetPathQ(), this);
-				if (!_isListeningFor_OnPostInstantiateAllPrefabs2)
-				{
-					_isListeningFor_OnPostInstantiateAllPrefabs2 = true;
-					CosmeticsV2Spawner_Dirty.OnPostInstantiateAllPrefabs2 = (Action)Delegate.Combine(CosmeticsV2Spawner_Dirty.OnPostInstantiateAllPrefabs2, new Action(OnEnable_AfterAllCosmeticsSpawnedOrIsSceneObject));
-				}
-			}
-			else
-			{
-				OnEnable_AfterAllCosmeticsSpawnedOrIsSceneObject();
-			}
+			OnEnable_AfterAllCosmeticsSpawnedOrIsSceneObject();
 		}
 		catch (Exception exception)
 		{
@@ -627,7 +617,7 @@ public class TransferrableObject : HoldableObject, ISelfValidator, IRequestableO
 			base.gameObject.SetActive(value: false);
 			Debug.LogError("TransferrableObject: Disabled & deactivated self because of the exception logged above. Path: " + base.transform.GetPathQ(), this);
 		}
-		if (networkedStateEvents != 0)
+		if (networkedStateEvents != SyncOptions.None)
 		{
 			previousItemState = (ItemStates)0;
 			itemState = (ItemStates)0;
@@ -643,113 +633,118 @@ public class TransferrableObject : HoldableObject, ISelfValidator, IRequestableO
 		if (!base.enabled)
 		{
 			base.gameObject.SetActive(value: false);
-			return;
 		}
-		_isListeningFor_OnPostInstantiateAllPrefabs2 = false;
-		CosmeticsV2Spawner_Dirty.OnPostInstantiateAllPrefabs2 = (Action)Delegate.Remove(CosmeticsV2Spawner_Dirty.OnPostInstantiateAllPrefabs2, new Action(OnEnable_AfterAllCosmeticsSpawnedOrIsSceneObject));
-		if (!base.isActiveAndEnabled)
+		else
 		{
-			return;
-		}
-		try
-		{
-			TransferrableObjectManager.Register(this);
-			transferrableItemSlotTransformOverride = GetComponent<TransferrableItemSlotTransformOverride>();
-			if (!positionInitialized)
+			if (!base.isActiveAndEnabled)
 			{
-				SetInitMatrix();
-				positionInitialized = true;
+				return;
 			}
-			if (isSceneObject)
+			try
 			{
-				if (!worldShareableInstance)
+				TransferrableObjectManager.Register(this);
+				transferrableItemSlotTransformOverride = GetComponent<TransferrableItemSlotTransformOverride>();
+				if (!positionInitialized)
 				{
-					Debug.LogError("Missing Sharable Instance on Scene enabled object: " + base.gameObject.name);
+					SetInitMatrix();
+					positionInitialized = true;
+				}
+				if (isSceneObject)
+				{
+					if (!worldShareableInstance)
+					{
+						Debug.LogError("Missing Sharable Instance on Scene enabled object: " + base.gameObject.name);
+						return;
+					}
+					worldShareableInstance.SyncToSceneObject(this);
+					worldShareableInstance.GetComponent<RequestableOwnershipGuard>().AddCallbackTarget(this);
 					return;
 				}
-				worldShareableInstance.SyncToSceneObject(this);
-				worldShareableInstance.GetComponent<RequestableOwnershipGuard>().AddCallbackTarget(this);
-				return;
-			}
-			if (!isSceneObject && !myRig && !myOnlineRig && !ownerRig)
-			{
-				ownerRig = GetComponentInParent<VRRig>(includeInactive: true);
-				if (ownerRig.isOfflineVRRig)
+				if (!isSceneObject && !myRig && !myOnlineRig && !ownerRig)
 				{
-					myRig = ownerRig;
+					ownerRig = GetComponentInParent<VRRig>(includeInactive: true);
+					if (ownerRig.isOfflineVRRig)
+					{
+						myRig = ownerRig;
+					}
+					else
+					{
+						myOnlineRig = ownerRig;
+					}
 				}
-				else
+				if (!myRig && (bool)myOnlineRig)
 				{
-					myOnlineRig = ownerRig;
+					ownerRig = myOnlineRig;
+					SetTargetRig(myOnlineRig);
 				}
-			}
-			if (!myRig && (bool)myOnlineRig)
-			{
-				ownerRig = myOnlineRig;
-				SetTargetRig(myOnlineRig);
-			}
-			if (myRig == null && myOnlineRig == null)
-			{
-				if (!isSceneObject)
+				if (!IsSpawned)
+				{
+					IsSpawned = true;
+					OnSpawn((myRig != null) ? myRig : myOnlineRig);
+				}
+				if (myRig == null && myOnlineRig == null)
+				{
+					if (!isSceneObject)
+					{
+						base.gameObject.SetActive(value: false);
+					}
+					return;
+				}
+				objectIndex = targetDockPositions.ReturnTransferrableItemIndex(myIndex);
+				if (currentState == PositionState.OnLeftArm)
+				{
+					storedZone = BodyDockPositions.DropPositions.LeftArm;
+				}
+				else if (currentState == PositionState.OnRightArm)
+				{
+					storedZone = BodyDockPositions.DropPositions.RightArm;
+				}
+				else if (currentState == PositionState.OnLeftShoulder)
+				{
+					storedZone = BodyDockPositions.DropPositions.LeftBack;
+				}
+				else if (currentState == PositionState.OnRightShoulder)
+				{
+					storedZone = BodyDockPositions.DropPositions.RightBack;
+				}
+				else if (currentState == PositionState.OnChest)
+				{
+					storedZone = BodyDockPositions.DropPositions.Chest;
+				}
+				if (IsLocalObject())
+				{
+					ownerRig = GorillaTagger.Instance.offlineVRRig;
+					SetTargetRig(GorillaTagger.Instance.offlineVRRig);
+				}
+				if (objectIndex == -1)
 				{
 					base.gameObject.SetActive(value: false);
+					return;
 				}
-				return;
-			}
-			objectIndex = targetDockPositions.ReturnTransferrableItemIndex(myIndex);
-			if (currentState == PositionState.OnLeftArm)
-			{
-				storedZone = BodyDockPositions.DropPositions.LeftArm;
-			}
-			else if (currentState == PositionState.OnRightArm)
-			{
-				storedZone = BodyDockPositions.DropPositions.RightArm;
-			}
-			else if (currentState == PositionState.OnLeftShoulder)
-			{
-				storedZone = BodyDockPositions.DropPositions.LeftBack;
-			}
-			else if (currentState == PositionState.OnRightShoulder)
-			{
-				storedZone = BodyDockPositions.DropPositions.RightBack;
-			}
-			else if (currentState == PositionState.OnChest)
-			{
-				storedZone = BodyDockPositions.DropPositions.Chest;
-			}
-			if (IsLocalObject())
-			{
-				ownerRig = GorillaTagger.Instance.offlineVRRig;
-				SetTargetRig(GorillaTagger.Instance.offlineVRRig);
-			}
-			if (objectIndex == -1)
-			{
-				base.gameObject.SetActive(value: false);
-				return;
-			}
-			if (currentState == PositionState.OnLeftArm && flipOnXForLeftArm)
-			{
-				Transform transform = GetAnchor(currentState);
-				transform.localScale = new Vector3(0f - transform.localScale.x, transform.localScale.y, transform.localScale.z);
-			}
-			initState = currentState;
-			enabledOnFrame = Time.frameCount;
-			startInterpolation = true;
-			if (NetworkSystem.Instance.InRoom && (canDrop || shareable))
-			{
-				SpawnTransferableObjectViews();
-				if ((bool)myRig && myRig != null && worldShareableInstance != null)
+				if (currentState == PositionState.OnLeftArm && flipOnXForLeftArm)
 				{
-					OnWorldShareableItemSpawn();
+					Transform transform = GetAnchor(currentState);
+					transform.localScale = new Vector3(0f - transform.localScale.x, transform.localScale.y, transform.localScale.z);
+				}
+				initState = currentState;
+				enabledOnFrame = Time.frameCount;
+				startInterpolation = true;
+				if (NetworkSystem.Instance.InRoom && (canDrop || shareable))
+				{
+					SpawnTransferableObjectViews();
+					if ((bool)myRig && myRig != null && worldShareableInstance != null)
+					{
+						OnWorldShareableItemSpawn();
+					}
 				}
 			}
-		}
-		catch (Exception exception)
-		{
-			Debug.LogException(exception, this);
-			base.enabled = false;
-			base.gameObject.SetActive(value: false);
-			Debug.LogError("TransferrableObject: Disabled & deactivated self because of the exception logged above. Path: " + base.transform.GetPathQ(), this);
+			catch (Exception exception)
+			{
+				Debug.LogException(exception, this);
+				base.enabled = false;
+				base.gameObject.SetActive(value: false);
+				Debug.LogError("TransferrableObject: Disabled & deactivated self because of the exception logged above. Path: " + base.transform.GetPathQ(), this);
+			}
 		}
 	}
 
@@ -762,8 +757,6 @@ public class TransferrableObject : HoldableObject, ISelfValidator, IRequestableO
 		}
 		RoomSystem.JoinedRoomEvent -= new Action(OnJoinedRoom);
 		RoomSystem.LeftRoomEvent -= new Action(OnLeftRoom);
-		_isListeningFor_OnPostInstantiateAllPrefabs2 = false;
-		CosmeticsV2Spawner_Dirty.OnPostInstantiateAllPrefabs2 = (Action)Delegate.Remove(CosmeticsV2Spawner_Dirty.OnPostInstantiateAllPrefabs2, new Action(OnEnable_AfterAllCosmeticsSpawnedOrIsSceneObject));
 		enabledOnFrame = -1;
 		base.transform.localScale = Vector3.one;
 		try
@@ -831,7 +824,7 @@ public class TransferrableObject : HoldableObject, ISelfValidator, IRequestableO
 	public virtual void PreDisable()
 	{
 		itemState = ItemStates.State0;
-		if (networkedStateEvents != 0)
+		if (networkedStateEvents != SyncOptions.None)
 		{
 			previousItemState = (ItemStates)0;
 			itemState = (ItemStates)0;
@@ -1349,7 +1342,7 @@ public class TransferrableObject : HoldableObject, ISelfValidator, IRequestableO
 				}
 			}
 		}
-		else if (currentState != 0)
+		else if (currentState != PositionState.None)
 		{
 			UpdateFollowXform();
 		}
@@ -1745,7 +1738,7 @@ public class TransferrableObject : HoldableObject, ISelfValidator, IRequestableO
 					array2[j].enabled = !InHand();
 				}
 			}
-			if (networkedStateEvents != 0 && previousItemState != itemState)
+			if (networkedStateEvents != SyncOptions.None && previousItemState != itemState)
 			{
 				ItemStates num2 = previousItemState & (ItemStates)(-65);
 				int num3 = (int)(itemState & (ItemStates)(-65));
@@ -1901,7 +1894,7 @@ public class TransferrableObject : HoldableObject, ISelfValidator, IRequestableO
 			{
 				return false;
 			}
-			if (targetDockPositions.DropZoneStorageUsed(zoneReleased.dropPosition) == -1 && zoneReleased.forBodyDock == targetDockPositions && (zoneReleased.dropPosition & dockPositions) != 0)
+			if (targetDockPositions.DropZoneStorageUsed(zoneReleased.dropPosition) == -1 && zoneReleased.forBodyDock == targetDockPositions && (zoneReleased.dropPosition & dockPositions) != BodyDockPositions.DropPositions.None)
 			{
 				storedZone = zoneReleased.dropPosition;
 			}
@@ -2134,31 +2127,31 @@ public class TransferrableObject : HoldableObject, ISelfValidator, IRequestableO
 		case PositionState.InRightHand:
 			return true;
 		case PositionState.OnLeftArm:
-			if ((dockPositions & BodyDockPositions.DropPositions.LeftArm) != 0)
+			if ((dockPositions & BodyDockPositions.DropPositions.LeftArm) != BodyDockPositions.DropPositions.None)
 			{
 				return true;
 			}
 			break;
 		case PositionState.OnRightArm:
-			if ((dockPositions & BodyDockPositions.DropPositions.RightArm) != 0)
+			if ((dockPositions & BodyDockPositions.DropPositions.RightArm) != BodyDockPositions.DropPositions.None)
 			{
 				return true;
 			}
 			break;
 		case PositionState.OnChest:
-			if ((dockPositions & BodyDockPositions.DropPositions.Chest) != 0)
+			if ((dockPositions & BodyDockPositions.DropPositions.Chest) != BodyDockPositions.DropPositions.None)
 			{
 				return true;
 			}
 			break;
 		case PositionState.OnLeftShoulder:
-			if ((dockPositions & BodyDockPositions.DropPositions.LeftBack) != 0)
+			if ((dockPositions & BodyDockPositions.DropPositions.LeftBack) != BodyDockPositions.DropPositions.None)
 			{
 				return true;
 			}
 			break;
 		case PositionState.OnRightShoulder:
-			if ((dockPositions & BodyDockPositions.DropPositions.RightBack) != 0)
+			if ((dockPositions & BodyDockPositions.DropPositions.RightBack) != BodyDockPositions.DropPositions.None)
 			{
 				return true;
 			}
@@ -2453,7 +2446,7 @@ public class TransferrableObject : HoldableObject, ISelfValidator, IRequestableO
 
 	public void OnMyOwnerLeft()
 	{
-		if (currentState != 0 && currentState != PositionState.Dropped)
+		if (currentState != PositionState.None && currentState != PositionState.Dropped)
 		{
 			DropItem();
 			if ((bool)anchor)

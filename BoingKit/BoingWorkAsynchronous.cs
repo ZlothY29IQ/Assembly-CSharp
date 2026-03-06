@@ -20,16 +20,16 @@ public static class BoingWorkAsynchronous
 
 		public void Execute(int index)
 		{
-			BoingWork.Params @params = Params[index];
-			if (@params.Bits.IsBitSet(9))
+			BoingWork.Params obj = Params[index];
+			if (obj.Bits.IsBitSet(9))
 			{
-				@params.Execute(FixedDeltaTime);
+				obj.Execute(FixedDeltaTime);
 			}
 			else
 			{
-				@params.Execute(DeltaTime);
+				obj.Execute(DeltaTime);
 			}
-			Output[index] = new BoingWork.Output(@params.InstanceID, ref @params.Instance.PositionSpring, ref @params.Instance.RotationSpring, ref @params.Instance.ScaleSpring);
+			Output[index] = new BoingWork.Output(obj.InstanceID, ref obj.Instance.PositionSpring, ref obj.Instance.RotationSpring, ref obj.Instance.ScaleSpring);
 		}
 	}
 
@@ -48,23 +48,23 @@ public static class BoingWorkAsynchronous
 
 		public void Execute(int index)
 		{
-			BoingWork.Params @params = Params[index];
+			BoingWork.Params obj = Params[index];
 			int i = 0;
 			for (int length = Effectors.Length; i < length; i++)
 			{
 				BoingEffector.Params effector = Effectors[i];
-				@params.AccumulateTarget(ref effector, DeltaTime);
+				obj.AccumulateTarget(ref effector, DeltaTime);
 			}
-			@params.EndAccumulateTargets();
-			if (@params.Bits.IsBitSet(9))
+			obj.EndAccumulateTargets();
+			if (obj.Bits.IsBitSet(9))
 			{
-				@params.Execute(FixedDeltaTime);
+				obj.Execute(FixedDeltaTime);
 			}
 			else
 			{
-				@params.Execute(BoingManager.DeltaTime);
+				obj.Execute(BoingManager.DeltaTime);
 			}
-			Output[index] = new BoingWork.Output(@params.InstanceID, ref @params.Instance.PositionSpring, ref @params.Instance.RotationSpring, ref @params.Instance.ScaleSpring);
+			Output[index] = new BoingWork.Output(obj.InstanceID, ref obj.Instance.PositionSpring, ref obj.Instance.RotationSpring, ref obj.Instance.ScaleSpring);
 		}
 	}
 
@@ -125,12 +125,13 @@ public static class BoingWorkAsynchronous
 		}
 		if (num > 0)
 		{
-			BehaviorJob behaviorJob = default(BehaviorJob);
-			behaviorJob.Params = s_aBehaviorParams;
-			behaviorJob.Output = s_aBehaviorOutput;
-			behaviorJob.DeltaTime = BoingManager.DeltaTime;
-			behaviorJob.FixedDeltaTime = BoingManager.FixedDeltaTime;
-			s_hBehaviorJob = behaviorJob.Schedule(innerloopBatchCount: (int)Mathf.Ceil((float)num / (float)Environment.ProcessorCount), arrayLength: num);
+			s_hBehaviorJob = new BehaviorJob
+			{
+				Params = s_aBehaviorParams,
+				Output = s_aBehaviorOutput,
+				DeltaTime = BoingManager.DeltaTime,
+				FixedDeltaTime = BoingManager.FixedDeltaTime
+			}.Schedule(innerloopBatchCount: (int)Mathf.Ceil((float)num / (float)Environment.ProcessorCount), arrayLength: num);
 			JobHandle.ScheduleBatchedJobs();
 		}
 		s_behaviorJobNeedsGather = true;
@@ -179,13 +180,14 @@ public static class BoingWorkAsynchronous
 		}
 		if (num > 0)
 		{
-			ReactorJob jobData = default(ReactorJob);
-			jobData.Effectors = s_aEffectors;
-			jobData.Params = s_aReactorExecParams;
-			jobData.Output = s_aReactorExecOutput;
-			jobData.DeltaTime = BoingManager.DeltaTime;
-			jobData.FixedDeltaTime = BoingManager.FixedDeltaTime;
-			s_hReactorJob = IJobParallelForExtensions.Schedule(jobData, num, 32);
+			s_hReactorJob = IJobParallelForExtensions.Schedule(new ReactorJob
+			{
+				Effectors = s_aEffectors,
+				Params = s_aReactorExecParams,
+				Output = s_aReactorExecOutput,
+				DeltaTime = BoingManager.DeltaTime,
+				FixedDeltaTime = BoingManager.FixedDeltaTime
+			}, num, 32);
 			JobHandle.ScheduleBatchedJobs();
 		}
 		foreach (KeyValuePair<int, BoingReactorField> item3 in fieldMap)

@@ -19,6 +19,9 @@ public class GameModeZoneMapping : ScriptableObject
 	private GameModeType[] defaultGameModes;
 
 	[SerializeField]
+	private GameModeType[] bigRoomGameModes;
+
+	[SerializeField]
 	private ZoneGameModes[] zoneGameModes;
 
 	[SerializeField]
@@ -26,6 +29,8 @@ public class GameModeZoneMapping : ScriptableObject
 
 	[SerializeField]
 	private GameModeType[] newThisUpdate;
+
+	private Dictionary<GTZone, HashSet<GameModeType>> bigRoomZoneGameModesLookup;
 
 	private Dictionary<GTZone, HashSet<GameModeType>> publicZoneGameModesLookup;
 
@@ -43,12 +48,12 @@ public class GameModeZoneMapping : ScriptableObject
 	{
 		get
 		{
-			init();
+			Init();
 			return allModes;
 		}
 	}
 
-	private void init()
+	private void Init()
 	{
 		if (allModes != null)
 		{
@@ -57,11 +62,9 @@ public class GameModeZoneMapping : ScriptableObject
 		allModes = new HashSet<GameModeType>();
 		for (int i = 0; i < defaultGameModes.Length; i++)
 		{
-			if (!allModes.Contains(defaultGameModes[i]))
-			{
-				allModes.Add(defaultGameModes[i]);
-			}
+			allModes.Add(defaultGameModes[i]);
 		}
+		bigRoomZoneGameModesLookup = new Dictionary<GTZone, HashSet<GameModeType>>();
 		publicZoneGameModesLookup = new Dictionary<GTZone, HashSet<GameModeType>>();
 		privateZoneGameModesLookup = new Dictionary<GTZone, HashSet<GameModeType>>();
 		for (int j = 0; j < zoneGameModes.Length; j++)
@@ -108,7 +111,7 @@ public class GameModeZoneMapping : ScriptableObject
 
 	public HashSet<GameModeType> GetModesForZone(GTZone zone, bool isPrivate)
 	{
-		init();
+		Init();
 		if (isPrivate && privateZoneGameModesLookup.ContainsKey(zone))
 		{
 			return privateZoneGameModesLookup[zone];
@@ -120,9 +123,21 @@ public class GameModeZoneMapping : ScriptableObject
 		return new HashSet<GameModeType>(defaultGameModes);
 	}
 
+	public bool IsBigRoomMode(GameModeType gameModeType)
+	{
+		for (int i = 0; i < bigRoomGameModes.Length; i++)
+		{
+			if (bigRoomGameModes[i] == gameModeType)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
 	internal string GetModeName(GameModeType mode)
 	{
-		init();
+		Init();
 		if (modeNameLookup.ContainsKey(mode))
 		{
 			return modeNameLookup[mode];
@@ -132,13 +147,13 @@ public class GameModeZoneMapping : ScriptableObject
 
 	internal bool IsNew(GameModeType mode)
 	{
-		init();
+		Init();
 		return isNewLookup.Contains(mode);
 	}
 
 	internal CountdownTextDate GetCountdown(GameModeType mode)
 	{
-		init();
+		Init();
 		if (gameModeTypeCountdownsLookup.ContainsKey(mode))
 		{
 			return gameModeTypeCountdownsLookup[mode];

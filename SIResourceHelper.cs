@@ -176,7 +176,7 @@ public static class SIResourceHelper
 		int num = 0;
 		foreach (SIResource.ResourceCost cost in costs)
 		{
-			if (cost.type != 0)
+			if (cost.type != SIResource.ResourceType.TechPoint)
 			{
 				num += cost.amount;
 			}
@@ -221,7 +221,7 @@ public static class SIResourceHelper
 		for (int i = 0; i < baseCost.Count; i++)
 		{
 			SIResource.ResourceCost value = baseCost[i];
-			if (value.type != 0)
+			if (value.type != SIResource.ResourceType.TechPoint)
 			{
 				value.amount += desiredCost - miscCost;
 				if (value.amount >= 1)

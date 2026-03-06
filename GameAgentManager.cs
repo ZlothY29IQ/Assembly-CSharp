@@ -193,9 +193,9 @@ public class GameAgentManager : NetworkComponent, ITickSystemTick
 		return entityManager.IsZoneActive();
 	}
 
-	public bool IsPositionInZone(Vector3 pos)
+	public bool IsPositionInManagerBounds(Vector3 pos)
 	{
-		return entityManager.IsPositionInZone(pos);
+		return entityManager.IsPositionInManagerBounds(pos);
 	}
 
 	public bool IsValidClientRPC(Player sender)
@@ -399,7 +399,7 @@ public class GameAgentManager : NetworkComponent, ITickSystemTick
 	[PunRPC]
 	public void ApplyJumpRPC(int agentNetId, Vector3 start, Vector3 end, float heightScale, float speedScale, PhotonMessageInfo info)
 	{
-		if (!IsValidClientRPC(info.Sender, agentNetId) || m_RpcSpamChecks.IsSpamming(RPC.ApplyTarget) || !start.IsValid(10000f) || !end.IsValid(10000f) || !entityManager.IsPositionInZone(start) || !entityManager.IsPositionInZone(end) || !entityManager.IsEntityNearPosition(agentNetId, start) || heightScale > 5f || speedScale > 5f || (end - start).sqrMagnitude > 625f)
+		if (!IsValidClientRPC(info.Sender, agentNetId) || m_RpcSpamChecks.IsSpamming(RPC.ApplyTarget) || !start.IsValid(10000f) || !end.IsValid(10000f) || !entityManager.IsPositionInManagerBounds(start) || !entityManager.IsPositionInManagerBounds(end) || !entityManager.IsEntityNearPosition(agentNetId, start) || heightScale > 5f || speedScale > 5f || (end - start).sqrMagnitude > 625f)
 		{
 			return;
 		}
@@ -453,7 +453,7 @@ public class GameAgentManager : NetworkComponent, ITickSystemTick
 			int netId = (int)stream.ReceiveNext();
 			Vector3 vector = BitPackUtils.UnpackWorldPosFromNetwork((long)stream.ReceiveNext());
 			Quaternion rotation = BitPackUtils.UnpackQuaternionFromNetwork((int)stream.ReceiveNext());
-			if (IsPositionInZone(vector) && entityManager.IsValidNetId(netId))
+			if (IsPositionInManagerBounds(vector) && entityManager.IsValidNetId(netId))
 			{
 				GameEntityId entityIdFromNetId = entityManager.GetEntityIdFromNetId(netId);
 				GameAgent gameAgent = GetGameAgent(entityIdFromNetId);

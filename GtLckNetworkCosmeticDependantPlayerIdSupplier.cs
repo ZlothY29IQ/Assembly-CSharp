@@ -15,7 +15,6 @@ public class GtLckNetworkCosmeticDependantPlayerIdSupplier : MonoBehaviour, ILck
 
 	public void UpdatePlayerId()
 	{
-		Debug.Log("LCK: GtLckNetworkCosmeticDependantPlayerIdSupplier::UpdatePlayerId, ID is now: " + vrrig.OwningNetPlayer.UserId);
 		this.PlayerIdUpdated?.Invoke();
 	}
 }

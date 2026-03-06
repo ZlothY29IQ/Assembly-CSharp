@@ -34,22 +34,23 @@ public struct BuilderPotentialPlacementData
 
 	public BuilderPotentialPlacement ToPotentialPlacement(BuilderTable table)
 	{
-		BuilderPotentialPlacement builderPotentialPlacement = default(BuilderPotentialPlacement);
-		builderPotentialPlacement.attachPiece = table.GetPiece(pieceId);
-		builderPotentialPlacement.parentPiece = table.GetPiece(parentPieceId);
-		builderPotentialPlacement.score = score;
-		builderPotentialPlacement.localPosition = localPosition;
-		builderPotentialPlacement.localRotation = localRotation;
-		builderPotentialPlacement.attachIndex = attachIndex;
-		builderPotentialPlacement.parentAttachIndex = parentAttachIndex;
-		builderPotentialPlacement.attachDistance = attachDistance;
-		builderPotentialPlacement.attachPlaneNormal = attachPlaneNormal;
-		builderPotentialPlacement.attachBounds = attachBounds;
-		builderPotentialPlacement.parentAttachBounds = parentAttachBounds;
-		builderPotentialPlacement.twist = twist;
-		builderPotentialPlacement.bumpOffsetX = bumpOffsetX;
-		builderPotentialPlacement.bumpOffsetZ = bumpOffsetZ;
-		BuilderPotentialPlacement result = builderPotentialPlacement;
+		BuilderPotentialPlacement result = new BuilderPotentialPlacement
+		{
+			attachPiece = table.GetPiece(pieceId),
+			parentPiece = table.GetPiece(parentPieceId),
+			score = score,
+			localPosition = localPosition,
+			localRotation = localRotation,
+			attachIndex = attachIndex,
+			parentAttachIndex = parentAttachIndex,
+			attachDistance = attachDistance,
+			attachPlaneNormal = attachPlaneNormal,
+			attachBounds = attachBounds,
+			parentAttachBounds = parentAttachBounds,
+			twist = twist,
+			bumpOffsetX = bumpOffsetX,
+			bumpOffsetZ = bumpOffsetZ
+		};
 		if (result.parentPiece != null)
 		{
 			BuilderAttachGridPlane builderAttachGridPlane = result.parentPiece.gridPlanes[result.parentAttachIndex];

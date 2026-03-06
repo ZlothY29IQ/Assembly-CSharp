@@ -12,13 +12,13 @@ public class FusionPlayerProperties : NetworkBehaviour
 	public struct PlayerInfo : INetworkStruct
 	{
 		[FieldOffset(0)]
-		[FixedBufferProperty(/*Could not decode attribute arguments.*/)]
+		[FixedBufferProperty(typeof(NetworkString<_32>), typeof(UnityValueSurrogate_0040ReaderWriter_0040Fusion_NetworkString_00601_003CFusion__32_003E), 0, order = -2147483647)]
 		[WeaverGenerated]
 		[SerializeField]
 		private FixedStorage_004033 _NickName;
 
 		[FieldOffset(132)]
-		[FixedBufferProperty(/*Could not decode attribute arguments.*/)]
+		[FixedBufferProperty(typeof(NetworkDictionary<NetworkString<_32>, NetworkString<_32>>), typeof(UnityDictionarySurrogate_0040ReaderWriter_0040Fusion_NetworkString_00601_003CFusion__32_003E_0040ReaderWriter_0040Fusion_NetworkString_00601_003CFusion__32_003E), 3, order = -2147483647)]
 		[WeaverGenerated]
 		[SerializeField]
 		private FixedStorage_0040207 _properties;
@@ -38,7 +38,7 @@ public class FusionPlayerProperties : NetworkBehaviour
 		}
 
 		[Networked]
-		[NetworkedWeavedDictionary(/*Could not decode attribute arguments.*/)]
+		[NetworkedWeavedDictionary(3, 33, 33, typeof(ReaderWriter_0040Fusion_NetworkString_00601_003CFusion__32_003E), typeof(ReaderWriter_0040Fusion_NetworkString_00601_003CFusion__32_003E))]
 		[NetworkedWeaved(33, 207)]
 		public unsafe NetworkDictionary<NetworkString<_32>, NetworkString<_32>> properties => new NetworkDictionary<NetworkString<_32>, NetworkString<_32>>((int*)Native.ReferenceToPointer(ref _properties), 3, ReaderWriter_0040Fusion_NetworkString_00601_003CFusion__32_003E.GetInstance(), ReaderWriter_0040Fusion_NetworkString_00601_003CFusion__32_003E.GetInstance());
 	}
@@ -47,7 +47,7 @@ public class FusionPlayerProperties : NetworkBehaviour
 
 	public PlayerAttributeOnChanged playerAttributeOnChanged;
 
-	[Capacity(10)]
+	[Capacity(20)]
 	private NetworkDictionary<PlayerRef, PlayerInfo> netPlayerAttributes => default(NetworkDictionary<PlayerRef, PlayerInfo>);
 
 	public PlayerInfo PlayerProperties => netPlayerAttributes[base.Runner.LocalPlayer];

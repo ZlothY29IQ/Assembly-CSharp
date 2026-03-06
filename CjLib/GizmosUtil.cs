@@ -267,7 +267,7 @@ public class GizmosUtil
 		DrawCone(to - coneHeight * vector, rotation, coneHeight, coneRadius, numSegments, color, style);
 		if (stemThickness <= 0f)
 		{
-			if (style != 0)
+			if (style != Style.Wireframe)
 			{
 				to -= coneHeight * vector;
 			}

@@ -52,7 +52,7 @@ public class SprayCanCosmeticNetworked : MonoBehaviour
 		{
 			return;
 		}
-		GorillaNot.IncrementRPCCall(info, "OnShakeEvent");
+		MonkeAgent.IncrementRPCCall(info, "OnShakeEvent");
 		if (info.Sender != transferrableObject.myOnlineRig?.creator || !callLimiter.CheckCallTime(Time.time))
 		{
 			return;

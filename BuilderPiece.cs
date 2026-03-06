@@ -1324,7 +1324,7 @@ public class BuilderPiece : MonoBehaviour
 
 	public static bool CanPlayerAttachPieceToPiece(int playerActorNumber, BuilderPiece attachingPiece, BuilderPiece attachToPiece)
 	{
-		if (attachToPiece.state != 0 && !attachToPiece.IsPrivatePlot() && attachToPiece.state != State.AttachedToArm)
+		if (attachToPiece.state != State.AttachedAndPlaced && !attachToPiece.IsPrivatePlot() && attachToPiece.state != State.AttachedToArm)
 		{
 			return true;
 		}
@@ -1354,7 +1354,7 @@ public class BuilderPiece : MonoBehaviour
 
 	public bool CanPlayerGrabPiece(int actorNumber, Vector3 worldPosition)
 	{
-		if (state != 0 && !isPrivatePlot)
+		if (state != State.AttachedAndPlaced && !isPrivatePlot)
 		{
 			return true;
 		}
@@ -1376,7 +1376,7 @@ public class BuilderPiece : MonoBehaviour
 
 	public bool IsPieceMoving()
 	{
-		if (state != 0)
+		if (state != State.AttachedAndPlaced)
 		{
 			return false;
 		}
@@ -1408,7 +1408,7 @@ public class BuilderPiece : MonoBehaviour
 		{
 			return this;
 		}
-		if (state != 0)
+		if (state != State.AttachedAndPlaced)
 		{
 			return null;
 		}

@@ -283,7 +283,7 @@ public class IAPurchase
 			JsonData jsonData = JsonMapper.ToObject(message);
 			int num = -1;
 			int total = 0;
-			int from = 0;
+			int num2 = 0;
 			int to = 0;
 			List<QueryResponse2> list = new List<QueryResponse2>();
 			string text = "";
@@ -305,7 +305,7 @@ public class IAPurchase
 					{
 						JsonData jsonData2 = JsonMapper.ToObject(text);
 						total = (int)jsonData2["total"];
-						from = (int)jsonData2["from"];
+						num2 = (int)jsonData2["from"];
 						to = (int)jsonData2["to"];
 						JsonData jsonData3 = jsonData2["purchases"];
 						_ = jsonData3.IsArray;
@@ -349,7 +349,7 @@ public class IAPurchase
 				{
 					QueryListResponse queryListResponse = new QueryListResponse();
 					queryListResponse.total = total;
-					queryListResponse.from = from;
+					queryListResponse.from = num2;
 					queryListResponse.to = to;
 					queryListResponse.purchaseList = list;
 					listener.OnQuerySuccess(queryListResponse);

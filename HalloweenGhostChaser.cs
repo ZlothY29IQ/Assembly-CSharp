@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Fusion;
 using Fusion.CodeGen;
+using GorillaExtensions;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
@@ -284,11 +285,11 @@ public class HalloweenGhostChaser : NetworkComponent
 				for (int i = 0; i < spawnTransforms.Length; i++)
 				{
 					int num2 = 0;
-					for (int j = 0; j < GorillaParent.instance.vrrigs.Count; j++)
+					for (int j = 0; j < VRRigCache.ActiveRigContainers.Count; j++)
 					{
-						if ((GorillaParent.instance.vrrigs[j].transform.position - spawnTransforms[i].position).magnitude < summonDistance)
+						if ((VRRigCache.ActiveRigContainers[j].transform.position - spawnTransforms[i].position).magnitude < summonDistance)
 						{
-							possibleTarget.Add(GorillaParent.instance.vrrigs[j].creator);
+							possibleTarget.Add(VRRigCache.ActiveRigContainers[j].Creator);
 							num2++;
 							if (num2 >= summonCount)
 							{
@@ -534,18 +535,19 @@ public class HalloweenGhostChaser : NetworkComponent
 		if (possibleTarget.Count >= summonCount)
 		{
 			int randomTarget = UnityEngine.Random.Range(0, possibleTarget.Count);
-			num = GorillaParent.instance.vrrigs.FindIndex((VRRig x) => x.creator != null && x.creator == possibleTarget[randomTarget]);
+			num = VRRigCache.ActiveRigContainers.FindIndex((RigContainer x) => x.Creator != null && x.Creator == possibleTarget[randomTarget]);
 			currentSpeed = 3f;
 		}
 		if (num == -1)
 		{
-			num = UnityEngine.Random.Range(0, GorillaParent.instance.vrrigs.Count);
+			num = UnityEngine.Random.Range(0, VRRigCache.ActiveRigContainers.Count);
 		}
 		possibleTarget.Clear();
-		if (num < GorillaParent.instance.vrrigs.Count)
+		if (num < VRRigCache.ActiveRigContainers.Count)
 		{
-			targetPlayer = GorillaParent.instance.vrrigs[num].creator;
-			followTarget = GorillaParent.instance.vrrigs[num].head.rigTarget;
+			VRRig rig = VRRigCache.ActiveRigContainers[num].Rig;
+			targetPlayer = rig.creator;
+			followTarget = rig.head.rigTarget;
 			targetIsOnNavMesh = NavMesh.SamplePosition(followTarget.position, out var _, 5f, 1);
 		}
 		else
@@ -692,13 +694,14 @@ public class HalloweenGhostChaser : NetworkComponent
 
 	public override void WriteDataFusion()
 	{
-		GhostData data = default(GhostData);
-		data.TargetActorNumber = targetPlayer?.ActorNumber ?? (-1);
-		data.CurrentState = (int)currentState;
-		data.SpawnIndex = spawnIndex;
-		data.CurrentSpeed = currentSpeed;
-		data.IsSummoned = isSummoned;
-		Data = data;
+		Data = new GhostData
+		{
+			TargetActorNumber = (targetPlayer?.ActorNumber ?? (-1)),
+			CurrentState = (int)currentState,
+			SpawnIndex = spawnIndex,
+			CurrentSpeed = currentSpeed,
+			IsSummoned = isSummoned
+		};
 	}
 
 	public override void ReadDataFusion()

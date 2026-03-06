@@ -254,7 +254,7 @@ public class ProgressionController : MonoBehaviour
 			{
 				int num = (int)Mathf.Pow(2f, _fetchStatusRetryCount + 1);
 				_fetchStatusRetryCount++;
-				yield return new WaitForSeconds(num);
+				yield return new WaitForSecondsRealtime(num);
 				FetchStatus();
 			}
 			else
@@ -342,7 +342,7 @@ public class ProgressionController : MonoBehaviour
 			{
 				int num = (int)Mathf.Pow(2f, _sendQuestCompleteRetryCount + 1);
 				_sendQuestCompleteRetryCount++;
-				yield return new WaitForSeconds(num);
+				yield return new WaitForSecondsRealtime(num);
 				StartSendQuestComplete(data.QuestId);
 			}
 			else
@@ -479,32 +479,32 @@ public class ProgressionController : MonoBehaviour
 	private void LoadCompletedQuestQueue()
 	{
 		_queuedDailyCompletedQuests.Clear();
-		int @int = PlayerPrefs.GetInt("Queued_Quest_Daily_SetID_Key", -1);
-		int int2 = PlayerPrefs.GetInt("Queued_Quest_Daily_SaveCount_Key", -1);
+		int num = PlayerPrefs.GetInt("Queued_Quest_Daily_SetID_Key", -1);
+		int num2 = PlayerPrefs.GetInt("Queued_Quest_Daily_SaveCount_Key", -1);
 		int dailyQuestSetID = _questManager.dailyQuestSetID;
-		if (@int == dailyQuestSetID)
+		if (num == dailyQuestSetID)
 		{
-			for (int i = 0; i < int2; i++)
+			for (int i = 0; i < num2; i++)
 			{
-				int int3 = PlayerPrefs.GetInt(string.Format("{0}{1}", "Queued_Quest_Daily_ID_Key", i), -1);
-				if (int3 != -1)
+				int num3 = PlayerPrefs.GetInt(string.Format("{0}{1}", "Queued_Quest_Daily_ID_Key", i), -1);
+				if (num3 != -1)
 				{
-					_queuedDailyCompletedQuests.Add(int3);
+					_queuedDailyCompletedQuests.Add(num3);
 				}
 			}
 		}
 		_queuedWeeklyCompletedQuests.Clear();
-		int int4 = PlayerPrefs.GetInt("Queued_Quest_Weekly_SetID_Key", -1);
-		int int5 = PlayerPrefs.GetInt("Queued_Quest_Weekly_SaveCount_Key", -1);
+		int num4 = PlayerPrefs.GetInt("Queued_Quest_Weekly_SetID_Key", -1);
+		int num5 = PlayerPrefs.GetInt("Queued_Quest_Weekly_SaveCount_Key", -1);
 		int weeklyQuestSetID = _questManager.weeklyQuestSetID;
-		if (int4 == weeklyQuestSetID)
+		if (num4 == weeklyQuestSetID)
 		{
-			for (int j = 0; j < int5; j++)
+			for (int j = 0; j < num5; j++)
 			{
-				int int6 = PlayerPrefs.GetInt(string.Format("{0}{1}", "Queued_Quest_Weekly_ID_Key", j), -1);
-				if (int6 != -1)
+				int num6 = PlayerPrefs.GetInt(string.Format("{0}{1}", "Queued_Quest_Weekly_ID_Key", j), -1);
+				if (num6 != -1)
 				{
-					_queuedWeeklyCompletedQuests.Add(int6);
+					_queuedWeeklyCompletedQuests.Add(num6);
 				}
 			}
 		}

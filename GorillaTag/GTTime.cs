@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using GorillaNetworking;
+using TMPro;
 using UnityEngine;
 
 namespace GorillaTag;
@@ -138,5 +139,27 @@ public static class GTTime
 	public static DateTime ConvertDateTimeHumanReadableLongToDateTime(long humanReadableLong)
 	{
 		return DateTime.ParseExact(humanReadableLong.ToString(), "yyyyMMddHHmmssfff'00'", CultureInfo.InvariantCulture);
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static bool TryUpdateTimeText(TMP_Text textComponent, TimeSpan timeSpan, char[] chars, int index, ref int ref_lastUpdateSeconds)
+	{
+		int num = (int)timeSpan.TotalSeconds;
+		if (ref_lastUpdateSeconds == num)
+		{
+			return false;
+		}
+		ref_lastUpdateSeconds = num;
+		int num2 = Mathf.Clamp((int)timeSpan.TotalHours, 0, 99);
+		int minutes = timeSpan.Minutes;
+		int seconds = timeSpan.Seconds;
+		chars[index] = (char)(48 + num2 / 10);
+		chars[index + 1] = (char)(48 + num2 % 10);
+		chars[index + 3] = (char)(48 + minutes / 10);
+		chars[index + 4] = (char)(48 + minutes % 10);
+		chars[index + 6] = (char)(48 + seconds / 10);
+		chars[index + 7] = (char)(48 + seconds % 10);
+		textComponent.SetCharArray(chars);
+		return true;
 	}
 }

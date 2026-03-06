@@ -131,24 +131,36 @@ public class Slingshot : ProjectileWeapon
 	{
 		base.OnSpawn(rig);
 		myRig = rig;
+		OnEnable();
 	}
 
 	internal override void OnEnable()
 	{
-		leftHandSnap = myRig.cosmeticReferences.Get(CosmeticRefID.SlingshotSnapLeft).transform;
-		rightHandSnap = myRig.cosmeticReferences.Get(CosmeticRefID.SlingshotSnapRight).transform;
-		currentState = PositionState.OnChest;
-		itemState = ItemStates.State0;
-		if ((bool)elasticLeft)
+		if (base.IsSpawned)
 		{
-			elasticLeft.positionCount = 2;
+			GameObject gameObject = myRig.cosmeticReferences.Get(CosmeticRefID.SlingshotSnapLeft);
+			if (gameObject != null)
+			{
+				leftHandSnap = gameObject.transform;
+			}
+			GameObject gameObject2 = myRig.cosmeticReferences.Get(CosmeticRefID.SlingshotSnapRight);
+			if (gameObject2 != null)
+			{
+				rightHandSnap = gameObject2.transform;
+			}
+			currentState = PositionState.OnChest;
+			itemState = ItemStates.State0;
+			if ((bool)elasticLeft)
+			{
+				elasticLeft.positionCount = 2;
+			}
+			if ((bool)elasticRight)
+			{
+				elasticRight.positionCount = 2;
+			}
+			dummyProjectile = null;
+			base.OnEnable();
 		}
-		if ((bool)elasticRight)
-		{
-			elasticRight.positionCount = 2;
-		}
-		dummyProjectile = null;
-		base.OnEnable();
 	}
 
 	internal override void OnDisable()
@@ -159,6 +171,10 @@ public class Slingshot : ProjectileWeapon
 
 	protected override void LateUpdateShared()
 	{
+		if (!base.IsSpawned)
+		{
+			return;
+		}
 		base.LateUpdateShared();
 		float num = Mathf.Abs(base.transform.lossyScale.x);
 		Vector3 vector;

@@ -80,7 +80,7 @@ public class SIGadgetCooldownBlaster : MonoBehaviour, SIGadgetBlasterType
 
 	public void OnUpdateRemote(float dt)
 	{
-		if (blaster.currentState != 0)
+		if (blaster.currentState != SIGadgetBlasterState.Idle)
 		{
 			_ = 2;
 		}

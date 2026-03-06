@@ -3,7 +3,7 @@ using System.Linq;
 using UnityEngine;
 using XNode;
 
-[CreateAssetMenu(fileName = "TechTreePage", menuName = "SuperInfection/TechTree Page")]
+[CreateAssetMenu(fileName = "TechTreeGadgetGraph", menuName = "SuperInfection/TechTree Gadget Graph")]
 public class TechTreeGadgetGraph : NodeGraph
 {
 	public string nickName;
@@ -29,7 +29,7 @@ public class TechTreeGadgetGraph : NodeGraph
 		get
 		{
 			EAssetReleaseTier eAssetReleaseTier = releaseTier;
-			if (eAssetReleaseTier != 0 && eAssetReleaseTier <= EAssetReleaseTier.PublicRC)
+			if (eAssetReleaseTier != EAssetReleaseTier.Disabled && eAssetReleaseTier <= EAssetReleaseTier.PublicRC)
 			{
 				List<Node> list = nodes;
 				if (list == null)

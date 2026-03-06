@@ -70,9 +70,9 @@ public class BuilderConveyorManager : MonoBehaviour
 			Vector3 vector = shelfOffsets[index];
 			int index2 = conveyorIndices[index];
 			NativeSpline splineAt = GetSplineAt(index2);
-			Quaternion quaternion = conveyorRotations[index2];
+			Quaternion quaternion2 = conveyorRotations[index2];
 			float curveT;
-			Vector3 position = (Vector3)CurveUtility.EvaluatePosition(splineAt.GetCurve(splineAt.SplineToCurveT(splineT, out curveT)), curveT) + quaternion * vector;
+			Vector3 position = (Vector3)CurveUtility.EvaluatePosition(splineAt.GetCurve(splineAt.SplineToCurveT(splineT, out curveT)), curveT) + quaternion2 * vector;
 			transform.position = position;
 		}
 	}
@@ -219,12 +219,13 @@ public class BuilderConveyorManager : MonoBehaviour
 
 	public JobHandle ConstructJobHandle()
 	{
-		EvaluateSplineJob evaluateSplineJob = default(EvaluateSplineJob);
-		evaluateSplineJob.conveyorRotations = conveyorRotations;
-		evaluateSplineJob.conveyorIndices = conveyorIndices;
-		evaluateSplineJob.shelfOffsets = jobShelfOffsets;
-		evaluateSplineJob.splineTimes = jobSplineTimes;
-		EvaluateSplineJob jobData = evaluateSplineJob;
+		EvaluateSplineJob jobData = new EvaluateSplineJob
+		{
+			conveyorRotations = conveyorRotations,
+			conveyorIndices = conveyorIndices,
+			shelfOffsets = jobShelfOffsets,
+			splineTimes = jobSplineTimes
+		};
 		for (int i = 0; i < conveyorSplines.Length; i++)
 		{
 			jobData.SetSplineAt(i, conveyorSplines[i]);

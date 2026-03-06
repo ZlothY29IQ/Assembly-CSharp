@@ -207,7 +207,7 @@ public class VenusFlyTrapHoldable : MonoBehaviour, ITickSystemTick
 	{
 		if (sender == target)
 		{
-			GorillaNot.IncrementRPCCall(info, "OnTriggerEvent");
+			MonkeAgent.IncrementRPCCall(info, "OnTriggerEvent");
 			if (callLimiter.CheckCallTime(Time.time))
 			{
 				OnTriggerLocal();

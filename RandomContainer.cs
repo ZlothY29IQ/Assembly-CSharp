@@ -43,7 +43,7 @@ public abstract class RandomContainer<T> : ScriptableObject
 
 	public void Reset()
 	{
-		ResetRandom(null);
+		ResetRandom();
 		_lastItem = default(T);
 		_lastItemIndex = -1;
 	}

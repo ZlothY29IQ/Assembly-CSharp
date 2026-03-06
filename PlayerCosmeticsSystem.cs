@@ -1,15 +1,23 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
-using GorillaExtensions;
 using GorillaNetworking;
+using GorillaTagScripts;
+using Newtonsoft.Json;
 using PlayFab;
 using PlayFab.ClientModels;
 using UnityEngine;
 
 internal class PlayerCosmeticsSystem : MonoBehaviour, ITickSystemPre
 {
+	[Serializable]
+	public class PlayFabSubscriptionData
+	{
+		public string Sku;
+
+		public bool IsActive;
+	}
+
 	public float playerLookUpCooldown = 3f;
 
 	public float getSharedGroupDataCooldown = 0.1f;
@@ -28,17 +36,21 @@ internal class PlayerCosmeticsSystem : MonoBehaviour, ITickSystemPre
 
 	private List<string> inventory;
 
+	private const string inventoryKey = "InventoryDict";
+
+	private static readonly string subscriptionKey = "subscriptions.fan_club";
+
 	private static PlayerCosmeticsSystem instance;
 
-	private static Queue<NetPlayer> playersToLookUp = new Queue<NetPlayer>(10);
+	private static Queue<NetPlayer> playersToLookUp = new Queue<NetPlayer>(20);
 
-	private static Dictionary<int, IUserCosmeticsCallback> userCosmeticCallback = new Dictionary<int, IUserCosmeticsCallback>(10);
+	private static Dictionary<int, IUserCosmeticsCallback> userCosmeticCallback = new Dictionary<int, IUserCosmeticsCallback>(20);
 
 	private static Dictionary<int, string> userCosmeticsWaiting = new Dictionary<int, string>(5);
 
-	private static List<string> playerIDsList = new List<string>(10);
+	private static List<string> playerIDsList = new List<string>(20);
 
-	private static List<int> playerActorNumberList = new List<int>(10);
+	private static List<int> playerActorNumberList = new List<int>(20);
 
 	private static List<int> playersWaiting = new List<int>();
 
@@ -72,7 +84,8 @@ internal class PlayerCosmeticsSystem : MonoBehaviour, ITickSystemPre
 			base.transform.SetParent(null, worldPositionStays: true);
 			UnityEngine.Object.DontDestroyOnLoad(this);
 			inventory = new List<string>();
-			inventory.Add("Inventory");
+			inventory.Add("InventoryDict");
+			inventory.Add(subscriptionKey);
 			NetworkSystem.Instance.OnRaiseEvent += OnNetEvent;
 		}
 		else
@@ -112,14 +125,8 @@ internal class PlayerCosmeticsSystem : MonoBehaviour, ITickSystemPre
 		if (!isLookingUp)
 		{
 			TickSystem<object>.AddPreTickCallback(this);
-			if (wait)
-			{
-				startSearchingTime = Time.time;
-			}
-			else
-			{
-				startSearchingTime = float.MinValue;
-			}
+			startSearchingTime = (wait ? Time.realtimeSinceStartup : float.MinValue);
+			isLookingUp = true;
 		}
 	}
 
@@ -130,54 +137,11 @@ internal class PlayerCosmeticsSystem : MonoBehaviour, ITickSystemPre
 			TickSystem<object>.RemovePreTickCallback(this);
 			startSearchingTime = float.MinValue;
 			isLookingUp = false;
-			return;
 		}
-		isLookingUp = true;
-		if (startSearchingTime + playerLookUpCooldown > Time.time)
-		{
-			return;
-		}
-		if (GorillaServer.Instance.NewCosmeticsPathShouldReadSharedGroupData())
+		else if (!(startSearchingTime + playerLookUpCooldown > Time.realtimeSinceStartup))
 		{
 			NewCosmeticsPath();
-			return;
 		}
-		NetPlayer netPlayer = null;
-		playerIDsList.Clear();
-		while (playersToLookUp.Count > 0)
-		{
-			netPlayer = playersToLookUp.Dequeue();
-			string item = netPlayer.ActorNumber.ToString();
-			if (netPlayer.InRoom() && !playerIDsList.Contains(item))
-			{
-				if (playerIDsList.Count == 0)
-				{
-					_ = netPlayer.ActorNumber;
-				}
-				playerIDsList.Add(item);
-				playersWaiting.AddSortedUnique(netPlayer.ActorNumber);
-			}
-		}
-		if (playerIDsList.Count > 0)
-		{
-			PlayFabClientAPI.GetSharedGroupData(new PlayFab.ClientModels.GetSharedGroupDataRequest
-			{
-				Keys = playerIDsList,
-				SharedGroupId = NetworkSystem.Instance.RoomName + Regex.Replace(NetworkSystem.Instance.CurrentRegion, "[^a-zA-Z0-9]", "").ToUpper()
-			}, OnGetsharedGroupData, delegate(PlayFabError error)
-			{
-				Debug.Log(error.GenerateErrorReport());
-				if (error.Error == PlayFabErrorCode.NotAuthenticated)
-				{
-					PlayFabAuthenticator.instance.AuthenticateWithPlayFab();
-				}
-				else if (error.Error == PlayFabErrorCode.AccountBanned)
-				{
-					GorillaGameManager.ForceStopGame_DisconnectAndDestroy();
-				}
-			});
-		}
-		isLookingUp = false;
 	}
 
 	private void NewCosmeticsPath()
@@ -216,25 +180,78 @@ internal class PlayerCosmeticsSystem : MonoBehaviour, ITickSystemPre
 				if (!NetworkSystem.Instance.InRoom)
 				{
 					playersWaiting.Clear();
-					return;
 				}
-				foreach (KeyValuePair<string, PlayFab.ClientModels.SharedGroupDataRecord> datum in result.Data)
+				else
 				{
-					if (!(datum.Key != "Inventory") && Utils.PlayerInRoom(playerActorNumberList[j]))
+					bool flag = false;
+					foreach (KeyValuePair<string, PlayFab.ClientModels.SharedGroupDataRecord> datum in result.Data)
 					{
-						tempCosmetics = datum.Value.Value;
-						if (!userCosmeticCallback.TryGetValue(playerActorNumberList[j], out var value))
+						if (datum.Key == "InventoryDict")
 						{
-							userCosmeticsWaiting[playerActorNumberList[j]] = tempCosmetics;
-						}
-						else
-						{
-							value.PendingUpdate = false;
-							if (!value.OnGetUserCosmetics(tempCosmetics))
+							if (Utils.PlayerInRoom(playerActorNumberList[j]))
 							{
-								playersToLookUp.Enqueue(player);
-								value.PendingUpdate = true;
+								tempCosmetics = datum.Value.Value;
+								if (!userCosmeticCallback.TryGetValue(playerActorNumberList[j], out var value))
+								{
+									userCosmeticsWaiting[playerActorNumberList[j]] = tempCosmetics;
+								}
+								else
+								{
+									value.PendingUpdate = false;
+									if (!value.OnGetUserCosmetics(tempCosmetics))
+									{
+										playersToLookUp.Enqueue(player);
+										value.PendingUpdate = true;
+									}
+								}
 							}
+						}
+						else if (datum.Key == subscriptionKey)
+						{
+							flag = true;
+							NetPlayer netPlayer = null;
+							NetPlayer[] allNetPlayers = NetworkSystem.Instance.AllNetPlayers;
+							foreach (NetPlayer netPlayer2 in allNetPlayers)
+							{
+								if (netPlayer2.ActorNumber == playerActorNumberList[j])
+								{
+									netPlayer = netPlayer2;
+									break;
+								}
+							}
+							if (netPlayer != null)
+							{
+								bool isSubscribed = false;
+								if (!string.IsNullOrEmpty(datum.Value.Value))
+								{
+									try
+									{
+										isSubscribed = JsonConvert.DeserializeObject<PlayFabSubscriptionData>(datum.Value.Value).IsActive;
+									}
+									catch (Exception ex)
+									{
+										Debug.LogError("Failed to deserialize subscription data for " + netPlayer.NickName + ": " + ex.Message);
+									}
+								}
+								SubscriptionManager.UpdatePlayerSubscriptionData(netPlayer, isSubscribed);
+							}
+						}
+					}
+					if (!flag)
+					{
+						NetPlayer netPlayer3 = null;
+						NetPlayer[] allNetPlayers = NetworkSystem.Instance.AllNetPlayers;
+						foreach (NetPlayer netPlayer4 in allNetPlayers)
+						{
+							if (netPlayer4.ActorNumber == playerActorNumberList[j])
+							{
+								netPlayer3 = netPlayer4;
+								break;
+							}
+						}
+						if (netPlayer3 != null)
+						{
+							SubscriptionManager.UpdatePlayerSubscriptionData(netPlayer3, isSubscribed: false);
 						}
 					}
 				}
@@ -249,73 +266,9 @@ internal class PlayerCosmeticsSystem : MonoBehaviour, ITickSystemPre
 					GorillaGameManager.ForceStopGame_DisconnectAndDestroy();
 				}
 			});
-			yield return new WaitForSeconds(getSharedGroupDataCooldown);
+			yield return new WaitForSecondsRealtime(getSharedGroupDataCooldown);
 		}
 		isLookingUpNew = false;
-	}
-
-	private void UpdatePlayersWaitingAndDoLookup(bool retrying)
-	{
-		if (playersWaiting.Count > 0)
-		{
-			for (int num = playersWaiting.Count - 1; num >= 0; num--)
-			{
-				int num2 = playersWaiting[num];
-				if (!Utils.PlayerInRoom(num2))
-				{
-					playersWaiting.RemoveAt(num);
-				}
-				else
-				{
-					playersToLookUp.Enqueue(NetworkSystem.Instance.GetPlayer(num2));
-					retrying = true;
-				}
-			}
-		}
-		if (retrying)
-		{
-			LookUpPlayerCosmetics(wait: true);
-		}
-	}
-
-	private void OnGetsharedGroupData(GetSharedGroupDataResult result)
-	{
-		if (!NetworkSystem.Instance.InRoom)
-		{
-			playersWaiting.Clear();
-			return;
-		}
-		bool retrying = false;
-		foreach (KeyValuePair<string, PlayFab.ClientModels.SharedGroupDataRecord> datum in result.Data)
-		{
-			playerTemp = null;
-			if (!int.TryParse(datum.Key, out var result2))
-			{
-				continue;
-			}
-			if (!Utils.PlayerInRoom(result2))
-			{
-				playersWaiting.Remove(result2);
-				continue;
-			}
-			playersWaiting.Remove(result2);
-			playerTemp = NetworkSystem.Instance.GetPlayer(result2);
-			tempCosmetics = datum.Value.Value;
-			if (!userCosmeticCallback.TryGetValue(result2, out var value))
-			{
-				userCosmeticsWaiting[result2] = tempCosmetics;
-				continue;
-			}
-			value.PendingUpdate = false;
-			if (!value.OnGetUserCosmetics(tempCosmetics))
-			{
-				Debug.Log("retrying cosmetics for " + playerTemp.ToStringFull());
-				playersToLookUp.Enqueue(playerTemp);
-				retrying = true;
-				value.PendingUpdate = true;
-			}
-		}
-		UpdatePlayersWaitingAndDoLookup(retrying);
 	}
 
 	private void OnNetEvent(byte code, object data, int source)
@@ -323,7 +276,7 @@ internal class PlayerCosmeticsSystem : MonoBehaviour, ITickSystemPre
 		if (code == 199 && source >= 0)
 		{
 			NetPlayer player = NetworkSystem.Instance.GetPlayer(source);
-			GorillaNot.IncrementRPCCall(new PhotonMessageInfoWrapped(source, NetworkSystem.Instance.ServerTimestamp), "UpdatePlayerCosmetics");
+			MonkeAgent.IncrementRPCCall(new PhotonMessageInfoWrapped(source, NetworkSystem.Instance.ServerTimestamp), "UpdatePlayerCosmetics");
 			UpdatePlayerCosmetics(player);
 		}
 	}
@@ -441,6 +394,7 @@ internal class PlayerCosmeticsSystem : MonoBehaviour, ITickSystemPre
 				CosmeticsController.instance.AddTempUnlockToWardrobe(cosmeticId);
 			}
 		}
+		CosmeticsController.instance.OnCosmeticsUpdated?.Invoke();
 		if (rig.isOfflineVRRig)
 		{
 			CosmeticsController.instance.UpdateWornCosmetics(sync: true);
@@ -471,6 +425,7 @@ internal class PlayerCosmeticsSystem : MonoBehaviour, ITickSystemPre
 				CosmeticsController.instance.RemoveTempUnlockFromWardrobe(cosmeticId);
 			}
 		}
+		CosmeticsController.instance.OnCosmeticsUpdated?.Invoke();
 		if (rig.isOfflineVRRig)
 		{
 			CosmeticsController.instance.UpdateWornCosmetics(sync: true);

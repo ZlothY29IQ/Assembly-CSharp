@@ -5,17 +5,11 @@ using UnityEngine.Serialization;
 public class FixedSizeTrailAdjustBySpeed : MonoBehaviour
 {
 	[Serializable]
-	public struct GradientKey
+	public struct GradientKey(Color color, float time)
 	{
-		public Color color;
+		public Color color = color;
 
-		public float time;
-
-		public GradientKey(Color color, float time)
-		{
-			this.color = color;
-			this.time = time;
-		}
+		public float time = time;
 	}
 
 	public FixedSizeTrail trail;

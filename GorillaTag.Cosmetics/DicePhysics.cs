@@ -133,7 +133,7 @@ public class DicePhysics : MonoBehaviour
 
 	public int GetRandomSide()
 	{
-		if (diceType != 0)
+		if (diceType != DiceType.D6)
 		{
 			_ = 1;
 			if (forceLandingSide)
@@ -159,7 +159,7 @@ public class DicePhysics : MonoBehaviour
 
 	public Vector3 GetSideDirection(int side)
 	{
-		if (diceType != 0)
+		if (diceType != DiceType.D6)
 		{
 			_ = 1;
 			int num = Mathf.Clamp(side - 1, 0, 19);
@@ -264,7 +264,7 @@ public class DicePhysics : MonoBehaviour
 
 	private void InvokeLandingEffects(int side)
 	{
-		if (diceType != 0)
+		if (diceType != DiceType.D6)
 		{
 			_ = 1;
 			switch (side)

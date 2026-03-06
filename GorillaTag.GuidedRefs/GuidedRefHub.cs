@@ -242,24 +242,26 @@ public class GuidedRefHub : MonoBehaviour, IGuidedRefMonoBehaviour, IGuidedRefOb
 		{
 			globalHubsTransientList.Add(rootInstance);
 		}
-		RegisteredReceiverFieldInfo registeredReceiverFieldInfo = default(RegisteredReceiverFieldInfo);
-		registeredReceiverFieldInfo.receiverMono = receiverMono;
-		registeredReceiverFieldInfo.fieldId = fieldId;
-		registeredReceiverFieldInfo.index = index;
-		RegisteredReceiverFieldInfo registeredReceiverFieldInfo2 = registeredReceiverFieldInfo;
+		RegisteredReceiverFieldInfo registeredReceiverFieldInfo = new RegisteredReceiverFieldInfo
+		{
+			receiverMono = receiverMono,
+			fieldId = fieldId,
+			index = index
+		};
 		bool flag = false;
 		foreach (GuidedRefHub globalHubsTransient in globalHubsTransientList)
 		{
 			if (!(hubId != null) || !(globalHubsTransient.hubId != hubId))
 			{
 				flag = true;
-				globalHubsTransient.RegisterReceiverField(registeredReceiverFieldInfo2, targetId);
+				globalHubsTransient.RegisterReceiverField(registeredReceiverFieldInfo, targetId);
 				break;
 			}
 		}
 		if (flag)
 		{
-			receiverMono.GuidedRefsWaitingToResolveCount++;
+			int guidedRefsWaitingToResolveCount = receiverMono.GuidedRefsWaitingToResolveCount;
+			receiverMono.GuidedRefsWaitingToResolveCount = guidedRefsWaitingToResolveCount + 1;
 		}
 		else
 		{
@@ -430,7 +432,8 @@ public class GuidedRefHub : MonoBehaviour, IGuidedRefMonoBehaviour, IGuidedRefOb
 			Debug.LogError("TryResolveField: Receiver \"" + receiverMono.transform.name + "\" with field \"" + fieldNameByID2 + "\" was already assigned to something other than matching target id! Assigning to found target anyway. Make the receiving field null before attempting to resolve to prevent this message. " + $"fieldId={tryResolveInfo.fieldId}, receiver path=\"{receiverMono.transform.GetPath()}\"");
 		}
 		refReceiverObj = val;
-		receiverMono.GuidedRefsWaitingToResolveCount--;
+		int guidedRefsWaitingToResolveCount = receiverMono.GuidedRefsWaitingToResolveCount;
+		receiverMono.GuidedRefsWaitingToResolveCount = guidedRefsWaitingToResolveCount - 1;
 		return true;
 	}
 
@@ -484,7 +487,8 @@ public class GuidedRefHub : MonoBehaviour, IGuidedRefMonoBehaviour, IGuidedRefOb
 			Debug.LogError("TryResolveArrayItem: Receiver \"" + receiverMono.transform.name + "\" with array \"" + fieldNameByID6 + "\" " + $"at index {tryResolveInfo.index}: Already assigned to something other than matching target id! " + "Assigning to found target anyway. Make the receiving field null before attempting to resolve to prevent this message. " + $"fieldId={tryResolveInfo.fieldId}, receiver path=\"{receiverMono.transform.GetPath()}\"");
 		}
 		arrayResolved = ++receiverArrayInfo.resolveCount >= num;
-		receiverMono.GuidedRefsWaitingToResolveCount--;
+		int guidedRefsWaitingToResolveCount = receiverMono.GuidedRefsWaitingToResolveCount;
+		receiverMono.GuidedRefsWaitingToResolveCount = guidedRefsWaitingToResolveCount - 1;
 		receivingArray[tryResolveInfo.index] = val;
 		return true;
 	}

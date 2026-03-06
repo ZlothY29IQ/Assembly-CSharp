@@ -85,10 +85,10 @@ public class RCRemoteHoldable : TransferrableObject, ISnapTurnOverride
 		}
 	}
 
-	internal override void OnEnable()
+	internal override async void OnEnable()
 	{
 		base.OnEnable();
-		if (!_TryFindRemoteVehicle())
+		if (!(await _TryFindRemoteVehicle()))
 		{
 			base.gameObject.SetActive(value: false);
 			return;
@@ -231,7 +231,7 @@ public class RCRemoteHoldable : TransferrableObject, ISnapTurnOverride
 		}
 	}
 
-	private bool _TryFindRemoteVehicle()
+	private async Awaitable<bool> _TryFindRemoteVehicle()
 	{
 		if (targetVehicle != null)
 		{
@@ -243,7 +243,11 @@ public class RCRemoteHoldable : TransferrableObject, ISnapTurnOverride
 			Debug.LogError("RCRemoteHoldable: unable to find parent vrrig");
 			return false;
 		}
-		CosmeticItemInstance cosmeticItemInstance = componentInParent.cosmeticsObjectRegistry.Cosmetic(base.name);
+		CosmeticItemInstance cosmeticItemInstance = await componentInParent.cosmeticsObjectRegistry.AwaitCosmetic(base.name);
+		if (cosmeticItemInstance == null)
+		{
+			return false;
+		}
 		int instanceID = base.gameObject.GetInstanceID();
 		if (_TryFindRemoteVehicle_InCosmeticInstanceArray(instanceID, cosmeticItemInstance.objects))
 		{

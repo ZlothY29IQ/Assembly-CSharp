@@ -1,17 +1,11 @@
 using GorillaExtensions;
 using Photon.Pun;
 
-public struct CritterAppearance
+public struct CritterAppearance(string hatName, float size = 1f)
 {
-	public float size;
+	public float size = size;
 
-	public string hatName;
-
-	public CritterAppearance(string hatName, float size = 1f)
-	{
-		this.hatName = hatName;
-		this.size = size;
-	}
+	public string hatName = hatName;
 
 	public object[] WriteToRPCData()
 	{

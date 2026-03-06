@@ -1,20 +1,12 @@
 namespace GorillaTagScripts;
 
-public struct BuilderPrivatePlotData
+public struct BuilderPrivatePlotData(BuilderPiecePrivatePlot plot)
 {
-	public BuilderPiecePrivatePlot.PlotState plotState;
+	public BuilderPiecePrivatePlot.PlotState plotState = plot.plotState;
 
-	public int ownerActorNumber;
+	public int ownerActorNumber = plot.GetOwnerActorNumber();
 
-	public bool isUnderCapacityLeft;
+	public bool isUnderCapacityLeft = false;
 
-	public bool isUnderCapacityRight;
-
-	public BuilderPrivatePlotData(BuilderPiecePrivatePlot plot)
-	{
-		plotState = plot.plotState;
-		ownerActorNumber = plot.GetOwnerActorNumber();
-		isUnderCapacityLeft = false;
-		isUnderCapacityRight = false;
-	}
+	public bool isUnderCapacityRight = false;
 }

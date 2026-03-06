@@ -16,7 +16,10 @@ public class FittingRoomButton : GorillaPressableButton
 
 	public override void Start()
 	{
-		currentCosmeticItem = CosmeticsController.instance.nullItem;
+		if (currentCosmeticItem.itemName == "")
+		{
+			currentCosmeticItem = CosmeticsController.instance.nullItem;
+		}
 	}
 
 	public override void UpdateColor()

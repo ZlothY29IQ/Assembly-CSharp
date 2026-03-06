@@ -639,6 +639,10 @@ public class SITechTreeStation : MonoBehaviour, ITouchScreenStation
 		}
 	}
 
+	public void TouchscreenToggleButtonPressed(SITouchscreenButton.SITouchscreenButtonType buttonType, int data, int actorNr, bool isToggledOn)
+	{
+	}
+
 	public void UpdateHelpButtonPage(int helpButtonPageIndex)
 	{
 		for (int i = 0; i < helpPopupScreens.Length; i++)
@@ -649,7 +653,7 @@ public class SITechTreeStation : MonoBehaviour, ITouchScreenStation
 
 	public void UpdateNodePopupPage()
 	{
-		int num = ((nodePopupState != 0) ? 1 : 0);
+		int num = ((nodePopupState != NodePopupState.Description) ? 1 : 0);
 		if (nodePopupScreens[0].activeSelf != (num == 0))
 		{
 			nodePopupScreens[0].SetActive(num == 0);
@@ -687,7 +691,7 @@ public class SITechTreeStation : MonoBehaviour, ITouchScreenStation
 			{
 				foreach (KeyValuePair<SIResource.ResourceType, int> cost in node2.costs)
 				{
-					if (cost.Key != 0)
+					if (cost.Key != SIResource.ResourceType.TechPoint)
 					{
 						return text + cost.Value;
 					}
@@ -706,7 +710,7 @@ public class SITechTreeStation : MonoBehaviour, ITouchScreenStation
 			text = text + ActivePlayer.CurrentProgression.resourceArray[0] + "\n";
 			foreach (KeyValuePair<SIResource.ResourceType, int> cost in node2.costs)
 			{
-				if (cost.Key != 0)
+				if (cost.Key != SIResource.ResourceType.TechPoint)
 				{
 					text = text + ActivePlayer.CurrentProgression.resourceArray[(int)cost.Key] + "\n";
 				}
@@ -730,7 +734,7 @@ public class SITechTreeStation : MonoBehaviour, ITouchScreenStation
 			text = text + SIResource.ResourceType.TechPoint.ToString().ToUpperInvariant() + "\n";
 			foreach (KeyValuePair<SIResource.ResourceType, int> cost in node2.costs)
 			{
-				if (cost.Key != 0)
+				if (cost.Key != SIResource.ResourceType.TechPoint)
 				{
 					text = text + cost.Key.ToString().ToUpperInvariant() + "\n";
 					resourceCost.sprite = spriteByType[cost.Key];

@@ -329,15 +329,15 @@ public class RotatingQuestsManager : MonoBehaviour, ITickSystemTick, GorillaQues
 
 	public void LoadQuestProgress()
 	{
-		int @int = PlayerPrefs.GetInt("Rotating_Quest_Daily_SetID_Key", -1);
-		int int2 = PlayerPrefs.GetInt("Rotating_Quest_Daily_SaveCount_Key", -1);
-		if (@int == dailyQuestSetID)
+		int num = PlayerPrefs.GetInt("Rotating_Quest_Daily_SetID_Key", -1);
+		int num2 = PlayerPrefs.GetInt("Rotating_Quest_Daily_SaveCount_Key", -1);
+		if (num == dailyQuestSetID)
 		{
-			for (int i = 0; i < int2; i++)
+			for (int i = 0; i < num2; i++)
 			{
-				int int3 = PlayerPrefs.GetInt(string.Format("{0}{1}", "Rotating_Quest_Daily_ID_Key", i), -1);
-				int int4 = PlayerPrefs.GetInt(string.Format("{0}{1}", "Rotating_Quest_Daily_Progress_Key", i), -1);
-				if (int3 == -1)
+				int num3 = PlayerPrefs.GetInt(string.Format("{0}{1}", "Rotating_Quest_Daily_ID_Key", i), -1);
+				int progress = PlayerPrefs.GetInt(string.Format("{0}{1}", "Rotating_Quest_Daily_Progress_Key", i), -1);
+				if (num3 == -1)
 				{
 					continue;
 				}
@@ -346,26 +346,26 @@ public class RotatingQuestsManager : MonoBehaviour, ITickSystemTick, GorillaQues
 					for (int k = 0; k < quests.DailyQuests[j].quests.Count; k++)
 					{
 						RotatingQuest rotatingQuest = quests.DailyQuests[j].quests[k];
-						if (rotatingQuest.questID == int3)
+						if (rotatingQuest.questID == num3)
 						{
-							rotatingQuest.ApplySavedProgress(int4);
+							rotatingQuest.ApplySavedProgress(progress);
 							break;
 						}
 					}
 				}
 			}
 		}
-		int int5 = PlayerPrefs.GetInt("Rotating_Quest_Weekly_SetID_Key", -1);
-		int int6 = PlayerPrefs.GetInt("Rotating_Quest_Weekly_SaveCount_Key", -1);
-		if (int5 != weeklyQuestSetID)
+		int num4 = PlayerPrefs.GetInt("Rotating_Quest_Weekly_SetID_Key", -1);
+		int num5 = PlayerPrefs.GetInt("Rotating_Quest_Weekly_SaveCount_Key", -1);
+		if (num4 != weeklyQuestSetID)
 		{
 			return;
 		}
-		for (int l = 0; l < int6; l++)
+		for (int l = 0; l < num5; l++)
 		{
-			int int7 = PlayerPrefs.GetInt(string.Format("{0}{1}", "Rotating_Quest_Weekly_ID_Key", l), -1);
-			int int8 = PlayerPrefs.GetInt(string.Format("{0}{1}", "Rotating_Quest_Weekly_Progress_Key", l), -1);
-			if (int7 == -1)
+			int num6 = PlayerPrefs.GetInt(string.Format("{0}{1}", "Rotating_Quest_Weekly_ID_Key", l), -1);
+			int progress2 = PlayerPrefs.GetInt(string.Format("{0}{1}", "Rotating_Quest_Weekly_Progress_Key", l), -1);
+			if (num6 == -1)
 			{
 				continue;
 			}
@@ -374,9 +374,9 @@ public class RotatingQuestsManager : MonoBehaviour, ITickSystemTick, GorillaQues
 				for (int n = 0; n < quests.WeeklyQuests[m].quests.Count; n++)
 				{
 					RotatingQuest rotatingQuest2 = quests.WeeklyQuests[m].quests[n];
-					if (rotatingQuest2.questID == int7)
+					if (rotatingQuest2.questID == num6)
 					{
-						rotatingQuest2.ApplySavedProgress(int8);
+						rotatingQuest2.ApplySavedProgress(progress2);
 						break;
 					}
 				}

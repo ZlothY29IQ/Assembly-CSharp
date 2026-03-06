@@ -1,13 +1,8 @@
-public struct GameBallId
+public struct GameBallId(int index)
 {
 	public static GameBallId Invalid = new GameBallId(-1);
 
-	public int index;
-
-	public GameBallId(int index)
-	{
-		this.index = index;
-	}
+	public int index = index;
 
 	public bool IsValid()
 	{

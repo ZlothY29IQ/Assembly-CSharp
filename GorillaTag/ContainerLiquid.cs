@@ -235,9 +235,9 @@ public class ContainerLiquid : MonoBehaviour
 			ParticleSystem.ShapeModule shape = spillParticleSystem.shape;
 			shape.radius = num3 * num6;
 			ParticleSystem.MinMaxCurve rateOverTime = emission.rateOverTime;
-			float num8 = (rateOverTime.constant = num6 * maxSpillRate);
+			float num7 = (rateOverTime.constant = num6 * maxSpillRate);
 			emission.rateOverTime = rateOverTime;
-			fillAmount -= num8 * deltaTime * 0.01f;
+			fillAmount -= num7 * deltaTime * 0.01f;
 		}
 		if (isEmpty && !wasEmptyLastFrame && !emptySoundBankPlayer.isPlaying)
 		{

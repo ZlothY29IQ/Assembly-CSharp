@@ -206,7 +206,7 @@ public class SIGadgetWristJet : SIGadget, I_SIDisruptable, IEnergyGadget
 
 	protected override void OnDisable()
 	{
-		if (m_warnFuelLowThreshold > 0f && m_warnFuelLowSound.loadState != 0)
+		if (m_warnFuelLowThreshold > 0f && m_warnFuelLowSound.loadState != AudioDataLoadState.Unloaded)
 		{
 			m_warnFuelLowSound.UnloadAudioData();
 		}

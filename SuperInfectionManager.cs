@@ -17,7 +17,17 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 		CombinedTerminalHandScan,
 		ResourceDepositDeposited,
 		CallEntityRPC,
-		CallEntityRPCData
+		CallEntityRPCData,
+		RequestStartRoomFX
+	}
+
+	public enum RoomFXType
+	{
+		Underwater,
+		LunarMode,
+		ConstLowG,
+		Bouncy,
+		Supercharge
 	}
 
 	public enum AuthorityToClientRPC
@@ -28,7 +38,7 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 		CallEntityRPC,
 		CallEntityRPCData,
 		TriggerMonkeIdolDepositCelebration,
-		StartUnderwaterFX
+		StartRoomFX
 	}
 
 	public enum ClientToClientRPC
@@ -65,15 +75,19 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 
 	public static Dictionary<GTZone, SuperInfectionManager> siManagerByZone = new Dictionary<GTZone, SuperInfectionManager>();
 
-	private static List<VRRig> tempRigs = new List<VRRig>(10);
+	private static List<VRRig> tempRigs = new List<VRRig>(20);
 
-	private static List<VRRig> tempRigs2 = new List<VRRig>(10);
+	private static List<VRRig> tempRigs2 = new List<VRRig>(20);
 
 	private readonly Dictionary<SnapJointType, List<SuperInfectionSnapPoint>> allSnapPoints = new Dictionary<SnapJointType, List<SuperInfectionSnapPoint>>();
 
 	private const float rpcProximityCheckRange = 3f;
 
 	private bool PendingZoneInit;
+
+	private const int roomFXTypeCount = 5;
+
+	public bool IsSupercharged => false;
 
 	private void Awake()
 	{
@@ -133,7 +147,6 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 			if (value.Count > 0)
 			{
 				gameEntityManager.RequestDestroyItems(value);
-				Debug.Log("[GT/SuperInfectionManager]  _OnStartGameMode: " + $"Removed {value.Count} blaster gadgets because they are only allowed in SuperInfection.", this);
 			}
 		}
 	}
@@ -278,7 +291,7 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 					else
 					{
 						num++;
-						if (num >= sIPlayer.totalGadgetLimit)
+						if (num >= sIPlayer.TotalGadgetLimit)
 						{
 							gameEntityManager.DestroyItemLocal(gameEntityFromNetId.id);
 							break;
@@ -325,7 +338,6 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 			PendingZoneInit = true;
 			return;
 		}
-		Debug.Log("poop - switching super infection zone from \"" + activeSuperInfectionManager?.name + "\" to \"" + base.name + "\"", this);
 		activeSuperInfectionManager = this;
 		if (gameEntityManager.IsAuthority())
 		{
@@ -553,6 +565,8 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 			}
 			break;
 		}
+		case ClientToAuthorityRPC.RequestStartRoomFX:
+			break;
 		}
 	}
 
@@ -615,7 +629,7 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 			}
 			break;
 		}
-		case AuthorityToClientRPC.StartUnderwaterFX:
+		case AuthorityToClientRPC.StartRoomFX:
 			break;
 		}
 	}
@@ -727,7 +741,6 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 			SIPlayer sIPlayer = SIPlayer.Get((int)(entity.createData & 0xFFFFFFFFu));
 			if (sIPlayer != null && sIPlayer.activePlayerGadgets.Contains(entity.GetNetId()))
 			{
-				Debug.Log($"GadgetDebug: removing gadget grom list {sIPlayer.gameObject.name} {entity.GetNetId()}");
 				sIPlayer.activePlayerGadgets.Remove(entity.GetNetId());
 			}
 		}
@@ -771,7 +784,7 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 				num++;
 			}
 		}
-		if (num > sIPlayer.totalGadgetLimit)
+		if (num > sIPlayer.TotalGadgetLimit)
 		{
 			return false;
 		}
@@ -799,6 +812,21 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 		{
 			return false;
 		}
+		return true;
+	}
+
+	public bool ValidateCreateMultipleItems(int zoneId, byte[] compressedStateData, int EntityCount)
+	{
+		return false;
+	}
+
+	public bool ValidateCreateItem(int nedId, int entityTypeId, Vector3 position, Quaternion rotation, long createData, int createdByEntityNetId)
+	{
+		return true;
+	}
+
+	public bool ValidateCreateItemBatchSize(int size)
+	{
 		return true;
 	}
 

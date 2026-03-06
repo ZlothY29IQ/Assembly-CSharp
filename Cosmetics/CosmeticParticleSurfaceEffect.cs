@@ -251,7 +251,7 @@ public class CosmeticParticleSurfaceEffect : MonoBehaviour, ITickSystemTick
 		{
 			return;
 		}
-		GorillaNot.IncrementRPCCall(info, "OnSpawnReplicated");
+		MonkeAgent.IncrementRPCCall(info, "OnSpawnReplicated");
 		if (!spawnCallLimiter.CheckCallTime(Time.time) || args.Length != 3 || !(args[0] is long) || !(args[1] is long) || !(args[2] is int))
 		{
 			return;
@@ -344,7 +344,7 @@ public class CosmeticParticleSurfaceEffect : MonoBehaviour, ITickSystemTick
 		{
 			return;
 		}
-		GorillaNot.IncrementRPCCall(info, "OnTriggerEffectReplicated");
+		MonkeAgent.IncrementRPCCall(info, "OnTriggerEffectReplicated");
 		if (!destroyCallLimiter.CheckCallTime(Time.time) || args.Length != 1 || !(args[0] is int))
 		{
 			return;

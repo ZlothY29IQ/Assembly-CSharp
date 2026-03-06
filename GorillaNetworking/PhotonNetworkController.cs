@@ -102,7 +102,7 @@ public class PhotonNetworkController : MonoBehaviour
 
 	public string autoJoinRoom;
 
-	public int autoJoinRoomCap = 8;
+	public int autoJoinRoomCap = 18;
 
 	public string autoJoinGameMode;
 
@@ -228,7 +228,7 @@ public class PhotonNetworkController : MonoBehaviour
 		lastHeadRightHandDistance = headRightHandDistance;
 		lastHeadLeftHandDistance = headLeftHandDistance;
 		lastHeadQuat = headQuat;
-		if (!deferredJoin || !(Time.time >= partyJoinDeferredUntilTimestamp))
+		if (!deferredJoin || !(Time.realtimeSinceStartup >= partyJoinDeferredUntilTimestamp))
 		{
 			return;
 		}
@@ -252,7 +252,7 @@ public class PhotonNetworkController : MonoBehaviour
 				AttemptToJoinPublicRoom(currentJoinTrigger, currentJoinType);
 			}
 		}
-		else if (NetworkSystem.Instance.netState != NetSystemState.PingRecon && NetworkSystem.Instance.netState != 0 && NetworkSystem.Instance.netState != NetSystemState.Disconnecting)
+		else if (NetworkSystem.Instance.netState != NetSystemState.PingRecon && NetworkSystem.Instance.netState != NetSystemState.Initialization && NetworkSystem.Instance.netState != NetSystemState.Disconnecting)
 		{
 			deferredJoin = false;
 			partyJoinDeferredUntilTimestamp = 0f;
@@ -261,7 +261,7 @@ public class PhotonNetworkController : MonoBehaviour
 
 	public void DeferJoining(float duration)
 	{
-		partyJoinDeferredUntilTimestamp = Mathf.Max(partyJoinDeferredUntilTimestamp, Time.time + duration);
+		partyJoinDeferredUntilTimestamp = Mathf.Max(partyJoinDeferredUntilTimestamp, Time.realtimeSinceStartup + duration);
 	}
 
 	public void ClearDeferredJoin()
@@ -270,18 +270,18 @@ public class PhotonNetworkController : MonoBehaviour
 		deferredJoin = false;
 	}
 
-	public void AttemptToJoinPublicRoom(GorillaNetworkJoinTrigger triggeredTrigger, JoinType roomJoinType = JoinType.Solo, List<(string, string)> additionalCustomProperties = null)
+	public void AttemptToJoinPublicRoom(GorillaNetworkJoinTrigger triggeredTrigger, JoinType roomJoinType = JoinType.Solo, List<(string, string)> additionalCustomProperties = null, bool filterSubscribed = false)
 	{
-		AttemptToJoinPublicRoomAsync(triggeredTrigger, roomJoinType, additionalCustomProperties);
+		AttemptToJoinPublicRoomAsync(triggeredTrigger, roomJoinType, additionalCustomProperties, filterSubscribed);
 	}
 
-	private async void AttemptToJoinPublicRoomAsync(GorillaNetworkJoinTrigger triggeredTrigger, JoinType roomJoinType, List<(string, string)> additionalCustomProperties)
+	private async void AttemptToJoinPublicRoomAsync(GorillaNetworkJoinTrigger triggeredTrigger, JoinType roomJoinType, List<(string, string)> additionalCustomProperties, bool filterSubscribed)
 	{
 		if ((KIDManager.KidEnabledAndReady && !KIDManager.CheckFeatureOptIn(EKIDFeatures.Multiplayer).hasOptedInPreviously) || !base.enabled || NetworkSystem.Instance.netState == NetSystemState.Connecting || NetworkSystem.Instance.netState == NetSystemState.Disconnecting)
 		{
 			return;
 		}
-		if (NetworkSystem.Instance.netState == NetSystemState.Initialization || NetworkSystem.Instance.netState == NetSystemState.PingRecon || Time.time < partyJoinDeferredUntilTimestamp)
+		if (NetworkSystem.Instance.netState == NetSystemState.Initialization || NetworkSystem.Instance.netState == NetSystemState.PingRecon || Time.realtimeSinceStartup < partyJoinDeferredUntilTimestamp)
 		{
 			currentJoinTrigger = triggeredTrigger;
 			currentJoinType = roomJoinType;
@@ -303,7 +303,7 @@ public class PhotonNetworkController : MonoBehaviour
 			{
 				_ = roomJoinType;
 				_ = 3;
-				if (NetworkSystem.Instance.GameModeString.StartsWith(desiredGameMode) || triggeredTrigger.SameZoneAsOverride())
+				if ((!filterSubscribed || (PhotonNetwork.CurrentRoom != null && PhotonNetwork.CurrentRoom.MaxPlayers > 10)) && (NetworkSystem.Instance.GameModeString.StartsWith(desiredGameMode) || triggeredTrigger.SameZoneAsOverride()))
 				{
 					return;
 				}
@@ -328,6 +328,7 @@ public class PhotonNetworkController : MonoBehaviour
 		{
 			roomConfig.SetFriendIDs(FriendshipGroupDetection.Instance.PartyMemberIDs.ToList());
 		}
+		bool flag = filterSubscribed && SubscriptionManager.IsLocalSubscribed();
 		ExitGames.Client.Photon.Hashtable hashtable = new ExitGames.Client.Photon.Hashtable
 		{
 			{ "gameMode", desiredGameMode },
@@ -339,6 +340,10 @@ public class PhotonNetworkController : MonoBehaviour
 			{
 				"language",
 				LocalisationManager.CurrentLanguage.ToString()
+			},
+			{
+				"fan_club",
+				flag ? "true" : "false"
 			}
 		};
 		if (additionalCustomProperties != null)
@@ -349,8 +354,8 @@ public class PhotonNetworkController : MonoBehaviour
 			}
 		}
 		roomConfig.CustomProps = hashtable;
-		roomConfig.MaxPlayers = currentJoinTrigger.GetRoomSize();
-		Debug.Log($"AttemptToJoinPublicRoom: MaxPlayers: {roomConfig.MaxPlayers}");
+		roomConfig.MaxPlayers = currentJoinTrigger.GetRoomSize(flag);
+		Debug.Log($"AttemptToJoinPublicRoom: MaxPlayers: {roomConfig.MaxPlayers}   FanClub: {flag}");
 		await NetworkSystem.Instance.ConnectToRoom(null, roomConfig);
 	}
 
@@ -368,7 +373,7 @@ public class PhotonNetworkController : MonoBehaviour
 		{
 			return;
 		}
-		if (NetworkSystem.Instance.netState == NetSystemState.Initialization || NetworkSystem.Instance.netState == NetSystemState.PingRecon || Time.time < partyJoinDeferredUntilTimestamp)
+		if (NetworkSystem.Instance.netState == NetSystemState.Initialization || NetworkSystem.Instance.netState == NetSystemState.PingRecon || Time.realtimeSinceStartup < partyJoinDeferredUntilTimestamp)
 		{
 			currentJoinTrigger = triggeredTrigger;
 			currentJoinType = roomJoinType;
@@ -393,7 +398,7 @@ public class PhotonNetworkController : MonoBehaviour
 				{ "platform", platform }
 			};
 			roomConfig.CustomProps = customProps;
-			roomConfig.MaxPlayers = currentJoinTrigger.GetRoomSize();
+			roomConfig.MaxPlayers = currentJoinTrigger.GetRoomSize(subscribed: false);
 			await NetworkSystem.Instance.ConnectToRoom(null, roomConfig);
 		}
 	}
@@ -476,13 +481,14 @@ public class PhotonNetworkController : MonoBehaviour
 			roomConfig.createIfMissing = true;
 			roomConfig.isJoinable = true;
 			roomConfig.isPublic = false;
-			roomConfig.MaxPlayers = RoomSystem.GetRoomSizeForCreate(currentJoinTrigger.networkZone);
-			Debug.Log($"[AttemptToJoinSpecificRoomAsync] Room MaxPlayers = {roomConfig.MaxPlayers}");
-			roomConfig.CustomProps = customProps;
 			if (roomJoinType == JoinType.FriendStationPublic)
 			{
 				roomConfig.isPublic = true;
 			}
+			byte roomSizeForCreate = RoomSystem.GetRoomSizeForCreate(currentJoinTrigger.zone, Enum.Parse<GameModeType>(GorillaComputer.instance.currentGameMode.Value, ignoreCase: true), roomConfig.isPublic, SubscriptionManager.IsLocalSubscribed());
+			roomConfig.MaxPlayers = roomSizeForCreate;
+			Debug.Log($"[AttemptToJoinSpecificRoomAsync] Room MaxPlayers = {roomConfig.MaxPlayers}");
+			roomConfig.CustomProps = customProps;
 			if (PlayFabClientAPI.IsClientLoggedIn())
 			{
 				playFabAuthenticator.SetDisplayName(NetworkSystem.Instance.GetMyNickName());
@@ -526,7 +532,7 @@ public class PhotonNetworkController : MonoBehaviour
 		}
 		GTPlayer.Instance.maxJumpSpeed = 6.5f;
 		GTPlayer.Instance.jumpMultiplier = 1.1f;
-		GorillaNot.instance.currentMasterClient = null;
+		MonkeAgent.instance.currentMasterClient = null;
 		GorillaTagger.Instance.offlineVRRig.huntComputer.SetActive(value: false);
 		initialGameMode = "";
 	}
@@ -554,14 +560,10 @@ public class PhotonNetworkController : MonoBehaviour
 					break;
 				}
 			}
-			if (flag && GorillaComputer.instance.friendJoinCollider != null && !GorillaComputer.instance.friendJoinCollider.playerIDsCurrentlyTouching.Contains(NetworkSystem.Instance.LocalPlayer.UserId))
+			if (flag && GorillaComputer.instance.friendJoinCollider != null && !GorillaComputer.instance.friendJoinCollider.playerIDsCurrentlyTouching.Contains(NetworkSystem.Instance.LocalPlayer.UserId) && !GorillaComputer.instance.GetJoinTriggerFromFullGameModeString(NetworkSystem.Instance.GameModeString).groupJoinRequiredZonesAB.HasAnyFlag(VRRig.LocalRig.zoneEntity.currentNode.groupZoneAB))
 			{
-				GTZone gTZone = ParseZoneFromGameMode(NetworkSystem.Instance.GameModeString);
-				if (gTZone != GTZone.none && !ZoneManagement.IsInZone(gTZone))
-				{
-					Debug.Log($"NOT ALLOWED IN ROOM: Joined {gTZone} room but not physically in {gTZone} zone");
-					flag = false;
-				}
+				Debug.Log($"NOT ALLOWED IN ROOM: Joined {ParseZoneFromGameMode(NetworkSystem.Instance.GameModeString)} room but physically in {VRRig.LocalRig.zoneEntity.currentNode.groupZoneAB} zone");
+				flag = false;
 			}
 			if (!flag)
 			{
@@ -583,7 +585,7 @@ public class PhotonNetworkController : MonoBehaviour
 			keyToFollow = NetworkSystem.Instance.LocalPlayer.UserId + keyStr;
 			NetworkSystem.Instance.BroadcastMyRoom(create: true, keyToFollow, shuffler);
 		}
-		GorillaNot.instance.currentMasterClient = null;
+		MonkeAgent.instance.currentMasterClient = null;
 		UpdateCurrentJoinTrigger();
 		UpdateTriggerScreens();
 		NetworkSystem.Instance.MultiplayerStarted();

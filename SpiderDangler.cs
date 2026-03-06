@@ -2,17 +2,11 @@ using UnityEngine;
 
 public class SpiderDangler : MonoBehaviour
 {
-	public struct RopeSegment
+	public struct RopeSegment(Vector3 pos)
 	{
-		public Vector3 pos;
+		public Vector3 pos = pos;
 
-		public Vector3 posOld;
-
-		public RopeSegment(Vector3 pos)
-		{
-			this.pos = pos;
-			posOld = pos;
-		}
+		public Vector3 posOld = pos;
 	}
 
 	public Transform endTransform;

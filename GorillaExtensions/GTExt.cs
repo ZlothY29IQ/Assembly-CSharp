@@ -126,19 +126,19 @@ public static class GTExt
 
 	public static List<T> GetComponentsInChildrenUntil<T, TStop1>(this Component root, bool includeInactive = false, bool stopAtRoot = true, int capacity = 64) where T : Component where TStop1 : Component
 	{
-		List<T> components2 = new List<T>(capacity);
+		List<T> components = new List<T>(capacity);
 		if (stopAtRoot && root.GetComponent<TStop1>() != null)
 		{
-			return components2;
+			return components;
 		}
 		T component = root.GetComponent<T>();
 		if (component != null)
 		{
-			components2.Add(component);
+			components.Add(component);
 		}
-		GetRecursive(root.transform, ref components2);
-		return components2;
-		void GetRecursive(Transform currentTransform, ref List<T> components)
+		GetRecursive(root.transform, ref components);
+		return components;
+		void GetRecursive(Transform currentTransform, ref List<T> reference)
 		{
 			foreach (Transform item in currentTransform)
 			{
@@ -147,9 +147,9 @@ public static class GTExt
 					T component2 = item.GetComponent<T>();
 					if (component2 != null)
 					{
-						components.Add(component2);
+						reference.Add(component2);
 					}
-					GetRecursive(item, ref components);
+					GetRecursive(item, ref reference);
 				}
 			}
 		}
@@ -171,19 +171,19 @@ public static class GTExt
 
 	public static List<T> GetComponentsInChildrenUntil<T, TStop1, TStop2>(this Component root, bool includeInactive = false, bool stopAtRoot = true, int capacity = 64) where T : Component where TStop1 : Component where TStop2 : Component
 	{
-		List<T> components2 = new List<T>(capacity);
+		List<T> components = new List<T>(capacity);
 		if (stopAtRoot && (root.GetComponent<TStop1>() != null || root.GetComponent<TStop2>() != null))
 		{
-			return components2;
+			return components;
 		}
 		T component = root.GetComponent<T>();
 		if (component != null)
 		{
-			components2.Add(component);
+			components.Add(component);
 		}
-		GetRecursive(root.transform, ref components2);
-		return components2;
-		void GetRecursive(Transform currentTransform, ref List<T> components)
+		GetRecursive(root.transform, ref components);
+		return components;
+		void GetRecursive(Transform currentTransform, ref List<T> reference)
 		{
 			foreach (Transform item in currentTransform)
 			{
@@ -192,9 +192,9 @@ public static class GTExt
 					T component2 = item.GetComponent<T>();
 					if (component2 != null)
 					{
-						components.Add(component2);
+						reference.Add(component2);
 					}
-					GetRecursive(item, ref components);
+					GetRecursive(item, ref reference);
 				}
 			}
 		}
@@ -202,19 +202,19 @@ public static class GTExt
 
 	public static List<T> GetComponentsInChildrenUntil<T, TStop1, TStop2, TStop3>(this Component root, bool includeInactive = false, bool stopAtRoot = true, int capacity = 64) where T : Component where TStop1 : Component where TStop2 : Component where TStop3 : Component
 	{
-		List<T> components2 = new List<T>(capacity);
+		List<T> components = new List<T>(capacity);
 		if (stopAtRoot && (root.GetComponent<TStop1>() != null || root.GetComponent<TStop2>() != null || root.GetComponent<TStop3>() != null))
 		{
-			return components2;
+			return components;
 		}
 		T component = root.GetComponent<T>();
 		if (component != null)
 		{
-			components2.Add(component);
+			components.Add(component);
 		}
-		GetRecursive(root.transform, ref components2);
-		return components2;
-		void GetRecursive(Transform currentTransform, ref List<T> components)
+		GetRecursive(root.transform, ref components);
+		return components;
+		void GetRecursive(Transform currentTransform, ref List<T> reference)
 		{
 			foreach (Transform item in currentTransform)
 			{
@@ -223,9 +223,9 @@ public static class GTExt
 					T component2 = item.GetComponent<T>();
 					if (component2 != null)
 					{
-						components.Add(component2);
+						reference.Add(component2);
 					}
-					GetRecursive(item, ref components);
+					GetRecursive(item, ref reference);
 				}
 			}
 		}
@@ -522,6 +522,19 @@ public static class GTExt
 	public static Vector3 ProjectOnPlane(this Vector3 point, Vector3 planeAnchorPosition, Vector3 planeNormal)
 	{
 		return planeAnchorPosition + Vector3.ProjectOnPlane(point - planeAnchorPosition, planeNormal);
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static int FindIndex<T>(this IReadOnlyList<T> list, Predicate<T> match)
+	{
+		for (int i = 0; i < list.Count; i++)
+		{
+			if (match(list[i]))
+			{
+				return i;
+			}
+		}
+		return -1;
 	}
 
 	public static void ForEachBackwards<T>(this List<T> list, Action<T> action)

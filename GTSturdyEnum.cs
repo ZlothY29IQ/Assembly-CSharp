@@ -20,9 +20,10 @@ public struct GTSturdyEnum<TEnum> : ISerializationCallbackReceiver where TEnum :
 
 	public static implicit operator GTSturdyEnum<TEnum>(TEnum value)
 	{
-		GTSturdyEnum<TEnum> result = default(GTSturdyEnum<TEnum>);
-		result.Value = value;
-		return result;
+		return new GTSturdyEnum<TEnum>
+		{
+			Value = value
+		};
 	}
 
 	public static implicit operator TEnum(GTSturdyEnum<TEnum> sturdyEnum)

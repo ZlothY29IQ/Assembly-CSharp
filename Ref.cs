@@ -21,39 +21,39 @@ public class Ref<T> where T : class
 
 	public static implicit operator bool(Ref<T> r)
 	{
-		UnityEngine.Object @object = r?._target;
-		if ((object)@object == null)
+		UnityEngine.Object obj = r?._target;
+		if ((object)obj == null)
 		{
 			return false;
 		}
-		return @object != null;
+		return obj != null;
 	}
 
 	public static implicit operator T(Ref<T> r)
 	{
-		UnityEngine.Object @object = r?._target;
-		if ((object)@object == null)
+		UnityEngine.Object obj = r?._target;
+		if ((object)obj == null)
 		{
 			return null;
 		}
-		if (@object == null)
+		if (obj == null)
 		{
 			return null;
 		}
-		return @object as T;
+		return obj as T;
 	}
 
 	public static implicit operator UnityEngine.Object(Ref<T> r)
 	{
-		UnityEngine.Object @object = r?._target;
-		if ((object)@object == null)
+		UnityEngine.Object obj = r?._target;
+		if ((object)obj == null)
 		{
 			return null;
 		}
-		if (@object == null)
+		if (obj == null)
 		{
 			return null;
 		}
-		return @object;
+		return obj;
 	}
 }

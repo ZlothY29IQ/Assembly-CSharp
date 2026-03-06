@@ -932,13 +932,14 @@ public class GRSeedExtractor : MonoBehaviour
 		{
 			if (!chaosSeedVisuals[i].activeSelf)
 			{
-				SeedProcessingVisualState seedProcessingVisualState = default(SeedProcessingVisualState);
-				seedProcessingVisualState.poolIndex = i;
-				seedProcessingVisualState.rollAngle = 0f;
-				seedProcessingVisualState.speed = 0f;
-				seedProcessingVisualState.rampProgress = 0f;
-				seedProcessingVisualState.dropProgress = 0f;
-				SeedProcessingVisualState item = seedProcessingVisualState;
+				SeedProcessingVisualState item = new SeedProcessingVisualState
+				{
+					poolIndex = i,
+					rollAngle = 0f,
+					speed = 0f,
+					rampProgress = 0f,
+					dropProgress = 0f
+				};
 				seedProcessingStates.Add(item);
 				chaosSeedVisuals[i].SetActive(value: true);
 				chaosSeedVisuals[i].transform.localPosition = seedTubeStart.localPosition;

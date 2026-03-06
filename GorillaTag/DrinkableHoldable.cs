@@ -1,5 +1,6 @@
 using System;
 using emotitron.Compression;
+using GorillaExtensions;
 using GorillaNetworking;
 using UnityEngine;
 
@@ -60,15 +61,16 @@ public class DrinkableHoldable : TransferrableObject
 		bool flag = (GorillaTagger.Instance.offlineVRRig.head.rigTarget.transform.TransformPoint(headToMouthOffset) - containerLiquid.cupTopWorldPos).sqrMagnitude < num2;
 		if (!flag)
 		{
-			foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+			foreach (RigContainer activeRigContainer in VRRigCache.ActiveRigContainers)
 			{
-				if (!vrrig.isOfflineVRRig)
+				VRRig rig = activeRigContainer.Rig;
+				if (!rig.isOfflineVRRig)
 				{
-					if (flag || vrrig.head == null || vrrig.head.rigTarget == null)
+					if (flag || rig.head == null || rig.head.rigTarget.IsNull())
 					{
 						break;
 					}
-					flag = (vrrig.head.rigTarget.transform.TransformPoint(headToMouthOffset) - containerLiquid.cupTopWorldPos).sqrMagnitude < num2;
+					flag = (rig.head.rigTarget.transform.TransformPoint(headToMouthOffset) - containerLiquid.cupTopWorldPos).sqrMagnitude < num2;
 				}
 			}
 		}

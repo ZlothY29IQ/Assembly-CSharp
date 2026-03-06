@@ -78,6 +78,8 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 
 	private int nextLightCacheUpdate;
 
+	public bool IsDynamicLightingEnabled => customVertexLightingEnabled;
+
 	private void Awake()
 	{
 		InitData();
@@ -359,7 +361,7 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 
 	public void GetFromLight(int lightIndex, int gameLightIndex)
 	{
-		_ = this.lightData;
+		_ = lightData;
 		GameLight gameLight = null;
 		if (gameLightIndex >= 0 && gameLightIndex < gameLights.Count)
 		{
@@ -373,22 +375,24 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 			lightPos.w = 1f;
 			Vector4 cachedColorAndIntensity = gameLight.cachedColorAndIntensity;
 			Vector3 zero = Vector3.zero;
-			LightData lightData = default(LightData);
-			lightData.lightPos = lightPos;
-			lightData.lightColor = cachedColorAndIntensity;
-			lightData.lightDirection = zero;
-			LightData value = lightData;
-			this.lightData[lightIndex] = value;
+			LightData value = new LightData
+			{
+				lightPos = lightPos,
+				lightColor = cachedColorAndIntensity,
+				lightDirection = zero
+			};
+			lightData[lightIndex] = value;
 		}
 	}
 
 	private void ResetLight(int lightIndex)
 	{
-		LightData lightData = default(LightData);
-		lightData.lightPos = Vector4.zero;
-		lightData.lightColor = Color.black;
-		lightData.lightDirection = Vector4.zero;
-		LightData value = lightData;
-		this.lightData[lightIndex] = value;
+		LightData value = new LightData
+		{
+			lightPos = Vector4.zero,
+			lightColor = Color.black,
+			lightDirection = Vector4.zero
+		};
+		lightData[lightIndex] = value;
 	}
 }

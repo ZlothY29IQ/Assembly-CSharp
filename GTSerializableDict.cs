@@ -20,7 +20,12 @@ public class GTSerializableDict<TKey, TValue> : Dictionary<TKey, TValue>, ISeria
 				_m_serializedEntries.Add(new GTSerializableKeyValue<TKey, TValue>(current.Key, current.Value));
 			}
 		}
-		_m_serializedEntries.Sort((GTSerializableKeyValue<TKey, TValue> entry1, GTSerializableKeyValue<TKey, TValue> entry2) => entry1.k.CompareTo(entry2.k));
+		_m_serializedEntries.Sort(delegate(GTSerializableKeyValue<TKey, TValue> entry1, GTSerializableKeyValue<TKey, TValue> entry2)
+		{
+			ref TKey k = ref entry1.k;
+			TKey k2 = entry2.k;
+			return k.CompareTo(k2);
+		});
 	}
 
 	public void OnAfterDeserialize()

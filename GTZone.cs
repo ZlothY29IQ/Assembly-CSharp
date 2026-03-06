@@ -32,5 +32,7 @@ public enum GTZone
 	ghostReactorTunnel,
 	ranked,
 	ghostReactorDrill,
-	forestWithCity
+	forestWithCity,
+	GTFC,
+	GTFCWithCity
 }

@@ -120,7 +120,7 @@ public class TransferrableItemSlotTransformOverride : MonoBehaviour, IGorillaSli
 			Transform value = null;
 			foreach (SlotTransformOverride item2 in transformOverridesDeprecated)
 			{
-				if ((item2.positionState & item) != 0)
+				if ((item2.positionState & item) != TransferrableObject.PositionState.None)
 				{
 					value = item2.overrideTransform;
 					break;

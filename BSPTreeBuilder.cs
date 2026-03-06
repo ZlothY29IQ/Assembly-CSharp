@@ -65,16 +65,16 @@ public static class BSPTreeBuilder
 			List<BoxCollider> list3 = new List<BoxCollider>();
 			zoneDef.GetComponents(list3);
 			list3.AddRange(zoneDef.transform.GetComponentsInChildren<BoxCollider>());
-			foreach (BoxCollider item4 in list3)
+			foreach (BoxCollider item3 in list3)
 			{
 				int count = list2.Count;
 				int zoneIndex = Array.IndexOf(zones.ToArray(), zoneDef);
 				list2.Add(new MatrixZonePair
 				{
-					matrix = BoxColliderUtils.GetWorldToNormalizedBoxMatrix(item4),
+					matrix = BoxColliderUtils.GetWorldToNormalizedBoxMatrix(item3),
 					zoneIndex = zoneIndex
 				});
-				list.Add(new BoxMetadata(item4, zoneDef, count, zones.Length - i));
+				list.Add(new BoxMetadata(item3, zoneDef, count, zones.Length - i));
 			}
 		}
 		if (list.Count == 0)
@@ -85,10 +85,11 @@ public static class BSPTreeBuilder
 		List<MatrixBSPNode> list5 = new List<MatrixBSPNode>();
 		Dictionary<(int, int), int> matrixNodeCache = new Dictionary<(int, int), int>();
 		int matrixNodeCacheHits = 0;
-		MatrixBSPNode item = default(MatrixBSPNode);
-		item.matrixIndex = -1;
-		item.outsideChildIndex = 0;
-		list5.Add(item);
+		list5.Add(new MatrixBSPNode
+		{
+			matrixIndex = -1,
+			outsideChildIndex = 0
+		});
 		BoundsInt bounds = CalculateWorldBounds(list);
 		int num = BuildTreeRecursive(zones.ToArray(), list, bounds, 0, SerializableBSPNode.Axis.X, list4, list5, matrixNodeCache, ref matrixNodeCacheHits);
 		CleanupUnreferencedMatrices(list5, list2);
@@ -99,24 +100,26 @@ public static class BSPTreeBuilder
 			MatrixBSPNode matrixBSPNode = list5[j];
 			if (matrixBSPNode.matrixIndex < 0)
 			{
-				SerializableBSPNode serializableBSPNode = default(SerializableBSPNode);
-				serializableBSPNode.axis = SerializableBSPNode.Axis.Zone;
-				serializableBSPNode.splitValue = 0f;
-				serializableBSPNode.leftChildIndex = (short)matrixBSPNode.outsideChildIndex;
-				serializableBSPNode.rightChildIndex = 0;
-				SerializableBSPNode item2 = serializableBSPNode;
-				list6.Add(item2);
+				SerializableBSPNode item = new SerializableBSPNode
+				{
+					axis = SerializableBSPNode.Axis.Zone,
+					splitValue = 0f,
+					leftChildIndex = (short)matrixBSPNode.outsideChildIndex,
+					rightChildIndex = 0
+				};
+				list6.Add(item);
 			}
 			else
 			{
 				bool flag = matrixBSPNode.outsideChildIndex >= 0;
-				SerializableBSPNode serializableBSPNode = default(SerializableBSPNode);
-				serializableBSPNode.axis = (flag ? SerializableBSPNode.Axis.MatrixFinal : SerializableBSPNode.Axis.MatrixChain);
-				serializableBSPNode.splitValue = 0f;
-				serializableBSPNode.leftChildIndex = (short)matrixBSPNode.matrixIndex;
-				serializableBSPNode.rightChildIndex = (short)(flag ? matrixBSPNode.outsideChildIndex : (count2 - matrixBSPNode.outsideChildIndex));
-				SerializableBSPNode item3 = serializableBSPNode;
-				list6.Add(item3);
+				SerializableBSPNode item2 = new SerializableBSPNode
+				{
+					axis = (flag ? SerializableBSPNode.Axis.MatrixFinal : SerializableBSPNode.Axis.MatrixChain),
+					splitValue = 0f,
+					leftChildIndex = (short)matrixBSPNode.matrixIndex,
+					rightChildIndex = (short)(flag ? matrixBSPNode.outsideChildIndex : (count2 - matrixBSPNode.outsideChildIndex))
+				};
+				list6.Add(item2);
 			}
 		}
 		for (int k = 0; k < list6.Count; k++)
@@ -223,15 +226,16 @@ public static class BSPTreeBuilder
 			Debug.Log($"Creating matrix node tree with {boxes.Count} boxes at depth {depth}");
 			return CreateMatrixNodeTree(zones, boxes, matrixNodeList, bounds, matrixNodeCache, ref matrixNodeCacheHits);
 		}
-		SerializableBSPNode serializableBSPNode = default(SerializableBSPNode);
-		serializableBSPNode.axis = axis;
-		serializableBSPNode.leftChildIndex = -1;
-		serializableBSPNode.rightChildIndex = -1;
-		SerializableBSPNode serializableBSPNode2 = serializableBSPNode;
-		nodeList.Add(serializableBSPNode2);
+		SerializableBSPNode serializableBSPNode = new SerializableBSPNode
+		{
+			axis = axis,
+			leftChildIndex = -1,
+			rightChildIndex = -1
+		};
+		nodeList.Add(serializableBSPNode);
 		int bestSplitValue;
-		SerializableBSPNode.Axis axis2 = (serializableBSPNode2.axis = FindBestAxis(boxes, bounds, axis, out bestSplitValue));
-		serializableBSPNode2.splitValue = (float)bestSplitValue / 1000f;
+		SerializableBSPNode.Axis axis2 = (serializableBSPNode.axis = FindBestAxis(boxes, bounds, axis, out bestSplitValue));
+		serializableBSPNode.splitValue = (float)bestSplitValue / 1000f;
 		Debug.Log($"Best axis: {axis2}, split value: {bestSplitValue}");
 		BoundsInt boundsInt = bounds;
 		BoundsInt boundsInt2 = bounds;
@@ -261,9 +265,9 @@ public static class BSPTreeBuilder
 			return CreateMatrixNodeTree(zones, boxes, matrixNodeList, bounds, matrixNodeCache, ref matrixNodeCacheHits);
 		}
 		SerializableBSPNode.Axis nextAxis = GetNextAxis(axis);
-		serializableBSPNode2.leftChildIndex = (short)BuildTreeRecursive(zones, list2, boundsInt, depth + 1, nextAxis, nodeList, matrixNodeList, matrixNodeCache, ref matrixNodeCacheHits);
-		serializableBSPNode2.rightChildIndex = (short)BuildTreeRecursive(zones, list3, boundsInt2, depth + 1, nextAxis, nodeList, matrixNodeList, matrixNodeCache, ref matrixNodeCacheHits);
-		nodeList[count] = serializableBSPNode2;
+		serializableBSPNode.leftChildIndex = (short)BuildTreeRecursive(zones, list2, boundsInt, depth + 1, nextAxis, nodeList, matrixNodeList, matrixNodeCache, ref matrixNodeCacheHits);
+		serializableBSPNode.rightChildIndex = (short)BuildTreeRecursive(zones, list3, boundsInt2, depth + 1, nextAxis, nodeList, matrixNodeList, matrixNodeCache, ref matrixNodeCacheHits);
+		nodeList[count] = serializableBSPNode;
 		return count;
 	}
 
@@ -544,8 +548,10 @@ public static class BSPTreeBuilder
 			}
 			if (list2.Count == 0)
 			{
-				MatrixBSPNode matrixNode = default(MatrixBSPNode);
-				matrixNode.matrixIndex = -1;
+				MatrixBSPNode matrixNode = new MatrixBSPNode
+				{
+					matrixIndex = -1
+				};
 				int outsideChildIndex = Array.IndexOf(zones, zone);
 				matrixNode.outsideChildIndex = outsideChildIndex;
 				return AddMatrixNodeWithCache(matrixNode, matrixNodeList, matrixNodeCache, ref matrixNodeCacheHits);
@@ -581,14 +587,18 @@ public static class BSPTreeBuilder
 		BoxMetadata boxMetadata = boxes[boxIndex];
 		if (boxIndex == boxes.Count - 1)
 		{
-			MatrixBSPNode matrixNode = default(MatrixBSPNode);
-			matrixNode.matrixIndex = -1;
+			MatrixBSPNode matrixNode = new MatrixBSPNode
+			{
+				matrixIndex = -1
+			};
 			int outsideChildIndex = Array.IndexOf(allZones, boxMetadata.zone);
 			matrixNode.outsideChildIndex = outsideChildIndex;
 			return AddMatrixNodeWithCache(matrixNode, matrixNodeList, matrixNodeCache, ref matrixNodeCacheHits);
 		}
-		MatrixBSPNode matrixNode2 = default(MatrixBSPNode);
-		matrixNode2.matrixIndex = boxMetadata.matrixIndex;
+		MatrixBSPNode matrixNode2 = new MatrixBSPNode
+		{
+			matrixIndex = boxMetadata.matrixIndex
+		};
 		int outsideChildIndex2 = CreateSequentialMatrixNodes(zones, boxes, matrixNodeList, boxIndex + 1, allZones, matrixNodeCache, ref matrixNodeCacheHits);
 		matrixNode2.outsideChildIndex = outsideChildIndex2;
 		return AddMatrixNodeWithCache(matrixNode2, matrixNodeList, matrixNodeCache, ref matrixNodeCacheHits);

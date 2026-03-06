@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Fusion;
+using GorillaExtensions;
 using GorillaTag.Rendering;
 using Photon.Pun;
 using Photon.Realtime;
@@ -340,19 +341,20 @@ public class AngryBeeSwarm : NetworkComponent
 		float num2 = num * num;
 		VRRig vRRig = null;
 		float num3 = ZoneShaderSettings.GetWaterY() + PlayerMinHeightAboveWater;
-		foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+		foreach (RigContainer activeRigContainer in VRRigCache.ActiveRigContainers)
 		{
-			if (vrrig.head != null && !(vrrig.head.rigTarget == null) && !(vrrig.head.rigTarget.position.y <= num3))
+			VRRig rig = activeRigContainer.Rig;
+			if (rig.head != null && !(rig.head.rigTarget == null) && !(rig.head.rigTarget.position.y <= num3))
 			{
-				float sqrMagnitude = (base.transform.position - vrrig.head.rigTarget.transform.position).sqrMagnitude;
+				float sqrMagnitude = (base.transform.position - rig.head.rigTarget.transform.position).sqrMagnitude;
 				if (sqrMagnitude < num2)
 				{
 					num2 = sqrMagnitude;
-					vRRig = vrrig;
+					vRRig = rig;
 				}
 			}
 		}
-		if (vRRig != null)
+		if (vRRig.IsNotNull())
 		{
 			targetPlayer = vRRig.creator;
 			followTarget = vRRig.head.rigTarget;

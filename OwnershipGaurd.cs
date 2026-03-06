@@ -17,7 +17,7 @@ internal class OwnershipGaurd : MonoBehaviour
 		}
 		if (NetViews != null)
 		{
-			OwnershipGaurdHandler.RegisterViews(NetViews);
+			OwnershipGuardHandler.RegisterViews(NetViews);
 		}
 	}
 
@@ -25,7 +25,7 @@ internal class OwnershipGaurd : MonoBehaviour
 	{
 		if (NetViews != null)
 		{
-			OwnershipGaurdHandler.RemoveViews(NetViews);
+			OwnershipGuardHandler.RemoveViews(NetViews);
 		}
 	}
 }

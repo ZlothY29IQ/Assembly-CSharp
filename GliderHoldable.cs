@@ -836,7 +836,7 @@ public class GliderHoldable : NetworkHoldableObject, IRequestableOwnershipGuardC
 
 	private void AuthorityUpdateHeld(float dt)
 	{
-		if (gliderState != 0)
+		if (gliderState != GliderState.LocallyHeld)
 		{
 			gliderState = GliderState.LocallyHeld;
 		}

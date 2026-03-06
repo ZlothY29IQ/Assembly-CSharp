@@ -94,26 +94,26 @@ public class BuilderTrafficLight : MonoBehaviour, IBuilderPieceComponent
 
 	private void Update()
 	{
-		if (!(piece == null) && piece.state != 0)
+		if (!(piece == null) && piece.state != BuilderPiece.State.AttachedAndPlaced)
 		{
 			return;
 		}
 		float num = Time.time;
 		if (PhotonNetwork.InRoom)
 		{
-			uint serverTimestamp = (serverTimestamp = (uint)PhotonNetwork.ServerTimestamp);
+			uint num2 = (num2 = (uint)PhotonNetwork.ServerTimestamp);
 			if (piece != null)
 			{
-				serverTimestamp = (uint)(PhotonNetwork.ServerTimestamp - piece.activatedTimeStamp);
+				num2 = (uint)(PhotonNetwork.ServerTimestamp - piece.activatedTimeStamp);
 			}
-			num = (float)serverTimestamp / 1000f;
+			num = (float)num2 / 1000f;
 		}
-		float num2 = num % cycleDuration / cycleDuration;
-		num2 = (num2 + startPercentageOffset) % 1f;
-		int num3 = (int)stateCurve.Evaluate(num2);
-		if (num3 != (int)lightState)
+		float num3 = num % cycleDuration / cycleDuration;
+		num3 = (num3 + startPercentageOffset) % 1f;
+		int num4 = (int)stateCurve.Evaluate(num3);
+		if (num4 != (int)lightState)
 		{
-			SetState((LightState)num3);
+			SetState((LightState)num4);
 		}
 	}
 

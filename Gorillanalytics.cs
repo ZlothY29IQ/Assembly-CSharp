@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using GorillaGameModes;
 using GorillaLocomotion;
@@ -48,13 +47,9 @@ public class Gorillanalytics : MonoBehaviour
 
 	public PhotonNetworkController photonNetworkController;
 
+	public MapModeQueueSet mapModeQueueSet;
+
 	public GameModeZoneMapping gameModeData;
-
-	public List<string> maps;
-
-	public List<string> modes;
-
-	public List<string> queues;
 
 	private readonly UploadData uploadData = new UploadData();
 
@@ -71,7 +66,7 @@ public class Gorillanalytics : MonoBehaviour
 		});
 		while (true)
 		{
-			yield return new WaitForSeconds(interval);
+			yield return new WaitForSecondsRealtime(interval);
 			if ((double)UnityEngine.Random.Range(0f, 1f) < 1.0 / oneOverChance && PlayFabClientAPI.IsClientLoggedIn())
 			{
 				UploadGorillanalytics();
@@ -138,7 +133,18 @@ public class Gorillanalytics : MonoBehaviour
 		{
 			map += "private";
 		}
-		mode = modes.FirstOrDefault((string s) => gameMode.Contains(s)) ?? "unknown";
-		queue = queues.FirstOrDefault((string s) => gameMode.Contains(s)) ?? "unknown";
+		int num = gameMode.LastIndexOf('|');
+		string modeTestString;
+		if (num != -1)
+		{
+			modeTestString = gameMode.Substring(num + 1).ToUpper();
+			mode = mapModeQueueSet.modes.FirstOrDefault((string s) => modeTestString == s) ?? "unknown";
+		}
+		else
+		{
+			modeTestString = gameMode.ToUpper();
+			mode = mapModeQueueSet.modes.FirstOrDefault((string s) => modeTestString.EndsWith(s)) ?? "unknown";
+		}
+		queue = mapModeQueueSet.queues.FirstOrDefault((string s) => gameMode.Contains(s)) ?? "unknown";
 	}
 }

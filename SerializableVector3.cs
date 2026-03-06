@@ -2,20 +2,13 @@ using System;
 using UnityEngine;
 
 [Serializable]
-public struct SerializableVector3
+public struct SerializableVector3(float x, float y, float z)
 {
-	public float x;
+	public float x = x;
 
-	public float y;
+	public float y = y;
 
-	public float z;
-
-	public SerializableVector3(float x, float y, float z)
-	{
-		this.x = x;
-		this.y = y;
-		this.z = z;
-	}
+	public float z = z;
 
 	public static implicit operator SerializableVector3(Vector3 v)
 	{

@@ -100,7 +100,7 @@ public class CustomMapTelemetry : MonoBehaviour
 	{
 		if (!metricsCaptureStarted && !perfCaptureStarted)
 		{
-			mapEnterTime = Time.unscaledTime;
+			mapEnterTime = Time.realtimeSinceStartup;
 			float value = UnityEngine.Random.value;
 			if (value <= 0.01f)
 			{
@@ -152,7 +152,7 @@ public class CustomMapTelemetry : MonoBehaviour
 		NetworkSystem.Instance.OnPlayerJoined -= new Action<NetPlayer>(OnPlayerJoinedRoom);
 		NetworkSystem.Instance.OnPlayerLeft -= new Action<NetPlayer>(OnPlayerLeftRoom);
 		inPrivateRoom = NetworkSystem.Instance.InRoom && NetworkSystem.Instance.SessionIsPrivate;
-		int num = Mathf.RoundToInt(Time.unscaledTime - mapEnterTime);
+		int num = Mathf.RoundToInt(Time.realtimeSinceStartup - mapEnterTime);
 		if (num >= 30)
 		{
 			if (mapName.Equals("NULL") || mapModId == 0L)
@@ -203,7 +203,7 @@ public class CustomMapTelemetry : MonoBehaviour
 		{
 			return;
 		}
-		int num = Mathf.RoundToInt(Time.unscaledTime - mapEnterTime);
+		int num = Mathf.RoundToInt(Time.realtimeSinceStartup - mapEnterTime);
 		AverageFPS = totalFPS / frameCounter;
 		AverageDrawCalls = totalDrawCalls / frameCounter;
 		AveragePlayerCount = totalPlayerCount / frameCounter;

@@ -7,23 +7,15 @@ namespace GorillaExtensions;
 public static class GorillaMath
 {
 	[Serializable]
-	public struct RemapFloatInfo
+	public struct RemapFloatInfo(float fromMin = 0f, float toMin = 0f, float fromMax = 1f, float toMax = 1f)
 	{
-		public float fromMin;
+		public float fromMin = fromMin;
 
-		public float toMin;
+		public float toMin = toMin;
 
-		public float fromMax;
+		public float fromMax = fromMax;
 
-		public float toMax;
-
-		public RemapFloatInfo(float fromMin = 0f, float toMin = 0f, float fromMax = 1f, float toMax = 1f)
-		{
-			this.fromMin = fromMin;
-			this.toMin = toMin;
-			this.fromMax = fromMax;
-			this.toMax = toMax;
-		}
+		public float toMax = toMax;
 
 		public void OnValidate()
 		{

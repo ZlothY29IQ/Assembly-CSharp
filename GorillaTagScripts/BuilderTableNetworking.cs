@@ -191,7 +191,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 			localClientTableInit.Reset();
 			BuilderTable table = GetTable();
 			BuilderTable.TableState tableState = table.GetTableState();
-			bool flag = (tableState != BuilderTable.TableState.Ready && tableState != 0 && tableState != BuilderTable.TableState.WaitForMasterResync && tableState != BuilderTable.TableState.ReceivingMasterResync) || table.pieces.Count <= 0;
+			bool flag = (tableState != BuilderTable.TableState.Ready && tableState != BuilderTable.TableState.WaitingForZoneAndRoom && tableState != BuilderTable.TableState.WaitForMasterResync && tableState != BuilderTable.TableState.ReceivingMasterResync) || table.pieces.Count <= 0;
 			if (!flag)
 			{
 				flag |= table.pieces.Count <= 0;
@@ -233,7 +233,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 		}
 		localClientTableInit.Reset();
 		BuilderTable table2 = GetTable();
-		if (table2.GetTableState() != 0)
+		if (table2.GetTableState() != BuilderTable.TableState.WaitingForZoneAndRoom)
 		{
 			if (table2.GetTableState() == BuilderTable.TableState.Ready)
 			{
@@ -255,7 +255,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 	{
 		Debug.LogFormat("Player {0} left room", player.ActorNumber);
 		BuilderTable table = GetTable();
-		if (table.GetTableState() != 0)
+		if (table.GetTableState() != BuilderTable.TableState.WaitingForZoneAndRoom)
 		{
 			if (table.isTableMutable)
 			{
@@ -326,7 +326,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 	[PunRPC]
 	public void PlayerEnterBuilderRPC(Player player, bool entered, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "PlayerEnterBuilderRPC");
+		MonkeAgent.IncrementRPCCall(info, "PlayerEnterBuilderRPC");
 		if (!PhotonNetwork.IsMasterClient || !ValidateCallLimits(RPC.PlayerEnterMaster, info) || player == null || !player.Equals(info.Sender))
 		{
 			return;
@@ -444,7 +444,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 	[PunRPC]
 	public void StartBuildTableRPC(int totalBytes, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "StartBuildTableRPC");
+		MonkeAgent.IncrementRPCCall(info, "StartBuildTableRPC");
 		if (!info.Sender.IsMasterClient || PhotonNetwork.IsMasterClient || !ValidateCallLimits(RPC.TableDataStart, info))
 		{
 			return;
@@ -494,7 +494,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 	[PunRPC]
 	public void SendTableDataRPC(int numBytes, byte[] bytes, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "SendTableDataRPC");
+		MonkeAgent.IncrementRPCCall(info, "SendTableDataRPC");
 		if (!info.Sender.IsMasterClient)
 		{
 			return;
@@ -630,7 +630,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 	[PunRPC]
 	public void RequestFailedRPC(int localCommandId, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "RequestFailedRPC");
+		MonkeAgent.IncrementRPCCall(info, "RequestFailedRPC");
 		if (info.Sender.IsMasterClient && ValidateCallLimits(RPC.RequestFailed, info))
 		{
 			GetTable().RollbackFailedCommand(localCommandId);
@@ -734,7 +734,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 	[PunRPC]
 	public void PieceDestroyedRPC(int pieceId, long packedPosition, int packedRotation, bool playFX, short recyclerID, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "PieceDestroyedRPC");
+		MonkeAgent.IncrementRPCCall(info, "PieceDestroyedRPC");
 		if (!info.Sender.IsMasterClient || !ValidateCallLimits(RPC.RecyclePieceMaster, info))
 		{
 			return;
@@ -778,7 +778,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 	[PunRPC]
 	public void RequestPlacePieceRPC(int localCommandId, int pieceId, int attachPieceId, int placement, int parentPieceId, int attachIndex, int parentAttachIndex, Player placedByPlayer, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "RequestPlacePieceRPC");
+		MonkeAgent.IncrementRPCCall(info, "RequestPlacePieceRPC");
 		if (!PhotonNetwork.IsMasterClient || !ValidateMasterClientIsReady(info.Sender) || !ValidateCallLimits(RPC.PlacePieceMaster, info) || placedByPlayer == null || !placedByPlayer.Equals(info.Sender))
 		{
 			return;
@@ -813,7 +813,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 	[PunRPC]
 	public void PiecePlacedRPC(int localCommandId, int pieceId, int attachPieceId, int placement, int parentPieceId, int attachIndex, int parentAttachIndex, Player placedByPlayer, int timeStamp, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "PiecePlacedRPC");
+		MonkeAgent.IncrementRPCCall(info, "PiecePlacedRPC");
 		if (!info.Sender.IsMasterClient || !ValidateCallLimits(RPC.PlacePiece, info))
 		{
 			return;
@@ -856,7 +856,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 	[PunRPC]
 	public void RequestGrabPieceRPC(int localCommandId, int pieceId, bool isLeftHand, long packedPosRot, Player grabbedByPlayer, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "RequestGrabPieceRPC");
+		MonkeAgent.IncrementRPCCall(info, "RequestGrabPieceRPC");
 		if (!PhotonNetwork.IsMasterClient || !ValidateMasterClientIsReady(info.Sender) || !ValidateCallLimits(RPC.GrabPieceMaster, info) || !grabbedByPlayer.Equals(info.Sender))
 		{
 			return;
@@ -906,7 +906,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 	[PunRPC]
 	public void PieceGrabbedRPC(int localCommandId, int pieceId, bool isLeftHand, long packedPosRot, Player grabbedByPlayer, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "PieceGrabbedRPC");
+		MonkeAgent.IncrementRPCCall(info, "PieceGrabbedRPC");
 		if (info.Sender.IsMasterClient && ValidateCallLimits(RPC.GrabPiece, info))
 		{
 			BuilderTable table = GetTable();
@@ -948,7 +948,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 	[PunRPC]
 	public void RequestDropPieceRPC(int localCommandId, int pieceId, Vector3 position, Quaternion rotation, Vector3 velocity, Vector3 angVelocity, Player droppedByPlayer, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "RequestDropPieceRPC");
+		MonkeAgent.IncrementRPCCall(info, "RequestDropPieceRPC");
 		if (!PhotonNetwork.IsMasterClient || !ValidateMasterClientIsReady(info.Sender) || !ValidateCallLimits(RPC.DropPieceMaster, info) || !droppedByPlayer.Equals(info.Sender))
 		{
 			return;
@@ -976,7 +976,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 	[PunRPC]
 	public void PieceDroppedRPC(int localCommandId, int pieceId, Vector3 position, Quaternion rotation, Vector3 velocity, Vector3 angVelocity, Player droppedByPlayer, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "PieceDroppedRPC");
+		MonkeAgent.IncrementRPCCall(info, "PieceDroppedRPC");
 		if (info.Sender.IsMasterClient && ValidateCallLimits(RPC.DropPiece, info) && position.IsValid(10000f) && rotation.IsValid() && velocity.IsValid(10000f) && angVelocity.IsValid(10000f))
 		{
 			BuilderTable table = GetTable();
@@ -1009,7 +1009,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 	[PunRPC]
 	public void PieceEnteredDropZoneRPC(int pieceId, long position, int rotation, int dropZoneId, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "PieceEnteredDropZoneRPC");
+		MonkeAgent.IncrementRPCCall(info, "PieceEnteredDropZoneRPC");
 		if (!info.Sender.IsMasterClient || !ValidateCallLimits(RPC.PieceDropZone, info))
 		{
 			return;
@@ -1033,7 +1033,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 	[PunRPC]
 	public void PlotClaimedRPC(int pieceId, Player claimingPlayer, bool claimed, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "PlotClaimedRPC");
+		MonkeAgent.IncrementRPCCall(info, "PlotClaimedRPC");
 		if (!info.Sender.IsMasterClient || !ValidateCallLimits(RPC.PlotClaimedMaster, info))
 		{
 			return;
@@ -1082,7 +1082,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 	[PunRPC]
 	public void ArmShelfCreatedRPC(int pieceIdLeft, int pieceIdRight, int pieceType, Player owningPlayer, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "ArmShelfCreatedRPC");
+		MonkeAgent.IncrementRPCCall(info, "ArmShelfCreatedRPC");
 		if (info.Sender.IsMasterClient && ValidateCallLimits(RPC.ArmShelfCreated, info))
 		{
 			BuilderTable table = GetTable();
@@ -1120,7 +1120,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 	[PunRPC]
 	public void RequestShelfSelectionRPC(int shelfId, int setId, bool isConveyor, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "RequestShelfSelectionRPC");
+		MonkeAgent.IncrementRPCCall(info, "RequestShelfSelectionRPC");
 		if (PhotonNetwork.IsMasterClient && ValidateCallLimits(RPC.ShelfSelection, info) && ValidateMasterClientIsReady(info.Sender))
 		{
 			BuilderTable table = GetTable();
@@ -1134,7 +1134,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 	[PunRPC]
 	public void ShelfSelectionChangedRPC(int shelfId, int setId, bool isConveyor, Player caller, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "ShelfSelectionChangedRPC");
+		MonkeAgent.IncrementRPCCall(info, "ShelfSelectionChangedRPC");
 		if (info.Sender.IsMasterClient && ValidateCallLimits(RPC.ShelfSelectionMaster, info))
 		{
 			BuilderTable table = GetTable();
@@ -1157,7 +1157,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 	[PunRPC]
 	public void RequestFunctionalPieceStateChangeRPC(int pieceID, byte state, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "RequestFunctionalPieceStateChangeRPC");
+		MonkeAgent.IncrementRPCCall(info, "RequestFunctionalPieceStateChangeRPC");
 		if (PhotonNetwork.IsMasterClient && ValidateMasterClientIsReady(info.Sender) && ValidateCallLimits(RPC.SetFunctionalState, info))
 		{
 			BuilderTable table = GetTable();
@@ -1183,7 +1183,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 	[PunRPC]
 	public void FunctionalPieceStateChangeRPC(int pieceID, byte state, Player caller, int timeStamp, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "FunctionalPieceStateChangeRPC");
+		MonkeAgent.IncrementRPCCall(info, "FunctionalPieceStateChangeRPC");
 		if (info.Sender.IsMasterClient && ValidateCallLimits(RPC.SetFunctionalStateMaster, info) && caller != null)
 		{
 			if ((uint)(PhotonNetwork.ServerTimestamp - info.SentServerTimestamp) > PhotonNetwork.NetworkingClient.LoadBalancingPeer.DisconnectTimeout || (uint)(info.SentServerTimestamp - timeStamp) > PhotonNetwork.NetworkingClient.LoadBalancingPeer.DisconnectTimeout)
@@ -1210,7 +1210,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 	[PunRPC]
 	private void RequestBlocksTerminalControlRPC(bool lockedStatus, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "RequestBlocksTerminalControlRPC");
+		MonkeAgent.IncrementRPCCall(info, "RequestBlocksTerminalControlRPC");
 		if (NetworkSystem.Instance.IsMasterClient && ValidateCallLimits(RPC.RequestTerminalControl, info) && info.Sender != null)
 		{
 			BuilderTable table = GetTable();
@@ -1225,7 +1225,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 	[PunRPC]
 	private void SetBlocksTerminalDriverRPC(int driver, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "SetBlocksTerminalDriverRPC");
+		MonkeAgent.IncrementRPCCall(info, "SetBlocksTerminalDriverRPC");
 		if (info.Sender != null && info.Sender.IsMasterClient && (driver == -2 || NetworkSystem.Instance.GetPlayer(driver) != null) && ValidateCallLimits(RPC.SetTerminalDriver, info))
 		{
 			BuilderTable table = GetTable();
@@ -1248,7 +1248,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 		{
 			return;
 		}
-		GorillaNot.IncrementRPCCall(info, "LoadSharedBlocksMapRPC");
+		MonkeAgent.IncrementRPCCall(info, "LoadSharedBlocksMapRPC");
 		if (!ValidateCallLimits(RPC.LoadSharedBlocksMap, info) || info.Sender == null || mapID.IsNullOrEmpty())
 		{
 			return;
@@ -1299,7 +1299,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 	[PunRPC]
 	private void SharedTableEventRPC(byte eventType, string mapID, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "SharedTableEventRPC");
+		MonkeAgent.IncrementRPCCall(info, "SharedTableEventRPC");
 		if (eventType >= 3)
 		{
 			return;
@@ -1340,7 +1340,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 	{
 		localClientTableInit.Reset();
 		BuilderTable table = GetTable();
-		if (table.GetTableState() != 0)
+		if (table.GetTableState() != BuilderTable.TableState.WaitingForZoneAndRoom)
 		{
 			table.ClearTable();
 			table.ClearQueuedCommands();

@@ -129,7 +129,7 @@ internal class VRRigSerializer : GorillaWrappedSerializer, IFXContextParems<Hand
 		{
 			if (player != null)
 			{
-				GorillaNot.instance.SendReport("creating rigs as room objects", player.UserId, player.NickName);
+				MonkeAgent.instance.SendReport("creating rigs as room objects", player.UserId, player.NickName);
 			}
 			return false;
 		}
@@ -138,13 +138,13 @@ internal class VRRigSerializer : GorillaWrappedSerializer, IFXContextParems<Hand
 			NetPlayer player2 = NetworkSystem.Instance.GetPlayer(wrappedInfo.senderID);
 			if (player2 != null)
 			{
-				GorillaNot.instance.SendReport("creating rigs as room objects", player2.UserId, player2.NickName);
+				MonkeAgent.instance.SendReport("creating rigs as room objects", player2.UserId, player2.NickName);
 			}
 			return false;
 		}
 		if (player != netView.Owner)
 		{
-			GorillaNot.instance.SendReport("creating rigs for someone else", player.UserId, player.NickName);
+			MonkeAgent.instance.SendReport("creating rigs for someone else", player.UserId, player.NickName);
 			return false;
 		}
 		if (VRRigCache.Instance.TryGetVrrig(player, out rigContainer))
@@ -418,7 +418,7 @@ internal class VRRigSerializer : GorillaWrappedSerializer, IFXContextParems<Hand
 	[PunRPC]
 	public void DroppedByPlayer(Vector3 throwVelocity, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "DroppedByPlayer");
+		MonkeAgent.IncrementRPCCall(info, "DroppedByPlayer");
 		if (vrrig.isOfflineVRRig && VRRigCache.Instance.TryGetVrrig(info.Sender, out var playerRig) && throwVelocity.IsValid(10000f))
 		{
 			vrrig.DroppedByPlayer(playerRig.Rig, throwVelocity);
@@ -437,7 +437,7 @@ internal class VRRigSerializer : GorillaWrappedSerializer, IFXContextParems<Hand
 
 	private void OnHandTapRPCShared(int audioClipIndex, bool isDownTap, bool isLeftHand, StiltID stiltID, float handTapSpeed, long packedDirFromHitToHand, PhotonMessageInfoWrapped info)
 	{
-		GorillaNot.IncrementRPCCall(info, "OnHandTapRPCShared");
+		MonkeAgent.IncrementRPCCall(info, "OnHandTapRPCShared");
 		if (info.Sender != netView.Owner || audioClipIndex < 0 || audioClipIndex >= GTPlayer.Instance.materialData.Count)
 		{
 			return;
@@ -458,16 +458,17 @@ internal class VRRigSerializer : GorillaWrappedSerializer, IFXContextParems<Hand
 		{
 			max = gorillaAmbushManager.crawlingSpeedForMaxVolume;
 		}
-		OnHandTapFX onHandTapFX = default(OnHandTapFX);
-		onHandTapFX.rig = vrrig;
-		onHandTapFX.surfaceIndex = audioClipIndex;
-		onHandTapFX.isDownTap = isDownTap;
-		onHandTapFX.isLeftHand = isLeftHand;
-		onHandTapFX.stiltID = stiltID;
-		onHandTapFX.volume = handTapSpeed.ClampSafe(0f, max);
-		onHandTapFX.speed = handTapSpeed;
-		onHandTapFX.tapDir = tapDir;
-		OnHandTapFX onHandTapFX2 = onHandTapFX;
+		OnHandTapFX onHandTapFX = new OnHandTapFX
+		{
+			rig = vrrig,
+			surfaceIndex = audioClipIndex,
+			isDownTap = isDownTap,
+			isLeftHand = isLeftHand,
+			stiltID = stiltID,
+			volume = handTapSpeed.ClampSafe(0f, max),
+			speed = handTapSpeed,
+			tapDir = tapDir
+		};
 		if (CrittersManager.instance.IsNotNull() && CrittersManager.instance.LocalAuthority() && CrittersManager.instance.rigSetupByRig[vrrig].IsNotNull())
 		{
 			CrittersLoudNoise crittersLoudNoise = (CrittersLoudNoise)CrittersManager.instance.rigSetupByRig[vrrig].rigActors[(!isLeftHand) ? 2 : 0].actorSet;
@@ -482,12 +483,12 @@ internal class VRRigSerializer : GorillaWrappedSerializer, IFXContextParems<Hand
 			Vector3 tapPos = (isLeftHand ? vrrig.leftHand.rigTarget.position : vrrig.rightHand.rigTarget.position);
 			managerForZone.ghostReactorManager.OnSharedTap(vrrig, tapPos, handTapSpeed);
 		}
-		FXSystem.PlayFXForRig(FXType.OnHandTap, onHandTapFX2, info);
+		FXSystem.PlayFXForRig(FXType.OnHandTap, onHandTapFX, info);
 	}
 
 	private void PlayHandTapShared(int soundIndex, bool isLeftHand, float tapVolume, PhotonMessageInfoWrapped info = default(PhotonMessageInfoWrapped))
 	{
-		GorillaNot.IncrementRPCCall(info, "PlayHandTapShared");
+		MonkeAgent.IncrementRPCCall(info, "PlayHandTapShared");
 		NetPlayer sender = info.Sender;
 		if (info.Sender == netView.Owner && float.IsFinite(tapVolume))
 		{
@@ -498,13 +499,13 @@ internal class VRRigSerializer : GorillaWrappedSerializer, IFXContextParems<Hand
 		}
 		else
 		{
-			GorillaNot.instance.SendReport("inappropriate tag data being sent hand tap", sender.UserId, sender.NickName);
+			MonkeAgent.instance.SendReport("inappropriate tag data being sent hand tap", sender.UserId, sender.NickName);
 		}
 	}
 
 	private void UpdateNativeSizeShared(float value, PhotonMessageInfoWrapped info = default(PhotonMessageInfoWrapped))
 	{
-		GorillaNot.IncrementRPCCall(info, "UpdateNativeSizeShared");
+		MonkeAgent.IncrementRPCCall(info, "UpdateNativeSizeShared");
 		NetPlayer sender = info.Sender;
 		if (info.Sender == netView.Owner && RPCUtil.SafeValue(value, 0.1f, 10f) && RPCUtil.NotSpam("UpdateNativeSizeShared", info, 1f))
 		{
@@ -515,13 +516,13 @@ internal class VRRigSerializer : GorillaWrappedSerializer, IFXContextParems<Hand
 		}
 		else
 		{
-			GorillaNot.instance.SendReport("inappropriate tag data being sent native size", sender.UserId, sender.NickName);
+			MonkeAgent.instance.SendReport("inappropriate tag data being sent native size", sender.UserId, sender.NickName);
 		}
 	}
 
 	private void PlayGeodeEffectShared(Vector3 hitPosition, PhotonMessageInfoWrapped info)
 	{
-		GorillaNot.IncrementRPCCall(info, "PlayGeodeEffectShared");
+		MonkeAgent.IncrementRPCCall(info, "PlayGeodeEffectShared");
 		if (info.Sender == netView.Owner && hitPosition.IsValid(10000f))
 		{
 			geoSoundArg.position = hitPosition;
@@ -529,7 +530,7 @@ internal class VRRigSerializer : GorillaWrappedSerializer, IFXContextParems<Hand
 		}
 		else
 		{
-			GorillaNot.instance.SendReport("inappropriate tag data being sent geode effect", info.Sender.UserId, info.Sender.NickName);
+			MonkeAgent.instance.SendReport("inappropriate tag data being sent geode effect", info.Sender.UserId, info.Sender.NickName);
 		}
 	}
 
@@ -545,7 +546,7 @@ internal class VRRigSerializer : GorillaWrappedSerializer, IFXContextParems<Hand
 
 	private void RequestCosmeticsShared(PhotonMessageInfoWrapped info)
 	{
-		GorillaNot.IncrementRPCCall(info, "RequestCosmetics");
+		MonkeAgent.IncrementRPCCall(info, "RequestCosmetics");
 		if (VRRigCache.Instance.TryGetVrrig(info.Sender, out var playerRig) && playerRig.Rig.fxSettings.callSettings[9].CallLimitSettings.CheckCallTime(Time.unscaledTime))
 		{
 			vrrig?.RequestCosmetics(info);

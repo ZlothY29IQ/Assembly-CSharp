@@ -439,7 +439,7 @@ public class BoingBones : BoingReactor
 			while (queue.Count > 0)
 			{
 				RescanEntry rescanEntry = queue.Dequeue();
-				if (chain.Exclusion.Contains(rescanEntry.Transform))
+				if (Enumerable.Contains(chain.Exclusion, rescanEntry.Transform))
 				{
 					continue;
 				}
@@ -455,7 +455,7 @@ public class BoingBones : BoingReactor
 				for (int childCount = transform2.childCount; m < childCount; m++)
 				{
 					Transform child = transform2.GetChild(m);
-					if (!chain.Exclusion.Contains(child))
+					if (!Enumerable.Contains(chain.Exclusion, child))
 					{
 						float num5 = Vector3.Distance(rescanEntry.Transform.position, child.position);
 						float lengthFromRoot = rescanEntry.LengthFromRoot + num5;

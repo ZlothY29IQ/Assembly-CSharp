@@ -71,11 +71,10 @@ public class GTSignalRelay : MonoBehaviourStatic<GTSignalRelay>, IOnEventCallbac
 
 	void IOnEventCallback.OnEvent(EventData eventData)
 	{
-		if (eventData.Code != 186)
+		if (eventData.Code != 186 || !(eventData.CustomData is object[] array))
 		{
 			return;
 		}
-		object[] array = (object[])eventData.CustomData;
 		int key = (int)array[0];
 		if (!gSignalIdToListeners.TryGetValue(key, out var value))
 		{

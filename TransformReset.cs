@@ -2,13 +2,13 @@ using UnityEngine;
 
 public class TransformReset : MonoBehaviour
 {
-	private struct OriginalGameObjectTransform
+	private struct OriginalGameObjectTransform(Transform constructionTransform)
 	{
-		private Transform _thisTransform;
+		private Transform _thisTransform = constructionTransform;
 
-		private Vector3 _thisPosition;
+		private Vector3 _thisPosition = constructionTransform.position;
 
-		private Quaternion _thisRotation;
+		private Quaternion _thisRotation = constructionTransform.rotation;
 
 		public Transform thisTransform
 		{
@@ -44,13 +44,6 @@ public class TransformReset : MonoBehaviour
 			{
 				_thisRotation = value;
 			}
-		}
-
-		public OriginalGameObjectTransform(Transform constructionTransform)
-		{
-			_thisTransform = constructionTransform;
-			_thisPosition = constructionTransform.position;
-			_thisRotation = constructionTransform.rotation;
 		}
 	}
 

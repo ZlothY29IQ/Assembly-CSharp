@@ -222,18 +222,19 @@ public class BuilderPieceInteractor : MonoBehaviour
 		VRRig offlineVRRig = GorillaTagger.Instance.offlineVRRig;
 		if (BuilderTable.TryGetBuilderTableForZone(offlineVRRig.zoneEntity.currentZone, out var table) && table.isTableMutable)
 		{
-			QueryParameters queryParameters = default(QueryParameters);
-			queryParameters.layerMask = table.allPiecesMask;
-			QueryParameters queryParameters2 = queryParameters;
-			checkPiecesInSphere[0] = new OverlapSphereCommand(offlineVRRig.leftHand.overrideTarget.position, (handState[0] == HandState.Empty) ? 0.0375f : 1f, queryParameters2);
-			checkPiecesInSphere[1] = new OverlapSphereCommand(offlineVRRig.rightHand.overrideTarget.position, (handState[1] == HandState.Empty) ? 0.0375f : 1f, queryParameters2);
+			QueryParameters queryParameters = new QueryParameters
+			{
+				layerMask = table.allPiecesMask
+			};
+			checkPiecesInSphere[0] = new OverlapSphereCommand(offlineVRRig.leftHand.overrideTarget.position, (handState[0] == HandState.Empty) ? 0.0375f : 1f, queryParameters);
+			checkPiecesInSphere[1] = new OverlapSphereCommand(offlineVRRig.rightHand.overrideTarget.position, (handState[1] == HandState.Empty) ? 0.0375f : 1f, queryParameters);
 			checkNearbyPiecesHandle = OverlapSphereCommand.ScheduleBatch(checkPiecesInSphere, checkPiecesInSphereResults, 1, 1024);
 			for (int i = 0; i < 64; i++)
 			{
 				grabSphereCastResults[i] = emptyRaycastHit;
 			}
-			grabSphereCast[0] = new SpherecastCommand(offlineVRRig.leftHand.overrideTarget.position, 0.0375f, offlineVRRig.leftHand.overrideTarget.rotation * Vector3.right, queryParameters2, 0.15f);
-			grabSphereCast[1] = new SpherecastCommand(offlineVRRig.rightHand.overrideTarget.position, 0.0375f, offlineVRRig.rightHand.overrideTarget.rotation * -Vector3.right, queryParameters2, 0.15f);
+			grabSphereCast[0] = new SpherecastCommand(offlineVRRig.leftHand.overrideTarget.position, 0.0375f, offlineVRRig.leftHand.overrideTarget.rotation * Vector3.right, queryParameters, 0.15f);
+			grabSphereCast[1] = new SpherecastCommand(offlineVRRig.rightHand.overrideTarget.position, 0.0375f, offlineVRRig.rightHand.overrideTarget.rotation * -Vector3.right, queryParameters, 0.15f);
 			findPiecesToGrab = SpherecastCommand.ScheduleBatch(grabSphereCast, grabSphereCastResults, 1, 64);
 			JobHandle.ScheduleBatchedJobs();
 		}

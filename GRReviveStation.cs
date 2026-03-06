@@ -86,7 +86,7 @@ public class GRReviveStation : MonoBehaviour
 			return;
 		}
 		GRPlayer component2 = component.GetComponent<GRPlayer>();
-		if (component2 != null && (component2.State != 0 || component2.Hp < component2.MaxHp))
+		if (component2 != null && (component2.State != GRPlayer.GRPlayerState.Alive || component2.Hp < component2.MaxHp))
 		{
 			if (!NetworkSystem.Instance.InRoom && component == VRRig.LocalRig)
 			{

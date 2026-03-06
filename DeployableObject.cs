@@ -141,7 +141,7 @@ public class DeployableObject : TransferrableObject
 		{
 			return;
 		}
-		GorillaNot.IncrementRPCCall(info, "DeployRPC");
+		MonkeAgent.IncrementRPCCall(info, "DeployRPC");
 		if (m_spamChecker.CheckCallTime(Time.unscaledTime))
 		{
 			Vector3 v = BitPackUtils.UnpackWorldPosFromNetwork(packedPos);

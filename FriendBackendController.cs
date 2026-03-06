@@ -326,7 +326,7 @@ public class FriendBackendController : MonoBehaviour
 			{
 				int num = (int)Mathf.Pow(2f, getFriendsRetryCount + 1);
 				getFriendsRetryCount++;
-				yield return new WaitForSeconds(num);
+				yield return new WaitForSecondsRealtime(num);
 				GetFriendsInternal();
 			}
 			else
@@ -429,7 +429,7 @@ public class FriendBackendController : MonoBehaviour
 			{
 				int num = (int)Mathf.Pow(2f, setPrivacyStateRetryCount + 1);
 				setPrivacyStateRetryCount++;
-				yield return new WaitForSeconds(num);
+				yield return new WaitForSecondsRealtime(num);
 				SetPrivacyStateInternal();
 			}
 			else
@@ -512,7 +512,7 @@ public class FriendBackendController : MonoBehaviour
 			{
 				int num = (int)Mathf.Pow(2f, addFriendRetryCount + 1);
 				addFriendRetryCount++;
-				yield return new WaitForSeconds(num);
+				yield return new WaitForSecondsRealtime(num);
 				AddFriendInternal();
 			}
 			else
@@ -590,7 +590,7 @@ public class FriendBackendController : MonoBehaviour
 			{
 				int num = (int)Mathf.Pow(2f, removeFriendRetryCount + 1);
 				removeFriendRetryCount++;
-				yield return new WaitForSeconds(num);
+				yield return new WaitForSecondsRealtime(num);
 				AddFriendInternal();
 			}
 			else

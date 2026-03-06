@@ -76,7 +76,7 @@ public class TriggerOnJump : MonoBehaviour, ITickSystemTick
 
 	private void OnActivate(int sender, int target, object[] args, PhotonMessageInfoWrapped info)
 	{
-		GorillaNot.IncrementRPCCall(info, "OnJumpActivate");
+		MonkeAgent.IncrementRPCCall(info, "OnJumpActivate");
 		if (info.senderID == myRig.creator.ActorNumber && sender == target)
 		{
 			onJumping.Invoke();

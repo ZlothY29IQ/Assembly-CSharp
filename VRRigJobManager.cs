@@ -34,11 +34,11 @@ public class VRRigJobManager : MonoBehaviour
 	[OnEnterPlay_SetNull]
 	private static VRRigJobManager _instance;
 
-	private const int MaxSize = 9;
+	private const int MaxSize = 19;
 
 	private const int questJobThreads = 2;
 
-	private List<VRRig> rigList = new List<VRRig>(9);
+	private List<VRRig> rigList = new List<VRRig>(19);
 
 	private NativeArray<VRRigTransformInput> cachedInput;
 
@@ -55,8 +55,8 @@ public class VRRigJobManager : MonoBehaviour
 	private void Awake()
 	{
 		_instance = this;
-		cachedInput = new NativeArray<VRRigTransformInput>(9, Allocator.Persistent);
-		tAA = new TransformAccessArray(9, 2);
+		cachedInput = new NativeArray<VRRigTransformInput>(19, Allocator.Persistent);
+		tAA = new TransformAccessArray(19, 2);
 		job = default(VRRigTransformJob);
 	}
 

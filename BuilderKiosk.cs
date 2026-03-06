@@ -113,11 +113,12 @@ public class BuilderKiosk : MonoBehaviour
 
 	private void Awake()
 	{
-		BuilderSetManager.BuilderSetStoreItem builderSetStoreItem = default(BuilderSetManager.BuilderSetStoreItem);
-		builderSetStoreItem.displayName = "NOTHING";
-		builderSetStoreItem.playfabID = "NULL";
-		builderSetStoreItem.isNullItem = true;
-		nullItem = builderSetStoreItem;
+		nullItem = new BuilderSetManager.BuilderSetStoreItem
+		{
+			displayName = "NOTHING",
+			playfabID = "NULL",
+			isNullItem = true
+		};
 	}
 
 	private void Start()
@@ -472,7 +473,7 @@ public class BuilderKiosk : MonoBehaviour
 
 	public void PressLeftPurchaseItemButton(GorillaPressableButton pressedPurchaseItemButton, bool isLeftHand)
 	{
-		if (currentPurchaseItemStage != 0 && !animating)
+		if (currentPurchaseItemStage != CosmeticsController.PurchaseItemStages.Start && !animating)
 		{
 			ProcessPurchaseItemState("left", isLeftHand);
 		}
@@ -480,7 +481,7 @@ public class BuilderKiosk : MonoBehaviour
 
 	public void PressRightPurchaseItemButton(GorillaPressableButton pressedPurchaseItemButton, bool isLeftHand)
 	{
-		if (currentPurchaseItemStage != 0 && !animating)
+		if (currentPurchaseItemStage != CosmeticsController.PurchaseItemStages.Start && !animating)
 		{
 			ProcessPurchaseItemState("right", isLeftHand);
 		}

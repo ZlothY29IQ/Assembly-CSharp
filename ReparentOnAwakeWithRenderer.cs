@@ -34,7 +34,7 @@ public class ReparentOnAwakeWithRenderer : MonoBehaviour, IBuildValidation
 		if (myRenderer != null)
 		{
 			myRenderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
-			myRenderer.lightProbeUsage = LightProbeUsage.CustomProvided;
+			myRenderer.lightProbeUsage = LightProbeUsage.Off;
 			myRenderer.probeAnchor = newParent;
 		}
 	}

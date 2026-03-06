@@ -522,32 +522,32 @@ public class SIGadgetTentacleArm : SIGadget, ICallBack, IEnergyGadget
 			{
 				TakeMyHand_HandLink takeMyHand_HandLink2 = (isLeftHanded ? VRRig.LocalRig.leftHandLink : VRRig.LocalRig.rightHandLink);
 				Vector3 position5 = (isLeftHanded ? VRRig.LocalRig.leftHand : VRRig.LocalRig.rightHand).overrideTarget.position;
-				foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+				foreach (VRRig activeRig in VRRigCache.ActiveRigs)
 				{
-					if (vrrig.isLocal)
+					if (activeRig.isLocal)
 					{
 						continue;
 					}
-					if (vrrig.leftHandLink.interactionPoint.OverlapCheck(vector) && vrrig.leftHandLink.CanBeGrabbed())
+					if (activeRig.leftHandLink.interactionPoint.OverlapCheck(vector) && activeRig.leftHandLink.CanBeGrabbed())
 					{
-						if (takeMyHand_HandLink2.TentacleTryCreateLink(vrrig.leftHandLink))
+						if (takeMyHand_HandLink2.TentacleTryCreateLink(activeRig.leftHandLink))
 						{
 							isHoldingHand = true;
 							clawHoldingVisual.SetActive(value: true);
 							clawReleasedVisual.SetActive(value: false);
 							takeMyHand_HandLink2.TentacleOffset = idealClawPosition - position5;
-							heldPlayerCallback.Register(vrrig, vrrig.leftHandLink);
+							heldPlayerCallback.Register(activeRig, activeRig.leftHandLink);
 							gameEntity.RequestState(gameEntity.id, GetStateLong());
 							break;
 						}
 					}
-					else if (vrrig.rightHandLink.interactionPoint.OverlapCheck(vector) && vrrig.rightHandLink.CanBeGrabbed() && takeMyHand_HandLink2.TentacleTryCreateLink(vrrig.rightHandLink))
+					else if (activeRig.rightHandLink.interactionPoint.OverlapCheck(vector) && activeRig.rightHandLink.CanBeGrabbed() && takeMyHand_HandLink2.TentacleTryCreateLink(activeRig.rightHandLink))
 					{
 						isHoldingHand = true;
 						clawHoldingVisual.SetActive(value: true);
 						clawReleasedVisual.SetActive(value: false);
 						takeMyHand_HandLink2.TentacleOffset = idealClawPosition - position5;
-						heldPlayerCallback.Register(vrrig, vrrig.rightHandLink);
+						heldPlayerCallback.Register(activeRig, activeRig.rightHandLink);
 						gameEntity.RequestState(gameEntity.id, GetStateLong());
 						break;
 					}
@@ -591,13 +591,12 @@ public class SIGadgetTentacleArm : SIGadget, ICallBack, IEnergyGadget
 		{
 			return;
 		}
-		int attachedPlayerActorNumber = GetAttachedPlayerActorNumber();
-		if (attachedPlayerActorNumber < 1 || !GamePlayer.TryGetGamePlayer(attachedPlayerActorNumber, out var out_gamePlayer))
+		VRRig attachedPlayerRig = GetAttachedPlayerRig();
+		if (attachedPlayerRig == null)
 		{
 			return;
 		}
-		VRRig rig = out_gamePlayer.rig;
-		Vector3 idealClawPosition = GetIdealClawPosition(rig);
+		Vector3 idealClawPosition = GetIdealClawPosition(attachedPlayerRig);
 		Quaternion rotation = base.transform.rotation;
 		Vector3 position = base.transform.position;
 		if ((knownSafePosition - idealClawPosition).IsLongerThan(1f))
@@ -606,8 +605,8 @@ public class SIGadgetTentacleArm : SIGadget, ICallBack, IEnergyGadget
 		}
 		if (isHoldingHand)
 		{
-			TakeMyHand_HandLink obj = (isLeftHanded ? rig.leftHandLink : rig.rightHandLink);
-			Vector3 position2 = (isLeftHanded ? rig.leftHand : rig.rightHand).rigTarget.position;
+			TakeMyHand_HandLink obj = (isLeftHanded ? attachedPlayerRig.leftHandLink : attachedPlayerRig.rightHandLink);
+			Vector3 position2 = (isLeftHanded ? attachedPlayerRig.leftHand : attachedPlayerRig.rightHand).rigTarget.position;
 			obj.TentacleOffset = idealClawPosition - position2;
 			return;
 		}
@@ -757,8 +756,8 @@ public class SIGadgetTentacleArm : SIGadget, ICallBack, IEnergyGadget
 		}
 		else if (newState != 0L)
 		{
-			int attachedPlayerActorNumber = GetAttachedPlayerActorNumber();
-			if (attachedPlayerActorNumber >= 1 && GamePlayer.TryGetGamePlayer(attachedPlayerActorNumber, out var out_gamePlayer2))
+			int attachedPlayerActorNr = gameEntity.AttachedPlayerActorNr;
+			if (attachedPlayerActorNr >= 1 && GamePlayer.TryGetGamePlayer(attachedPlayerActorNr, out var out_gamePlayer2))
 			{
 				BitPackUtils.UnpackAnchoredPosRotForNetwork(newState, out_gamePlayer2.rig.transform.position, out var pos, out var rot);
 				SetClawAnchor(pos, rot, Vector3.zero);

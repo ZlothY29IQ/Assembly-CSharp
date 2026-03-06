@@ -8,6 +8,9 @@ public class ZoneConditionalVisibility : MonoBehaviour
 	private GTZone zone;
 
 	[SerializeField]
+	private GTZone[] zones;
+
+	[SerializeField]
 	private bool invisibleWhileLoaded;
 
 	[SerializeField]
@@ -39,7 +42,7 @@ public class ZoneConditionalVisibility : MonoBehaviour
 
 	private void OnZoneChanged()
 	{
-		bool flag = ZoneManagement.IsInZone(zone);
+		bool flag = ((zones == null || zones.Length == 0) ? ZoneManagement.IsInZone(zone) : InAnyZone());
 		if (invisibleWhileLoaded)
 		{
 			if (renderersOnly)
@@ -71,5 +74,17 @@ public class ZoneConditionalVisibility : MonoBehaviour
 		{
 			base.gameObject.SetActive(flag);
 		}
+	}
+
+	private bool InAnyZone()
+	{
+		for (int i = 0; i < zones.Length; i++)
+		{
+			if (ZoneManagement.IsInZone(zones[i]))
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 }

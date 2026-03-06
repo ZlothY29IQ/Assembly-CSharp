@@ -1,6 +1,6 @@
 using System.Collections.Generic;
-using GorillaLocomotion;
 using GorillaNetworking;
+using GTMathUtil;
 using Unity.Profiling;
 using UnityEngine;
 
@@ -24,23 +24,13 @@ public class GorillaFriendCollider : MonoBehaviour, IGorillaSliceableSimple
 
 	private readonly Collider[] overlapColliders = new Collider[20];
 
-	private int tagAndBodyLayerMask;
-
-	private float jiggleAmount;
-
-	private Collider otherCollider;
-
-	private GameObject otherColliderGO;
-
-	private VRRig collidingRig;
-
-	private int collisions;
-
-	private WaitForSeconds wait1Sec = new WaitForSeconds(1f);
-
 	public bool manualRefreshOnly;
 
 	private float _nextUpdateTime = -1f;
+
+	private static List<VRRig> playerRigs = new List<VRRig>();
+
+	private static bool updateAdded = false;
 
 	private static readonly ProfilerMarker profiler_SliceUpdate = new ProfilerMarker("GT/FriendCollider.SliceUpdate");
 
@@ -48,8 +38,17 @@ public class GorillaFriendCollider : MonoBehaviour, IGorillaSliceableSimple
 	{
 		thisCapsule = GetComponent<CapsuleCollider>();
 		thisBox = GetComponent<BoxCollider>();
-		jiggleAmount = Random.Range(0f, 1f);
-		tagAndBodyLayerMask = LayerMask.GetMask("Gorilla Tag Collider") | LayerMask.GetMask("Gorilla Body Collider");
+		if (!updateAdded)
+		{
+			updateAdded = true;
+			VRRigCache.OnActiveRigsChanged += UpdateActiveRigs;
+			UpdateActiveRigs();
+		}
+	}
+
+	private static void UpdateActiveRigs()
+	{
+		VRRigCache.Instance.GetActiveRigs(playerRigs);
 	}
 
 	public void OnEnable()
@@ -74,77 +73,25 @@ public class GorillaFriendCollider : MonoBehaviour, IGorillaSliceableSimple
 	{
 		using (profiler_SliceUpdate.Auto())
 		{
-			float time = Time.time;
-			if (_nextUpdateTime < 0f)
+			if (NetworkSystem.Instance.InRoom || runCheckWhileNotInRoom)
 			{
-				_nextUpdateTime = time + 1f + jiggleAmount;
-			}
-			else if (!(time < _nextUpdateTime))
-			{
-				_nextUpdateTime = time + 1f;
-				if (NetworkSystem.Instance.InRoom || runCheckWhileNotInRoom)
-				{
-					RefreshPlayersInSphere();
-				}
+				RefreshPlayersWithinBounds();
 			}
 		}
 	}
 
-	public void RefreshPlayersInSphere()
+	public void RefreshPlayersWithinBounds()
 	{
 		playerIDsCurrentlyTouching.Clear();
-		if (thisBox != null)
+		for (int i = 0; i < playerRigs.Count; i++)
 		{
-			collisions = Physics.OverlapBoxNonAlloc(thisBox.transform.position, thisBox.size / 2f, overlapColliders, thisBox.transform.rotation, tagAndBodyLayerMask);
-		}
-		else
-		{
-			collisions = Physics.OverlapSphereNonAlloc(base.transform.position, thisCapsule.radius, overlapColliders, tagAndBodyLayerMask);
-		}
-		collisions = Mathf.Min(collisions, overlapColliders.Length);
-		if (collisions <= 0)
-		{
-			return;
-		}
-		for (int i = 0; i < collisions; i++)
-		{
-			otherCollider = overlapColliders[i];
-			if (otherCollider == null || otherCollider.attachedRigidbody == null)
+			float y = playerRigs[i].bodyTransform.transform.position.y;
+			bool num = !applyCapsuleYLimits || (y >= capsuleColliderYLimits.x && y <= capsuleColliderYLimits.y);
+			bool flag = (thisBox != null && WithinBounds.PointWithinBoxColliderBounds(playerRigs[i].rigContainer.SpeakerHead.position, thisBox)) || (thisBox == null && thisCapsule != null && WithinBounds.PointWithinCapsuleColliderBounds(playerRigs[i].rigContainer.SpeakerHead.position, thisCapsule));
+			if (num && flag)
 			{
-				continue;
+				playerIDsCurrentlyTouching.Add(playerRigs[i].isLocal ? NetworkSystem.Instance.LocalPlayer.UserId : playerRigs[i].creator.UserId);
 			}
-			otherColliderGO = otherCollider.attachedRigidbody.gameObject;
-			collidingRig = otherColliderGO.GetComponent<VRRig>();
-			if (collidingRig == null || collidingRig.creator == null || collidingRig.creator.IsNull || string.IsNullOrEmpty(collidingRig.creator.UserId))
-			{
-				GTPlayer component = otherColliderGO.GetComponent<GTPlayer>();
-				if (component == null || NetworkSystem.Instance.LocalPlayer == null)
-				{
-					continue;
-				}
-				if (thisCapsule != null && applyCapsuleYLimits)
-				{
-					float y = component.bodyCollider.transform.position.y;
-					if (y < capsuleColliderYLimits.x || y > capsuleColliderYLimits.y)
-					{
-						continue;
-					}
-				}
-				AddUserID(NetworkSystem.Instance.LocalPlayer.UserId);
-			}
-			else
-			{
-				if (thisCapsule != null && applyCapsuleYLimits)
-				{
-					float y2 = collidingRig.bodyTransform.transform.position.y;
-					if (y2 < capsuleColliderYLimits.x || y2 > capsuleColliderYLimits.y)
-					{
-						continue;
-					}
-				}
-				AddUserID(collidingRig.creator.UserId);
-			}
-			overlapColliders[i] = null;
 		}
 		if (NetworkSystem.Instance.InRoom && NetworkSystem.Instance.LocalPlayer != null && playerIDsCurrentlyTouching.Contains(NetworkSystem.Instance.LocalPlayer.UserId) && GorillaComputer.instance.friendJoinCollider != this)
 		{
@@ -152,8 +99,5 @@ public class GorillaFriendCollider : MonoBehaviour, IGorillaSliceableSimple
 			GorillaComputer.instance.friendJoinCollider = this;
 			GorillaComputer.instance.UpdateScreen();
 		}
-		otherCollider = null;
-		otherColliderGO = null;
-		collidingRig = null;
 	}
 }

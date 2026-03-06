@@ -281,9 +281,9 @@ public class CrittersManager : NetworkComponent, IRequestableOwnershipGuardCallb
 		});
 		PlayFabTitleDataCache.Instance.GetTitleData("PrivateCrittersGrabSettings", delegate(string data)
 		{
-			if (int.TryParse(data, out var result2))
+			if (int.TryParse(data, out var result))
 			{
-				privateRoomGrabbingFlags = (AllowGrabbingFlags)result2;
+				privateRoomGrabbingFlags = (AllowGrabbingFlags)result;
 			}
 		}, delegate
 		{
@@ -676,7 +676,7 @@ public class CrittersManager : NetworkComponent, IRequestableOwnershipGuardCallb
 		{
 			for (int num = crittersActors.Count - 1; num >= 0; num--)
 			{
-				if (crittersActors[num].crittersActorType != 0 || priorityBins[actorBinIndices[crittersActors[num]]] || lowPriorityPawnsToProcess.Contains(crittersActors[num]))
+				if (crittersActors[num].crittersActorType != CrittersActor.CrittersActorType.Creature || priorityBins[actorBinIndices[crittersActors[num]]] || lowPriorityPawnsToProcess.Contains(crittersActors[num]))
 				{
 					int actorId = crittersActors[num].actorId;
 					if (crittersActors[num].ProcessLocal() && !updatesToSend.Contains(actorId))

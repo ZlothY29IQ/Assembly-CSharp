@@ -25,19 +25,7 @@ public static class StaticHash
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static int Compute(int i)
-	{
-		uint num = (uint)i;
-		num = num + 2127912214 + (num << 12);
-		num = num ^ 0xC761C23Cu ^ (num >> 19);
-		num = num + 374761393 + (num << 5);
-		num = (uint)((int)num + -744332180) ^ (num << 9);
-		num = (uint)((int)num + -42973499) + (num << 3);
-		return (int)(num ^ 0xB55A4F09u ^ (num >> 16));
-	}
-
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static int Compute(uint u)
+	public static uint ComputeU(uint u)
 	{
 		uint num = u;
 		num = num + 2127912214 + (num << 12);
@@ -45,13 +33,31 @@ public static class StaticHash
 		num = num + 374761393 + (num << 5);
 		num = (uint)((int)num + -744332180) ^ (num << 9);
 		num = (uint)((int)num + -42973499) + (num << 3);
-		return (int)(num ^ 0xB55A4F09u ^ (num >> 16));
+		return num ^ 0xB55A4F09u ^ (num >> 16);
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static uint ComputeU(int i)
+	{
+		return ComputeU((uint)i);
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static int Compute(int i)
+	{
+		return (int)ComputeU(i);
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static int Compute(uint u)
+	{
+		return (int)ComputeU(u);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static int Compute(float f)
 	{
-		return Compute(Unsafe.As<float, int>(ref f));
+		return Compute(Unsafe.As<float, uint>(ref f));
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -82,16 +88,21 @@ public static class StaticHash
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private static ulong ComputeUL(ulong h)
+	{
+		h = ~h + (h << 18);
+		h ^= h >> 31;
+		h *= 21;
+		h ^= h >> 11;
+		h += h << 6;
+		h ^= h >> 22;
+		return h;
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static int Compute(long l)
 	{
-		ulong num = (ulong)l;
-		num = ~num + (num << 18);
-		num ^= num >> 31;
-		num *= 21;
-		num ^= num >> 11;
-		num += num << 6;
-		num ^= num >> 22;
-		return (int)num;
+		return (int)ComputeUL((ulong)l);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]

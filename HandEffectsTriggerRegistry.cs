@@ -26,7 +26,7 @@ public class HandEffectsTriggerRegistry : MonoBehaviour, ITickSystemTick, ITickS
 		{
 			for (int j = i + 1; j < actualListSize; j++)
 			{
-				closeOutput[i * 30 + j] = (positionInput[i] - positionInput[j]).IsShorterThan(0.5f);
+				closeOutput[i * 50 + j] = (positionInput[i] - positionInput[j]).IsShorterThan(0.5f);
 			}
 		}
 
@@ -37,9 +37,9 @@ public class HandEffectsTriggerRegistry : MonoBehaviour, ITickSystemTick, ITickS
 		}
 	}
 
-	private const int MAX_TRIGGERS = 30;
+	private const int MAX_TRIGGERS = 50;
 
-	private const int BIT_ARRAY_SIZE = 900;
+	private const int BIT_ARRAY_SIZE = 2500;
 
 	private const float COOLDOWN_TIME = 0.5f;
 
@@ -47,11 +47,11 @@ public class HandEffectsTriggerRegistry : MonoBehaviour, ITickSystemTick, ITickS
 
 	private readonly List<IHandEffectsTrigger> triggers = new List<IHandEffectsTrigger>();
 
-	private readonly float[] triggerTimes = new float[30];
+	private readonly float[] triggerTimes = new float[50];
 
-	private readonly GTBitArray existingCollisionBits = new GTBitArray(900);
+	private readonly GTBitArray existingCollisionBits = new GTBitArray(2500);
 
-	private readonly GTBitArray newCollisionBits = new GTBitArray(900);
+	private readonly GTBitArray newCollisionBits = new GTBitArray(2500);
 
 	private int actualListSz;
 
@@ -81,8 +81,8 @@ public class HandEffectsTriggerRegistry : MonoBehaviour, ITickSystemTick, ITickS
 		HasInstance = true;
 		job = new HandEffectsJob
 		{
-			positionInput = new NativeArray<Vector3>(30, Allocator.Persistent),
-			closeOutput = new NativeArray<bool>(900, Allocator.Persistent),
+			positionInput = new NativeArray<Vector3>(50, Allocator.Persistent),
+			closeOutput = new NativeArray<bool>(2500, Allocator.Persistent),
 			actualListSize = actualListSz
 		};
 	}
@@ -101,7 +101,7 @@ public class HandEffectsTriggerRegistry : MonoBehaviour, ITickSystemTick, ITickS
 
 	public void Register(IHandEffectsTrigger trigger)
 	{
-		if (triggers.Count < 30)
+		if (triggers.Count < 50)
 		{
 			actualListSz++;
 			triggers.Add(trigger);
@@ -145,10 +145,10 @@ public class HandEffectsTriggerRegistry : MonoBehaviour, ITickSystemTick, ITickS
 		for (int i = 0; i < triggers.Count; i++)
 		{
 			IHandEffectsTrigger handEffectsTrigger = triggers[i];
-			int num = i * 30;
+			int num = i * 50;
 			for (int j = i + 1; j < triggers.Count; j++)
 			{
-				if (!job.closeOutput[i * 30 + j])
+				if (!job.closeOutput[i * 50 + j])
 				{
 					continue;
 				}

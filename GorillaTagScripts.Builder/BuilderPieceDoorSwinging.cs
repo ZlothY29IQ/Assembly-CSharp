@@ -507,7 +507,7 @@ public class BuilderPieceDoorSwinging : MonoBehaviour, IBuilderPieceComponent, I
 	{
 		if (myPiece != null && myPiece.state == BuilderPiece.State.AttachedAndPlaced)
 		{
-			if (!NetworkSystem.Instance.InRoom && currentState != 0)
+			if (!NetworkSystem.Instance.InRoom && currentState != SwingingDoorState.Closed)
 			{
 				CloseDoor();
 			}

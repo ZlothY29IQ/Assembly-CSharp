@@ -299,16 +299,16 @@ public static class ArraySerializeUnsafe
 		}
 		int bitposition = sourcePos;
 		int num = bits;
-		fixed (ulong* uPtr2 = source)
+		fixed (ulong* uPtr = source)
 		{
 			fixed (byte* ptr = target)
 			{
-				ulong* uPtr = (ulong*)ptr;
+				ulong* uPtr2 = (ulong*)ptr;
 				while (num > 0)
 				{
 					int num2 = ((num > 64) ? 64 : num);
-					ulong value = Read(uPtr2, ref bitposition, num2);
-					Write(uPtr, value, ref targetPos, num2);
+					ulong value = Read(uPtr, ref bitposition, num2);
+					Write(uPtr2, value, ref targetPos, num2);
 					num -= num2;
 				}
 			}
@@ -324,16 +324,16 @@ public static class ArraySerializeUnsafe
 		}
 		int bitposition = sourcePos;
 		int num = bits;
-		fixed (ulong* uPtr2 = source)
+		fixed (ulong* uPtr = source)
 		{
 			fixed (uint* ptr = target)
 			{
-				ulong* uPtr = (ulong*)ptr;
+				ulong* uPtr2 = (ulong*)ptr;
 				while (num > 0)
 				{
 					int num2 = ((num > 64) ? 64 : num);
-					ulong value = Read(uPtr2, ref bitposition, num2);
-					Write(uPtr, value, ref targetPos, num2);
+					ulong value = Read(uPtr, ref bitposition, num2);
+					Write(uPtr2, value, ref targetPos, num2);
 					num -= num2;
 				}
 			}
@@ -427,14 +427,14 @@ public static class ArraySerializeUnsafe
 		int num = bits;
 		fixed (uint* ptr = source)
 		{
-			fixed (ulong* uPtr2 = target)
+			fixed (ulong* uPtr = target)
 			{
-				ulong* uPtr = (ulong*)ptr;
+				ulong* uPtr2 = (ulong*)ptr;
 				while (num > 0)
 				{
 					int num2 = ((num > 64) ? 64 : num);
-					ulong value = Read(uPtr, ref bitposition, num2);
-					Write(uPtr2, value, ref targetPos, num2);
+					ulong value = Read(uPtr2, ref bitposition, num2);
+					Write(uPtr, value, ref targetPos, num2);
 					num -= num2;
 				}
 			}
@@ -452,14 +452,14 @@ public static class ArraySerializeUnsafe
 		int num = bits;
 		fixed (byte* ptr = source)
 		{
-			fixed (ulong* uPtr2 = target)
+			fixed (ulong* uPtr = target)
 			{
-				ulong* uPtr = (ulong*)ptr;
+				ulong* uPtr2 = (ulong*)ptr;
 				while (num > 0)
 				{
 					int num2 = ((num > 64) ? 64 : num);
-					ulong value = Read(uPtr, ref bitposition, num2);
-					Write(uPtr2, value, ref targetPos, num2);
+					ulong value = Read(uPtr2, ref bitposition, num2);
+					Write(uPtr, value, ref targetPos, num2);
 					num -= num2;
 				}
 			}

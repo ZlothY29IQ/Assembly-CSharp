@@ -20,9 +20,10 @@ public class GameDockable : MonoBehaviour
 		{
 			return GameEntityId.Invalid;
 		}
-		SnapJointType snapJointType = (GamePlayerLocal.IsLeftHand(heldByHandIndex) ? SnapJointType.HandL : SnapJointType.HandR);
-		SnapJointType snapJointType2 = (GamePlayerLocal.IsLeftHand(heldByHandIndex) ? SnapJointType.ForearmL : SnapJointType.ForearmR);
-		List<SuperInfectionSnapPoint> snapPoints = GamePlayerLocal.instance.gamePlayer.snapPointManager.SnapPoints;
+		SnapJointType snapJointType = (GamePlayer.IsLeftHand(heldByHandIndex) ? SnapJointType.HandL : SnapJointType.HandR);
+		SnapJointType snapJointType2 = (GamePlayer.IsLeftHand(heldByHandIndex) ? SnapJointType.ForearmL : SnapJointType.ForearmR);
+		GamePlayer gamePlayer = GamePlayerLocal.instance.gamePlayer;
+		List<SuperInfectionSnapPoint> snapPoints = gamePlayer.snapPointManager.SnapPoints;
 		float num = float.MaxValue;
 		GameDock gameDock = null;
 		for (int i = 0; i < snapPoints.Count; i++)
@@ -51,7 +52,6 @@ public class GameDockable : MonoBehaviour
 				}
 			}
 		}
-		GamePlayer gamePlayer = GamePlayerLocal.instance.gamePlayer;
 		for (int j = 0; j < 2; j++)
 		{
 			GameEntity grabbedGameEntity = gamePlayer.GetGrabbedGameEntity(j);

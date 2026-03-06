@@ -34,7 +34,7 @@ public class RCCosmeticNetworkSync : MonoBehaviourPun, IPunObservable, IPunInsta
 		}
 		if (info.Sender != base.photonView.Owner || base.photonView.IsRoomView)
 		{
-			GorillaNot.instance.SendReport("spoofed rc instantiate", info.Sender.UserId, info.Sender.NickName);
+			MonkeAgent.instance.SendReport("spoofed rc instantiate", info.Sender.UserId, info.Sender.NickName);
 			DestroyThis();
 			return;
 		}
@@ -93,10 +93,10 @@ public class RCCosmeticNetworkSync : MonoBehaviourPun, IPunObservable, IPunInsta
 	[PunRPC]
 	public void HitRCVehicleRPC(Vector3 hitVelocity, bool isProjectile, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "HitRCVehicleRPC");
+		MonkeAgent.IncrementRPCCall(info, "HitRCVehicleRPC");
 		if (!hitVelocity.IsValid(10000f))
 		{
-			GorillaNot.instance.SendReport("nan rc hit", info.Sender.UserId, info.Sender.NickName);
+			MonkeAgent.instance.SendReport("nan rc hit", info.Sender.UserId, info.Sender.NickName);
 		}
 		else if (rcRemote != null && rcRemote.Vehicle != null)
 		{

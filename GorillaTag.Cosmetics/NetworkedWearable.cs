@@ -286,7 +286,6 @@ public class NetworkedWearable : MonoBehaviour, ISpawnable, ITickSystemTick
 		myRig = rig;
 		isLocal = rig.isLocal;
 		wearableSlot = CosmeticCategoryToWearableSlot(assignedSlot, CosmeticSelectedSide != ECosmeticSelectSide.Right);
-		Debug.Log($"Networked Wearable {base.gameObject.name} Select Side {CosmeticSelectedSide} slot {wearableSlot}");
 	}
 
 	public void OnDespawn()

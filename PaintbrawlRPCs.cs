@@ -17,7 +17,7 @@ internal class PaintbrawlRPCs : RPCNetworkBase
 	[PunRPC]
 	public void RPC_ReportSlingshotHit(Player taggedPlayer, Vector3 hitLocation, int projectileCount, PhotonMessageInfo info)
 	{
-		GorillaNot.IncrementRPCCall(info, "RPC_ReportSlingshotHit");
+		MonkeAgent.IncrementRPCCall(info, "RPC_ReportSlingshotHit");
 		if (NetworkSystem.Instance.IsMasterClient && taggedPlayer != null)
 		{
 			NetPlayer player = NetworkSystem.Instance.GetPlayer(taggedPlayer);

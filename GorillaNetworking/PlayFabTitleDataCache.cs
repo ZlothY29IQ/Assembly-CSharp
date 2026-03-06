@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using GorillaExtensions;
 using LitJson;
 using PlayFab;
 using UnityEngine;
@@ -27,6 +28,8 @@ public class PlayFabTitleDataCache : MonoBehaviour
 
 		public Action<PlayFabError> ErrorCallback { get; set; }
 	}
+
+	private static Action<PlayFabTitleDataCache> k_onnLoaded;
 
 	public DataUpdate OnTitleDataUpdate;
 
@@ -68,11 +71,11 @@ public class PlayFabTitleDataCache : MonoBehaviour
 		if (Instance != null)
 		{
 			UnityEngine.Object.Destroy(this);
+			return;
 		}
-		else
-		{
-			Instance = this;
-		}
+		Instance = this;
+		k_onnLoaded?.Invoke(this);
+		k_onnLoaded = null;
 	}
 
 	private void Start()
@@ -153,8 +156,7 @@ public class PlayFabTitleDataCache : MonoBehaviour
 			bool wipeOldData = oldCache == null || oldCache.DeploymentId != MothershipClientApiUnity.DeploymentId;
 			Dictionary<string, string> newTitleData = null;
 			string mothershipError = null;
-			Stopwatch sw = Stopwatch.StartNew();
-			UnityEngine.Debug.Log("[PlayFabTitleDataCache::UpdateDataCo] Starting Mothership API call");
+			Stopwatch.StartNew();
 			StringVector stringVector = new StringVector();
 			if (!isFirstLoad)
 			{
@@ -164,25 +166,20 @@ public class PlayFabTitleDataCache : MonoBehaviour
 				}
 			}
 			bool finished = false;
-			UnityEngine.Debug.Log("[PlayFabTitleDataCache::UpdateDataCo] Keys to fetch: " + string.Join(", ", stringVector));
-			UnityEngine.Debug.Log($"[PlayFabTitleDataCache::UpdateDataCo] Calling MothershipClientApiUnity.ListMothershipTitleData with TitleId={MothershipClientApiUnity.TitleId}, EnvironmentId={MothershipClientApiUnity.EnvironmentId}, DeploymentId={MothershipClientApiUnity.DeploymentId}, keys count={stringVector.Count}");
 			if (!MothershipClientApiUnity.ListMothershipTitleData(MothershipClientApiUnity.TitleId, MothershipClientApiUnity.EnvironmentId, MothershipClientApiUnity.DeploymentId, stringVector, delegate(ListClientMothershipTitleDataResponse response)
 			{
-				UnityEngine.Debug.Log($"[PlayFabTitleDataCache::UpdateDataCo] Mothership API success callback - Response: {response != null}, Results: {(response?.Results?.Count).GetValueOrDefault()}");
 				if (response != null && response.Results != null)
 				{
 					newTitleData = new Dictionary<string, string>();
 					for (int i = 0; i < response.Results.Count; i++)
 					{
 						MothershipTitleDataShort mothershipTitleDataShort = response.Results[i];
-						UnityEngine.Debug.Log($"[PlayFabTitleDataCache::UpdateDataCo] Processing title data item {i}: key='{mothershipTitleDataShort.key}', data length={mothershipTitleDataShort.data?.Length ?? 0}");
 						if (!string.IsNullOrEmpty(mothershipTitleDataShort.key))
 						{
 							newTitleData[mothershipTitleDataShort.key] = mothershipTitleDataShort.data;
 						}
 					}
 					mothershipError = null;
-					UnityEngine.Debug.Log($"[PlayFabTitleDataCache::UpdateDataCo] Successfully processed {newTitleData.Count} title data items");
 				}
 				else
 				{
@@ -200,14 +197,11 @@ public class PlayFabTitleDataCache : MonoBehaviour
 				mothershipError = "Mothership API call was not sent.";
 				UnityEngine.Debug.LogError("[PlayFabTitleDataCache::UpdateDataCo] " + mothershipError);
 			}
-			UnityEngine.Debug.Log("[PlayFabTitleDataCache::UpdateDataCo] Waiting for Mothership API response");
 			yield return new WaitUntil(() => finished);
-			UnityEngine.Debug.Log($"[PlayFabTitleDataCache::UpdateDataCo] {sw.Elapsed.TotalSeconds:N5}s");
 			if (newTitleData == null)
 			{
 				yield break;
 			}
-			UnityEngine.Debug.Log($"[PlayFabTitleDataCache::UpdateDataCo] Processing {newTitleData.Count} new title data items");
 			if (wipeOldData)
 			{
 				localizedTitleData.Clear();
@@ -220,19 +214,18 @@ public class PlayFabTitleDataCache : MonoBehaviour
 			}
 			foreach (var (text3, text4) in newTitleData)
 			{
-				UnityEngine.Debug.Log("[PlayFabTitleDataCache::UpdateDataCo] Updating title data key: " + text3);
-				titleData[text3] = text4;
+				string text5 = (titleData[text3] = text4);
 				for (int num = requests.Count - 1; num >= 0; num--)
 				{
 					DataRequest dataRequest = requests[num];
 					if (dataRequest.Name == text3)
 					{
-						dataRequest.Callback?.Invoke(text4);
+						dataRequest.Callback?.Invoke(text5);
 						requests.RemoveAt(num);
 						break;
 					}
 				}
-				if (oldLocalizedCache.TryGetValue(text3, out var value) && value != text4)
+				if (oldLocalizedCache.TryGetValue(text3, out var value) && value != text5)
 				{
 					OnTitleDataUpdate?.Invoke(text3);
 				}
@@ -274,5 +267,17 @@ public class PlayFabTitleDataCache : MonoBehaviour
 			request.ErrorCallback.SafeInvoke(e);
 		}
 		requests.Clear();
+	}
+
+	public static void RegisterOnLoad(Action<PlayFabTitleDataCache> callback)
+	{
+		if (Instance.IsNotNull())
+		{
+			callback(Instance);
+		}
+		else
+		{
+			k_onnLoaded = (Action<PlayFabTitleDataCache>)Delegate.Combine(k_onnLoaded, callback);
+		}
 	}
 }

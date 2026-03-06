@@ -57,7 +57,7 @@ public static class Utils
 	{
 		if (NetworkSystem.Instance.InRoom)
 		{
-			return NetworkSystem.Instance.AllNetPlayers.Contains(player);
+			return Enumerable.Contains(NetworkSystem.Instance.AllNetPlayers, player);
 		}
 		return false;
 	}

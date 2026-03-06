@@ -2,21 +2,13 @@ using System;
 using UnityEngine;
 
 [Serializable]
-public struct ShaderGroup
+public struct ShaderGroup(Material material, Shader original, Shader gameplay, Shader baking)
 {
-	public Material material;
+	public Material material = material;
 
-	public Shader originalShader;
+	public Shader originalShader = original;
 
-	public Shader gameplayShader;
+	public Shader gameplayShader = gameplay;
 
-	public Shader bakingShader;
-
-	public ShaderGroup(Material material, Shader original, Shader gameplay, Shader baking)
-	{
-		this.material = material;
-		originalShader = original;
-		gameplayShader = gameplay;
-		bakingShader = baking;
-	}
+	public Shader bakingShader = baking;
 }

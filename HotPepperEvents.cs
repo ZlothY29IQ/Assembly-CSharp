@@ -1,3 +1,4 @@
+using GorillaExtensions;
 using UnityEngine;
 
 public class HotPepperEvents : MonoBehaviour
@@ -12,6 +13,9 @@ public class HotPepperEvents : MonoBehaviour
 
 	[SerializeField]
 	private EdibleHoldable _pepper;
+
+	[SerializeField]
+	private CosmeticRefID m_targetEffectID = CosmeticRefID.HotPepperFaceEffect;
 
 	private void OnEnable()
 	{
@@ -37,9 +41,18 @@ public class HotPepperEvents : MonoBehaviour
 
 	public void OnBite(VRRig rig, int nextState, bool isViewRig)
 	{
-		if (nextState == 8)
+		if (nextState != 8)
 		{
-			rig.transform.Find("RigAnchor/rig/body/head/gorillaface/spicy").gameObject.GetComponent<HotPepperFace>().PlayFX(1f);
+			return;
+		}
+		GameObject gameObject = rig.cosmeticReferences.Get(m_targetEffectID);
+		if (!gameObject.IsNull())
+		{
+			HotPepperFace component = gameObject.GetComponent<HotPepperFace>();
+			if (!component.IsNull())
+			{
+				component.PlayFX(1f);
+			}
 		}
 	}
 }

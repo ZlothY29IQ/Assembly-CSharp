@@ -32,6 +32,46 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 
 	public SICombinedTerminal parentTerminal;
 
+	[Header("TryOn")]
+	[FormerlySerializedAs("isTryOn")]
+	[SerializeField]
+	private bool m_isTryOn;
+
+	[SerializeField]
+	private float m_tryOnLifetime = 30f;
+
+	[SerializeField]
+	private AudioClip m_tryOnBeepClip;
+
+	[SerializeField]
+	private AudioClip m_tryOnExplosionClip;
+
+	[SerializeField]
+	private GameEntityDelayedDestroy.BeepPhase[] m_tryOnBeepPhases = new GameEntityDelayedDestroy.BeepPhase[3]
+	{
+		new GameEntityDelayedDestroy.BeepPhase
+		{
+			timeRemaining = 10f,
+			interval = 1f
+		},
+		new GameEntityDelayedDestroy.BeepPhase
+		{
+			timeRemaining = 5f,
+			interval = 0.5f
+		},
+		new GameEntityDelayedDestroy.BeepPhase
+		{
+			timeRemaining = 2f,
+			interval = 0.1f
+		}
+	};
+
+	[SerializeField]
+	private float m_tryOnBeepVolume = 1f;
+
+	[SerializeField]
+	private float m_tryOnExplosionVolume = 1f;
+
 	public GameObject waitingForScanScreen;
 
 	public GameObject gadgetTypeScreen;
@@ -114,7 +154,7 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 
 	public SIPlayer ActivePlayer => parentTerminal.activePlayer;
 
-	public string ActivePlayerName => ActivePlayer.gamePlayer.rig.OwningNetPlayer.SanitizedNickName;
+	public string ActivePlayerName => ActivePlayer.gamePlayer.rig.Creator.SanitizedNickName;
 
 	public bool IsAuthority => parentTerminal.superInfection.siManager.gameEntityManager.IsAuthority();
 
@@ -326,6 +366,7 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 
 	public void UpdateGadgetListVisibility()
 	{
+		m_isTryOn = false;
 		foreach (SIDispenserGadgetListEntry gadgetEntry in gadgetEntries)
 		{
 			gadgetEntry.gameObject.SetActive(value: false);
@@ -333,7 +374,7 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 		int num = 0;
 		foreach (SITechTreeNode dispensableGadget in CurrentPage.DispensableGadgets)
 		{
-			if (ActivePlayer.CurrentProgression.IsUnlocked(dispensableGadget.upgradeType))
+			if (m_isTryOn || ActivePlayer.CurrentProgression.IsUnlocked(dispensableGadget.upgradeType))
 			{
 				SIDispenserGadgetListEntry sIDispenserGadgetListEntry = gadgetEntries[num++];
 				sIDispenserGadgetListEntry.SetTechTreeNode(dispensableGadget);
@@ -472,6 +513,10 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 		}
 	}
 
+	public void TouchscreenToggleButtonPressed(SITouchscreenButton.SITouchscreenButtonType buttonType, int data, int actorNr, bool isToggledOn)
+	{
+	}
+
 	public void UpdateHelpButtonPage(int helpButtonPageIndex)
 	{
 		for (int i = 0; i < helpPopupScreens.Length; i++)
@@ -482,6 +527,7 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 
 	public void DispenseGadgetForPlayer(SIPlayer player)
 	{
+		m_isTryOn = false;
 		int num = 0;
 		int staticHash = CurrentNode.unlockedGadgetPrefab.name.GetStaticHash();
 		for (int num2 = player.activePlayerGadgets.Count - 1; num2 >= 0; num2--)
@@ -494,7 +540,7 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 			else
 			{
 				num++;
-				if (num >= player.totalGadgetLimit)
+				if (num >= player.TotalGadgetLimit)
 				{
 					GameEntityManager.RequestDestroyItem(gameEntityFromNetId.id);
 					break;
@@ -515,7 +561,15 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 				upgrades.Remove(dispensableGadget.upgradeType);
 			}
 		}
-		GameEntityManager.RequestCreateItem(staticHash, gadgetDispensePosition.position, gadgetDispensePosition.rotation, upgrades.GetCreateData(player));
+		GameEntityId id = GameEntityManager.RequestCreateItem(staticHash, gadgetDispensePosition.position, gadgetDispensePosition.rotation, upgrades.GetCreateData(player));
+		if (m_isTryOn && id.IsValid())
+		{
+			GameEntity gameEntity = GameEntityManager.GetGameEntity(id);
+			if (gameEntity != null)
+			{
+				gameEntity.gameObject.AddComponent<GameEntityDelayedDestroy>().Configure(m_tryOnLifetime, m_tryOnBeepClip, m_tryOnExplosionClip, m_tryOnBeepPhases, m_tryOnBeepVolume, m_tryOnExplosionVolume);
+			}
+		}
 		dispenseSoundBankPlayer.Play();
 	}
 

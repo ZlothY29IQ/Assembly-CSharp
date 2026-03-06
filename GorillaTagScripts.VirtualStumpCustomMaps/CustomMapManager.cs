@@ -593,9 +593,9 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 		{
 			return false;
 		}
-		foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+		foreach (VRRig activeRig in VRRigCache.ActiveRigs)
 		{
-			if (!instance.virtualStumpPlayerDetector.playerIDsCurrentlyTouching.Contains(vrrig.creator.UserId))
+			if (!instance.virtualStumpPlayerDetector.playerIDsCurrentlyTouching.Contains(activeRig.creator.UserId))
 			{
 				return false;
 			}

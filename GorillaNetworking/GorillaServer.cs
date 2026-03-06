@@ -59,7 +59,6 @@ public class GorillaServer : MonoBehaviour, ISerializationCallbackReceiver
 	{
 		successCallback = DebugWrapCb(successCallback, "ReturnCurrentVersion result");
 		errorCallback = DebugWrapCb(errorCallback, "ReturnCurrentVersion error");
-		Debug.Log("GorillaServer: ReturnCurrentVersion V2 call");
 		PlayFabCloudScriptAPI.ExecuteFunction(new ExecuteFunctionRequest
 		{
 			Entity = playerEntity,
@@ -68,24 +67,10 @@ public class GorillaServer : MonoBehaviour, ISerializationCallbackReceiver
 		}, successCallback, errorCallback);
 	}
 
-	public void ReturnMyOculusHash(Action<ExecuteFunctionResult> successCallback, Action<PlayFabError> errorCallback)
-	{
-		successCallback = DebugWrapCb(successCallback, "ReturnMyOculusHash result");
-		errorCallback = DebugWrapCb(errorCallback, "ReturnMyOculusHash error");
-		Debug.Log("GorillaServer: ReturnMyOculusHash V2 call");
-		PlayFabCloudScriptAPI.ExecuteFunction(new ExecuteFunctionRequest
-		{
-			Entity = playerEntity,
-			FunctionName = "ReturnMyOculusHashV2",
-			FunctionParameter = new { }
-		}, successCallback, errorCallback);
-	}
-
 	public void TryDistributeCurrency(Action<ExecuteFunctionResult> successCallback, Action<PlayFabError> errorCallback)
 	{
 		successCallback = DebugWrapCb(successCallback, "TryDistributeCurrency result");
 		errorCallback = DebugWrapCb(errorCallback, "TryDistributeCurrency error");
-		Debug.Log("GorillaServer: TryDistributeCurrency V2 call");
 		PlayFabCloudScriptAPI.ExecuteFunction(new ExecuteFunctionRequest
 		{
 			Entity = playerEntity,
@@ -98,7 +83,6 @@ public class GorillaServer : MonoBehaviour, ISerializationCallbackReceiver
 	{
 		successCallback = DebugWrapCb(successCallback, "AddOrRemoveDLCOwnership result");
 		errorCallback = DebugWrapCb(errorCallback, "AddOrRemoveDLCOwnership error");
-		Debug.Log("GorillaServer: AddOrRemoveDLCOwnership V2 call");
 		PlayFabCloudScriptAPI.ExecuteFunction(new ExecuteFunctionRequest
 		{
 			Entity = playerEntity,
@@ -111,33 +95,12 @@ public class GorillaServer : MonoBehaviour, ISerializationCallbackReceiver
 	{
 		successCallback = DebugWrapCb(successCallback, "BroadcastMyRoom result");
 		errorCallback = DebugWrapCb(errorCallback, "BroadcastMyRoom error");
-		Debug.Log($"GorillaServer: BroadcastMyRoom V2 call ({request})");
 		PlayFabCloudScriptAPI.ExecuteFunction(new ExecuteFunctionRequest
 		{
 			Entity = playerEntity,
 			FunctionName = "BroadcastMyRoomV2",
 			FunctionParameter = request
 		}, successCallback, errorCallback);
-	}
-
-	public bool NewCosmeticsPath()
-	{
-		return featureFlags.IsEnabledForUser("2024-06-CosmeticsAuthenticationV2");
-	}
-
-	public bool NewCosmeticsPathShouldSetSharedGroupData()
-	{
-		return featureFlags.IsEnabledForUser("2025-04-CosmeticsAuthenticationV2-SetData");
-	}
-
-	public bool NewCosmeticsPathShouldReadSharedGroupData()
-	{
-		return featureFlags.IsEnabledForUser("2025-04-CosmeticsAuthenticationV2-ReadData");
-	}
-
-	public bool NewCosmeticsPathShouldSetRoomData()
-	{
-		return featureFlags.IsEnabledForUser("2025-04-CosmeticsAuthenticationV2-Compat");
 	}
 
 	public void UpdateUserCosmetics()
@@ -163,7 +126,6 @@ public class GorillaServer : MonoBehaviour, ISerializationCallbackReceiver
 	{
 		successCallback = DebugWrapCb(successCallback, "GetAcceptedAgreements result");
 		errorCallback = DebugWrapCb(errorCallback, "GetAcceptedAgreements json error");
-		Debug.Log($"GorillaServer: GetAcceptedAgreements call ({request})");
 		PlayFabCloudScriptAPI.ExecuteFunction(new ExecuteFunctionRequest
 		{
 			Entity = playerEntity,
@@ -192,7 +154,6 @@ public class GorillaServer : MonoBehaviour, ISerializationCallbackReceiver
 	{
 		successCallback = DebugWrapCb(successCallback, "SubmitAcceptedAgreements result");
 		errorCallback = DebugWrapCb(errorCallback, "SubmitAcceptedAgreements error");
-		Debug.Log($"GorillaServer: SubmitAcceptedAgreements call ({request})");
 		PlayFabCloudScriptAPI.ExecuteFunction(new ExecuteFunctionRequest
 		{
 			Entity = playerEntity,
@@ -204,19 +165,16 @@ public class GorillaServer : MonoBehaviour, ISerializationCallbackReceiver
 
 	public void UploadGorillanalytics(object uploadData)
 	{
-		Debug.Log($"GorillaServer: UploadGorillanalytics call ({uploadData})");
 		PlayFabCloudScriptAPI.ExecuteFunction(new ExecuteFunctionRequest
 		{
 			Entity = playerEntity,
 			FunctionName = "Gorillanalytics",
 			FunctionParameter = uploadData,
 			GeneratePlayStreamEvent = false
-		}, delegate(ExecuteFunctionResult result)
+		}, delegate
 		{
-			Debug.Log($"The {result.FunctionName} function took {result.ExecutionTimeMilliseconds} to complete");
-		}, delegate(PlayFabError error)
+		}, delegate
 		{
-			Debug.Log("Error uploading Gorillanalytics: " + error.GenerateErrorReport());
 		});
 	}
 
@@ -224,7 +182,6 @@ public class GorillaServer : MonoBehaviour, ISerializationCallbackReceiver
 	{
 		successCallback = DebugWrapCb(successCallback, "CheckForBadName result");
 		errorCallback = DebugWrapCb(errorCallback, "CheckForBadName error");
-		Debug.Log($"GorillaServer: CheckForBadName call ({request})");
 		PlayFabCloudScriptAPI.ExecuteFunction(new ExecuteFunctionRequest
 		{
 			Entity = playerEntity,
@@ -243,7 +200,6 @@ public class GorillaServer : MonoBehaviour, ISerializationCallbackReceiver
 	{
 		successCallback = DebugWrapCb(successCallback, "GetRandomName result");
 		errorCallback = DebugWrapCb(errorCallback, "GetRandomName error");
-		Debug.Log("GorillaServer: GetRandomName call");
 		PlayFabCloudScriptAPI.ExecuteFunction(new ExecuteFunctionRequest
 		{
 			Entity = playerEntity,
@@ -256,7 +212,6 @@ public class GorillaServer : MonoBehaviour, ISerializationCallbackReceiver
 	{
 		successCallback = DebugWrapCb(successCallback, "ReturnQueueStats result");
 		errorCallback = DebugWrapCb(errorCallback, "ReturnQueueStats error");
-		Debug.Log("GorillaServer: ReturnQueueStats call");
 		PlayFabCloudScriptAPI.ExecuteFunction(new ExecuteFunctionRequest
 		{
 			Entity = playerEntity,
@@ -273,17 +228,7 @@ public class GorillaServer : MonoBehaviour, ISerializationCallbackReceiver
 	{
 		return delegate(T arg)
 		{
-			if (debug)
-			{
-				try
-				{
-					Debug.Log("GorillaServer: " + label + " (" + JsonConvert.SerializeObject(arg, serializationSettings) + ")");
-				}
-				catch (Exception arg2)
-				{
-					Debug.LogError($"GorillaServer: {label} Error printing failure log: {arg2}");
-				}
-			}
+			_ = debug;
 			cb(arg);
 		};
 	}

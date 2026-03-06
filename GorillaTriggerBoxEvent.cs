@@ -4,11 +4,15 @@ public class GorillaTriggerBoxEvent : GorillaTriggerBox
 {
 	public UnityEvent onBoxTriggered;
 
+	public UnityEvent onBoxExited;
+
 	public override void OnBoxTriggered()
 	{
-		if (onBoxTriggered != null)
-		{
-			onBoxTriggered.Invoke();
-		}
+		onBoxTriggered?.Invoke();
+	}
+
+	public override void OnBoxExited()
+	{
+		onBoxExited?.Invoke();
 	}
 }

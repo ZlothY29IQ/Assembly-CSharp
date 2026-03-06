@@ -87,8 +87,8 @@ public class PropHuntDebugHelper : MonoBehaviour
 		{
 			_selectedPropIndex = _cachedAllPropIDs.Length - 1;
 		}
-		string selectedPropID = ((_selectedPropIndex <= -1) ? string.Empty : (selectedPropID = GetSelectedPropID(_selectedPropIndex)));
-		SendForcePropHandRPC(selectedPropID);
+		string newPropId = ((_selectedPropIndex <= -1) ? string.Empty : (newPropId = GetSelectedPropID(_selectedPropIndex)));
+		SendForcePropHandRPC(newPropId);
 		UpdatePropsText();
 	}
 
@@ -100,8 +100,8 @@ public class PropHuntDebugHelper : MonoBehaviour
 		{
 			_selectedPropIndex = -1;
 		}
-		string selectedPropID = ((_selectedPropIndex <= -1) ? string.Empty : (selectedPropID = GetSelectedPropID(_selectedPropIndex)));
-		SendForcePropHandRPC(selectedPropID);
+		string newPropId = ((_selectedPropIndex <= -1) ? string.Empty : (newPropId = GetSelectedPropID(_selectedPropIndex)));
+		SendForcePropHandRPC(newPropId);
 		UpdatePropsText();
 	}
 

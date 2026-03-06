@@ -91,7 +91,7 @@ public class PlayerTimerBoardLine : MonoBehaviour
 		catch (Exception)
 		{
 			playerNameVisible = linePlayer.DefaultName;
-			GorillaNot.instance.SendReport("NmError", linePlayer.UserId, linePlayer.NickName);
+			MonkeAgent.instance.SendReport("NmError", linePlayer.UserId, linePlayer.NickName);
 		}
 	}
 
@@ -131,7 +131,7 @@ public class PlayerTimerBoardLine : MonoBehaviour
 			else
 			{
 				text = "BADGORILLA";
-				GorillaNot.instance.SendReport("evading the name ban", linePlayer.UserId, linePlayer.NickName);
+				MonkeAgent.instance.SendReport("evading the name ban", linePlayer.UserId, linePlayer.NickName);
 			}
 		}
 		return text;

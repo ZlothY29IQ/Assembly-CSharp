@@ -7,17 +7,11 @@ using UnityEngine;
 
 internal class MockWarningServer : WarningsServer
 {
-	public struct ButtonSetup
+	public struct ButtonSetup(string txt, WarningButtonResult result)
 	{
-		public string buttonText;
+		public string buttonText = txt;
 
-		public WarningButtonResult buttonResult;
-
-		public ButtonSetup(string txt, WarningButtonResult result)
-		{
-			buttonText = txt;
-			buttonResult = result;
-		}
+		public WarningButtonResult buttonResult = result;
 	}
 
 	private const string SHOWN_SCREEN_PREFIX = "screen-shown-";
@@ -109,50 +103,53 @@ internal class MockWarningServer : WarningsServer
 				ButtonSetup value4 = new ButtonSetup("Do This Later", WarningButtonResult.CloseWarning);
 				value2 = CreateWarningStatus(rightButtonSetup: new ButtonSetup("Opt-In", WarningButtonResult.OptIn), header: "IMPORTANT NEWS", body: "We have partnered with k-ID to create a better, more age-appropriate experience. Opt-in early and get 500 Shiny Rocks as our way of saying \"Thanks!\"", leftButtonSetup: value4, showImage: EImageVisibility.AfterBody, leftButtonCallback: delegate
 				{
-					TelemetryData telemetryData3 = default(TelemetryData);
-					telemetryData3.EventName = "kid_phase2_incohort";
-					telemetryData3.CustomTags = new string[4]
+					TelemetryData telemetryData2 = new TelemetryData
 					{
-						"kid_warning_screen",
-						"kid_phase_2",
-						KIDTelemetry.GameVersionCustomTag,
-						KIDTelemetry.GameEnvironment
+						EventName = "kid_phase2_incohort",
+						CustomTags = new string[4]
+						{
+							"kid_warning_screen",
+							"kid_phase_2",
+							KIDTelemetry.GameVersionCustomTag,
+							KIDTelemetry.GameEnvironment
+						},
+						BodyData = new Dictionary<string, string> { { "opt_in_choice", "skip" } }
 					};
-					telemetryData3.BodyData = new Dictionary<string, string> { { "opt_in_choice", "skip" } };
-					TelemetryData telemetryData4 = telemetryData3;
-					GorillaTelemetry.EnqueueTelemetryEvent(telemetryData4.EventName, telemetryData4.BodyData, telemetryData4.CustomTags);
+					GorillaTelemetry.EnqueueTelemetryEvent(telemetryData2.EventName, telemetryData2.BodyData, telemetryData2.CustomTags);
 				}, rightButtonCallback: delegate
 				{
-					TelemetryData telemetryData5 = default(TelemetryData);
-					telemetryData5.EventName = "kid_phase2_incohort";
-					telemetryData5.CustomTags = new string[4]
+					TelemetryData telemetryData2 = new TelemetryData
 					{
-						"kid_warning_screen",
-						"kid_phase_2",
-						KIDTelemetry.GameVersionCustomTag,
-						KIDTelemetry.GameEnvironment
+						EventName = "kid_phase2_incohort",
+						CustomTags = new string[4]
+						{
+							"kid_warning_screen",
+							"kid_phase_2",
+							KIDTelemetry.GameVersionCustomTag,
+							KIDTelemetry.GameEnvironment
+						},
+						BodyData = new Dictionary<string, string> { { "opt_in_choice", "sign_up" } }
 					};
-					telemetryData5.BodyData = new Dictionary<string, string> { { "opt_in_choice", "sign_up" } };
-					TelemetryData telemetryData6 = telemetryData5;
-					GorillaTelemetry.EnqueueTelemetryEvent(telemetryData6.EventName, telemetryData6.BodyData, telemetryData6.CustomTags);
+					GorillaTelemetry.EnqueueTelemetryEvent(telemetryData2.EventName, telemetryData2.BodyData, telemetryData2.CustomTags);
 				});
 			}
 			else
 			{
 				ButtonSetup value5 = new ButtonSetup("Continue", WarningButtonResult.CloseWarning);
 				value2 = CreateWarningStatus("IMPORTANT NEWS", "We're working to make Gorilla Tag a better, more age-appropriate experience in the coming days. To learn more, please check out our Discord.", null, value5, EImageVisibility.None, null, null);
-				TelemetryData telemetryData7 = default(TelemetryData);
-				telemetryData7.EventName = "kid_screen_shown";
-				telemetryData7.CustomTags = new string[4]
+				TelemetryData telemetryData = new TelemetryData
 				{
-					"kid_warning_screen",
-					"kid_phase_2",
-					KIDTelemetry.GameVersionCustomTag,
-					KIDTelemetry.GameEnvironment
+					EventName = "kid_screen_shown",
+					CustomTags = new string[4]
+					{
+						"kid_warning_screen",
+						"kid_phase_2",
+						KIDTelemetry.GameVersionCustomTag,
+						KIDTelemetry.GameEnvironment
+					},
+					BodyData = new Dictionary<string, string> { { "screen", "phase2_nocohort" } }
 				};
-				telemetryData7.BodyData = new Dictionary<string, string> { { "screen", "phase2_nocohort" } };
-				TelemetryData telemetryData8 = telemetryData7;
-				GorillaTelemetry.EnqueueTelemetryEvent(telemetryData8.EventName, telemetryData8.BodyData, telemetryData8.CustomTags);
+				GorillaTelemetry.EnqueueTelemetryEvent(telemetryData.EventName, telemetryData.BodyData, telemetryData.CustomTags);
 			}
 			break;
 		case 3:
@@ -175,50 +172,53 @@ internal class MockWarningServer : WarningsServer
 				}
 				value2 = CreateWarningStatus(result5, result6, value6, null, EImageVisibility.AfterBody, delegate
 				{
-					TelemetryData telemetryData9 = default(TelemetryData);
-					telemetryData9.EventName = "kid_screen_shown";
-					telemetryData9.CustomTags = new string[4]
+					TelemetryData telemetryData2 = new TelemetryData
 					{
-						"kid_warning_screen",
-						"kid_phase_3",
-						KIDTelemetry.GameVersionCustomTag,
-						KIDTelemetry.GameEnvironment
+						EventName = "kid_screen_shown",
+						CustomTags = new string[4]
+						{
+							"kid_warning_screen",
+							"kid_phase_3",
+							KIDTelemetry.GameVersionCustomTag,
+							KIDTelemetry.GameEnvironment
+						},
+						BodyData = new Dictionary<string, string> { { "screen", "phase3_required" } }
 					};
-					telemetryData9.BodyData = new Dictionary<string, string> { { "screen", "phase3_required" } };
-					TelemetryData telemetryData10 = telemetryData9;
-					GorillaTelemetry.EnqueueTelemetryEvent(telemetryData10.EventName, telemetryData10.BodyData, telemetryData10.CustomTags);
+					GorillaTelemetry.EnqueueTelemetryEvent(telemetryData2.EventName, telemetryData2.BodyData, telemetryData2.CustomTags);
 				}, null);
 				break;
 			}
 			ButtonSetup value7 = new ButtonSetup("Do This Later", WarningButtonResult.CloseWarning);
 			value2 = CreateWarningStatus(rightButtonSetup: new ButtonSetup("Opt-In", WarningButtonResult.OptIn), header: "IMPORTANT NEWS", body: "We have partnered with k-ID to create a better, more age-appropriate experience. Opt-in early and get 500 Shiny Rocks as our way of saying \"Thanks!\"", leftButtonSetup: value7, showImage: EImageVisibility.AfterBody, leftButtonCallback: delegate
 			{
-				TelemetryData telemetryData11 = default(TelemetryData);
-				telemetryData11.EventName = "kid_phase3_optional";
-				telemetryData11.CustomTags = new string[4]
+				TelemetryData telemetryData2 = new TelemetryData
 				{
-					"kid_warning_screen",
-					"kid_phase_3",
-					KIDTelemetry.GameVersionCustomTag,
-					KIDTelemetry.GameEnvironment
+					EventName = "kid_phase3_optional",
+					CustomTags = new string[4]
+					{
+						"kid_warning_screen",
+						"kid_phase_3",
+						KIDTelemetry.GameVersionCustomTag,
+						KIDTelemetry.GameEnvironment
+					},
+					BodyData = new Dictionary<string, string> { { "opt_in_choice", "skip" } }
 				};
-				telemetryData11.BodyData = new Dictionary<string, string> { { "opt_in_choice", "skip" } };
-				TelemetryData telemetryData12 = telemetryData11;
-				GorillaTelemetry.EnqueueTelemetryEvent(telemetryData12.EventName, telemetryData12.BodyData, telemetryData12.CustomTags);
+				GorillaTelemetry.EnqueueTelemetryEvent(telemetryData2.EventName, telemetryData2.BodyData, telemetryData2.CustomTags);
 			}, rightButtonCallback: delegate
 			{
-				TelemetryData telemetryData13 = default(TelemetryData);
-				telemetryData13.EventName = "kid_phase3_optional";
-				telemetryData13.CustomTags = new string[4]
+				TelemetryData telemetryData2 = new TelemetryData
 				{
-					"kid_warning_screen",
-					"kid_phase_3",
-					KIDTelemetry.GameVersionCustomTag,
-					KIDTelemetry.GameEnvironment
+					EventName = "kid_phase3_optional",
+					CustomTags = new string[4]
+					{
+						"kid_warning_screen",
+						"kid_phase_3",
+						KIDTelemetry.GameVersionCustomTag,
+						KIDTelemetry.GameEnvironment
+					},
+					BodyData = new Dictionary<string, string> { { "opt_in_choice", "sign_up" } }
 				};
-				telemetryData13.BodyData = new Dictionary<string, string> { { "opt_in_choice", "sign_up" } };
-				TelemetryData telemetryData14 = telemetryData13;
-				GorillaTelemetry.EnqueueTelemetryEvent(telemetryData14.EventName, telemetryData14.BodyData, telemetryData14.CustomTags);
+				GorillaTelemetry.EnqueueTelemetryEvent(telemetryData2.EventName, telemetryData2.BodyData, telemetryData2.CustomTags);
 			});
 			break;
 		}
@@ -241,17 +241,18 @@ internal class MockWarningServer : WarningsServer
 				}
 				value2 = CreateWarningStatus(result2, result3, null, value, EImageVisibility.AfterBody, delegate
 				{
-					TelemetryData telemetryData = default(TelemetryData);
-					telemetryData.EventName = "kid_screen_shown";
-					telemetryData.CustomTags = new string[4]
+					TelemetryData telemetryData2 = new TelemetryData
 					{
-						"kid_warning_screen",
-						"kid_phase_4",
-						KIDTelemetry.GameVersionCustomTag,
-						KIDTelemetry.GameEnvironment
+						EventName = "kid_screen_shown",
+						CustomTags = new string[4]
+						{
+							"kid_warning_screen",
+							"kid_phase_4",
+							KIDTelemetry.GameVersionCustomTag,
+							KIDTelemetry.GameEnvironment
+						},
+						BodyData = new Dictionary<string, string> { { "screen", "phase4" } }
 					};
-					telemetryData.BodyData = new Dictionary<string, string> { { "screen", "phase4" } };
-					TelemetryData telemetryData2 = telemetryData;
 					GorillaTelemetry.EnqueueTelemetryEvent(telemetryData2.EventName, telemetryData2.BodyData, telemetryData2.CustomTags);
 				}, null);
 			}

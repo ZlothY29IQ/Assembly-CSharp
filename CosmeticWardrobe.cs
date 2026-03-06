@@ -58,9 +58,6 @@ public class CosmeticWardrobe : MonoBehaviour
 	[SerializeField]
 	private TMP_Text outfitText;
 
-	[SerializeField]
-	private TMP_Text outfitTextOutline;
-
 	private static int selectedCategoryIndex = 0;
 
 	private static CosmeticsController.CosmeticCategory selectedCategory = CosmeticsController.CosmeticCategory.Hat;
@@ -191,12 +188,17 @@ public class CosmeticWardrobe : MonoBehaviour
 		OnWardrobeUpdateDisplays?.Invoke();
 	}
 
-	private void HandlePressedSelectCosmeticButton(GorillaPressableButton button, bool isLeft)
+	private async void HandlePressedSelectCosmeticButton(GorillaPressableButton button, bool isLeft)
 	{
 		for (int i = 0; i < cosmeticCollectionDisplays.Length; i++)
 		{
-			if (cosmeticCollectionDisplays[i].selectButton == button)
+			if (!(cosmeticCollectionDisplays[i].selectButton == button))
 			{
+				continue;
+			}
+			if (!string.IsNullOrEmpty(cosmeticCollectionDisplays[i].currentCosmeticItem.itemName) && !(cosmeticCollectionDisplays[i].currentCosmeticItem.itemName == "NOTHING"))
+			{
+				await VRRig.LocalRig.cosmeticsObjectRegistry.AwaitCosmetic(cosmeticCollectionDisplays[i].currentCosmeticItem.itemName);
 				CosmeticsController.instance.PressWardrobeItemButton(cosmeticCollectionDisplays[i].currentCosmeticItem, isLeft, m_useTemporarySet);
 				if (isLeft)
 				{
@@ -206,8 +208,8 @@ public class CosmeticWardrobe : MonoBehaviour
 				{
 					cosmeticCategoryButtons[selectedCategoryIndex].slot1RemovedItem = CosmeticsController.instance.nullItem;
 				}
-				break;
 			}
+			break;
 		}
 	}
 
@@ -369,7 +371,6 @@ public class CosmeticWardrobe : MonoBehaviour
 		nextOutfit.UpdateColor();
 		previousOutfit.UpdateColor();
 		outfitText.text = "Outfit #" + num;
-		outfitTextOutline.text = "Outfit #" + num;
 	}
 
 	public bool WardrobeButtonsInitialized()

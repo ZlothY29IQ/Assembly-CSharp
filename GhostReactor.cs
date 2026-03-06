@@ -6,6 +6,7 @@ using GorillaTag.Rendering;
 using Photon.Pun;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Serialization;
 
 public class GhostReactor : MonoBehaviourTick, IBuildValidation
 {
@@ -69,11 +70,12 @@ public class GhostReactor : MonoBehaviourTick, IBuildValidation
 
 		public static EnemyEntityCreateData Unpack(long bits)
 		{
-			EnemyEntityCreateData result = default(EnemyEntityCreateData);
-			result.respawnCount = UnpackData(bits, 8, 16);
-			result.sectionIndex = UnpackData(bits, 8, 8);
-			result.patrolIndex = UnpackData(bits, 8, 0);
-			return result;
+			return new EnemyEntityCreateData
+			{
+				respawnCount = UnpackData(bits, 8, 16),
+				sectionIndex = UnpackData(bits, 8, 8),
+				patrolIndex = UnpackData(bits, 8, 0)
+			};
 		}
 
 		public long Pack()
@@ -100,8 +102,10 @@ public class GhostReactor : MonoBehaviourTick, IBuildValidation
 
 		public static ToolEntityCreateData Unpack(long bits)
 		{
-			ToolEntityCreateData result = default(ToolEntityCreateData);
-			result.stationIndex = UnpackData(bits, 8, 0) - 1;
+			ToolEntityCreateData result = new ToolEntityCreateData
+			{
+				stationIndex = UnpackData(bits, 8, 0) - 1
+			};
 			int num = UnpackData(bits, 8, 8);
 			result.decayTime = 5f * (float)num;
 			return result;
@@ -127,7 +131,8 @@ public class GhostReactor : MonoBehaviourTick, IBuildValidation
 
 	public AudioClip entryRoomDeathSound;
 
-	public BoxCollider zoneLimit;
+	[FormerlySerializedAs("zoneLimit")]
+	public BoxCollider boundsBoxCollider;
 
 	public BoxCollider safeZoneLimit;
 
@@ -330,7 +335,7 @@ public class GhostReactor : MonoBehaviourTick, IBuildValidation
 			return;
 		}
 		grManager.reactor = this;
-		grManager.gameEntityManager.zoneLimit = zoneLimit;
+		grManager.gameEntityManager.boundsBoxCollider = boundsBoxCollider;
 		if (GameLightingManager.instance != null && zone != GTZone.customMaps)
 		{
 			GameLightingManager.instance.ZoneEnableCustomDynamicLighting(enable: true);

@@ -485,6 +485,10 @@ public class SIResourceCollection : MonoBehaviour, ITouchScreenStation
 		}
 	}
 
+	public void TouchscreenToggleButtonPressed(SITouchscreenButton.SITouchscreenButtonType buttonType, int data, int actorNr, bool isToggledOn)
+	{
+	}
+
 	public void AddButton(SITouchscreenButton button, bool isPopupButton = false)
 	{
 	}

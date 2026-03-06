@@ -46,4 +46,9 @@ public class GameLight : MonoBehaviour
 			GameLightingManager.instance.RemoveGameLight(this);
 		}
 	}
+
+	public void UpdateCachedLightColorAndIntensity()
+	{
+		cachedColorAndIntensity = (float)intensityMult * light.intensity * (negativeLight ? (-1f) : 1f) * light.color;
+	}
 }

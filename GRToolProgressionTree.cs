@@ -416,19 +416,16 @@ public class GRToolProgressionTree
 
 	private EmployeeLevelRequirement GetEmployeeLevel(List<string> rawRequiredEntitlements)
 	{
-		using (List<string>.Enumerator enumerator = rawRequiredEntitlements.GetEnumerator())
+		foreach (string rawRequiredEntitlement in rawRequiredEntitlements)
 		{
-			while (enumerator.MoveNext())
+			switch (rawRequiredEntitlement.Trim())
 			{
-				switch (enumerator.Current.Trim())
-				{
-				case "Intern":
-					return EmployeeLevelRequirement.Intern;
-				case "PartTime":
-					return EmployeeLevelRequirement.PartTime;
-				case "FullTime":
-					return EmployeeLevelRequirement.FullTime;
-				}
+			case "Intern":
+				return EmployeeLevelRequirement.Intern;
+			case "PartTime":
+				return EmployeeLevelRequirement.PartTime;
+			case "FullTime":
+				return EmployeeLevelRequirement.FullTime;
 			}
 		}
 		return EmployeeLevelRequirement.None;
@@ -471,7 +468,7 @@ public class GRToolProgressionTree
 				gRToolProgressionRawNode.requiredByIds.Add(nodeReference.node_id);
 			}
 		}
-		if (pendingPartUnlock != 0 && pendingPartUnlock == gRToolProgressionRawNode.progressionNode.type)
+		if (pendingPartUnlock != GRToolProgressionManager.ToolParts.None && pendingPartUnlock == gRToolProgressionRawNode.progressionNode.type)
 		{
 			GRPlayer gRPlayer = GRPlayer.Get(VRRig.LocalRig);
 			if (pendingPartUnlock == GRToolProgressionManager.ToolParts.DropPodBasic || pendingPartUnlock == GRToolProgressionManager.ToolParts.DropPodChassis1 || pendingPartUnlock == GRToolProgressionManager.ToolParts.DropPodChassis2 || pendingPartUnlock == GRToolProgressionManager.ToolParts.DropPodChassis3)

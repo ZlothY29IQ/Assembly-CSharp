@@ -72,6 +72,7 @@ public class VoiceBroadcastCosmetic : MonoBehaviour, IGorillaSliceableSimple
 	{
 		loudSpeaker.StartLocalBroadcast();
 		onStartListening?.Invoke();
+		onStartListening?.Invoke();
 		wearable.OnCosmeticStartListening();
 		lastSliceUpdateTime = Time.time;
 		GorillaSlicerSimpleManager.RegisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.LateUpdate);

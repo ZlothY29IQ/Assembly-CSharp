@@ -211,7 +211,6 @@ public class KIDManager : MonoBehaviour
 		}
 		else
 		{
-			Debug.Log("[KID] INIT");
 			_instance = this;
 			DbgLocale = PlayerPrefs.GetString(_debugKIDLocalePlayerPrefRef, "");
 		}
@@ -521,33 +520,23 @@ public class KIDManager : MonoBehaviour
 	{
 		if (GorillaServer.Instance.CheckOptedInKID())
 		{
-			Debug.Log("[KID::MANAGER] PHASE ONE (A) -- IN PROGRESS - User has already opted in to k-ID, skipping warning screens");
 			return true;
 		}
-		Debug.Log("[KID::MANAGER] CHECK WARNING SCREENS - Force Starting Overlay");
 		PrivateUIRoom.ForceStartOverlay();
 		switch (await WarningScreens.StartWarningScreen(_requestCancellationSource.Token))
 		{
 		case WarningButtonResult.None:
-		{
 			if (_requestCancellationSource.IsCancellationRequested)
 			{
 				return false;
 			}
-			bool flag = GorillaServer.Instance.CheckIsInKIDOptInCohort();
-			bool flag2 = GorillaServer.Instance.CheckIsInKIDRequiredCohort();
-			Debug.Log("[KID::MANAGER] PHASE ONE (A) -- IN PROGRESS - User not shown any warning screen and has not opted in yet. Is Eligible: [" + (flag || flag2) + "].");
+			GorillaServer.Instance.CheckIsInKIDOptInCohort();
+			GorillaServer.Instance.CheckIsInKIDRequiredCohort();
 			return false;
-		}
 		case WarningButtonResult.CloseWarning:
-			if (_requestCancellationSource.IsCancellationRequested)
-			{
-				return false;
-			}
-			Debug.Log("[KID::MANAGER] PHASE ONE (A) -- IN PROGRESS - User cancelled the warning screen. Skipping k-ID Opt-in.");
+			_ = _requestCancellationSource.IsCancellationRequested;
 			return false;
 		case WarningButtonResult.OptIn:
-			Debug.Log("[KID::MANAGER] PHASE ONE (A) -- IN PROGRESS - User has newly opted in to k-ID");
 			if (!(await Server_OptIn()))
 			{
 				Debug.LogError("[KID::MANAGER] PHASE ONE (A) -- FAILURE - Opting in to k-ID failed!");
@@ -566,10 +555,8 @@ public class KIDManager : MonoBehaviour
 	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
 	public static void InitialiseBootFlow()
 	{
-		Debug.Log("[KID::MANAGER] PHASE ZERO -- START -- Checking K-ID Flag");
 		if (PlayerPrefs.GetInt(KIDSetupPlayerPref, 0) == 0)
 		{
-			Debug.Log("[KID::MANAGER] INITIALISE BOOT FLOW - Force Starting Overlay");
 			PrivateUIRoom.ForceStartOverlay();
 		}
 	}
@@ -583,21 +570,10 @@ public class KIDManager : MonoBehaviour
 		int num = 0;
 		try
 		{
-			Debug.Log("[KID::MANAGER] PHASE ZERO -- START - Initialising k-ID System - " + Application.version);
 			bool num2 = !(await WaitForAuthentication());
 			UGCPermissionManager.UsePlayFabSafety();
-			if (num2)
+			if (!num2 && _useKid)
 			{
-				Debug.Log("[KID::MANAGER] Wait for auth failed. Skipping age gate.");
-			}
-			else if (!_useKid)
-			{
-				Debug.Log("[KID::MANAGER] Kid disabled. Skipping age gate.");
-			}
-			else
-			{
-				Debug.Log("[KID::MANAGER] PlayFab has logged in, starting k-ID initialisation flow");
-				Debug.Log("[KID::MANAGER] PHASE ZERO -- COMPLETE");
 				GorillaSnapTurn.DisableSnapTurn();
 				snapTurnDisabled = true;
 				if (GorillaTagger.Instance != null)
@@ -605,7 +581,6 @@ public class KIDManager : MonoBehaviour
 					cachedTapHapticsStrength = GorillaTagger.Instance.tapHapticStrength;
 					GorillaTagger.Instance.tapHapticStrength = 0f;
 				}
-				Debug.Log("[KID::MANAGER] PHASE ONE -- START - Initialising k-ID System");
 				GetPlayerData_Data newSessionData = await TryGetPlayerData(forceRefresh: true);
 				if (!_requestCancellationSource.IsCancellationRequested)
 				{
@@ -616,127 +591,95 @@ public class KIDManager : MonoBehaviour
 					else if (newSessionData.responseType == GetSessionResponseType.ERROR)
 					{
 						Debug.LogError("[KID::MANAGER] Failed to retrieve Player Data, response type: [" + newSessionData.responseType.ToString() + "]. Unable to proceed. Will default to Using Safeties");
-						Debug.Log($"[KID::MANAGER] Safeties is: [{PlayFabAuthenticator.instance.GetSafety()}");
 					}
 					else
 					{
 						HasOptedInToKID = newSessionData.responseType != GetSessionResponseType.NOT_FOUND;
 						bool flag = await CheckWarningScreensOptedIn();
-						if (!_requestCancellationSource.IsCancellationRequested)
+						if (!_requestCancellationSource.IsCancellationRequested && flag)
 						{
-							if (!flag)
+							PreviousStatus = (SessionStatus)PlayerPrefs.GetInt(PreviousStatusPlayerPrefRef, 0);
+							TMPSession newSession = newSessionData.session;
+							_ = newSessionData.session?.AgeStatus;
+							_ageGateRequirements = await TryGetRequirements();
+							KIDAgeGate.SetAgeGateConfig(_ageGateRequirements);
+							if (_ageGateRequirements != null)
 							{
-								Debug.Log("[KID] Kid Not opted into. Aborting k-ID setup.");
+								_ = _ageGateRequirements.AgeGateRequirements;
+							}
+							if (newSessionData.status == SessionStatus.PROHIBITED || newSessionData.status == SessionStatus.PENDING_AGE_APPEAL)
+							{
+								PrivateUIRoom.ForceStartOverlay();
+								KIDUI_AgeAppealController.Instance.StartAgeAppealScreens(newSessionData.status);
 							}
 							else
 							{
-								Debug.Log("[KID::MANAGER] PHASE ONE -- COMPLETE");
-								Debug.Log("[KID::MANAGER] PHASE TWO -- START - Get Player Data from Server");
-								PreviousStatus = (SessionStatus)PlayerPrefs.GetInt(PreviousStatusPlayerPrefRef, 0);
-								TMPSession newSession = newSessionData.session;
-								_ = newSessionData.session?.AgeStatus;
-								Debug.Log("[KID::MANAGER] PHASE TWO -- IN PROGRESS - Getting Age-Gate Configuration Data");
-								_ageGateRequirements = await TryGetRequirements();
-								KIDAgeGate.SetAgeGateConfig(_ageGateRequirements);
-								string text = ((_ageGateRequirements == null) ? "UNSUCCESSFULLY [_ageGateRequirements] is null" : ((_ageGateRequirements.AgeGateRequirements == null) ? "UNSUCCESSFULLY [AgeGateRequirements] is NULL" : "SUCCESSFULLY"));
-								Debug.Log("[KID::MANAGER] PHASE TWO -- IN PROGRESS - Age-Gate configuration Completed: " + text);
-								if (newSessionData.status == SessionStatus.PROHIBITED || newSessionData.status == SessionStatus.PENDING_AGE_APPEAL)
+								TMPSession session = newSessionData.session;
+								int num3;
+								if (session == null)
 								{
-									PrivateUIRoom.ForceStartOverlay();
-									Debug.Log("[KID::MANAGER] User is [" + newSessionData.status.ToString() + "] from playing Gorilla Tag. Skipping to Age-Appeal flow");
-									KIDUI_AgeAppealController.Instance.StartAgeAppealScreens(newSessionData.status);
+									num3 = 1;
 								}
 								else
 								{
-									Debug.Log("[KID::MANAGER] PHASE TWO -- COMPLETE");
-									Debug.Log("[KID::MANAGER] PHASE THREE -- START - Check for Age-Gate");
-									TMPSession session = newSessionData.session;
-									int num3;
-									if (session == null)
+									_ = session.AgeStatus;
+									num3 = 0;
+								}
+								if (num3 != 0)
+								{
+									PrivateUIRoom.ForceStartOverlay();
+									(AgeStatusType, TMPSession) obj2 = await AgeGateFlow(newSessionData);
+									_ = obj2.Item1;
+									TMPSession item = obj2.Item2;
+									if (_requestCancellationSource.IsCancellationRequested)
 									{
-										num3 = 1;
+										goto IL_06b1;
 									}
-									else
+									newSession = item;
+								}
+								if (LegalAgreements.instance != null)
+								{
+									await LegalAgreements.instance.StartLegalAgreements();
+									if (_requestCancellationSource.IsCancellationRequested)
 									{
-										_ = session.AgeStatus;
-										num3 = 0;
+										goto IL_06b1;
 									}
-									if (num3 != 0)
+								}
+								if (UpdatePermissions(newSession) && CurrentSession != null)
+								{
+									if (CurrentSession.IsDefault)
 									{
-										PrivateUIRoom.ForceStartOverlay();
-										Debug.Log("[KID::MANAGER] PHASE THREE -- IN PROGRESS - Age-gate required");
-										(AgeStatusType, TMPSession) obj2 = await AgeGateFlow(newSessionData);
-										_ = obj2.Item1;
-										TMPSession item = obj2.Item2;
-										if (_requestCancellationSource.IsCancellationRequested)
+										WaitForAndUpdateNewSession(forceRefresh: true);
+									}
+									if (!_requestCancellationSource.IsCancellationRequested)
+									{
+										UGCPermissionManager.UseKID();
+										await KIDUI_Controller.Instance.StartKIDScreens(_requestCancellationSource.Token);
+										while (!_requestCancellationSource.IsCancellationRequested)
 										{
-											goto IL_0887;
-										}
-										newSession = item;
-									}
-									Debug.Log("[KID::MANAGER] PHASE THREE -- COMPLETE");
-									Debug.Log("[KID::MANAGER] PHASE FOUR -- START - Legal Agreements Processes");
-									if (LegalAgreements.instance != null)
-									{
-										Debug.Log("[KID::MANAGER] Start legal agreements");
-										await LegalAgreements.instance.StartLegalAgreements();
-										if (_requestCancellationSource.IsCancellationRequested)
-										{
-											goto IL_0887;
-										}
-									}
-									Debug.Log("[KID::MANAGER] PHASE FOUR -- COMPLETE");
-									Debug.Log("[KID::MANAGER] PHASE FIVE -- START - Update Permissions");
-									if (!UpdatePermissions(newSession))
-									{
-										Debug.LogError("[KID::MANAGER] PHASE FIVE -- FAILURE - Failed to update permissions but will continue.\nSession was:\n" + newSession);
-										Debug.Log($"[KID::MANAGER] Safeties is: [{PlayFabAuthenticator.instance.GetSafety()}");
-									}
-									else if (CurrentSession == null)
-									{
-										Debug.LogError("[KID::MANAGER] PHASE FIVE -- FAILURE -- CurrentSession is NULL, should at least have a default session!");
-										Debug.Log($"[KID::MANAGER] Safeties is: [{PlayFabAuthenticator.instance.GetSafety()}");
-									}
-									else
-									{
-										if (CurrentSession.IsDefault)
-										{
-											WaitForAndUpdateNewSession(forceRefresh: true);
-										}
-										if (!_requestCancellationSource.IsCancellationRequested)
-										{
-											UGCPermissionManager.UseKID();
-											Debug.Log("[KID::MANAGER] PHASE FIVE -- COMPLETE");
-											Debug.Log("[KID::MANAGER] PHASE SIX -- START - Check for K-ID Screens");
-											await KIDUI_Controller.Instance.StartKIDScreens(_requestCancellationSource.Token);
-											while (!_requestCancellationSource.IsCancellationRequested)
+											await Task.Yield();
+											if (KIDUI_Controller.IsKIDUIActive)
 											{
-												await Task.Yield();
-												if (KIDUI_Controller.IsKIDUIActive)
-												{
-													continue;
-												}
-												Debug.Log("[KID::MANAGER] PHASE SIX --  COMPLETE");
-												if (_requestCancellationSource.IsCancellationRequested)
-												{
-													break;
-												}
-												Debug.Log("[KID::MANAGER] PHASE SEVEN -- START - Finalise setup");
-												if (CurrentSession == null)
-												{
-													Debug.LogError("[KID::MANAGER] PHASE SEVEN -- FAILURE -- CurrentSession is NULL, should at least have a default session!");
-													Debug.Log($"[KID::MANAGER] Safeties is: [{PlayFabAuthenticator.instance.GetSafety()}");
-													break;
-												}
-												if (!newSessionData.HasConfirmedSetup)
-												{
-													await KIDMessagingController.StartKIDConfirmationScreen(_requestCancellationSource.Token);
-												}
-												PlayerPrefs.SetInt(PreviousStatusPlayerPrefRef, (int)PreviousStatus);
-												PlayerPrefs.Save();
-												InitialisationSuccessful = true;
-												goto end_IL_005f;
+												continue;
 											}
+											if (_requestCancellationSource.IsCancellationRequested)
+											{
+												break;
+											}
+											if (CurrentSession == null)
+											{
+												Debug.LogError("[KID::MANAGER] PHASE SEVEN -- FAILURE -- CurrentSession is NULL, should at least have a default session!");
+												Debug.Log($"[KID::MANAGER] Safeties is: [{PlayFabAuthenticator.instance.GetSafety()}");
+												break;
+											}
+											if (!newSessionData.HasConfirmedSetup)
+											{
+												await KIDMessagingController.StartKIDConfirmationScreen(_requestCancellationSource.Token);
+											}
+											PlayerPrefs.SetInt(PreviousStatusPlayerPrefRef, (int)PreviousStatus);
+											PlayerPrefs.Save();
+											InitialisationSuccessful = true;
+											goto end_IL_00b2;
 										}
 									}
 								}
@@ -745,10 +688,10 @@ public class KIDManager : MonoBehaviour
 					}
 				}
 			}
-			goto IL_0887;
-			IL_0887:
+			goto IL_06b1;
+			IL_06b1:
 			num = 1;
-			end_IL_005f:;
+			end_IL_00b2:;
 		}
 		catch (object obj3)
 		{
@@ -757,23 +700,18 @@ public class KIDManager : MonoBehaviour
 		InitialisationComplete = true;
 		if (!InitialisationSuccessful)
 		{
-			Debug.Log("[KID::MANAGER] k-ID Initialisation has FAILED.");
 			if (cachedTapHapticsStrength.HasValue)
 			{
-				Debug.Log("[KID::MANAGER] Enable back haptics when we're done with the k-ID setup");
 				GorillaTagger.Instance.tapHapticStrength = cachedTapHapticsStrength.Value;
 			}
 			if (snapTurnDisabled)
 			{
-				Debug.Log("[KID::MANAGER] Reverting Snap Turning to PlayerPref settings");
 				GorillaSnapTurn.LoadSettingsFromCache();
 			}
 			if (LegalAgreements.instance != null)
 			{
-				Debug.Log("[KID::MANAGER] Start legal agreements");
 				await LegalAgreements.instance.StartLegalAgreements();
 			}
-			Debug.Log("[KID::MANAGER] Stop forced overlay");
 			PrivateUIRoom.StopForcedOverlay();
 		}
 		object obj4 = obj;
@@ -784,28 +722,24 @@ public class KIDManager : MonoBehaviour
 		if (num != 1)
 		{
 			UGCPermissionManager.UseKID();
-			bool flag2 = CurrentSession == null && PlayFabAuthenticator.instance.GetSafety();
-			Debug.Log($"[KID::MANAGER] Safeties enabled status: [{flag2}");
+			if (CurrentSession == null)
+			{
+				PlayFabAuthenticator.instance.GetSafety();
+			}
 			if (cachedTapHapticsStrength.HasValue)
 			{
-				Debug.Log("[KID::MANAGER] Enable back haptics when we're done with the k-ID setup");
 				GorillaTagger.Instance.tapHapticStrength = cachedTapHapticsStrength.Value;
 			}
 			if (snapTurnDisabled)
 			{
-				Debug.Log("[KID::MANAGER] Reverting Snap Turning to PlayerPref settings");
 				GorillaSnapTurn.LoadSettingsFromCache();
 			}
-			Debug.Log("[KID::MANAGER] Stop forced overlay");
 			PrivateUIRoom.StopForcedOverlay();
-			Debug.Log("[KID::MANAGER] PHASE SEVEN -- COMPLETE");
-			Debug.Log("[KID::MANAGER] K-ID Has been Initialised and is ready!");
 		}
 	}
 
 	private static bool UpdatePermissions(TMPSession newSession)
 	{
-		Debug.Log("[KID::MANAGER] Updating Permissions to reflect session.");
 		if (newSession == null || !newSession.IsValidSession)
 		{
 			Debug.LogError("[KID::MANAGER] A NULL or Invalid Session was received!");
@@ -875,7 +809,6 @@ public class KIDManager : MonoBehaviour
 	{
 		if (_titleDataReady)
 		{
-			Debug.Log($"[KID::MANAGER] K-ID Title Data already retrieved, returning _useKid = [{_useKid}]");
 			return _useKid;
 		}
 		int state = 0;
@@ -884,7 +817,6 @@ public class KIDManager : MonoBehaviour
 		{
 			state = 1;
 			isEnabled = GetIsEnabled(res);
-			Debug.Log($"[KID::MANAGER::UseKID] K-ID Enabled status retrieved from Title Data: [{isEnabled}]");
 		}, delegate(PlayFabError err)
 		{
 			state = -1;
@@ -1049,7 +981,6 @@ public class KIDManager : MonoBehaviour
 
 	private static async Task<bool> WaitForAuthentication()
 	{
-		Debug.Log("[KID] Starting Age-Gate process.");
 		while (!PlayFabClientAPI.IsClientLoggedIn())
 		{
 			if (_requestCancellationSource.IsCancellationRequested)
@@ -1062,7 +993,6 @@ public class KIDManager : MonoBehaviour
 			}
 			await Task.Yield();
 		}
-		Debug.Log("[KID] Initialisation - PlayFab has signed in. Continuing.");
 		while (!GorillaServer.Instance.FeatureFlagsReady)
 		{
 			if (_requestCancellationSource.IsCancellationRequested)
@@ -1071,7 +1001,6 @@ public class KIDManager : MonoBehaviour
 			}
 			await Task.Yield();
 		}
-		Debug.Log("[KID] Initialisation - Feature Flags ready. Continuing.");
 		while (!_titleDataReady)
 		{
 			if (_requestCancellationSource.IsCancellationRequested)
@@ -1080,7 +1009,6 @@ public class KIDManager : MonoBehaviour
 			}
 			await Task.Yield();
 		}
-		Debug.Log("[KID] Initialisation - K-ID Title Data loaded in. Continuing.");
 		return true;
 	}
 
@@ -1090,20 +1018,14 @@ public class KIDManager : MonoBehaviour
 		AgeStatusType? ageStatusType = newPlayerData.session?.AgeStatus;
 		if (!newPlayerData.AgeStatus.HasValue)
 		{
-			Debug.Log("[KID::MANAGER] PHASE THREE (A) -- IN PROGRESS - Age not set, must process age gate");
 			VerifyAgeData verifyAgeData = await ProcessAgeGate();
-			Debug.Log("[KID::MANAGER] PHASE THREE (A) -- IN PROGRESS - Age Gate Completed");
 			if (verifyAgeData == null)
 			{
-				Debug.Log("[KID::MANAGER] Verify Response returned NULL, this could happen if a Prohibited response was received and the age-gate exited, or the game shut down");
 				return (ageStatus: AgeStatusType.DIGITALMINOR, resp: null);
 			}
 			session = verifyAgeData.Session;
 			ageStatusType = session.AgeStatus;
-			if (session.IsDefault)
-			{
-				Debug.Log("[KID::MANAGER] PHASE THREE (A) -- IN PROGRESS - Age Gate completed - Default session received");
-			}
+			_ = session.IsDefault;
 		}
 		if (!ageStatusType.HasValue)
 		{
@@ -1115,20 +1037,16 @@ public class KIDManager : MonoBehaviour
 
 	private static async Task<VerifyAgeData> ProcessAgeGate()
 	{
-		Debug.Log("[KID::MANAGER] PHASE THREE (B) -- IN PROGRESS - Beginning Age-Gate");
 		await KIDAgeGate.BeginAgeGate();
 		if (_requestCancellationSource.IsCancellationRequested)
 		{
 			return null;
 		}
-		Debug.Log("[KID::MANAGER] PHASE THREE (B) -- IN PROGRESS - Age-Gate completed");
-		Debug.Log("[KID::MANAGER] PHASE THREE (C) -- IN PROGRESS - Trying to verify Age Response");
 		VerifyAgeData verifyResponse = await TryVerifyAgeResponse();
 		if (_requestCancellationSource.IsCancellationRequested)
 		{
 			return null;
 		}
-		Debug.Log("[KID::MANAGER] PHASE THREE (C) -- IN PROGRESS - Verify Age Response completed");
 		if (verifyResponse.Status == SessionStatus.PROHIBITED || verifyResponse.Status == SessionStatus.PENDING_AGE_APPEAL)
 		{
 			KIDUI_AgeAppealController.Instance.StartAgeAppealScreens(verifyResponse.Status);
@@ -1488,67 +1406,56 @@ public class KIDManager : MonoBehaviour
 
 	public static void RegisterSessionUpdateCallback_AnyPermission(Action callback)
 	{
-		Debug.Log("[KID] Successfully registered a new callback to SessionUpdate which monitors any permission change");
 		_onSessionUpdated_AnyPermission = (Action)Delegate.Combine(_onSessionUpdated_AnyPermission, callback);
 	}
 
 	public static void UnregisterSessionUpdateCallback_AnyPermission(Action callback)
 	{
-		Debug.Log("[KID] Successfully unregistered a new callback to SessionUpdate which monitors any permission change");
 		_onSessionUpdated_AnyPermission = (Action)Delegate.Remove(_onSessionUpdated_AnyPermission, callback);
 	}
 
 	public static void RegisterSessionUpdatedCallback_VoiceChat(Action<bool, Permission.ManagedByEnum> callback)
 	{
-		Debug.Log("[KID] Successfully registered a new callback to SessionUpdate which monitors the Voice Chat permission");
 		_onSessionUpdated_VoiceChat = (Action<bool, Permission.ManagedByEnum>)Delegate.Combine(_onSessionUpdated_VoiceChat, callback);
 	}
 
 	public static void UnregisterSessionUpdatedCallback_VoiceChat(Action<bool, Permission.ManagedByEnum> callback)
 	{
-		Debug.Log("[KID] Successfully unregistered a callback to SessionUpdate which monitors the Voice Chat permission");
 		_onSessionUpdated_VoiceChat = (Action<bool, Permission.ManagedByEnum>)Delegate.Remove(_onSessionUpdated_VoiceChat, callback);
 	}
 
 	public static void RegisterSessionUpdatedCallback_CustomUsernames(Action<bool, Permission.ManagedByEnum> callback)
 	{
-		Debug.Log("[KID] Successfully registered a new callback to SessionUpdate which monitors the Custom Usernames permission");
 		_onSessionUpdated_CustomUsernames = (Action<bool, Permission.ManagedByEnum>)Delegate.Combine(_onSessionUpdated_CustomUsernames, callback);
 	}
 
 	public static void UnregisterSessionUpdatedCallback_CustomUsernames(Action<bool, Permission.ManagedByEnum> callback)
 	{
-		Debug.Log("[KID] Successfully unregistered a callback to SessionUpdate which monitors the Custom Usernames permission");
 		_onSessionUpdated_CustomUsernames = (Action<bool, Permission.ManagedByEnum>)Delegate.Remove(_onSessionUpdated_CustomUsernames, callback);
 	}
 
 	public static void RegisterSessionUpdatedCallback_PrivateRooms(Action<bool, Permission.ManagedByEnum> callback)
 	{
-		Debug.Log("[KID] Successfully registered a new callback to SessionUpdate which monitors the Private Rooms permission");
 		_onSessionUpdated_PrivateRooms = (Action<bool, Permission.ManagedByEnum>)Delegate.Combine(_onSessionUpdated_PrivateRooms, callback);
 	}
 
 	public static void UnregisterSessionUpdatedCallback_PrivateRooms(Action<bool, Permission.ManagedByEnum> callback)
 	{
-		Debug.Log("[KID] Successfully unregistered a callback to SessionUpdate which monitors the Private Rooms permission");
 		_onSessionUpdated_PrivateRooms = (Action<bool, Permission.ManagedByEnum>)Delegate.Remove(_onSessionUpdated_PrivateRooms, callback);
 	}
 
 	public static void RegisterSessionUpdatedCallback_Multiplayer(Action<bool, Permission.ManagedByEnum> callback)
 	{
-		Debug.Log("[KID] Successfully registered a new callback to SessionUpdate which monitors the Multiplayer permission");
 		_onSessionUpdated_Multiplayer = (Action<bool, Permission.ManagedByEnum>)Delegate.Combine(_onSessionUpdated_Multiplayer, callback);
 	}
 
 	public static void UnregisterSessionUpdatedCallback_Multiplayer(Action<bool, Permission.ManagedByEnum> callback)
 	{
-		Debug.Log("[KID] Successfully unregistered a callback to SessionUpdate which monitors the Multiplayer permission");
 		_onSessionUpdated_Multiplayer = (Action<bool, Permission.ManagedByEnum>)Delegate.Remove(_onSessionUpdated_Multiplayer, callback);
 	}
 
 	public static void RegisterSessionUpdatedCallback_UGC(Action<bool, Permission.ManagedByEnum> callback)
 	{
-		Debug.Log("[KID] Successfully registered a new callback to SessionUpdate which monitors the UGC permission");
 		_onSessionUpdated_UGC = (Action<bool, Permission.ManagedByEnum>)Delegate.Combine(_onSessionUpdated_UGC, callback);
 	}
 
@@ -1556,31 +1463,26 @@ public class KIDManager : MonoBehaviour
 	{
 		if (_isUpdatingNewSession)
 		{
-			Debug.LogError("[KID::MANAGER] Trying to UpdateNewSession, but is already running, or state was not reset. Will not start again");
 			return false;
 		}
 		_isUpdatingNewSession = true;
-		Debug.Log($"[KID::MANAGER] UpdateNewSession -- START - Starting Update New Session async Loop. Max duration: [{10f:#} minutes");
-		float updateTimeout = Time.time + 600f;
+		float updateTimeout = Time.realtimeSinceStartup + 600f;
 		GetPlayerData_Data getPlayerData_Data = await TryGetPlayerData(forceRefresh);
 		TMPSession tMPSession = getPlayerData_Data?.session;
 		bool flag = HasSessionChanged(tMPSession);
-		while (Time.time < updateTimeout && (tMPSession == null || tMPSession.Age == 0 || !flag))
+		while (Time.realtimeSinceStartup < updateTimeout && (tMPSession == null || tMPSession.Age == 0 || !flag))
 		{
 			await Task.Delay(30000);
 			if (_requestCancellationSource.IsCancellationRequested)
 			{
-				Debug.Log("[KID::MANAGER] UpdateNewSession -- CANCELLED - CancellationTokenSource was cancelled, aborting session Update");
 				_isUpdatingNewSession = false;
 				return false;
 			}
-			Debug.Log("[KID::MANAGER] UpdateNewSession -- LOOP - Trying to get Player Data");
 			getPlayerData_Data = await TryGetPlayerData(forceRefresh);
 			tMPSession = getPlayerData_Data?.session;
 			flag = HasSessionChanged(tMPSession);
 			if (flag)
 			{
-				Debug.Log("[KID::MANAGER] UpdateNewSession -- SUCCESS - Valid, updated session has been found");
 				break;
 			}
 			if (getPlayerData_Data == null)
@@ -1599,7 +1501,6 @@ public class KIDManager : MonoBehaviour
 		_isUpdatingNewSession = false;
 		if (getPlayerData_Data == null || getPlayerData_Data.responseType != GetSessionResponseType.OK || tMPSession == null)
 		{
-			Debug.Log("[KID::MANAGER] UpdateNewSession -- FAILED - Was unable to get new session in time");
 			return false;
 		}
 		return UpdatePermissions(tMPSession);

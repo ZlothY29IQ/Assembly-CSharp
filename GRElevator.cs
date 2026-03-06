@@ -301,7 +301,7 @@ public class GRElevator : MonoBehaviour
 
 	public static bool StateIsClosingState(ElevatorState checkState)
 	{
-		if (checkState != ElevatorState.DoorMovingClosing && checkState != 0 && checkState != ElevatorState.DoorEndClosing)
+		if (checkState != ElevatorState.DoorMovingClosing && checkState != ElevatorState.DoorBeginClosing && checkState != ElevatorState.DoorEndClosing)
 		{
 			return checkState == ElevatorState.DoorClosed;
 		}

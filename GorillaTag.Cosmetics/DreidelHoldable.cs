@@ -49,7 +49,7 @@ public class DreidelHoldable : TransferrableObject
 
 	private void OnDreidelSpin(int sender, int target, object[] args, PhotonMessageInfoWrapped info)
 	{
-		GorillaNot.IncrementRPCCall(info, "OnDreidelSpin");
+		MonkeAgent.IncrementRPCCall(info, "OnDreidelSpin");
 		if (sender == target && info.senderID == ownerRig.creator.ActorNumber)
 		{
 			Vector3 v = (Vector3)args[0];

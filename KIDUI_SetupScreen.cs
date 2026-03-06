@@ -42,10 +42,10 @@ public class KIDUI_SetupScreen : MonoBehaviour
 
 	private void OnEnable()
 	{
-		string @string = PlayerPrefs.GetString(KIDManager.GetEmailForUserPlayerPrefRef, "");
-		_emailInputField.text = @string;
+		string text = PlayerPrefs.GetString(KIDManager.GetEmailForUserPlayerPrefRef, "");
+		_emailInputField.text = text;
 		_confirmButton.ResetButton();
-		OnInputChanged(@string);
+		OnInputChanged(text);
 	}
 
 	private void OnDisable()
@@ -59,17 +59,18 @@ public class KIDUI_SetupScreen : MonoBehaviour
 	public void OnStartSetup()
 	{
 		base.gameObject.SetActive(value: true);
-		TelemetryData telemetryData = default(TelemetryData);
-		telemetryData.EventName = "kid_screen_shown";
-		telemetryData.CustomTags = new string[3]
+		TelemetryData telemetryData = new TelemetryData
 		{
-			"kid_setup",
-			KIDTelemetry.GameVersionCustomTag,
-			KIDTelemetry.GameEnvironment
+			EventName = "kid_screen_shown",
+			CustomTags = new string[3]
+			{
+				"kid_setup",
+				KIDTelemetry.GameVersionCustomTag,
+				KIDTelemetry.GameEnvironment
+			},
+			BodyData = new Dictionary<string, string> { { "screen", "enter_email" } }
 		};
-		telemetryData.BodyData = new Dictionary<string, string> { { "screen", "enter_email" } };
-		TelemetryData telemetryData2 = telemetryData;
-		GorillaTelemetry.EnqueueTelemetryEvent(telemetryData2.EventName, telemetryData2.BodyData, telemetryData2.CustomTags);
+		GorillaTelemetry.EnqueueTelemetryEvent(telemetryData.EventName, telemetryData.BodyData, telemetryData.CustomTags);
 	}
 
 	public void OnInputSelected()

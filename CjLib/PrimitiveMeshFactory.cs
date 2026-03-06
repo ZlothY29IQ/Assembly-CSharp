@@ -91,8 +91,8 @@ public class PrimitiveMeshFactory
 		Mesh mesh = s_lineMeshPool[s_iPooledMesh++];
 		if (mesh == null)
 		{
-			Mesh mesh3 = (s_lineMeshPool[s_iPooledMesh - 1] = new Mesh());
-			mesh = mesh3;
+			Mesh mesh2 = (s_lineMeshPool[s_iPooledMesh - 1] = new Mesh());
+			mesh = mesh2;
 		}
 		return mesh;
 	}

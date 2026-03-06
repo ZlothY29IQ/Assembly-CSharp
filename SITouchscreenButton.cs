@@ -5,6 +5,12 @@ using UnityEngine.Events;
 
 public class SITouchscreenButton : MonoBehaviour, IClickable
 {
+	public enum ButtonMode
+	{
+		Normal,
+		Toggle
+	}
+
 	public enum SITouchscreenButtonType
 	{
 		Back,
@@ -21,8 +27,11 @@ public class SITouchscreenButton : MonoBehaviour, IClickable
 		Confirm,
 		Cancel,
 		OverrideFailure,
-		None
+		None,
+		Subscribe
 	}
+
+	public ButtonMode buttonMode;
 
 	public SITouchscreenButtonType buttonType;
 
@@ -34,7 +43,15 @@ public class SITouchscreenButton : MonoBehaviour, IClickable
 	[SerializeField]
 	private float _pressSoundVolume = 0.1f;
 
+	[SerializeField]
+	private bool _isToggledOn;
+
+	[SerializeField]
+	private bool _startToggledOn;
+
 	public UnityEvent<SITouchscreenButtonType, int, int> buttonPressed;
+
+	public UnityEvent<SITouchscreenButtonType, int, int, bool> buttonToggled;
 
 	private SIScreenRegion _screenRegion;
 
@@ -49,13 +66,16 @@ public class SITouchscreenButton : MonoBehaviour, IClickable
 	{
 		get
 		{
-			if (!_screenRegion)
+			bool flag = Time.time - _enableTime >= 0.2f;
+			if ((bool)_screenRegion)
 			{
-				return Time.time - _enableTime >= 0.2f;
+				flag = flag && !_screenRegion.HasPressedButton;
 			}
-			return !_screenRegion.HasPressedButton;
+			return flag;
 		}
 	}
+
+	public bool IsToggledOn => _isToggledOn;
 
 	private void Awake()
 	{
@@ -63,6 +83,10 @@ public class SITouchscreenButton : MonoBehaviour, IClickable
 		if (componentInParent != null)
 		{
 			_screenRegion = componentInParent.ScreenRegion;
+		}
+		if (buttonMode == ButtonMode.Toggle)
+		{
+			_isToggledOn = _startToggledOn;
 		}
 	}
 
@@ -89,10 +113,31 @@ public class SITouchscreenButton : MonoBehaviour, IClickable
 			{
 				_screenRegion.RegisterButtonPress();
 			}
-			buttonPressed.Invoke(buttonType, data, NetworkSystem.Instance.LocalPlayer.ActorNumber);
+			if (buttonMode == ButtonMode.Normal)
+			{
+				buttonPressed.Invoke(buttonType, data, NetworkSystem.Instance.LocalPlayer.ActorNumber);
+			}
+			else if (buttonMode == ButtonMode.Toggle)
+			{
+				bool arg = !_isToggledOn;
+				buttonToggled.Invoke(buttonType, data, NetworkSystem.Instance.LocalPlayer.ActorNumber, arg);
+			}
 			if (_pressSound != null)
 			{
 				GTAudioOneShot.Play(_pressSound, base.transform.position, _pressSoundVolume);
+			}
+		}
+	}
+
+	public void SetToggleState(bool state, bool invokeEvent = false)
+	{
+		if (buttonMode == ButtonMode.Toggle)
+		{
+			bool flag = _isToggledOn != state;
+			_isToggledOn = state;
+			if (invokeEvent && flag)
+			{
+				buttonToggled.Invoke(buttonType, data, NetworkSystem.Instance.LocalPlayer.ActorNumber, _isToggledOn);
 			}
 		}
 	}

@@ -9,26 +9,29 @@ public struct GroupJoinZoneAB
 
 	public static GroupJoinZoneAB operator &(GroupJoinZoneAB one, GroupJoinZoneAB two)
 	{
-		GroupJoinZoneAB result = default(GroupJoinZoneAB);
-		result.a = one.a & two.a;
-		result.b = one.b & two.b;
-		return result;
+		return new GroupJoinZoneAB
+		{
+			a = (one.a & two.a),
+			b = (one.b & two.b)
+		};
 	}
 
 	public static GroupJoinZoneAB operator |(GroupJoinZoneAB one, GroupJoinZoneAB two)
 	{
-		GroupJoinZoneAB result = default(GroupJoinZoneAB);
-		result.a = one.a | two.a;
-		result.b = one.b | two.b;
-		return result;
+		return new GroupJoinZoneAB
+		{
+			a = (one.a | two.a),
+			b = (one.b | two.b)
+		};
 	}
 
 	public static GroupJoinZoneAB operator ~(GroupJoinZoneAB z)
 	{
-		GroupJoinZoneAB result = default(GroupJoinZoneAB);
-		result.a = ~z.a;
-		result.b = ~z.b;
-		return result;
+		return new GroupJoinZoneAB
+		{
+			a = ~z.a,
+			b = ~z.b
+		};
 	}
 
 	public static bool operator ==(GroupJoinZoneAB one, GroupJoinZoneAB two)
@@ -49,6 +52,15 @@ public struct GroupJoinZoneAB
 		return true;
 	}
 
+	public bool HasAnyFlag(GroupJoinZoneAB other)
+	{
+		if ((a & other.a) == 0)
+		{
+			return (b & other.b) != 0;
+		}
+		return true;
+	}
+
 	public override bool Equals(object other)
 	{
 		return this == (GroupJoinZoneAB)other;
@@ -61,9 +73,10 @@ public struct GroupJoinZoneAB
 
 	public static implicit operator GroupJoinZoneAB(int d)
 	{
-		GroupJoinZoneAB result = default(GroupJoinZoneAB);
-		result.a = (GroupJoinZoneA)d;
-		return result;
+		return new GroupJoinZoneAB
+		{
+			a = (GroupJoinZoneA)d
+		};
 	}
 
 	public override string ToString()

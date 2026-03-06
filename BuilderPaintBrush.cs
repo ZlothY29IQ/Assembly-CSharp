@@ -138,7 +138,7 @@ public class BuilderPaintBrush : HoldableObject
 
 	private void LateUpdate()
 	{
-		if (brushState != 0)
+		if (brushState != PaintBrushState.Inactive)
 		{
 			if (holdingHand == null || materialType == -1)
 			{

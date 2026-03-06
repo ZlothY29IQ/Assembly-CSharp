@@ -30,4 +30,10 @@ public interface IGameEntityZoneComponent
 	long ProcessMigratedGameEntityCreateData(GameEntity entity, long createData);
 
 	bool ValidateMigratedGameEntity(int netId, int entityTypeId, Vector3 position, Quaternion rotation, long createData, int actorNr);
+
+	bool ValidateCreateMultipleItems(int zoneId, byte[] compressedStateData, int EntityCount);
+
+	bool ValidateCreateItem(int nedId, int entityTypeId, Vector3 position, Quaternion rotation, long createData, int createdByEntityNetId);
+
+	bool ValidateCreateItemBatchSize(int size);
 }

@@ -29,7 +29,7 @@ public class GRToolScannable : GRScannable
 			{
 				toolParts = upgradePiece.matchingUpgrade;
 			}
-			if (toolParts != 0)
+			if (toolParts != GRToolProgressionManager.ToolParts.None)
 			{
 				metadata = reactor.toolProgression.GetPartMetadata(toolParts);
 			}

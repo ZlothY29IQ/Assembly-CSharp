@@ -866,7 +866,7 @@ public class CustomMapsDetailsScreen : CustomMapsTerminalScreen
 
 	public void OnMapLoadProgress(MapLoadStatus loadStatus, int progress, string message)
 	{
-		if (loadStatus != 0)
+		if (loadStatus != MapLoadStatus.None)
 		{
 			mapLoadError = false;
 			loadingMapMessageText.fontSize = 40f;

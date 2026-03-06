@@ -10,7 +10,11 @@ public static class GamePlayConfig
 
 	public const float TAG_TIME_ROLLBACK = 0.2f;
 
-	public const int MAX_ROOM_SIZE = 10;
+	public const int MAX_ROOM_SIZE = 20;
+
+	public const int MAX_ROOM_SIZE_NOSUBS = 10;
 
 	public const float SPEED_TELEPORT_THRESHOLD = 100f;
+
+	public const string GTFC_APPEND = ":GTFC";
 }

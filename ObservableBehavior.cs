@@ -6,6 +6,9 @@ public abstract class ObservableBehavior : MonoBehaviour, IGorillaSliceableSimpl
 
 	private bool observable = true;
 
+	[SerializeField]
+	private ObservableBehaviorRule observableBehaviorRule;
+
 	private void OnEnable()
 	{
 		GorillaSlicerSimpleManager.RegisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.LateUpdate);
@@ -35,9 +38,9 @@ public abstract class ObservableBehavior : MonoBehaviour, IGorillaSliceableSimpl
 	void IGorillaSliceableSimple.SliceUpdate()
 	{
 		Transform transform = Camera.main.transform;
-		Vector3.Distance(transform.position, base.transform.position);
-		Vector3.Dot((transform.position - base.transform.position).normalized, transform.transform.forward);
-		bool flag = true;
+		float num = Vector3.Distance(transform.position, base.transform.position);
+		float num2 = ((!(observableBehaviorRule != null) || !observableBehaviorRule.InverseObservable) ? Vector3.Dot((transform.position - base.transform.position).normalized, transform.transform.forward) : Vector3.Dot((base.transform.position - transform.position).normalized, base.transform.forward));
+		bool flag = observableBehaviorRule == null || (observableBehaviorRule.ObservableDistanceRange.x <= num && num <= observableBehaviorRule.ObservableDistanceRange.y && observableBehaviorRule.ObservableDotRange.x <= num2 && num2 <= observableBehaviorRule.ObservableDotRange.y);
 		if (firstFrame || observable != flag)
 		{
 			if (flag)

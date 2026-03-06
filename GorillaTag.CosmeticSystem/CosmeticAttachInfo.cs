@@ -13,17 +13,12 @@ public struct CosmeticAttachInfo
 
 	public XformOffset offset;
 
-	public static CosmeticAttachInfo Identity
+	public static CosmeticAttachInfo Identity => new CosmeticAttachInfo
 	{
-		get
-		{
-			CosmeticAttachInfo result = default(CosmeticAttachInfo);
-			result.selectSide = ECosmeticSelectSide.Both;
-			result.parentBone = GTHardCodedBones.EBone.None;
-			result.offset = XformOffset.Identity;
-			return result;
-		}
-	}
+		selectSide = ECosmeticSelectSide.Both,
+		parentBone = GTHardCodedBones.EBone.None,
+		offset = XformOffset.Identity
+	};
 
 	public CosmeticAttachInfo(ECosmeticSelectSide selectSide, GTHardCodedBones.EBone parentBone, XformOffset offset)
 	{

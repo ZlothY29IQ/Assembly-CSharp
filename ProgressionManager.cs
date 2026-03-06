@@ -965,7 +965,7 @@ public class ProgressionManager : MonoBehaviour
 			float num = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, retryCounters[requestType] + 1));
 			Debug.LogWarning($"PM: Retrying ... attempt #{retryCounters[requestType] + 1}, waiting {num}s");
 			retryCounters[requestType]++;
-			yield return new WaitForSeconds(num);
+			yield return new WaitForSecondsRealtime(num);
 			actionToTake(data);
 		}
 		else

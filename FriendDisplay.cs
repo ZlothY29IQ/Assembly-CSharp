@@ -426,12 +426,12 @@ public class FriendDisplay : MonoBehaviour
 		for (int i = 0; i <= gridDimension; i++)
 		{
 			float t = (float)i / (float)gridDimension;
-			Vector3 from = Vector3.Lerp(a, vector, t);
+			Vector3 vector3 = Vector3.Lerp(a, vector, t);
 			Vector3 to = Vector3.Lerp(vector2, b, t);
-			Gizmos.DrawLine(from, to);
-			Vector3 from2 = Vector3.Lerp(a, vector2, t);
+			Gizmos.DrawLine(vector3, to);
+			Vector3 vector4 = Vector3.Lerp(a, vector2, t);
 			Vector3 to2 = Vector3.Lerp(vector, b, t);
-			Gizmos.DrawLine(from2, to2);
+			Gizmos.DrawLine(vector4, to2);
 		}
 	}
 }

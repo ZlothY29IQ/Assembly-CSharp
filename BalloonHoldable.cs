@@ -430,7 +430,7 @@ public class BalloonHoldable : TransferrableObject, IFXContext
 		{
 			worldShareableInstance.EnableRemoteSync = ShouldSimulate();
 		}
-		if (balloonState != 0)
+		if (balloonState != BalloonStates.Normal)
 		{
 			RunLocalPopSM();
 		}

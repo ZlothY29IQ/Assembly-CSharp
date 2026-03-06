@@ -54,7 +54,7 @@ public class PaperPlaneThrowable : TransferrableObject
 		{
 			return;
 		}
-		GorillaNot.IncrementRPCCall(info, "OnLaunchRPC");
+		MonkeAgent.IncrementRPCCall(info, "OnLaunchRPC");
 		if (sender != receiver || !this)
 		{
 			return;
@@ -110,7 +110,7 @@ public class PaperPlaneThrowable : TransferrableObject
 		{
 			return;
 		}
-		GorillaNot.IncrementRPCCall(new PhotonMessageInfo(netPlayer.GetPlayerRef(), PhotonNetwork.ServerTimestamp, null), "OnPhotonEvent");
+		MonkeAgent.IncrementRPCCall(new PhotonMessageInfo(netPlayer.GetPlayerRef(), PhotonNetwork.ServerTimestamp, null), "OnPhotonEvent");
 		if (!m_spamCheck.CheckCallTime(Time.unscaledTime))
 		{
 			return;
@@ -232,7 +232,7 @@ public class PaperPlaneThrowable : TransferrableObject
 			obj.transform.localScale = base.transform.lossyScale;
 			PaperPlaneProjectile component = obj.GetComponent<PaperPlaneProjectile>();
 			component.OnHit += OnProjectileHit;
-			if (networkedStateEvents != 0)
+			if (networkedStateEvents != SyncOptions.None)
 			{
 				int state = (int)(itemState & (ItemStates)(-65));
 				component.SetTransferrableState(networkedStateEvents, state);
@@ -247,7 +247,7 @@ public class PaperPlaneThrowable : TransferrableObject
 	private void OnProjectileHit(Vector3 endPoint)
 	{
 		_renderer.forceRenderingOff = false;
-		if (IsLocalObject() && networkedStateEvents != 0 && resetOnDocked)
+		if (IsLocalObject() && networkedStateEvents != SyncOptions.None && resetOnDocked)
 		{
 			switch (networkedStateEvents)
 			{

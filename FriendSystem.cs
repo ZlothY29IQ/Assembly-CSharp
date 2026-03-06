@@ -82,13 +82,14 @@ public class FriendSystem : MonoBehaviour
 
 	public void SendFriendRequest(NetPlayer targetPlayer, GTZone stationZone, FriendRequestCallback callback)
 	{
-		FriendRequestData friendRequestData = default(FriendRequestData);
-		friendRequestData.completionCallback = callback;
-		friendRequestData.sendingPlayerId = NetworkSystem.Instance.LocalPlayer.UserId.GetHashCode();
-		friendRequestData.targetPlayerId = targetPlayer.UserId.GetHashCode();
-		friendRequestData.localTimeSent = Time.time;
-		friendRequestData.zone = stationZone;
-		FriendRequestData item = friendRequestData;
+		FriendRequestData item = new FriendRequestData
+		{
+			completionCallback = callback,
+			sendingPlayerId = NetworkSystem.Instance.LocalPlayer.UserId.GetHashCode(),
+			targetPlayerId = targetPlayer.UserId.GetHashCode(),
+			localTimeSent = Time.realtimeSinceStartup,
+			zone = stationZone
+		};
 		pendingFriendRequests.Add(item);
 		FriendBackendController.Instance.AddFriend(targetPlayer);
 	}
@@ -99,7 +100,7 @@ public class FriendSystem : MonoBehaviour
 		{
 			completionCallback = callback,
 			targetPlayerId = friend.Presence.FriendLinkId.GetHashCode(),
-			localTimeSent = Time.time
+			localTimeSent = Time.realtimeSinceStartup
 		});
 		FriendBackendController.Instance.RemoveFriend(friend);
 	}
@@ -167,7 +168,7 @@ public class FriendSystem : MonoBehaviour
 	{
 		if (succeeded)
 		{
-			lastFriendsListRefresh = Time.time;
+			lastFriendsListRefresh = Time.realtimeSinceStartup;
 			switch (FriendBackendController.Instance.MyPrivacyState)
 			{
 			default:
@@ -195,7 +196,7 @@ public class FriendSystem : MonoBehaviour
 				pendingFriendRequests[i].completionCallback?.Invoke(pendingFriendRequests[i].zone, pendingFriendRequests[i].sendingPlayerId, pendingFriendRequests[i].targetPlayerId, succeeded);
 				indexesToRemove.Add(i);
 			}
-			else if (pendingFriendRequests[i].localTimeSent + friendRequestExpirationTime < Time.time)
+			else if (pendingFriendRequests[i].localTimeSent + friendRequestExpirationTime < Time.realtimeSinceStartup)
 			{
 				indexesToRemove.Add(i);
 			}
@@ -221,7 +222,7 @@ public class FriendSystem : MonoBehaviour
 				pendingFriendRemovals[i].completionCallback?.Invoke(hashCode, succeeded);
 				indexesToRemove.Add(i);
 			}
-			else if (pendingFriendRemovals[i].localTimeSent + friendRequestExpirationTime < Time.time)
+			else if (pendingFriendRemovals[i].localTimeSent + friendRequestExpirationTime < Time.realtimeSinceStartup)
 			{
 				indexesToRemove.Add(i);
 			}

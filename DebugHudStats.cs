@@ -215,7 +215,7 @@ public class DebugHudStats : MonoBehaviour
 			lowFps = 0;
 		}
 		fpsWarning.gameObject.SetActive(lowFps > 5 && currentState == State.Inactive);
-		if (currentState != 0)
+		if (currentState != State.Inactive)
 		{
 			builder.Clear();
 			builder.Append("<color=\"" + colorFromState(currentState) + "\">");
@@ -227,7 +227,8 @@ public class DebugHudStats : MonoBehaviour
 			num = Mathf.Min(num, 90);
 			builder.Append((num < FPS_THRESHOLD) ? " - <color=\"red\">" : " - <color=\"white\">");
 			builder.Append(num);
-			builder.AppendLine(" fps</color>");
+			builder.Append($" fps / {FPS_THRESHOLD + 1} fps</color> ");
+			builder.AppendLine($"sfps: {GorillaTagger.Instance.SmoothedFramerate} (Health: {GorillaTagger.Instance.FramerateHealth})");
 			float eyeTextureResolutionScale = XRSettings.eyeTextureResolutionScale;
 			float renderViewportScale = XRSettings.renderViewportScale;
 			float renderScale = (GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset).renderScale;
@@ -240,7 +241,7 @@ public class DebugHudStats : MonoBehaviour
 			{
 				builder.AppendLine("Server Time Unavailable");
 			}
-			zones = GorillaTagger.Instance.offlineVRRig.zoneEntity.currentZone.ToString().ToUpperInvariant();
+			zones = GorillaTagger.Instance.offlineVRRig.zoneEntity.currentNode?.gameObject.name.ToUpperInvariant();
 			if (NetworkSystem.Instance.IsMasterClient)
 			{
 				builder.Append("H");

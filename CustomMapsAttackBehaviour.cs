@@ -109,7 +109,7 @@ public class CustomMapsAttackBehaviour : CustomMapsBehaviourBase
 
 	public override bool CanContinueExecuting()
 	{
-		if (state != 0 && controller.IsAnimationPlaying(attackAnimName))
+		if (state != State.Idle && controller.IsAnimationPlaying(attackAnimName))
 		{
 			return true;
 		}

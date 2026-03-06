@@ -1,10 +1,10 @@
-internal struct PlayIDWrappedData<T>
+internal struct PlayIDWrappedData<T>(T initialValue)
 {
-	private T currentValue;
+	private T currentValue = initialValue;
 
-	private T initialValue;
+	private T initialValue = initialValue;
 
-	private EnterPlayID id;
+	private EnterPlayID id = EnterPlayID.GetCurrent();
 
 	public T Value
 	{
@@ -21,12 +21,5 @@ internal struct PlayIDWrappedData<T>
 			currentValue = value;
 			id = EnterPlayID.GetCurrent();
 		}
-	}
-
-	public PlayIDWrappedData(T initialValue)
-	{
-		currentValue = initialValue;
-		this.initialValue = initialValue;
-		id = EnterPlayID.GetCurrent();
 	}
 }

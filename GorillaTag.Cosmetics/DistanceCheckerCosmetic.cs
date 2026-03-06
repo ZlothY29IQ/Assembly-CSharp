@@ -121,15 +121,15 @@ public class DistanceCheckerCosmetic : MonoBehaviour, ISpawnable, IGorillaSlicea
 		VRRig vRRig = currentClosestPlayer;
 		closestDistance = Vector3.positiveInfinity;
 		currentClosestPlayer = null;
-		foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+		foreach (VRRig activeRig in VRRigCache.ActiveRigs)
 		{
-			if (!others || !(ownerRig != null) || !(vrrig == ownerRig))
+			if (!others || !(ownerRig != null) || !(activeRig == ownerRig))
 			{
-				Vector3 distance = vrrig.transform.position - distanceFrom.position;
+				Vector3 distance = activeRig.transform.position - distanceFrom.position;
 				if (IsBelowThreshold(distance) && distance.sqrMagnitude < closestDistance.sqrMagnitude)
 				{
 					closestDistance = distance;
-					currentClosestPlayer = vrrig;
+					currentClosestPlayer = activeRig;
 				}
 			}
 		}
@@ -156,9 +156,9 @@ public class DistanceCheckerCosmetic : MonoBehaviour, ISpawnable, IGorillaSlicea
 			{
 				break;
 			}
-			foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+			foreach (VRRig activeRig in VRRigCache.ActiveRigs)
 			{
-				Vector3 distance2 = vrrig.transform.position - distanceFrom.position;
+				Vector3 distance2 = activeRig.transform.position - distanceFrom.position;
 				if (IsBelowThreshold(distance2))
 				{
 					UpdateState(State.BelowThreshold);
@@ -176,11 +176,11 @@ public class DistanceCheckerCosmetic : MonoBehaviour, ISpawnable, IGorillaSlicea
 			{
 				break;
 			}
-			foreach (VRRig vrrig2 in GorillaParent.instance.vrrigs)
+			foreach (VRRig activeRig2 in VRRigCache.ActiveRigs)
 			{
-				if (!(ownerRig != null) || !(vrrig2 == ownerRig))
+				if (!(ownerRig != null) || !(activeRig2 == ownerRig))
 				{
-					Vector3 distance3 = vrrig2.transform.position - distanceFrom.position;
+					Vector3 distance3 = activeRig2.transform.position - distanceFrom.position;
 					if (IsBelowThreshold(distance3))
 					{
 						UpdateState(State.BelowThreshold);

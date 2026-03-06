@@ -291,11 +291,11 @@ public class LurkerGhost : NetworkComponent
 		if (base.IsMine)
 		{
 			possibleTargets.Clear();
-			for (int i = 0; i < GorillaParent.instance.vrrigs.Count; i++)
+			for (int i = 0; i < VRRigCache.ActiveRigContainers.Count; i++)
 			{
-				if ((GorillaParent.instance.vrrigs[i].transform.position - base.transform.position).magnitude < maxDistance && GorillaParent.instance.vrrigs[i].creator != targetPlayer)
+				if ((VRRigCache.ActiveRigContainers[i].transform.position - base.transform.position).magnitude < maxDistance && VRRigCache.ActiveRigContainers[i].Creator != targetPlayer)
 				{
-					possibleTargets.Add(GorillaParent.instance.vrrigs[i].creator);
+					possibleTargets.Add(VRRigCache.ActiveRigContainers[i].Creator);
 				}
 			}
 			targetPlayer = null;
@@ -322,18 +322,19 @@ public class LurkerGhost : NetworkComponent
 
 	private void PickPlayer(NetPlayer player)
 	{
-		int num = GorillaParent.instance.vrrigs.FindIndex((VRRig x) => x.creator != null && x.creator == player);
-		if (num > -1 && num < GorillaParent.instance.vrrigs.Count)
+		int num = VRRigCache.ActiveRigContainers.FindIndex((RigContainer x) => x.Creator != null && x.Creator == player);
+		if (num > -1 && num < VRRigCache.ActiveRigContainers.Count)
 		{
-			targetPlayer = GorillaParent.instance.vrrigs[num].creator;
-			targetTransform = GorillaParent.instance.vrrigs[num].head.rigTarget;
-			targetVRRig = GorillaParent.instance.vrrigs[num];
+			VRRig rig = VRRigCache.ActiveRigContainers[num].Rig;
+			targetPlayer = rig.creator;
+			targetTransform = rig.head.rigTarget;
+			targetVRRig = rig;
 		}
 	}
 
 	private void SeekPlayer()
 	{
-		if (targetTransform == null)
+		if (targetTransform.IsNull())
 		{
 			ChangeState(ghostState.patrol);
 			return;

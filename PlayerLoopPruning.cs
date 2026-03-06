@@ -25,32 +25,34 @@ public class PlayerLoopPruning : MonoBehaviour
 
 	private PlayerLoopSystem RemoveSystem<T>(in PlayerLoopSystem loopSystem) where T : struct
 	{
-		PlayerLoopSystem playerLoopSystem = default(PlayerLoopSystem);
-		playerLoopSystem.loopConditionFunction = loopSystem.loopConditionFunction;
-		playerLoopSystem.type = loopSystem.type;
-		playerLoopSystem.updateDelegate = loopSystem.updateDelegate;
-		playerLoopSystem.updateFunction = loopSystem.updateFunction;
-		PlayerLoopSystem result = playerLoopSystem;
+		PlayerLoopSystem result = new PlayerLoopSystem
+		{
+			loopConditionFunction = loopSystem.loopConditionFunction,
+			type = loopSystem.type,
+			updateDelegate = loopSystem.updateDelegate,
+			updateFunction = loopSystem.updateFunction
+		};
 		List<PlayerLoopSystem> list = new List<PlayerLoopSystem>();
 		if (loopSystem.subSystemList != null)
 		{
 			for (int i = 0; i < loopSystem.subSystemList.Length; i++)
 			{
-				PlayerLoopSystem playerLoopSystem2 = loopSystem.subSystemList[i];
-				playerLoopSystem = default(PlayerLoopSystem);
-				playerLoopSystem.loopConditionFunction = playerLoopSystem2.loopConditionFunction;
-				playerLoopSystem.type = playerLoopSystem2.type;
-				playerLoopSystem.updateDelegate = playerLoopSystem2.updateDelegate;
-				playerLoopSystem.updateFunction = playerLoopSystem2.updateFunction;
-				PlayerLoopSystem item = playerLoopSystem;
-				if (playerLoopSystem2.subSystemList != null)
+				PlayerLoopSystem playerLoopSystem = loopSystem.subSystemList[i];
+				PlayerLoopSystem item = new PlayerLoopSystem
+				{
+					loopConditionFunction = playerLoopSystem.loopConditionFunction,
+					type = playerLoopSystem.type,
+					updateDelegate = playerLoopSystem.updateDelegate,
+					updateFunction = playerLoopSystem.updateFunction
+				};
+				if (playerLoopSystem.subSystemList != null)
 				{
 					List<PlayerLoopSystem> list2 = new List<PlayerLoopSystem>();
-					for (int j = 0; j < playerLoopSystem2.subSystemList.Length; j++)
+					for (int j = 0; j < playerLoopSystem.subSystemList.Length; j++)
 					{
-						if (!removeSubsystemList.Contains(playerLoopSystem2.subSystemList[j].type.Name) && (!isAndroid || !androidSubsystemExtras.Contains(playerLoopSystem2.subSystemList[j].type.Name)))
+						if (!removeSubsystemList.Contains(playerLoopSystem.subSystemList[j].type.Name) && (!isAndroid || !androidSubsystemExtras.Contains(playerLoopSystem.subSystemList[j].type.Name)))
 						{
-							list2.Add(playerLoopSystem2.subSystemList[j]);
+							list2.Add(playerLoopSystem.subSystemList[j]);
 						}
 					}
 					item.subSystemList = list2.ToArray();
@@ -58,14 +60,16 @@ public class PlayerLoopPruning : MonoBehaviour
 				list.Add(item);
 			}
 		}
-		playerLoopSystem = default(PlayerLoopSystem);
-		playerLoopSystem.type = typeof(PlayerLoopPruning);
-		playerLoopSystem.updateDelegate = PhaseSyncDestroyer3000Start;
-		PlayerLoopSystem item2 = playerLoopSystem;
-		playerLoopSystem = default(PlayerLoopSystem);
-		playerLoopSystem.type = typeof(PlayerLoopPruning);
-		playerLoopSystem.updateDelegate = PhaseSyncDestroyer3000End;
-		PlayerLoopSystem item3 = playerLoopSystem;
+		PlayerLoopSystem item2 = new PlayerLoopSystem
+		{
+			type = typeof(PlayerLoopPruning),
+			updateDelegate = PhaseSyncDestroyer3000Start
+		};
+		PlayerLoopSystem item3 = new PlayerLoopSystem
+		{
+			type = typeof(PlayerLoopPruning),
+			updateDelegate = PhaseSyncDestroyer3000End
+		};
 		list.Insert(0, item2);
 		list.Add(item3);
 		result.subSystemList = list.ToArray();
@@ -83,6 +87,7 @@ public class PlayerLoopPruning : MonoBehaviour
 		long elapsedTicks = sw.ElapsedTicks;
 		long num = (long)((1f / (float)Application.targetFrameRate - slop) * 10000000f);
 		long num2 = num - elapsedTicks;
+		num2 -= GorillaSimpleBackgroundWorkerManager.DoWork(num2);
 		if (num2 < 0)
 		{
 			sw.Restart();

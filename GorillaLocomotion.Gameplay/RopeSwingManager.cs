@@ -126,7 +126,7 @@ public class RopeSwingManager : NetworkSceneObject
 	{
 		if (info.Sender != null)
 		{
-			GorillaNot.IncrementRPCCall(info, "SetVelocityShared");
+			MonkeAgent.IncrementRPCCall(info, "SetVelocityShared");
 		}
 		if (TryGetRope(ropeId, out var result) && result != null)
 		{

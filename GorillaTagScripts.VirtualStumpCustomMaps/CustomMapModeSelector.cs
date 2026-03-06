@@ -129,7 +129,7 @@ public class CustomMapModeSelector : GameModeSelectorButtonLayout
 		GorillaComputer.instance.SetGameModeWithoutButton(defaultGamemodeForLoadedMap.ToString());
 	}
 
-	public override async void SetupButtons()
+	protected override async void SetupButtons()
 	{
 		if (superToggleButton != null)
 		{

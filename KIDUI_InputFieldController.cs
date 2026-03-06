@@ -107,7 +107,7 @@ public class KIDUI_InputFieldController : MonoBehaviour, IPointerEnterHandler, I
 		{
 			Debug.Log("[KID::INPUT_FIELD_CONTROLLER] Selecting and Activating Input Field");
 			EVROverlayError eVROverlayError = OpenVR.Overlay.ShowKeyboard(0, 0, 1u, "Enter Email", 1024u, _inputField.text ?? "", 0uL);
-			if (eVROverlayError != 0)
+			if (eVROverlayError != EVROverlayError.None)
 			{
 				Debug.LogError("[KID::INPUT_FIELD_CONTROLLER] Failed to open keyboard. Resulted with error: [" + eVROverlayError.ToString() + "]");
 				return;

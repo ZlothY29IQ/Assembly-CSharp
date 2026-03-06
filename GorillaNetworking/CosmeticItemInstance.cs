@@ -16,6 +16,10 @@ public class CosmeticItemInstance
 
 	public List<GameObject> holdableObjects = new List<GameObject>();
 
+	public List<Renderer> allRenderers = new List<Renderer>();
+
+	public List<ParticleSystem> allParticles = new List<ParticleSystem>();
+
 	public CosmeticAnchorAntiIntersectOffsets clippingOffsets;
 
 	public bool isHoldableItem;
@@ -26,7 +30,9 @@ public class CosmeticItemInstance
 
 	private VRRigAnchorOverrides _anchorOverrides;
 
-	private CosmeticsController.CosmeticSlots activeSlot;
+	private CosmeticsController.CosmeticSlots _activeSlot;
+
+	public CosmeticsController.CosmeticSlots ActiveSlot => _activeSlot;
 
 	private void EnableItem(GameObject obj, bool enable)
 	{
@@ -46,7 +52,7 @@ public class CosmeticItemInstance
 		{
 			if (clippingOffsets.nameTag.enabled)
 			{
-				_anchorOverrides.UpdateNameTagOffset(itemEnabled ? clippingOffsets.nameTag.offset : XformOffset.Identity, itemEnabled, activeSlot);
+				_anchorOverrides.UpdateNameTagOffset(itemEnabled ? clippingOffsets.nameTag.offset : XformOffset.Identity, itemEnabled, _activeSlot);
 			}
 			if (clippingOffsets.leftArm.enabled)
 			{
@@ -66,7 +72,7 @@ public class CosmeticItemInstance
 			}
 			if (clippingOffsets.badge.enabled)
 			{
-				_anchorOverrides.UpdateBadgeOffset(itemEnabled ? clippingOffsets.badge.offset : XformOffset.Identity, itemEnabled, activeSlot);
+				_anchorOverrides.UpdateBadgeOffset(itemEnabled ? clippingOffsets.badge.offset : XformOffset.Identity, itemEnabled, _activeSlot);
 			}
 			if (clippingOffsets.builderWatch.enabled)
 			{
@@ -112,7 +118,7 @@ public class CosmeticItemInstance
 	{
 		bool flag = CosmeticsController.CosmeticSet.IsSlotLeftHanded(cosmeticSlot);
 		bool flag2 = CosmeticsController.CosmeticSet.IsSlotRightHanded(cosmeticSlot);
-		activeSlot = cosmeticSlot;
+		_activeSlot = cosmeticSlot;
 		if (rig != null && _anchorOverrides == null)
 		{
 			_anchorOverrides = rig.gameObject.GetComponent<VRRigAnchorOverrides>();
@@ -152,5 +158,22 @@ public class CosmeticItemInstance
 			}
 		}
 		ApplyClippingOffsets(itemEnabled: true);
+	}
+
+	public void ToggleRenderers(bool enabled)
+	{
+		for (int i = 0; i < allRenderers.Count; i++)
+		{
+			allRenderers[i].enabled = enabled;
+		}
+	}
+
+	public void ToggleParticles(bool enabled)
+	{
+		for (int i = 0; i < allParticles.Count; i++)
+		{
+			ParticleSystem.EmissionModule emission = allParticles[i].emission;
+			emission.enabled = enabled;
+		}
 	}
 }

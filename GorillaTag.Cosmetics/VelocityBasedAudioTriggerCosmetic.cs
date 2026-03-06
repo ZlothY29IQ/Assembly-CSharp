@@ -62,7 +62,7 @@ public class VelocityBasedAudioTriggerCosmetic : MonoBehaviour
 		}
 		else if (soundBank != null && soundBank.soundBank != null && !soundBank.isPlaying)
 		{
-			soundBank.Play(num, null);
+			soundBank.Play(num);
 		}
 	}
 }

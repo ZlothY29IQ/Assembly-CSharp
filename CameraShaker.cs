@@ -16,7 +16,7 @@ public class CameraShaker : MonoBehaviour
 
 	private Vector2 freqRange;
 
-	private static event Action<float, float, Vector2, bool> ShakeRequested;
+	private static event Action<float, float, Vector2, bool, Transform, float> ShakeRequested;
 
 	private static event Action HaltRequested;
 
@@ -24,7 +24,7 @@ public class CameraShaker : MonoBehaviour
 	{
 		if (CameraShaker.ShakeRequested != null)
 		{
-			CameraShaker.ShakeRequested(duration, magnitude, new Vector2(0.02f, 0.1f), arg4: true);
+			CameraShaker.ShakeRequested(duration, magnitude, new Vector2(0.02f, 0.1f), arg4: true, null, 0f);
 		}
 	}
 
@@ -32,7 +32,7 @@ public class CameraShaker : MonoBehaviour
 	{
 		if (CameraShaker.ShakeRequested != null)
 		{
-			CameraShaker.ShakeRequested(duration, magnitude, freqRange, arg4: true);
+			CameraShaker.ShakeRequested(duration, magnitude, freqRange, arg4: true, null, 0f);
 		}
 	}
 
@@ -40,7 +40,15 @@ public class CameraShaker : MonoBehaviour
 	{
 		if (CameraShaker.ShakeRequested != null)
 		{
-			CameraShaker.ShakeRequested(duration, magnitude, freqRange, rollOffOverDuration);
+			CameraShaker.ShakeRequested(duration, magnitude, freqRange, rollOffOverDuration, null, 0f);
+		}
+	}
+
+	public static void ShakeInProximity(float duration, float magnitude, Vector2 freqRange, bool rollOffOverDuration, Transform source, float distance)
+	{
+		if (CameraShaker.ShakeRequested != null)
+		{
+			CameraShaker.ShakeRequested(duration, magnitude, freqRange, rollOffOverDuration, source, distance);
 		}
 	}
 
@@ -58,14 +66,14 @@ public class CameraShaker : MonoBehaviour
 		HaltRequested += _HaltRequested;
 	}
 
-	private void _ShakeRequested(float _duration, float _magnitude, Vector2 _freqRange, bool _rollOff)
+	private void _ShakeRequested(float _duration, float _magnitude, Vector2 _freqRange, bool _rollOff, Transform source, float distance)
 	{
 		stopTime = Time.time + _duration;
 		duration = _duration;
 		magnitude = _magnitude;
 		freqRange = _freqRange;
 		rollOff = _rollOff;
-		if (!rumbling)
+		if (!rumbling && (source == null || (base.transform.position - source.transform.position).sqrMagnitude < distance * distance))
 		{
 			StartCoroutine(crRumble());
 		}

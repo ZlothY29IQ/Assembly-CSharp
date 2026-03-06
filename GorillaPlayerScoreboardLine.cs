@@ -195,7 +195,7 @@ public class GorillaPlayerScoreboardLine : MonoBehaviour
 				emptyRigCount++;
 				if (emptyRigCount > 30)
 				{
-					GorillaNot.instance.SendReport("empty rig", linePlayer.UserId, linePlayer.NickName);
+					MonkeAgent.instance.SendReport("empty rig", linePlayer.UserId, linePlayer.NickName);
 				}
 			}
 		}
@@ -273,7 +273,7 @@ public class GorillaPlayerScoreboardLine : MonoBehaviour
 		catch (Exception)
 		{
 			playerNameVisible = linePlayer.DefaultName;
-			GorillaNot.instance.SendReport("NmError", linePlayer.UserId, linePlayer.NickName);
+			MonkeAgent.instance.SendReport("NmError", linePlayer.UserId, linePlayer.NickName);
 		}
 	}
 
@@ -382,7 +382,7 @@ public class GorillaPlayerScoreboardLine : MonoBehaviour
 			else
 			{
 				text = "BADGORILLA";
-				GorillaNot.instance.SendReport("evading the name ban", linePlayer.UserId, linePlayer.NickName);
+				MonkeAgent.instance.SendReport("evading the name ban", linePlayer.UserId, linePlayer.NickName);
 			}
 		}
 		return text;

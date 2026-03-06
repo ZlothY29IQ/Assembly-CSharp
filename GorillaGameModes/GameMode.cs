@@ -116,11 +116,11 @@ public class GameMode : MonoBehaviour
 		activeGameMode = null;
 		activeNetworkHandler = null;
 		CurrentGameModeType = GameModeType.None;
-		optOutPlayers = new HashSet<int>(10);
-		_participatingPlayers = new List<NetPlayer>(10);
-		_oldPlayersBuffer = new NetPlayer[10];
-		_tempAddedPlayers = new List<NetPlayer>(10);
-		_tempRemovedPlayers = new List<NetPlayer>(10);
+		optOutPlayers = new HashSet<int>(20);
+		_participatingPlayers = new List<NetPlayer>(20);
+		_oldPlayersBuffer = new NetPlayer[20];
+		_tempAddedPlayers = new List<NetPlayer>(20);
+		_tempRemovedPlayers = new List<NetPlayer>(20);
 		StaticLoad();
 	}
 
@@ -460,7 +460,7 @@ public class GameMode : MonoBehaviour
 		}
 		_participatingPlayers.Clear();
 		List<NetPlayer> playersInRoom = RoomSystem.PlayersInRoom;
-		int num = Mathf.Min(playersInRoom.Count, 10);
+		int num = Mathf.Min(playersInRoom.Count, 20);
 		for (int j = 0; j < num; j++)
 		{
 			if (CanParticipate(playersInRoom[j]))

@@ -27,15 +27,10 @@ public class LckSocialCamera : NetworkComponent, IGorillaSliceableSimple
 
 	[StructLayout(LayoutKind.Explicit, Size = 4)]
 	[NetworkStructWeaved(1)]
-	private struct CameraData : INetworkStruct
+	private struct CameraData(CameraState state) : INetworkStruct
 	{
 		[FieldOffset(0)]
-		public CameraState currentState;
-
-		public CameraData(CameraState state)
-		{
-			currentState = state;
-		}
+		public CameraState currentState = state;
 	}
 
 	[SerializeField]

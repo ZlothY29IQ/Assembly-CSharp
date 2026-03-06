@@ -56,6 +56,7 @@ public class DJScratchSoundPlayer : MonoBehaviour, ISpawnable
 		{
 			_events.Activate -= new Action<int, int, object[], PhotonMessageInfoWrapped>(OnPlayEvent);
 			_events.Dispose();
+			_events = null;
 		}
 	}
 

@@ -39,12 +39,14 @@ public struct BoundsInfo
 		Vector4 column2 = orientedBoundingBox.Axis2;
 		Vector4 column3 = orientedBoundingBox.Axis3;
 		Vector4 column4 = new Vector4(0f, 0f, 0f, 1f);
-		BoundsInfo result = default(BoundsInfo);
-		result.center = orientedBoundingBox.Center;
-		result.size = orientedBoundingBox.Extent * 2f;
-		result.rotation = new Matrix4x4(column, column2, column3, column4).rotation;
-		result.scale = Vector3.one;
-		result.inflate = 1f;
+		BoundsInfo result = new BoundsInfo
+		{
+			center = orientedBoundingBox.Center,
+			size = orientedBoundingBox.Extent * 2f,
+			rotation = new Matrix4x4(column, column2, column3, column4).rotation,
+			scale = Vector3.one,
+			inflate = 1f
+		};
 		Bounds bounds = GeometryUtility.CalculateBounds(vertices, Matrix4x4.identity);
 		result.centerAA = bounds.center;
 		result.sizeAA = bounds.size;

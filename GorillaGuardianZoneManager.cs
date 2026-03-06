@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using GorillaExtensions;
 using GorillaGameModes;
 using Photon.Pun;
 using Photon.Realtime;
@@ -370,11 +371,11 @@ public class GorillaGuardianZoneManager : MonoBehaviourPunCallbacks, IPunObserva
 	private List<Transform> SortByDistanceToNearestPlayer()
 	{
 		List<Vector3> playerPositions = new List<Vector3>();
-		foreach (VRRig vrrig in GorillaParent.instance.vrrigs)
+		foreach (RigContainer activeRigContainer in VRRigCache.ActiveRigContainers)
 		{
-			if (!(vrrig == null))
+			if (!activeRigContainer.IsNull())
 			{
-				playerPositions.Add(vrrig.transform.position);
+				playerPositions.Add(activeRigContainer.transform.position);
 			}
 		}
 		_sortedIdolPositions.Clear();
@@ -392,16 +393,16 @@ public class GorillaGuardianZoneManager : MonoBehaviourPunCallbacks, IPunObserva
 		}
 		float GetClosestPlayerSqrDistance(Vector3 idolPosition)
 		{
-			float num2 = float.PositiveInfinity;
+			float num = float.PositiveInfinity;
 			foreach (Vector3 item in playerPositions)
 			{
-				float num3 = Vector3.SqrMagnitude(idolPosition - item);
-				if (num3 < num2)
+				float num2 = Vector3.SqrMagnitude(idolPosition - item);
+				if (num2 < num)
 				{
-					num2 = num3;
+					num = num2;
 				}
 			}
-			return num2;
+			return num;
 		}
 	}
 

@@ -384,7 +384,9 @@ public class SIGadgetStilt : SIGadget
 
 	private void SpinMotor(float dt)
 	{
-		currentMotorAngle = (currentMotorAngle + rotateSpeedFactor * dt) % 360f;
+		SuperInfectionManager activeSuperInfectionManager = SuperInfectionManager.activeSuperInfectionManager;
+		float num = (((object)activeSuperInfectionManager != null && activeSuperInfectionManager.IsSupercharged) ? 1.5f : 1f);
+		currentMotorAngle = (currentMotorAngle + rotateSpeedFactor * num * dt) % 360f;
 		motorTransform.localRotation = Quaternion.AngleAxis(currentMotorAngle, Vector3.right);
 		if (!motorAudio.isPlaying)
 		{
@@ -508,7 +510,7 @@ public class SIGadgetStilt : SIGadget
 		{
 			return;
 		}
-		attachedPlayerActorNr = GetAttachedPlayerActorNumber();
+		attachedPlayerActorNr = gameEntity.AttachedPlayerActorNr;
 		attachedNetPlayer = NetworkSystem.Instance.GetPlayer(attachedPlayerActorNr);
 		if (GamePlayer.TryGetGamePlayer(attachedPlayerActorNr, out var out_gamePlayer))
 		{

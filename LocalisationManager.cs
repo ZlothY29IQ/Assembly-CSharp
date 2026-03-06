@@ -134,11 +134,11 @@ public class LocalisationManager : MonoBehaviour
 	private static void InitialiseLanguage()
 	{
 		_hasInitialised = false;
-		string @string = PlayerPrefs.GetString(LanugageSetPlayerPrefKey, "");
+		string text = PlayerPrefs.GetString(LanugageSetPlayerPrefKey, "");
 		Locale result = null;
-		if (!string.IsNullOrEmpty(@string) && LanguageSet)
+		if (!string.IsNullOrEmpty(text) && LanguageSet)
 		{
-			LoadPreviousLanguage(@string, out result);
+			LoadPreviousLanguage(text, out result);
 		}
 		else
 		{
@@ -249,23 +249,24 @@ public class LocalisationManager : MonoBehaviour
 		_cachedHasInitialised = true;
 		if (!(CurrentLanguage.Identifier.Code == newLocale.Identifier.Code))
 		{
-			TelemetryData telemetryData = default(TelemetryData);
-			telemetryData.EventName = "language_changed";
-			telemetryData.CustomTags = new string[1] { LocalizationTelemetry.GameVersionCustomTag };
-			telemetryData.BodyData = new Dictionary<string, string>
+			TelemetryData telemetryData = new TelemetryData
 			{
+				EventName = "language_changed",
+				CustomTags = new string[1] { LocalizationTelemetry.GameVersionCustomTag },
+				BodyData = new Dictionary<string, string>
 				{
-					"starting_language",
-					CurrentLanguage.Identifier.Code
-				},
-				{
-					"new_language",
-					newLocale.Identifier.Code
+					{
+						"starting_language",
+						CurrentLanguage.Identifier.Code
+					},
+					{
+						"new_language",
+						newLocale.Identifier.Code
+					}
 				}
 			};
-			TelemetryData telemetryData2 = telemetryData;
 			MothershipClientApiUnity.SetLanguage(newLocale.Identifier.Code);
-			GorillaTelemetry.EnqueueTelemetryEvent(telemetryData2.EventName, telemetryData2.BodyData, telemetryData2.CustomTags);
+			GorillaTelemetry.EnqueueTelemetryEvent(telemetryData.EventName, telemetryData.BodyData, telemetryData.CustomTags);
 			LocalizationSettings.SelectedLocale = newLocale;
 			GameEvents.LanguageEvent?.Invoke();
 			_onLanguageChanged?.Invoke();

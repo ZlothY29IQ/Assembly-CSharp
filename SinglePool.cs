@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [Serializable]
-public class SinglePool
+public class SinglePool : IGorillaSimpleBackgroundWorker
 {
 	public GameObject objectToPool;
 
@@ -19,18 +19,31 @@ public class SinglePool
 
 	private int amountAllocatedToPool;
 
-	private void PrivAllocPooledObjects()
+	public void SimpleWork()
 	{
 		int count = inactivePool.Count;
-		for (int i = count; i < count + initAmountToPool; i++)
+		if (count < initAmountToPool)
 		{
 			GameObject gameObject = UnityEngine.Object.Instantiate(objectToPool, this.gameObject.transform, worldPositionStays: true);
-			gameObject.name = objectToPool.name + "(PoolIndex=" + i + ")";
+			gameObject.name = objectToPool.name + "(PoolIndex=" + count + ")";
 			gameObject.SetActive(value: false);
 			inactivePool.Push(gameObject);
 			amountAllocatedToPool++;
 			int instanceID = gameObject.GetInstanceID();
 			pooledObjects.Add(instanceID);
+			GorillaSimpleBackgroundWorkerManager.WorkerSignup(this);
+		}
+	}
+
+	private void PrivAllocPooledObjects()
+	{
+		if (inactivePool.Count == 0)
+		{
+			SimpleWork();
+		}
+		else
+		{
+			GorillaSimpleBackgroundWorkerManager.WorkerSignup(this);
 		}
 	}
 
@@ -40,7 +53,7 @@ public class SinglePool
 		activePool = new Dictionary<int, GameObject>(initAmountToPool);
 		inactivePool = new Stack<GameObject>(initAmountToPool);
 		pooledObjects = new HashSet<int>();
-		PrivAllocPooledObjects();
+		GorillaSimpleBackgroundWorkerManager.WorkerSignup(this);
 	}
 
 	public GameObject Instantiate(bool setActive = true)
@@ -60,19 +73,12 @@ public class SinglePool
 	public void Destroy(GameObject obj)
 	{
 		int instanceID = obj.GetInstanceID();
-		if (!activePool.ContainsKey(instanceID))
+		if (activePool.ContainsKey(instanceID) && pooledObjects.Contains(instanceID))
 		{
-			Debug.Log("Failed to destroy Object " + obj.name + " in pool, It is not contained in the activePool");
-			return;
+			obj.SetActive(value: false);
+			inactivePool.Push(obj);
+			activePool.Remove(instanceID);
 		}
-		if (!pooledObjects.Contains(instanceID))
-		{
-			Debug.Log("Failed to destroy Object " + obj.name + " in pool, It is not contained in the pooledObjects");
-			return;
-		}
-		obj.SetActive(value: false);
-		inactivePool.Push(obj);
-		activePool.Remove(instanceID);
 	}
 
 	public int PoolGUID()

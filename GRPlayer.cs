@@ -568,7 +568,7 @@ public class GRPlayer : MonoBehaviourTick
 				instance.ApplyKnockback(hitImpulse / magnitude, magnitude, forceOffTheGround: true);
 			}
 		}
-		if (State != 0)
+		if (State != GRPlayerState.Alive)
 		{
 			return;
 		}

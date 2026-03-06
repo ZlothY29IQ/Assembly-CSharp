@@ -54,7 +54,7 @@ public class GameMirrorWhenEquipped : MonoBehaviour
 
 	private void _HandleGameEntityOnEquipChanged()
 	{
-		if (!m_shouldOnlyMirrorWhenSnapped || m_gameEntity.snappedJoint != 0)
+		if (!m_shouldOnlyMirrorWhenSnapped || m_gameEntity.snappedJoint != SnapJointType.None)
 		{
 			Vector3 localScale = ((m_gameEntity.EquippedHandedness == m_handednessToMirror) ? new Vector3(-1f, 1f, 1f) : Vector3.one);
 			for (int i = 0; i < m_xformsToMirror.Length; i++)

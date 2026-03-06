@@ -39,21 +39,22 @@ public class KIDUI_AgeAppealEmailScreen : MonoBehaviour
 			_parentPermissionNotice.SetActive(hasChallenge);
 		}
 		OnInputChanged(_emailText.text);
-		TelemetryData telemetryData = default(TelemetryData);
-		telemetryData.EventName = "kid_age_appeal_enter_email";
-		telemetryData.CustomTags = new string[3]
+		TelemetryData telemetryData = new TelemetryData
 		{
-			"kid_age_appeal",
-			KIDTelemetry.GameVersionCustomTag,
-			KIDTelemetry.GameEnvironment
+			EventName = "kid_age_appeal_enter_email",
+			CustomTags = new string[3]
+			{
+				"kid_age_appeal",
+				KIDTelemetry.GameVersionCustomTag,
+				KIDTelemetry.GameEnvironment
+			},
+			BodyData = new Dictionary<string, string> { 
+			{
+				"email_type",
+				hasChallenge ? "under_dac" : "over_dac"
+			} }
 		};
-		telemetryData.BodyData = new Dictionary<string, string> { 
-		{
-			"email_type",
-			hasChallenge ? "under_dac" : "over_dac"
-		} };
-		TelemetryData telemetryData2 = telemetryData;
-		GorillaTelemetry.EnqueueTelemetryEvent(telemetryData2.EventName, telemetryData2.BodyData, telemetryData2.CustomTags);
+		GorillaTelemetry.EnqueueTelemetryEvent(telemetryData.EventName, telemetryData.BodyData, telemetryData.CustomTags);
 	}
 
 	public void OnInputChanged(string newVal)

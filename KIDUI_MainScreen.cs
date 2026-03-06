@@ -324,23 +324,24 @@ public class KIDUI_MainScreen : MonoBehaviour
 		ShowMainScreen(showStatus);
 		_mainScreenOpenedReason = reason;
 		string value = reason.ToString().Replace("_", "-").ToLower();
-		TelemetryData telemetryData = default(TelemetryData);
-		telemetryData.EventName = "kid_game_settings";
-		telemetryData.CustomTags = new string[4]
+		TelemetryData telemetryData = new TelemetryData
 		{
-			"kid_setup",
-			KIDTelemetry.GameVersionCustomTag,
-			KIDTelemetry.GameEnvironment,
-			KIDTelemetry.Open_MetricActionCustomTag
+			EventName = "kid_game_settings",
+			CustomTags = new string[4]
+			{
+				"kid_setup",
+				KIDTelemetry.GameVersionCustomTag,
+				KIDTelemetry.GameEnvironment,
+				KIDTelemetry.Open_MetricActionCustomTag
+			},
+			BodyData = new Dictionary<string, string> { { "screen_shown_reason", value } }
 		};
-		telemetryData.BodyData = new Dictionary<string, string> { { "screen_shown_reason", value } };
-		TelemetryData telemetryData2 = telemetryData;
 		foreach (Permission allPermissionsDatum in KIDManager.GetAllPermissionsData())
 		{
-			telemetryData2.BodyData.Add(KIDTelemetry.GetPermissionManagedByBodyData(allPermissionsDatum.Name), allPermissionsDatum.ManagedBy.ToString().ToLower());
-			telemetryData2.BodyData.Add(KIDTelemetry.GetPermissionEnabledBodyData(allPermissionsDatum.Name), allPermissionsDatum.Enabled.ToString().ToLower());
+			telemetryData.BodyData.Add(KIDTelemetry.GetPermissionManagedByBodyData(allPermissionsDatum.Name), allPermissionsDatum.ManagedBy.ToString().ToLower());
+			telemetryData.BodyData.Add(KIDTelemetry.GetPermissionEnabledBodyData(allPermissionsDatum.Name), allPermissionsDatum.Enabled.ToString().ToLower());
 		}
-		GorillaTelemetry.EnqueueTelemetryEvent(telemetryData2.EventName, telemetryData2.BodyData, telemetryData2.CustomTags);
+		GorillaTelemetry.EnqueueTelemetryEvent(telemetryData.EventName, telemetryData.BodyData, telemetryData.CustomTags);
 	}
 
 	public void ShowMainScreen(EMainScreenStatus showStatus)
@@ -356,23 +357,24 @@ public class KIDUI_MainScreen : MonoBehaviour
 		if (sendMetrics && showStatus == EMainScreenStatus.Updated)
 		{
 			string value = _mainScreenOpenedReason.ToString().Replace("_", "-").ToLower();
-			TelemetryData telemetryData = default(TelemetryData);
-			telemetryData.EventName = "kid_game_settings";
-			telemetryData.CustomTags = new string[4]
+			TelemetryData telemetryData = new TelemetryData
 			{
-				"kid_setup",
-				KIDTelemetry.GameVersionCustomTag,
-				KIDTelemetry.GameEnvironment,
-				KIDTelemetry.Updated_MetricActionCustomTag
+				EventName = "kid_game_settings",
+				CustomTags = new string[4]
+				{
+					"kid_setup",
+					KIDTelemetry.GameVersionCustomTag,
+					KIDTelemetry.GameEnvironment,
+					KIDTelemetry.Updated_MetricActionCustomTag
+				},
+				BodyData = new Dictionary<string, string> { { "screen_shown_reason", value } }
 			};
-			telemetryData.BodyData = new Dictionary<string, string> { { "screen_shown_reason", value } };
-			TelemetryData telemetryData2 = telemetryData;
 			foreach (Permission allPermissionsDatum in KIDManager.GetAllPermissionsData())
 			{
-				telemetryData2.BodyData.Add(KIDTelemetry.GetPermissionManagedByBodyData(allPermissionsDatum.Name), allPermissionsDatum.ManagedBy.ToString().ToLower());
-				telemetryData2.BodyData.Add(KIDTelemetry.GetPermissionEnabledBodyData(allPermissionsDatum.Name), allPermissionsDatum.Enabled.ToString().ToLower());
+				telemetryData.BodyData.Add(KIDTelemetry.GetPermissionManagedByBodyData(allPermissionsDatum.Name), allPermissionsDatum.ManagedBy.ToString().ToLower());
+				telemetryData.BodyData.Add(KIDTelemetry.GetPermissionEnabledBodyData(allPermissionsDatum.Name), allPermissionsDatum.Enabled.ToString().ToLower());
 			}
-			GorillaTelemetry.EnqueueTelemetryEvent(telemetryData2.EventName, telemetryData2.BodyData, telemetryData2.CustomTags);
+			GorillaTelemetry.EnqueueTelemetryEvent(telemetryData.EventName, telemetryData.BodyData, telemetryData.CustomTags);
 		}
 		GameObject activeStatusObject = GetActiveStatusObject();
 		_declinedStatus.SetActive(value: false);
@@ -505,28 +507,29 @@ public class KIDUI_MainScreen : MonoBehaviour
 			}
 		}
 		KIDManager.SendOptInPermissions();
-		if (_screenStatus != 0)
+		if (_screenStatus != EMainScreenStatus.None)
 		{
 			string value = _mainScreenOpenedReason.ToString().Replace("_", "-").ToLower();
-			TelemetryData telemetryData = default(TelemetryData);
-			telemetryData.EventName = "kid_game_settings";
-			telemetryData.CustomTags = new string[3]
+			TelemetryData telemetryData = new TelemetryData
 			{
-				"kid_setup",
-				KIDTelemetry.GameVersionCustomTag,
-				KIDTelemetry.GameEnvironment
-			};
-			telemetryData.BodyData = new Dictionary<string, string>
-			{
-				{ "screen_shown_reason", value },
+				EventName = "kid_game_settings",
+				CustomTags = new string[3]
 				{
-					"kid_status",
-					_screenStatus.ToString().ToLower()
+					"kid_setup",
+					KIDTelemetry.GameVersionCustomTag,
+					KIDTelemetry.GameEnvironment
 				},
-				{ "button_pressed", "save_and_continue" }
+				BodyData = new Dictionary<string, string>
+				{
+					{ "screen_shown_reason", value },
+					{
+						"kid_status",
+						_screenStatus.ToString().ToLower()
+					},
+					{ "button_pressed", "save_and_continue" }
+				}
 			};
-			TelemetryData telemetryData2 = telemetryData;
-			GorillaTelemetry.EnqueueTelemetryEvent(telemetryData2.EventName, telemetryData2.BodyData, telemetryData2.CustomTags);
+			GorillaTelemetry.EnqueueTelemetryEvent(telemetryData.EventName, telemetryData.BodyData, telemetryData.CustomTags);
 		}
 		else
 		{
@@ -549,7 +552,7 @@ public class KIDUI_MainScreen : MonoBehaviour
 	{
 		bool hasUpdated = false;
 		bool wasSuccess = false;
-		float cutOffDuration = Time.time + 15f;
+		float cutOffDuration = Time.realtimeSinceStartup + 15f;
 		KIDManager.UpdateSession(delegate(bool success)
 		{
 			hasUpdated = true;
@@ -559,7 +562,7 @@ public class KIDUI_MainScreen : MonoBehaviour
 		{
 			await Task.Yield();
 		}
-		while (Time.time < cutOffDuration && !hasUpdated);
+		while (Time.realtimeSinceStartup < cutOffDuration && !hasUpdated);
 		UpdatePermissionsAndFeaturesScreen();
 		if (wasSuccess)
 		{

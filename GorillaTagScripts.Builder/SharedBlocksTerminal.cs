@@ -828,7 +828,6 @@ public class SharedBlocksTerminal : MonoBehaviour
 
 	private void OnJoinedRoom()
 	{
-		GTDev.Log("[SharedBlocksTerminal::OnJoinedRoom] Joined a multiplayer room, resetting terminal control");
 		cachedLocalPlayerID = NetworkSystem.Instance.LocalPlayer.ActorNumber;
 		ResetTerminalControl();
 	}

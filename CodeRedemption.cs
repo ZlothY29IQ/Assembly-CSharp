@@ -117,7 +117,7 @@ public class CodeRedemption : MonoBehaviour
 	private IEnumerator CheckProcessExternalUnlock(string[] itemIDs, bool autoEquip, bool isLeftHand, bool destroyOnFinish)
 	{
 		Debug.Log("[CodeRedemption] Checking if we can process external cosmetic unlock...");
-		while (!CosmeticsController.instance.allCosmeticsDict_isInitialized || !CosmeticsV2Spawner_Dirty.allPartsInstantiated)
+		while (!CosmeticsController.instance.allCosmeticsDict_isInitialized)
 		{
 			yield return null;
 		}

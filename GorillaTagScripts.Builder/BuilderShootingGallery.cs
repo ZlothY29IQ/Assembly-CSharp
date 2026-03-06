@@ -183,7 +183,7 @@ public class BuilderShootingGallery : MonoBehaviour, IBuilderPieceComponent, IBu
 
 	public void OnPieceDeactivate()
 	{
-		if (currentState != 0)
+		if (currentState != FunctionalState.Idle)
 		{
 			myPiece.SetFunctionalPieceState(0, NetworkSystem.Instance.LocalPlayer, NetworkSystem.Instance.ServerTimestamp);
 			myPiece.GetTable().UnregisterFunctionalPiece(this);

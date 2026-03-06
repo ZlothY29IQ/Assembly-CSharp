@@ -237,7 +237,7 @@ public class GrowingSnowballThrowable : SnowballThrowable
 		int num = ((targetRig != null && targetRig.gameObject.activeInHierarchy && targetRig.netView != null && targetRig.netView.Owner != null) ? targetRig.netView.Owner.ActorNumber : (-1));
 		if (info.senderID == num)
 		{
-			GorillaNot.IncrementRPCCall(info, "ChangeSizeEventReceiver");
+			MonkeAgent.IncrementRPCCall(info, "ChangeSizeEventReceiver");
 			int num2 = (int)args[0];
 			if (GetValidSizeLevel(num2) > sizeLevel && sizeIncreaseSoundBankPlayer.gameObject.activeInHierarchy)
 			{
@@ -253,7 +253,7 @@ public class GrowingSnowballThrowable : SnowballThrowable
 
 	private void SnowballThrowEventReceiver(int sender, int receiver, object[] args, PhotonMessageInfoWrapped info)
 	{
-		if (sender != receiver || args == null || args.Length < 4 || targetRig.IsNull() || !targetRig.gameObject.activeSelf)
+		if (sender != receiver || args == null || args.Length < 3 || targetRig.IsNull() || !targetRig.gameObject.activeSelf)
 		{
 			return;
 		}
@@ -262,7 +262,7 @@ public class GrowingSnowballThrowable : SnowballThrowable
 		{
 			return;
 		}
-		GorillaNot.IncrementRPCCall(info, "SnowballThrowEventReceiver");
+		MonkeAgent.IncrementRPCCall(info, "SnowballThrowEventReceiver");
 		if (FXSystem.CheckCallSpam(targetRig.fxSettings, 4, info.SentServerTime) && args[0] is Vector3 v && args[1] is Vector3 inVel && args[2] is int index)
 		{
 			Vector3 velocity = targetRig.ClampVelocityRelativeToPlayerSafe(inVel, 50f);
@@ -358,7 +358,7 @@ public class GrowingSnowballThrowable : SnowballThrowable
 
 	protected virtual SlingshotProjectile LaunchSnowballLocal(Vector3 location, Vector3 velocity, float scale)
 	{
-		return LaunchSnowballLocal(location, velocity, scale, randomizeColour: false, Color.white);
+		return LaunchSnowballLocal(location, velocity, scale, false, Color.white);
 	}
 
 	protected override SlingshotProjectile LaunchSnowballLocal(Vector3 location, Vector3 velocity, float scale, bool randomizeColour, Color colour)

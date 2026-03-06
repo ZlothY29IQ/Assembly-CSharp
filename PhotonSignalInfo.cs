@@ -2,19 +2,13 @@ using System;
 using Photon.Pun;
 
 [Serializable]
-public struct PhotonSignalInfo
+public struct PhotonSignalInfo(NetPlayer sender, int timestamp)
 {
-	public readonly int timestamp;
+	public readonly int timestamp = timestamp;
 
-	public readonly NetPlayer sender;
+	public readonly NetPlayer sender = sender;
 
 	public double sentServerTime => (double)(uint)timestamp / 1000.0;
-
-	public PhotonSignalInfo(NetPlayer sender, int timestamp)
-	{
-		this.sender = sender;
-		this.timestamp = timestamp;
-	}
 
 	public override string ToString()
 	{

@@ -57,6 +57,12 @@ public class SO_NetworkVoiceSettings : ScriptableObject
 	[Range(6000f, 510000f)]
 	public int Bitrate = 20000;
 
+	[Space]
+	public SamplingRate SubsSamplingRate = SamplingRate.Sampling24000;
+
+	[Range(6000f, 510000f)]
+	public int SubsBitrate = 30000;
+
 	[Header("Recorder Audio Source Settings")]
 	public Recorder.InputSourceType InputSourceType;
 

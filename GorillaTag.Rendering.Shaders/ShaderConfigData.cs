@@ -6,32 +6,21 @@ namespace GorillaTag.Rendering.Shaders;
 public class ShaderConfigData
 {
 	[Serializable]
-	public struct ShaderConfig
+	public struct ShaderConfig(string shadName, Material fMat, string[] intNames, int[] intVals, string[] floatNames, float[] floatVals, string[] matrixNames, Matrix4x4[] matrixVals, string[] vectorNames, Vector4[] vectorVals, string[] textureNames, Texture[] textureVals)
 	{
-		public string shaderName;
+		public string shaderName = shadName;
 
-		public Material firstMat;
+		public Material firstMat = fMat;
 
-		public MatPropInt[] ints;
+		public MatPropInt[] ints = convertInts(intNames, intVals);
 
-		public MatPropFloat[] floats;
+		public MatPropFloat[] floats = convertFloats(floatNames, floatVals);
 
-		public MatPropMatrix[] matrices;
+		public MatPropMatrix[] matrices = convertMatrices(matrixNames, matrixVals);
 
-		public MatPropVector[] vectors;
+		public MatPropVector[] vectors = convertVectors(vectorNames, vectorVals);
 
-		public MatPropTexture[] textures;
-
-		public ShaderConfig(string shadName, Material fMat, string[] intNames, int[] intVals, string[] floatNames, float[] floatVals, string[] matrixNames, Matrix4x4[] matrixVals, string[] vectorNames, Vector4[] vectorVals, string[] textureNames, Texture[] textureVals)
-		{
-			shaderName = shadName;
-			firstMat = fMat;
-			ints = convertInts(intNames, intVals);
-			floats = convertFloats(floatNames, floatVals);
-			matrices = convertMatrices(matrixNames, matrixVals);
-			vectors = convertVectors(vectorNames, vectorVals);
-			textures = convertTextures(textureNames, textureVals);
-		}
+		public MatPropTexture[] textures = convertTextures(textureNames, textureVals);
 	}
 
 	[Serializable]

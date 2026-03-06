@@ -1,5 +1,6 @@
 using System.Collections;
 using GorillaLocomotion;
+using GorillaTagScripts;
 using UnityEngine;
 
 public class TeleportNode : GorillaTriggerBox
@@ -10,11 +11,17 @@ public class TeleportNode : GorillaTriggerBox
 	[SerializeField]
 	private XSceneRef teleportToRef;
 
+	[SerializeField]
+	private bool seamless = true;
+
+	[SerializeField]
+	private bool subsOnly;
+
 	private float teleportTime;
 
 	public override void OnBoxTriggered()
 	{
-		if (Time.time - teleportTime < 0.1f)
+		if ((subsOnly && !SubscriptionManager.IsLocalSubscribed()) || Time.time - teleportTime < 0.1f)
 		{
 			return;
 		}
@@ -36,7 +43,11 @@ public class TeleportNode : GorillaTriggerBox
 			return;
 		}
 		Physics.SyncTransforms();
-		Vector3 position = result2.TransformPoint(result.InverseTransformPoint(instance.transform.position));
+		Vector3 position = result2.transform.position;
+		if (seamless)
+		{
+			position = result2.TransformPoint(result.InverseTransformPoint(instance.transform.position));
+		}
 		Quaternion quaternion = Quaternion.Inverse(result.rotation) * instance.transform.rotation;
 		Quaternion rotation = result2.rotation * quaternion;
 		StartCoroutine(DelayedTeleport(instance, position, rotation));

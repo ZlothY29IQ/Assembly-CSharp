@@ -137,10 +137,13 @@ public class GTPlayer : MonoBehaviour
 			isColliding = false;
 			isSliding = false;
 			wasSliding = false;
-			handFollower.position = controllerTransform.position;
-			handFollower.rotation = controllerTransform.rotation;
-			lastPosition = handFollower.transform.position;
-			lastRotation = handFollower.transform.rotation;
+			if (handFollower != null)
+			{
+				handFollower.position = controllerTransform.position;
+				handFollower.rotation = controllerTransform.rotation;
+			}
+			lastPosition = controllerTransform.position;
+			lastRotation = controllerTransform.rotation;
 		}
 
 		public Vector3 GetLastPosition()
@@ -439,7 +442,11 @@ public class GTPlayer : MonoBehaviour
 
 	private float bodyInitialRadius;
 
-	private float bodyInitialHeight;
+	private float _bodyInitialHeight;
+
+	private float currentBodyHeight;
+
+	private double frameCount;
 
 	private RaycastHit bodyHitInfo;
 
@@ -978,6 +985,18 @@ public class GTPlayer : MonoBehaviour
 
 	public static GTPlayer Instance => _instance;
 
+	private float bodyInitialHeight
+	{
+		get
+		{
+			if (GorillaIK.playerIK == null || !GorillaIK.playerIK.usingUpdatedIK)
+			{
+				return _bodyInitialHeight;
+			}
+			return Mathf.Max(0.2f, Vector3.Dot(GorillaIK.playerIK.bodyBone.up, Vector3.up)) * _bodyInitialHeight;
+		}
+	}
+
 	public HandState LeftHand => leftHand;
 
 	public HandState RightHand => rightHand;
@@ -1005,6 +1024,8 @@ public class GTPlayer : MonoBehaviour
 	protected bool IsFrozen { get; set; }
 
 	public bool forcedUnderwater { get; set; }
+
+	public float siJumpMultiplier { get; set; } = 1f;
 
 	public List<WaterVolume> HeadOverlappingWaterVolumes => headOverlappingWaterVolumes;
 
@@ -1299,7 +1320,7 @@ public class GTPlayer : MonoBehaviour
 		playerRigidbodyInterpolationDefault = playerRigidBody.interpolation;
 		playerRigidBody.maxAngularVelocity = 0f;
 		bodyOffsetVector = new Vector3(0f, (0f - bodyCollider.height) / 2f, 0f);
-		bodyInitialHeight = bodyCollider.height;
+		_bodyInitialHeight = bodyCollider.height;
 		bodyInitialRadius = bodyCollider.radius;
 		rayCastNonAllocColliders = new RaycastHit[5];
 		crazyCheckVectors = new Vector3[7];
@@ -1414,6 +1435,13 @@ public class GTPlayer : MonoBehaviour
 		lastOpenHeadPosition = headCollider.transform.position;
 		leftHand.OnTeleport();
 		rightHand.OnTeleport();
+		for (int i = 0; i < 12; i++)
+		{
+			if (stiltStates[i].isActive)
+			{
+				stiltStates[i].OnTeleport();
+			}
+		}
 		if (!keepVelocity)
 		{
 			playerRigidBody.linearVelocity = Vector3.zero;
@@ -2122,9 +2150,9 @@ public class GTPlayer : MonoBehaviour
 		Vector3 vector = Vector3.zero;
 		Quaternion quaternion = Quaternion.identity;
 		Vector3 pivot = headCollider.transform.position;
-		if (lastMovingSurfaceContact != 0 && ComputeWorldHitPoint(lastMovingSurfaceHit, lastMovingSurfaceTouchLocal, out var worldHitPoint2))
+		if (lastMovingSurfaceContact != MovingSurfaceContactPoint.NONE && ComputeWorldHitPoint(lastMovingSurfaceHit, lastMovingSurfaceTouchLocal, out var worldHitPoint2))
 		{
-			if (wasMovingSurfaceMonkeBlock && (lastMonkeBlock == null || lastMonkeBlock.state != 0))
+			if (wasMovingSurfaceMonkeBlock && (lastMonkeBlock == null || lastMonkeBlock.state != BuilderPiece.State.AttachedAndPlaced))
 			{
 				movingSurfaceOffset = Vector3.zero;
 			}
@@ -2209,7 +2237,7 @@ public class GTPlayer : MonoBehaviour
 		{
 			base.transform.position += totalMove;
 		}
-		if (lastMovingSurfaceContact != 0 && quaternion != Quaternion.identity && !isClimbing && !rightHand.isHolding && !leftHand.isHolding)
+		if (lastMovingSurfaceContact != MovingSurfaceContactPoint.NONE && quaternion != Quaternion.identity && !isClimbing && !rightHand.isHolding && !leftHand.isHolding)
 		{
 			RotateWithSurface(quaternion, pivot);
 		}
@@ -2370,7 +2398,7 @@ public class GTPlayer : MonoBehaviour
 					anyHandIsSliding = false;
 					didAJump = true;
 					float num3 = ApplyNativeScaleAdjustment(Mathf.Min(maxJumpSpeed * ExtraVelMaxMultiplier(), jumpMultiplier * ExtraVelMultiplier() * Vector3.Project(averagedVelocity, slideAverageNormal).magnitude));
-					playerRigidBody.linearVelocity = num3 * slideAverageNormal.normalized + Vector3.ProjectOnPlane(slideVelocity, slideAverageNormal);
+					playerRigidBody.linearVelocity = num3 * siJumpMultiplier * slideAverageNormal.normalized + Vector3.ProjectOnPlane(slideVelocity, slideAverageNormal);
 					if (num3 > slideVelocityLimit * scale * exitMovingSurfaceThreshold)
 					{
 						exitMovingSurface = true;
@@ -2381,7 +2409,7 @@ public class GTPlayer : MonoBehaviour
 			{
 				float num4 = ((InWater && CurrentWaterVolume != null) ? liquidPropertiesList[(int)CurrentWaterVolume.LiquidType].surfaceJumpFactor : 1f);
 				float num5 = ApplyNativeScaleAdjustment(enableHoverMode ? Mathf.Min(hoverMaxPaddleSpeed, averagedVelocity.magnitude) : Mathf.Min(maxJumpSpeed * ExtraVelMaxMultiplier(), jumpMultiplier * ExtraVelMultiplier() * num4 * averagedVelocity.magnitude));
-				Vector3 vector4 = num5 * averagedVelocity.normalized;
+				Vector3 vector4 = num5 * siJumpMultiplier * averagedVelocity.normalized;
 				didAJump = true;
 				playerRigidBody.linearVelocity = vector4;
 				if (InWater)
@@ -2615,7 +2643,7 @@ public class GTPlayer : MonoBehaviour
 			movingSurfaceContactPoint = MovingSurfaceContactPoint.BODY;
 			lastMovingSurfaceHit = raycastHit;
 		}
-		if (movingSurfaceContactPoint != 0 && ComputeLocalHitPoint(lastMovingSurfaceHit, out var localHitPoint2))
+		if (movingSurfaceContactPoint != MovingSurfaceContactPoint.NONE && ComputeLocalHitPoint(lastMovingSurfaceHit, out var localHitPoint2))
 		{
 			lastMovingSurfaceTouchLocal = localHitPoint2;
 			lastMovingSurfaceTouchWorld = lastMovingSurfaceHit.point;
@@ -2703,7 +2731,7 @@ public class GTPlayer : MonoBehaviour
 				lastMovingSurfaceID = -1;
 			}
 		}
-		if (lastMovingSurfaceContact == MovingSurfaceContactPoint.NONE && movingSurfaceContactPoint != 0)
+		if (lastMovingSurfaceContact == MovingSurfaceContactPoint.NONE && movingSurfaceContactPoint != MovingSurfaceContactPoint.NONE)
 		{
 			SetPlayerVelocity(Vector3.zero);
 		}

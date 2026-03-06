@@ -95,8 +95,8 @@ public class LocalizationTextSyncer : MonoBehaviour
 				if (fontDataOverride.fontSize != 0f)
 				{
 					TMP_Text textComponent = item.textComponent;
-					float fontSize2 = (item.textComponent.fontSizeMax = fontDataOverride.fontSize);
-					textComponent.fontSize = fontSize2;
+					float fontSize = (item.textComponent.fontSizeMax = fontDataOverride.fontSize);
+					textComponent.fontSize = fontSize;
 				}
 			}
 		}

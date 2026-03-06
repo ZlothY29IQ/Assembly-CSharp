@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using GorillaTag;
 using Unity.Collections;
 using UnityEngine;
+using UnityEngine.XR;
 
 public class GameEntity : MonoBehaviour
 {
@@ -104,6 +105,19 @@ public class GameEntity : MonoBehaviour
 	public int snappedByActorNumber { get; internal set; }
 
 	[DebugReadout]
+	public int slotIndex
+	{
+		get
+		{
+			if (heldByHandIndex == -1)
+			{
+				return GameSnappable.GetJointToSnapIndex(snappedJoint);
+			}
+			return heldByHandIndex;
+		}
+	}
+
+	[DebugReadout]
 	public SnapJointType snappedJoint { get; internal set; }
 
 	[DebugReadout]
@@ -118,6 +132,42 @@ public class GameEntity : MonoBehaviour
 	[DebugReadout]
 	public GameEntityId attachedToEntityId { get; internal set; }
 
+	public bool IsHeldOrSnappedByLocalPlayer => AttachedPlayerActorNr == NetworkSystem.Instance.LocalPlayer.ActorNumber;
+
+	public bool IsSnappedToHand => (snappedJoint & (SnapJointType.HandL | SnapJointType.HandR)) != 0;
+
+	public int AttachedPlayerActorNr
+	{
+		get
+		{
+			if (heldByActorNumber == -1)
+			{
+				return snappedByActorNumber;
+			}
+			return heldByActorNumber;
+		}
+	}
+
+	public int EquippedSlotIndex
+	{
+		get
+		{
+			if (heldByHandIndex == -1)
+			{
+				if ((snappedJoint & SnapJointType.HandL) == 0)
+				{
+					if ((snappedJoint & SnapJointType.HandR) == 0)
+					{
+						return -1;
+					}
+					return 3;
+				}
+				return 2;
+			}
+			return heldByHandIndex;
+		}
+	}
+
 	public EHandedness EquippedHandedness
 	{
 		get
@@ -131,6 +181,22 @@ public class GameEntity : MonoBehaviour
 				return EHandedness.Right;
 			}
 			return EHandedness.Left;
+		}
+	}
+
+	public XRNode EquippedHandXRNode
+	{
+		get
+		{
+			if (heldByHandIndex != 0 && (snappedJoint & SnapJointType.HandL) == 0)
+			{
+				if (heldByHandIndex != 1 && (snappedJoint & SnapJointType.HandR) == 0)
+				{
+					return (XRNode)(-1);
+				}
+				return XRNode.RightHand;
+			}
+			return XRNode.LeftHand;
 		}
 	}
 

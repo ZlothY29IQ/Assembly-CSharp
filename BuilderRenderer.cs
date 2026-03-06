@@ -548,11 +548,12 @@ public class BuilderRenderer : MonoBehaviourPostTick
 			uv1All.AddRange(uv1);
 			trianglesAll.AddRange(triangles);
 			int indexCount = trianglesAll.Count - count;
-			BuilderTableSubMesh builderTableSubMesh = default(BuilderTableSubMesh);
-			builderTableSubMesh.startIndex = count;
-			builderTableSubMesh.indexCount = indexCount;
-			builderTableSubMesh.startVertex = count2;
-			BuilderTableSubMesh value = builderTableSubMesh;
+			BuilderTableSubMesh value = new BuilderTableSubMesh
+			{
+				startIndex = count,
+				indexCount = indexCount,
+				startVertex = count2
+			};
 			renderData.subMeshes.Add(in value);
 		}
 		renderData.sharedMesh.SetVertices(verticesAll);
@@ -591,11 +592,12 @@ public class BuilderRenderer : MonoBehaviourPostTick
 		indirectBatch.renderMeshes = new NativeList<BuilderTableMeshInstances>(512, Allocator.Persistent);
 		for (int j = 0; j < meshCount; j++)
 		{
-			BuilderTableMeshInstances builderTableMeshInstances = default(BuilderTableMeshInstances);
-			builderTableMeshInstances.transforms = new TransformAccessArray(maxInstances, 3);
-			builderTableMeshInstances.texIndex = new NativeList<int>(Allocator.Persistent);
-			builderTableMeshInstances.tint = new NativeList<float>(Allocator.Persistent);
-			BuilderTableMeshInstances value = builderTableMeshInstances;
+			BuilderTableMeshInstances value = new BuilderTableMeshInstances
+			{
+				transforms = new TransformAccessArray(maxInstances, 3),
+				texIndex = new NativeList<int>(Allocator.Persistent),
+				tint = new NativeList<float>(Allocator.Persistent)
+			};
 			indirectBatch.renderMeshes.Add(in value);
 		}
 		indirectBatch.rp = new RenderParams(sharedMaterialIndirect);
@@ -652,10 +654,11 @@ public class BuilderRenderer : MonoBehaviourPostTick
 		{
 			renderData.setupInstancesJobs = default(JobHandle);
 			SetupIndirectBatchArgs(renderData.staticBatch, renderData.subMeshes);
-			SetupInstanceDataForMeshStatic setupInstanceDataForMeshStatic = default(SetupInstanceDataForMeshStatic);
-			setupInstanceDataForMeshStatic.transformIndexToDataIndex = renderData.staticBatch.instanceTransformIndexToDataIndex;
-			setupInstanceDataForMeshStatic.objectToWorld = renderData.staticBatch.instanceObjectToWorld;
-			SetupInstanceDataForMeshStatic jobData = setupInstanceDataForMeshStatic;
+			SetupInstanceDataForMeshStatic jobData = new SetupInstanceDataForMeshStatic
+			{
+				transformIndexToDataIndex = renderData.staticBatch.instanceTransformIndexToDataIndex,
+				objectToWorld = renderData.staticBatch.instanceObjectToWorld
+			};
 			renderData.setupInstancesJobs = jobData.ScheduleReadOnly(renderData.staticBatch.instanceTransform, 32);
 			JobHandle.ScheduleBatchedJobs();
 		}
@@ -674,12 +677,14 @@ public class BuilderRenderer : MonoBehaviourPostTick
 		{
 			BuilderTableMeshInstances builderTableMeshInstances = indirectBatch.renderMeshes[i];
 			BuilderTableSubMesh builderTableSubMesh = subMeshes[i];
-			GraphicsBuffer.IndirectDrawIndexedArgs value = default(GraphicsBuffer.IndirectDrawIndexedArgs);
-			value.indexCountPerInstance = (uint)builderTableSubMesh.indexCount;
-			value.startIndex = (uint)builderTableSubMesh.startIndex;
-			value.baseVertexIndex = (uint)builderTableSubMesh.startVertex;
-			value.startInstance = num;
-			value.instanceCount = (uint)(builderTableMeshInstances.transforms.length * 2);
+			GraphicsBuffer.IndirectDrawIndexedArgs value = new GraphicsBuffer.IndirectDrawIndexedArgs
+			{
+				indexCountPerInstance = (uint)builderTableSubMesh.indexCount,
+				startIndex = (uint)builderTableSubMesh.startIndex,
+				baseVertexIndex = (uint)builderTableSubMesh.startVertex,
+				startInstance = num,
+				instanceCount = (uint)(builderTableMeshInstances.transforms.length * 2)
+			};
 			num += value.instanceCount;
 			indirectBatch.commandData[i] = value;
 		}

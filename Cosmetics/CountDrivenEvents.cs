@@ -280,7 +280,7 @@ public class CountDrivenEvents : MonoBehaviour
 		{
 			return;
 		}
-		GorillaNot.IncrementRPCCall(info, "OnCountChanged_SharedEvent");
+		MonkeAgent.IncrementRPCCall(info, "OnCountChanged_SharedEvent");
 		if (callLimiter.CheckCallTime(Time.time) && args.Length == 2 && args[0] is bool flag && args[1] is int num)
 		{
 			onCountChangedShared?.Invoke(num);
@@ -308,7 +308,7 @@ public class CountDrivenEvents : MonoBehaviour
 	{
 		if (sender == target && info.senderID == myRig.creator.ActorNumber)
 		{
-			GorillaNot.IncrementRPCCall(info, "OnCountReached_SharedEvent");
+			MonkeAgent.IncrementRPCCall(info, "OnCountReached_SharedEvent");
 			if (callLimiter.CheckCallTime(Time.time) && args.Length == 1 && args[0] is int num && num >= 0 && num < triggers.Count)
 			{
 				triggers[num].onCountReachedShared?.Invoke();

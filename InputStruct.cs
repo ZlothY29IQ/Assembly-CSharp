@@ -4,88 +4,100 @@ using Fusion;
 using UnityEngine;
 
 [Serializable]
-[StructLayout(LayoutKind.Explicit, Size = 148)]
-[NetworkStructWeaved(37)]
+[StructLayout(LayoutKind.Explicit, Size = 164)]
+[NetworkStructWeaved(41)]
 public struct InputStruct : INetworkStruct
 {
 	[FieldOffset(0)]
 	public int headRotation;
 
 	[FieldOffset(4)]
-	public long rightHandLong;
+	public bool usingNewIK;
+
+	[FieldOffset(8)]
+	public int bodyRotation;
 
 	[FieldOffset(12)]
-	public long leftHandLong;
+	public short leftUpperArmRotation;
+
+	[FieldOffset(16)]
+	public short rightUpperArmRotation;
 
 	[FieldOffset(20)]
-	public long position;
+	public long rightHandLong;
 
 	[FieldOffset(28)]
-	public int handPosition;
-
-	[FieldOffset(32)]
-	public int packedFields;
+	public long leftHandLong;
 
 	[FieldOffset(36)]
-	public short packedCompetitiveData;
+	public long position;
 
-	[FieldOffset(40)]
-	public Vector3 velocity;
+	[FieldOffset(44)]
+	public int handPosition;
+
+	[FieldOffset(48)]
+	public int packedFields;
 
 	[FieldOffset(52)]
-	public int grabbedRopeIndex;
+	public short packedCompetitiveData;
 
 	[FieldOffset(56)]
-	public int ropeBoneIndex;
-
-	[FieldOffset(60)]
-	public bool ropeGrabIsLeft;
-
-	[FieldOffset(64)]
-	public bool ropeGrabIsBody;
+	public Vector3 velocity;
 
 	[FieldOffset(68)]
-	public Vector3 ropeGrabOffset;
+	public int grabbedRopeIndex;
+
+	[FieldOffset(72)]
+	public int ropeBoneIndex;
+
+	[FieldOffset(76)]
+	public bool ropeGrabIsLeft;
 
 	[FieldOffset(80)]
-	public bool movingSurfaceIsMonkeBlock;
+	public bool ropeGrabIsBody;
 
 	[FieldOffset(84)]
-	public long hoverboardPosRot;
-
-	[FieldOffset(92)]
-	public short hoverboardColor;
+	public Vector3 ropeGrabOffset;
 
 	[FieldOffset(96)]
-	public long propHuntPosRot;
+	public bool movingSurfaceIsMonkeBlock;
 
-	[FieldOffset(104)]
-	public double serverTimeStamp;
+	[FieldOffset(100)]
+	public long hoverboardPosRot;
+
+	[FieldOffset(108)]
+	public short hoverboardColor;
 
 	[FieldOffset(112)]
-	public short taggedById;
-
-	[FieldOffset(116)]
-	public bool isGroundedHand;
+	public long propHuntPosRot;
 
 	[FieldOffset(120)]
-	public bool isGroundedButt;
-
-	[FieldOffset(124)]
-	public int leftHandGrabbedActorNumber;
+	public double serverTimeStamp;
 
 	[FieldOffset(128)]
-	public bool leftGrabbedHandIsLeft;
+	public short taggedById;
 
 	[FieldOffset(132)]
-	public int rightHandGrabbedActorNumber;
+	public bool isGroundedHand;
 
 	[FieldOffset(136)]
-	public bool rightGrabbedHandIsLeft;
+	public bool isGroundedButt;
 
 	[FieldOffset(140)]
-	public float lastTouchedGroundAtTime;
+	public int leftHandGrabbedActorNumber;
 
 	[FieldOffset(144)]
+	public bool leftGrabbedHandIsLeft;
+
+	[FieldOffset(148)]
+	public int rightHandGrabbedActorNumber;
+
+	[FieldOffset(152)]
+	public bool rightGrabbedHandIsLeft;
+
+	[FieldOffset(156)]
+	public float lastTouchedGroundAtTime;
+
+	[FieldOffset(160)]
 	public float lastHandTouchedGroundAtTime;
 }

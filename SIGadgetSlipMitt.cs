@@ -168,7 +168,7 @@ public class SIGadgetSlipMitt : SIGadget
 	{
 		if (!ApplicationQuittingState.IsQuitting)
 		{
-			_attachedPlayerActorNr = GetAttachedPlayerActorNumber();
+			_attachedPlayerActorNr = gameEntity.AttachedPlayerActorNr;
 			if (GamePlayer.TryGetGamePlayer(_attachedPlayerActorNr, out var out_gamePlayer))
 			{
 				_attachedVRRig = out_gamePlayer.rig;
@@ -276,7 +276,7 @@ public class SIGadgetSlipMitt : SIGadget
 		if (newState != _state && _CanChangeState((long)newState))
 		{
 			_state = newState;
-			if (_state != 0)
+			if (_state != EState.Idle)
 			{
 				_ = 1;
 			}
@@ -286,7 +286,7 @@ public class SIGadgetSlipMitt : SIGadget
 	private bool _CheckInput()
 	{
 		float sensitivity = (_wasActivated ? m_inputDeactivateThreshold : m_inputActivateThreshold);
-		return m_buttonActivatable.CheckInput(checkHeld: true, checkSnapped: true, sensitivity);
+		return m_buttonActivatable.CheckInput(sensitivity);
 	}
 
 	private void _DoAirGrab()
