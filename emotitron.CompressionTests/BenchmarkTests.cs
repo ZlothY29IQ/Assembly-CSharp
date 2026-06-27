@@ -1,6 +1,6 @@
 using System.Diagnostics;
-using emotitron.Compression;
 using UnityEngine;
+using emotitron.Compression;
 
 namespace emotitron.CompressionTests;
 

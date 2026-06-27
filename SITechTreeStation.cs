@@ -170,7 +170,7 @@ public class SITechTreeStation : MonoBehaviour, ITouchScreenStation
 
 	public SIPlayer ActivePlayer => parentTerminal.activePlayer;
 
-	public string ActivePlayerName => ActivePlayer.gamePlayer.rig.OwningNetPlayer.SanitizedNickName;
+	public string ActivePlayerName => ActivePlayer.gamePlayer.rig.Creator?.SanitizedNickName;
 
 	public bool IsAuthority => parentTerminal.superInfection.siManager.gameEntityManager.IsAuthority();
 
@@ -342,9 +342,9 @@ public class SITechTreeStation : MonoBehaviour, ITouchScreenStation
 	public void ZoneDataSerializeRead(BinaryReader reader)
 	{
 		currentNodeId = reader.ReadInt32();
-		if (!Enum.IsDefined(typeof(SIUpgradeType), CurrentNode.upgradeType))
+		if (CurrentNode == null || !Enum.IsDefined(typeof(SIUpgradeType), CurrentNode.upgradeType))
 		{
-			GTDev.LogError("issue with currentnodeid wee woo wee woo");
+			GTDev.LogError($"SITechTreeStation.ZoneDataSerializeRead: Invalid currentNodeId {currentNodeId} for page {parentTerminal.ActivePage}. Falling back to first node.");
 			currentNodeId = (int)CurrentPage.AllNodes[0].Value.upgradeType;
 		}
 		helpScreenIndex = Mathf.Clamp(reader.ReadInt32(), 0, helpPopupScreens.Length - 1);
@@ -792,10 +792,5 @@ public class SITechTreeStation : MonoBehaviour, ITouchScreenStation
 			}
 		}
 		return false;
-	}
-
-	GameObject ITouchScreenStation.get_gameObject()
-	{
-		return base.gameObject;
 	}
 }

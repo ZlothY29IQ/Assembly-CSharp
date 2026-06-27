@@ -1,5 +1,6 @@
 using System;
 using GorillaExtensions;
+using GorillaNetworking;
 using GorillaTagScripts;
 using Photon.Pun;
 using TMPro;
@@ -57,9 +58,12 @@ public class GorillaPressableButton : MonoBehaviour, IClickable
 
 	public Material nonSubscriberMaterial;
 
-	private bool _localPlayerSubscribed;
+	protected bool _localPlayerSubscribed;
 
 	private bool _subscriptionChecked;
+
+	[Tooltip("For buttons on cosmetics: when true, only the player wearing this cosmetic can press the button.Leave off for world/UI buttons.")]
+	public bool isOwnerOnlyButton;
 
 	[Space]
 	public UnityEvent onPressButton;
@@ -103,12 +107,13 @@ public class GorillaPressableButton : MonoBehaviour, IClickable
 		{
 			UpdateSubscriptionState(flag);
 		}
-		void UpdateSubscriptionState(bool subscribed)
-		{
-			_localPlayerSubscribed = subscribed;
-			UpdateColor();
-			_subscriptionChecked = true;
-		}
+	}
+
+	private void UpdateSubscriptionState(bool subscribed)
+	{
+		_localPlayerSubscribed = subscribed;
+		UpdateColor();
+		_subscriptionChecked = true;
 	}
 
 	protected virtual void RefreshText()
@@ -232,7 +237,7 @@ public class GorillaPressableButton : MonoBehaviour, IClickable
 
 	private void PressButton(bool isLeftHand)
 	{
-		if (!isSubscriberOnlyButton || _localPlayerSubscribed)
+		if ((!isSubscriberOnlyButton || _localPlayerSubscribed) && (!isOwnerOnlyButton || IsOwnedByLocalPlayer()))
 		{
 			touchTime = Time.time;
 			onPressButton?.Invoke();
@@ -251,6 +256,21 @@ public class GorillaPressableButton : MonoBehaviour, IClickable
 	public void Click(bool leftHand = false)
 	{
 		PressButton(leftHand);
+	}
+
+	private bool IsOwnedByLocalPlayer()
+	{
+		VRRig componentInParent = GetComponentInParent<VRRig>(includeInactive: true);
+		if (componentInParent != null)
+		{
+			return componentInParent.isLocal;
+		}
+		CosmeticCollectionDisplay componentInParent2 = GetComponentInParent<CosmeticCollectionDisplay>(includeInactive: true);
+		if (componentInParent2 != null)
+		{
+			return componentInParent2.IsLocal;
+		}
+		return true;
 	}
 
 	public virtual void UpdateColor()
@@ -279,7 +299,10 @@ public class GorillaPressableButton : MonoBehaviour, IClickable
 
 	public void SetRendererMaterial(Material mat)
 	{
-		buttonRenderer.material = mat;
+		if ((bool)buttonRenderer)
+		{
+			buttonRenderer.material = mat;
+		}
 	}
 
 	public void SetPressedMaterial()

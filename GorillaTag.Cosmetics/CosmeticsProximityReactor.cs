@@ -27,6 +27,7 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 	public enum InteractionMode
 	{
 		CosmeticToCosmetic,
+		CosmeticToEnvironment,
 		GorillaBodyToCosmetic
 	}
 
@@ -40,11 +41,17 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 	[Serializable]
 	public class InteractionSetting
 	{
-		[Tooltip("Determines what type of interaction this block handles.\n• CosmeticToCosmetic: triggers when two cosmetics with matching keys are nearby.\n• GorillaBodyToCosmetic: triggers when a Gorilla body part (hand, head, etc.) is near this cosmetic.")]
+		[Tooltip("Determines what type of interaction this block handles.\n• CosmeticToCosmetic: triggers when two cosmetics with matching keys are nearby.\n• CosmeticToEnvironment: broadcasts keys that EnvironmentProximityReactor objects listen for. Use this to mark a cosmetic as a trigger for scene objects.\n• GorillaBodyToCosmetic: triggers when a Gorilla body part (hand, head, etc.) is near this cosmetic.")]
 		public InteractionMode mode;
 
-		[Tooltip("List of shared string identifiers that link this cosmetic to others.\nCosmetics with matching keys can trigger interactions with each other.")]
+		[Tooltip("Keys this block broadcasts. Other cosmetics or environment objects whose Key list or Listener list contain a matching key can react to this block.")]
 		public List<string> interactionKeys = new List<string>();
+
+		[Tooltip("If the other side is broadcasting any of these keys, this block will not fire, even if another key matches.")]
+		public List<string> ignoreKeys = new List<string>();
+
+		[Tooltip("Keys this block silently listens for. When the other side broadcasts one of these keys, this block fires. Listener keys are never broadcast outward, so two Listener-only objects will never trigger each other.")]
+		public List<string> listenerKeys = new List<string>();
 
 		[Tooltip("Specifies which Gorilla body parts (e.g., Hands, Head) can trigger this interaction.\nUse this when the Mode is set to GorillaBodyToCosmetic.")]
 		public GorillaBodyPart gorillaBodyMask;
@@ -85,6 +92,11 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 			return mode == InteractionMode.CosmeticToCosmetic;
 		}
 
+		public bool IsCosmeticToEnvironment()
+		{
+			return mode == InteractionMode.CosmeticToEnvironment;
+		}
+
 		public bool IsGorillaBodyToCosmetic()
 		{
 			return mode == InteractionMode.GorillaBodyToCosmetic;
@@ -99,29 +111,38 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 			return (gorillaBodyMask & kind) != 0;
 		}
 
-		public bool SharesKeyWith(InteractionSetting other)
+		public bool CanTriggerFrom(InteractionSetting other)
 		{
-			if (mode != InteractionMode.CosmeticToCosmetic)
+			if (mode != InteractionMode.CosmeticToCosmetic || other == null || other.mode != InteractionMode.CosmeticToCosmetic)
 			{
 				return false;
 			}
-			if (other == null)
+			if (other.interactionKeys == null || other.interactionKeys.Count == 0)
 			{
 				return false;
 			}
-			if (other.mode != InteractionMode.CosmeticToCosmetic)
+			if (ignoreKeys != null && ignoreKeys.Count > 0)
 			{
-				return false;
-			}
-			if (interactionKeys == null || other.interactionKeys == null)
-			{
-				return false;
-			}
-			foreach (string interactionKey in interactionKeys)
-			{
-				if (!string.IsNullOrEmpty(interactionKey) && other.interactionKeys.Contains(interactionKey))
+				foreach (string interactionKey in other.interactionKeys)
 				{
-					return true;
+					if (!string.IsNullOrEmpty(interactionKey) && ignoreKeys.Contains(interactionKey))
+					{
+						return false;
+					}
+				}
+			}
+			foreach (string interactionKey2 in other.interactionKeys)
+			{
+				if (!string.IsNullOrEmpty(interactionKey2))
+				{
+					if (interactionKeys != null && interactionKeys.Contains(interactionKey2))
+					{
+						return true;
+					}
+					if (listenerKeys != null && listenerKeys.Contains(interactionKey2))
+					{
+						return true;
+					}
 				}
 			}
 			return false;
@@ -225,6 +246,11 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 		}
 	}
 
+	public VRRig GetOwnerRig()
+	{
+		return MyRig;
+	}
+
 	public void OnSpawn(VRRig rig)
 	{
 		if (MyRig == null)
@@ -272,15 +298,29 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 		sharedKeysCache.Clear();
 		foreach (InteractionSetting block in blocks)
 		{
-			if (block.mode != InteractionMode.CosmeticToCosmetic || block.interactionKeys == null || block.interactionKeys.Count == 0)
+			if (block.mode != InteractionMode.CosmeticToCosmetic)
 			{
 				continue;
 			}
-			foreach (string interactionKey in block.interactionKeys)
+			if (block.interactionKeys != null)
 			{
-				if (!string.IsNullOrEmpty(interactionKey) && !sharedKeysCache.Contains(interactionKey))
+				foreach (string interactionKey in block.interactionKeys)
 				{
-					sharedKeysCache.Add(interactionKey);
+					if (!string.IsNullOrEmpty(interactionKey) && !sharedKeysCache.Contains(interactionKey))
+					{
+						sharedKeysCache.Add(interactionKey);
+					}
+				}
+			}
+			if (block.listenerKeys == null)
+			{
+				continue;
+			}
+			foreach (string listenerKey in block.listenerKeys)
+			{
+				if (!string.IsNullOrEmpty(listenerKey) && !sharedKeysCache.Contains(listenerKey))
+				{
+					sharedKeysCache.Add(listenerKey);
 				}
 			}
 		}
@@ -333,13 +373,12 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 			}
 			foreach (InteractionSetting block2 in other.blocks)
 			{
-				if (block2.mode == InteractionMode.CosmeticToCosmetic && block2.AllowsRig(other.MyRig, MyRig) && block.SharesKeyWith(block2))
+				if (block2.mode == InteractionMode.CosmeticToCosmetic && block2.AllowsRig(other.MyRig, MyRig) && block.CanTriggerFrom(block2))
 				{
 					any = true;
-					float num2 = Mathf.Min(block.proximityThreshold, block2.proximityThreshold);
-					if (num2 < num)
+					if (block.proximityThreshold < num)
 					{
-						num = num2;
+						num = block.proximityThreshold;
 					}
 				}
 			}
@@ -379,7 +418,7 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 			bool flag2 = false;
 			foreach (InteractionSetting block2 in other.blocks)
 			{
-				if (block2.mode == InteractionMode.CosmeticToCosmetic && block2.AllowsRig(other.MyRig, MyRig) && block.SharesKeyWith(block2))
+				if (block2.mode == InteractionMode.CosmeticToCosmetic && block2.AllowsRig(other.MyRig, MyRig) && block.CanTriggerFrom(block2))
 				{
 					flag2 = true;
 					break;
@@ -412,7 +451,7 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 			bool flag = false;
 			foreach (InteractionSetting block2 in other.blocks)
 			{
-				if (block2.mode == InteractionMode.CosmeticToCosmetic && block2.AllowsRig(other.MyRig, MyRig) && block.SharesKeyWith(block2))
+				if (block2.mode == InteractionMode.CosmeticToCosmetic && block2.AllowsRig(other.MyRig, MyRig) && block.CanTriggerFrom(block2))
 				{
 					flag = true;
 					break;

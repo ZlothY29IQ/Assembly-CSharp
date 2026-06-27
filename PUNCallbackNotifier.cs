@@ -63,6 +63,11 @@ public class PUNCallbackNotifier : MonoBehaviourPunCallbacks, IOnEventCallback
 		parentSystem.RaiseEvent(photonEvent.Code, photonEvent.CustomData, photonEvent.Sender);
 	}
 
+	public override void OnPreLeavingRoom()
+	{
+		parentSystem.PreLeavingRoom();
+	}
+
 	public override void OnMasterClientSwitched(Player newMasterClient)
 	{
 		parentSystem.OnMasterClientSwitched(newMasterClient);

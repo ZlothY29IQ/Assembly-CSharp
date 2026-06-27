@@ -31,6 +31,9 @@ public class GorillaMetaReport : MonoBehaviour
 	private GameObject rightHandObject;
 
 	[SerializeField]
+	private Quaternion handRotOffset;
+
+	[SerializeField]
 	private Vector3 playerLocalScreenPosition;
 
 	private float blockButtonsUntilTimestamp;
@@ -283,10 +286,7 @@ public class GorillaMetaReport : MonoBehaviour
 				currentScoreboard.transform.SetPositionAndRotation(position, rotation);
 			}
 			ToggleLevelVisibility(state: false);
-			Transform controllerTransform = localPlayer.GetControllerTransform(isLeftHand: true);
-			Transform controllerTransform2 = localPlayer.GetControllerTransform(isLeftHand: false);
-			rightHandObject.transform.SetPositionAndRotation(controllerTransform2.position, controllerTransform2.rotation);
-			leftHandObject.transform.SetPositionAndRotation(controllerTransform.position, controllerTransform.rotation);
+			UpdateHandPosRot();
 			if (isSanction)
 			{
 				currentScoreboard.gameObject.SetActive(value: false);
@@ -338,10 +338,7 @@ public class GorillaMetaReport : MonoBehaviour
 			{
 				localPlayer.inOverlay = true;
 				occluder.transform.position = GorillaTagger.Instance.mainCamera.transform.position;
-				Transform controllerTransform = localPlayer.GetControllerTransform(isLeftHand: true);
-				Transform controllerTransform2 = localPlayer.GetControllerTransform(isLeftHand: false);
-				rightHandObject.transform.SetPositionAndRotation(controllerTransform2.position, controllerTransform2.rotation);
-				leftHandObject.transform.SetPositionAndRotation(controllerTransform.position, controllerTransform.rotation);
+				UpdateHandPosRot();
 				CheckDistance();
 				CheckReportSubmit();
 			}
@@ -355,5 +352,13 @@ public class GorillaMetaReport : MonoBehaviour
 				StartOverlay();
 			}
 		}
+	}
+
+	private void UpdateHandPosRot()
+	{
+		Transform controllerTransform = localPlayer.GetControllerTransform(isLeftHand: true);
+		Transform controllerTransform2 = localPlayer.GetControllerTransform(isLeftHand: false);
+		rightHandObject.transform.SetPositionAndRotation(controllerTransform2.position, controllerTransform2.rotation * handRotOffset);
+		leftHandObject.transform.SetPositionAndRotation(controllerTransform.position, controllerTransform.rotation * handRotOffset);
 	}
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Collections;
 using UnityEngine;
 
 public class SITechTreeSO : ScriptableObject
@@ -15,6 +16,10 @@ public class SITechTreeSO : ScriptableObject
 	private SITechTreePage[] treePages;
 
 	private readonly Dictionary<SIUpgradeType, GraphNode<SITechTreeNode>> _nodeLookup = new Dictionary<SIUpgradeType, GraphNode<SITechTreeNode>>();
+
+	private NativeHashMap<int, SIUpgradeType> _upgradeTypeByEntityTypeId;
+
+	private readonly HashSet<int> _spawnableEntityTypeIds = new HashSet<int>();
 
 	private List<GameEntity> _spawnableEntities;
 
@@ -40,6 +45,17 @@ public class SITechTreeSO : ScriptableObject
 	public bool TryGetNode(SIUpgradeType upgradeType, out GraphNode<SITechTreeNode> node)
 	{
 		return _nodeLookup.TryGetValue(upgradeType, out node);
+	}
+
+	public bool TryGetUpgradeTypeByEntityTypeId(int entityTypeId, out SIUpgradeType upgradeType)
+	{
+		return _upgradeTypeByEntityTypeId.TryGetValue(entityTypeId, out upgradeType);
+	}
+
+	public bool IsSpawnableEntityTypeId(int entityTypeId)
+	{
+		EnsureInitialized();
+		return _spawnableEntityTypeIds.Contains(entityTypeId);
 	}
 
 	public bool IsValidPage(SITechTreePageId id)
@@ -115,6 +131,7 @@ public class SITechTreeSO : ScriptableObject
 		ClearTechTree();
 		TreePages = new List<SITechTreePage>();
 		_spawnableEntities = new List<GameEntity>();
+		int num = 0;
 		SITechTreePage[] array = treePages;
 		foreach (SITechTreePage sITechTreePage in array)
 		{
@@ -135,11 +152,33 @@ public class SITechTreeSO : ScriptableObject
 			}
 			foreach (SITechTreeNode dispensableGadget in sITechTreePage.DispensableGadgets)
 			{
+				num++;
 				AddSpawnableGadget(dispensableGadget.unlockedGadgetPrefab);
 			}
 			if (sITechTreePage.Roots.Count > 0)
 			{
 				TreePages.Add(sITechTreePage);
+			}
+		}
+		if (_upgradeTypeByEntityTypeId.IsCreated)
+		{
+			_upgradeTypeByEntityTypeId.Clear();
+		}
+		else
+		{
+			_upgradeTypeByEntityTypeId = new NativeHashMap<int, SIUpgradeType>(num, Allocator.Persistent);
+		}
+		array = treePages;
+		foreach (SITechTreePage sITechTreePage2 in array)
+		{
+			if (!sITechTreePage2.IsValid)
+			{
+				continue;
+			}
+			foreach (SITechTreeNode dispensableGadget2 in sITechTreePage2.DispensableGadgets)
+			{
+				int staticHash = dispensableGadget2.unlockedGadgetPrefab.gameObject.name.GetStaticHash();
+				_upgradeTypeByEntityTypeId.TryAdd(staticHash, dispensableGadget2.upgradeType);
 			}
 		}
 		AllNodes = new List<GraphNode<SITechTreeNode>>(_nodeLookup.Values);
@@ -158,6 +197,7 @@ public class SITechTreeSO : ScriptableObject
 	private void AddSpawnableGadget(GameEntity entity)
 	{
 		_spawnableEntities.Add(entity);
+		_spawnableEntityTypeIds.Add(entity.gameObject.name.GetStaticHash());
 		IPrefabRequirements component = entity.GetComponent<IPrefabRequirements>();
 		if (component == null)
 		{
@@ -166,6 +206,7 @@ public class SITechTreeSO : ScriptableObject
 		foreach (GameEntity requiredPrefab in component.RequiredPrefabs)
 		{
 			_spawnableEntities.Add(requiredPrefab);
+			_spawnableEntityTypeIds.Add(requiredPrefab.gameObject.name.GetStaticHash());
 		}
 	}
 
@@ -177,6 +218,11 @@ public class SITechTreeSO : ScriptableObject
 			array[i].ClearGraph();
 		}
 		_nodeLookup.Clear();
+		_spawnableEntityTypeIds.Clear();
+		if (_upgradeTypeByEntityTypeId.IsCreated)
+		{
+			_upgradeTypeByEntityTypeId.Dispose();
+		}
 		Initialized = false;
 	}
 }

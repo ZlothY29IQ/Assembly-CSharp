@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using GorillaTagScripts.VirtualStumpCustomMaps;
+using GorillaTagScripts.VirtualStumpCustomMaps.UI;
 using Modio;
 using Modio.Mods;
 using Modio.Users;
@@ -50,6 +51,9 @@ public class CustomMapsDisplayScreen : CustomMapsTerminalScreen
 
 	[SerializeField]
 	private TMP_Text outdatedText;
+
+	[SerializeField]
+	private TMP_Text playerCountText;
 
 	[SerializeField]
 	private string mapAutoDownloadingString = "DOWNLOADING...";
@@ -248,6 +252,7 @@ public class CustomMapsDisplayScreen : CustomMapsTerminalScreen
 		loadRoomMapPromptText.gameObject.SetActive(value: false);
 		hiddenRoomMapText.gameObject.SetActive(value: false);
 		outdatedText.gameObject.SetActive(value: false);
+		playerCountText.gameObject.SetActive(value: false);
 		loadingText.gameObject.SetActive(value: true);
 		if (CustomMapLoader.IsMapLoaded() || CustomMapManager.IsLoading() || CustomMapManager.IsUnloading())
 		{
@@ -370,15 +375,28 @@ public class CustomMapsDisplayScreen : CustomMapsTerminalScreen
 
 	private async Task UpdateStatus(bool errorEncountered = false)
 	{
-		if (base.isActiveAndEnabled && currentMapMod != null)
+		if (!base.isActiveAndEnabled || currentMapMod == null)
 		{
-			outdatedText.gameObject.SetActive(value: false);
-			ModFileState modFileState = (errorEncountered ? ModFileState.FileOperationFailed : currentMapMod.File.State);
-			if ((uint)modFileState > 1u && modFileState == ModFileState.Installed)
+			return;
+		}
+		outdatedText.gameObject.SetActive(value: false);
+		ModFileState modFileState = (errorEncountered ? ModFileState.FileOperationFailed : currentMapMod.File.State);
+		if ((uint)modFileState > 1u && modFileState == ModFileState.Installed)
+		{
+			bool item = (await ModIOManager.IsModOutdated(GetModId())).Item1;
+			outdatedText.gameObject.SetActive(item);
+		}
+		if (currentMapMod != null)
+		{
+			playerCountText.gameObject.SetActive(value: true);
+			PlayerCountHelper.GetPlayerCount(currentMapMod, delegate(string count)
 			{
-				bool item = (await ModIOManager.IsModOutdated(GetModId())).Item1;
-				outdatedText.gameObject.SetActive(item);
-			}
+				playerCountText.text = count;
+			});
+		}
+		else
+		{
+			playerCountText.gameObject.SetActive(value: false);
 		}
 	}
 

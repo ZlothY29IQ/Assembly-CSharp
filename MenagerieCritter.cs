@@ -226,19 +226,4 @@ public class MenagerieCritter : MonoBehaviour, IHoldableObject, IEyeScannable
 		}
 		return "Happy";
 	}
-
-	GameObject IHoldableObject.get_gameObject()
-	{
-		return base.gameObject;
-	}
-
-	string IHoldableObject.get_name()
-	{
-		return base.name;
-	}
-
-	void IHoldableObject.set_name(string value)
-	{
-		base.name = value;
-	}
 }

@@ -17,13 +17,17 @@ public class MothershipAuthenticator : MonoBehaviour, IGorillaSliceableSimple
 
 	public bool UseConstantTestAccountId;
 
-	public int MaxMetaLoginAttempts = 5;
+	private int loginAttempts;
+
+	public int MaxLoginAttempts = 5;
 
 	public Action OnLoginSuccess;
 
 	public Action<string, string, string> OnLoginFailure;
 
 	public Action<int> OnLoginAttemptFailure;
+
+	private double lastSliceUpdateTime;
 
 	[RuntimeInitializeOnLoadMethod]
 	private static void Init()
@@ -53,6 +57,16 @@ public class MothershipAuthenticator : MonoBehaviour, IGorillaSliceableSimple
 		{
 			Instance.SteamAuthenticator = Instance.gameObject.GetOrAddComponent<SteamAuthenticator>();
 		}
+		MothershipClientApiUnity.SetLogCallback(delegate(MothershipLogLevel level, string message)
+		{
+			PersistLog.Log(level switch
+			{
+				MothershipLogLevel.INFO => LogType.Log, 
+				MothershipLogLevel.WARN => LogType.Warning, 
+				MothershipLogLevel.ERROR => LogType.Error, 
+				_ => LogType.Log, 
+			}, message);
+		});
 		MothershipClientApiUnity.SetAuthRefreshedCallback(delegate
 		{
 			BeginLoginFlow();
@@ -84,10 +98,12 @@ public class MothershipAuthenticator : MonoBehaviour, IGorillaSliceableSimple
 	{
 		MothershipClientApiUnity.StartLoginWithSteam(delegate(PlayerSteamBeginLoginResponse resp)
 		{
+			Debug.Log($"Mothership: Steam Login started at {DateTime.Now}");
 			string nonce = resp.Nonce;
 			SteamAuthTicket ticketHandle = HAuthTicket.Invalid;
 			ticketHandle = SteamAuthenticator.GetAuthTicketForWebApi(nonce, delegate(string ticket)
 			{
+				Debug.Log($"Mothership: Attempting to complete login at {DateTime.Now}");
 				MothershipClientApiUnity.CompleteLoginWithSteam(nonce, ticket, delegate
 				{
 					ticketHandle.Dispose();
@@ -98,8 +114,16 @@ public class MothershipAuthenticator : MonoBehaviour, IGorillaSliceableSimple
 				{
 					ticketHandle.Dispose();
 					Debug.LogError($"Couldn't log into Mothership with Steam error {MothershipError.Message} trace ID: {MothershipError.TraceId} status: {errorCode} Mothership error code: {MothershipError.MothershipErrorCode}");
-					OnLoginAttemptFailure?.Invoke(1);
-					OnLoginFailure?.Invoke(MothershipError.Message, MothershipError.MothershipErrorCode, MothershipError.TraceId);
+					loginAttempts++;
+					OnLoginAttemptFailure?.Invoke(loginAttempts);
+					if (MothershipError.StatusCode == 400 || loginAttempts >= MaxLoginAttempts)
+					{
+						OnLoginFailure?.Invoke(MothershipError.Message, MothershipError.MothershipErrorCode, MothershipError.TraceId);
+					}
+					else
+					{
+						LogInWithSteam();
+					}
 				});
 			}, delegate(EResult error)
 			{
@@ -118,19 +142,26 @@ public class MothershipAuthenticator : MonoBehaviour, IGorillaSliceableSimple
 
 	public void OnEnable()
 	{
-		GorillaSlicerSimpleManager.RegisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
+		if (MothershipClientApiUnity.IsEnabled())
+		{
+			GorillaSlicerSimpleManager.RegisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
+			lastSliceUpdateTime = Time.unscaledTimeAsDouble;
+		}
 	}
 
 	public void OnDisable()
 	{
-		GorillaSlicerSimpleManager.UnregisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
+		if (MothershipClientApiUnity.IsEnabled())
+		{
+			GorillaSlicerSimpleManager.UnregisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
+		}
 	}
 
 	public void SliceUpdate()
 	{
-		if (MothershipClientApiUnity.IsEnabled())
-		{
-			MothershipClientApiUnity.Tick(Time.deltaTime);
-		}
+		double unscaledTimeAsDouble = Time.unscaledTimeAsDouble;
+		float deltaTime = (float)(unscaledTimeAsDouble - lastSliceUpdateTime);
+		lastSliceUpdateTime = unscaledTimeAsDouble;
+		MothershipClientApiUnity.Tick(deltaTime);
 	}
 }

@@ -120,9 +120,4 @@ public class BuilderPieceHandHold : MonoBehaviour, IGorillaGrabable, IBuilderPie
 			OnGrabReleased(activeGrabber);
 		}
 	}
-
-	string IGorillaGrabable.get_name()
-	{
-		return base.name;
-	}
 }

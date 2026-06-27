@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using ExitGames.Client.Photon;
 using ExitGames.Client.Photon.StructWrapping;
+using GT_CustomMapSupportRuntime;
 using GorillaExtensions;
 using GorillaGameModes;
-using GT_CustomMapSupportRuntime;
 using Photon.Pun;
 using Photon.Realtime;
 using Unity.Collections;
@@ -50,7 +50,7 @@ public class LuauVm : MonoBehaviourPunCallbacks, IOnEventCallback
 
 	public void OnEvent(EventData eventData)
 	{
-		if (eventData.Code != 180)
+		if (eventData.Code != 180 || !Utils.PlayerInRoom(eventData.Sender) || !(eventData.CustomData is object[] array) || array.Length > 20 || array.Length < 1)
 		{
 			return;
 		}
@@ -62,17 +62,27 @@ public class LuauVm : MonoBehaviourPunCallbacks, IOnEventCallback
 		}
 		value += 1f / callCount;
 		callTimers[eventData.Sender] = value;
-		if (!(value > Time.time))
+		if (value > Time.time || !(array[0] is string { Length: <=30 }))
 		{
-			object[] array = new object[2]
+			return;
+		}
+		for (int i = 1; i < array.Length; i++)
+		{
+			object obj = array[i];
+			if (obj != null && !(obj is double) && !(obj is bool) && !(obj is Vector3) && !(obj is Quaternion) && !(obj is Player))
 			{
-				NetworkSystem.Instance.GetPlayer(eventData.Sender),
-				(object[])eventData.CustomData
-			};
-			if (array.Length <= 20)
-			{
-				eventQueue.Enqueue(array);
+				return;
 			}
+		}
+		object[] item = new object[2]
+		{
+			NetworkSystem.Instance.GetPlayer(eventData.Sender),
+			array
+		};
+		eventQueue.Enqueue(item);
+		if (eventQueue.Count > 500)
+		{
+			eventQueue.Dequeue();
 		}
 	}
 
@@ -205,7 +215,7 @@ public class LuauVm : MonoBehaviourPunCallbacks, IOnEventCallback
 								}
 							}
 						}
-						else if (obj == null)
+						else
 						{
 							Luau.lua_pushnil(L);
 						}

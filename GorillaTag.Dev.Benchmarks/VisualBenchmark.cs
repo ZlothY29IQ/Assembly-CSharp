@@ -58,7 +58,6 @@ public class VisualBenchmark : MonoBehaviour
 		};
 		List<ProfilerRecorderHandle> list = new List<ProfilerRecorderHandle>(5500);
 		ProfilerRecorderHandle.GetAvailable(list);
-		Debug.Log($"poop Available stats: {list.Count}", this);
 		List<StatInfo> list2 = new List<StatInfo>(600);
 		foreach (ProfilerRecorderHandle item in list)
 		{
@@ -73,7 +72,6 @@ public class VisualBenchmark : MonoBehaviour
 			}
 		}
 		availableRenderStats = list2.ToArray();
-		Debug.Log($"poop availableRenderStats: {list2.Count}", this);
 		List<Transform> list3 = new List<Transform>(benchmarkLocations.Length);
 		Transform[] array = benchmarkLocations;
 		foreach (Transform transform in array)
@@ -114,14 +112,12 @@ public class VisualBenchmark : MonoBehaviour
 		switch (state)
 		{
 		case EState.Setup:
-			Debug.Log("poop start");
 			sb.Clear();
 			currentLocationIndex = 0;
 			lastTime = Time.realtimeSinceStartup;
 			state = EState.WaitingBeforeCollectingGarbage;
 			break;
 		case EState.WaitingBeforeCollectingGarbage:
-			Debug.Log("poop wait 1");
 			if (!(Time.realtimeSinceStartup - lastTime < collectGarbageDelay))
 			{
 				lastTime = Time.time;
@@ -130,7 +126,6 @@ public class VisualBenchmark : MonoBehaviour
 			}
 			break;
 		case EState.WaitingBeforeRecordingStats:
-			Debug.Log("poop wait 2");
 			if (!(Time.time - lastTime < recordStatsDelay))
 			{
 				lastTime = Time.time;
@@ -147,7 +142,6 @@ public class VisualBenchmark : MonoBehaviour
 			}
 			break;
 		case EState.TearDown:
-			Debug.Log("poop teardown");
 			Debug.Log(sb.ToString());
 			state = EState.Setup;
 			if (sb.Length > sb.Capacity)

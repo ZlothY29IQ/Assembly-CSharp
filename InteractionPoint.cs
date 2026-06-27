@@ -106,7 +106,10 @@ public class InteractionPoint : MonoBehaviour, ISpawnable, IBuildValidation
 		if (!forLocalPlayer)
 		{
 			base.enabled = false;
-			myCollider.enabled = false;
+			if (myCollider.IsNotNull())
+			{
+				myCollider.enabled = false;
+			}
 		}
 		else if (interactor == null)
 		{

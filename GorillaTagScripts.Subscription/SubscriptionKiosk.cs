@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using GorillaNetworking;
 using Oculus.Platform;
 using Oculus.Platform.Models;
+using Steamworks;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Video;
 
 namespace GorillaTagScripts.Subscription;
 
@@ -23,6 +25,7 @@ public class SubscriptionKiosk : MonoBehaviour, ITouchScreenStation, IGorillaSli
 		SubscriptionPurchaseInProgress,
 		SubscriptionPurchaseResult,
 		FeatureToggles,
+		SubscriptionSteamWarning,
 		None
 	}
 
@@ -44,6 +47,25 @@ public class SubscriptionKiosk : MonoBehaviour, ITouchScreenStation, IGorillaSli
 	private const string subSKU = "fan_club";
 
 	[SerializeField]
+	private VideoPlayer subsVideoPlayer;
+
+	[SerializeField]
+	private ObservableBehavior subsVideoObservable;
+
+	[SerializeField]
+	private VideoClip defaultVideoClip;
+
+	[SerializeField]
+	private VideoClip steamSubsVideoClip;
+
+	[SerializeField]
+	private ObservableBehaviorRule defaultObservableRule;
+
+	[SerializeField]
+	private ObservableBehaviorRule steamObservableRule;
+
+	[Space]
+	[SerializeField]
 	private GameObject steamComingSoon;
 
 	[SerializeField]
@@ -61,9 +83,17 @@ public class SubscriptionKiosk : MonoBehaviour, ITouchScreenStation, IGorillaSli
 	[SerializeField]
 	private GameObject mainMenuSubscribedScreen;
 
+	[Space]
 	[SerializeField]
 	private GameObject mainMenuUnsubscribedScreen;
 
+	[SerializeField]
+	private GameObject mainMenuUnsubscribedQuestText;
+
+	[SerializeField]
+	private GameObject mainMenuUnsubscribedSteamText;
+
+	[Space]
 	[SerializeField]
 	private GameObject subDataScreen;
 
@@ -82,6 +112,8 @@ public class SubscriptionKiosk : MonoBehaviour, ITouchScreenStation, IGorillaSli
 	private List<SITouchscreenButtonContainer> toggleButtonContainers;
 
 	private Dictionary<ScreenState, GameObject> screensByState;
+
+	private string steamOrderId = "";
 
 	[SerializeField]
 	private TextMeshPro subMenuPlayerName;
@@ -122,6 +154,10 @@ public class SubscriptionKiosk : MonoBehaviour, ITouchScreenStation, IGorillaSli
 
 	private PurchaseResult lastPurchase;
 
+	private Callback<MicroTxnAuthorizationResponse_t> _steamMicroTransactionAuthorizationResponse;
+
+	public static bool ProcessingSubscriptionPurchase { get; set; }
+
 	public SIScreenRegion ScreenRegion { get; }
 
 	private void Awake()
@@ -146,19 +182,28 @@ public class SubscriptionKiosk : MonoBehaviour, ITouchScreenStation, IGorillaSli
 		screensByState.Add(ScreenState.SubscriptionPurchaseInProgress, purchaseProgressScreen);
 		screensByState.Add(ScreenState.SubscriptionPurchaseResult, purchaseResultScreen);
 		screensByState.Add(ScreenState.FeatureToggles, featureTogglesScreen);
+		screensByState.Add(ScreenState.SubscriptionSteamWarning, steamComingSoon);
 	}
 
 	private void OnEnable()
 	{
-		steamComingSoon.SetActive(value: true);
-		waitingForScanScreen.SetActive(value: false);
-		UnityEngine.Object.Destroy(this);
+		if (PlayFabAuthenticator.instance.GetSafety())
+		{
+			UpdateState(ScreenState.SafeAccount);
+			UnityEngine.Object.Destroy(this);
+			return;
+		}
+		UpdateState(ScreenState.WaitingForScan);
+		subsVideoPlayer.clip = defaultVideoClip;
+		GorillaSlicerSimpleManager.RegisterSliceable(this);
+		SubscriptionManager.OnLocalSubscriptionData = (Action)Delegate.Combine(SubscriptionManager.OnLocalSubscriptionData, new Action(LocalSubscriptionDataUpdated));
 	}
 
 	private void OnDisable()
 	{
 		GorillaSlicerSimpleManager.UnregisterSliceable(this);
 		SubscriptionManager.OnLocalSubscriptionData = (Action)Delegate.Remove(SubscriptionManager.OnLocalSubscriptionData, new Action(LocalSubscriptionDataUpdated));
+		_steamMicroTransactionAuthorizationResponse?.Unregister();
 	}
 
 	public void HandScanAborted()
@@ -275,15 +320,20 @@ public class SubscriptionKiosk : MonoBehaviour, ITouchScreenStation, IGorillaSli
 		case ScreenState.MainMenuUnsubscribed:
 			if (buttonType == SITouchscreenButton.SITouchscreenButtonType.Subscribe)
 			{
+				UpdateState(ScreenState.SubscriptionSteamWarning);
+				subsVideoPlayer.clip = steamSubsVideoClip;
+				subsVideoObservable.ObservableBehaviorRule = steamObservableRule;
+			}
+			break;
+		case ScreenState.SubscriptionSteamWarning:
+			if (buttonType == SITouchscreenButton.SITouchscreenButtonType.Subscribe)
+			{
 				UpdateState(ScreenState.PurchaseSubscription);
 			}
 			break;
 		case ScreenState.SubscriptionData:
 			switch (buttonType)
 			{
-			case SITouchscreenButton.SITouchscreenButtonType.Cancel:
-				Debug.Log("yeet");
-				break;
 			case SITouchscreenButton.SITouchscreenButtonType.Back:
 				HandScanned();
 				break;
@@ -302,6 +352,8 @@ public class SubscriptionKiosk : MonoBehaviour, ITouchScreenStation, IGorillaSli
 				HandScanned();
 				break;
 			}
+			subsVideoPlayer.clip = defaultVideoClip;
+			subsVideoObservable.ObservableBehaviorRule = defaultObservableRule;
 			break;
 		case ScreenState.SubscriptionPurchaseResult:
 			if (buttonType == SITouchscreenButton.SITouchscreenButtonType.Confirm)
@@ -310,6 +362,7 @@ public class SubscriptionKiosk : MonoBehaviour, ITouchScreenStation, IGorillaSli
 			}
 			break;
 		case ScreenState.SubscriptionPurchaseInProgress:
+		case ScreenState.FeatureToggles:
 			break;
 		}
 	}
@@ -398,6 +451,10 @@ public class SubscriptionKiosk : MonoBehaviour, ITouchScreenStation, IGorillaSli
 	private void UpdateUnsubscribedMenu()
 	{
 		unsubscribedMenuPlayerName.text = NetworkSystem.Instance.LocalPlayer.SanitizedNickName;
+		mainMenuUnsubscribedQuestText.SetActive(value: false);
+		mainMenuUnsubscribedSteamText.SetActive(value: true);
+		subsVideoPlayer.clip = defaultVideoClip;
+		subsVideoObservable.ObservableBehaviorRule = defaultObservableRule;
 	}
 
 	private void UpdateSubscriptionData()
@@ -437,15 +494,79 @@ public class SubscriptionKiosk : MonoBehaviour, ITouchScreenStation, IGorillaSli
 		purchaseResultText.text = result2;
 	}
 
+	private void ProcessSteamCallback(MicroTxnAuthorizationResponse_t callBackResponse)
+	{
+		if (callBackResponse.m_bAuthorized == 0)
+		{
+			Debug.Log("The user did not authorize the steam subscription purchase");
+			UpdatePurchaseResultScreen(PurchaseResult.Cancel);
+			UpdateState(ScreenState.SubscriptionPurchaseResult);
+		}
+		MothershipClientApiUnity.FinalizeSteamSubscriptionTransaction(steamOrderId, delegate
+		{
+			ProcessingSubscriptionPurchase = false;
+			UpdatePurchaseResultScreen(PurchaseResult.Success);
+			UpdateState(ScreenState.SubscriptionPurchaseResult);
+			SubscriptionManager.InitializePersonalSubscriptionData();
+		}, delegate(MothershipError Error, int Status)
+		{
+			ProcessingSubscriptionPurchase = false;
+			UpdatePurchaseResultScreen(PurchaseResult.Failure);
+			UpdateState(ScreenState.SubscriptionPurchaseResult);
+			Debug.LogError("SubscriptionKiosk could not finalzie STEAM iap. Trace ID " + Error.TraceId + ", Error Code: " + Error.MothershipErrorCode);
+		});
+	}
+
 	private void PurchaseSubscription(SubscriptionManager.SubscriptionTerm subTerm)
 	{
-		IAP.LaunchCheckoutFlow("fan_club:SUBSCRIPTION__" + subTerm).OnComplete(LaunchCheckoutFlowCallback);
+		if (SteamManager.Initialized && _steamMicroTransactionAuthorizationResponse == null)
+		{
+			_steamMicroTransactionAuthorizationResponse = Callback<MicroTxnAuthorizationResponse_t>.Create(ProcessSteamCallback);
+		}
+		Debug.Log("Starting Steam Subscription Purchase");
+		int frequency = 1;
+		int priceInUSDCents = 999;
+		string frequencyUnit = "Month";
+		switch (subTerm)
+		{
+		case SubscriptionManager.SubscriptionTerm.MONTHLY:
+			frequency = 1;
+			priceInUSDCents = 999;
+			frequencyUnit = "Month";
+			break;
+		case SubscriptionManager.SubscriptionTerm.QUARTERLY:
+			frequency = 3;
+			priceInUSDCents = 2699;
+			frequencyUnit = "Month";
+			break;
+		case SubscriptionManager.SubscriptionTerm.SEMIANNUAL:
+			frequency = 6;
+			priceInUSDCents = 4999;
+			frequencyUnit = "Month";
+			break;
+		case SubscriptionManager.SubscriptionTerm.ANNUAL:
+			frequency = 1;
+			priceInUSDCents = 9499;
+			frequencyUnit = "Year";
+			break;
+		}
+		ProcessingSubscriptionPurchase = true;
+		MothershipClientApiUnity.InitSteamSubscriptionTransaction("40494", frequencyUnit, frequency, priceInUSDCents, delegate(InitSteamSubscriptionPurchaseResponse Response)
+		{
+			steamOrderId = Response.SteamOrderId;
+		}, delegate(MothershipError Error, int Status)
+		{
+			UpdatePurchaseResultScreen(PurchaseResult.Failure);
+			UpdateState(ScreenState.SubscriptionPurchaseResult);
+			Debug.LogError("SubscriptionKiosk could not start STEAM iap. Trace ID " + Error.TraceId + ", Error Code: " + Error.MothershipErrorCode);
+			ProcessingSubscriptionPurchase = false;
+		});
 		UpdateState(ScreenState.SubscriptionPurchaseInProgress);
 	}
 
 	public void LaunchCheckoutFlowCallback(Message<Purchase> msg)
 	{
-		Debug.Log("SubscriptionKiosk Purchase result: " + msg.Data.ToString());
+		Debug.Log($"SubscriptionKiosk Purchase result: {msg.Type}   isError: {msg.IsError}   Data: {msg.Data.ToString()}");
 		if (msg.IsError)
 		{
 			Error error = msg.GetError();
@@ -459,7 +580,7 @@ public class SubscriptionKiosk : MonoBehaviour, ITouchScreenStation, IGorillaSli
 		else
 		{
 			Purchase purchase = msg.GetPurchase();
-			if (purchase != null && purchase.Sku != "" && purchase.Sku != null)
+			if (purchase != null && !string.IsNullOrEmpty(purchase.Sku))
 			{
 				UpdatePurchaseResultScreen(PurchaseResult.Success);
 			}
@@ -490,6 +611,21 @@ public class SubscriptionKiosk : MonoBehaviour, ITouchScreenStation, IGorillaSli
 				UpdateState(ScreenState.SubscriptionData);
 			}
 		}
+		subsVideoPlayer.clip = defaultVideoClip;
+	}
+
+	private void UpdateSubsVideo()
+	{
+		if (SubscriptionManager.IsLocalSubscribed())
+		{
+			subsVideoObservable.ObservableBehaviorRule = defaultObservableRule;
+			subsVideoPlayer.clip = defaultVideoClip;
+		}
+		else
+		{
+			subsVideoPlayer.clip = steamSubsVideoClip;
+			subsVideoObservable.ObservableBehaviorRule = steamObservableRule;
+		}
 	}
 
 	public void SliceUpdate()
@@ -498,10 +634,5 @@ public class SubscriptionKiosk : MonoBehaviour, ITouchScreenStation, IGorillaSli
 		{
 			HandScanned();
 		}
-	}
-
-	GameObject ITouchScreenStation.get_gameObject()
-	{
-		return base.gameObject;
 	}
 }

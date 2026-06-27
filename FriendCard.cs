@@ -1,4 +1,5 @@
 using GorillaNetworking;
+using GorillaTagScripts;
 using TMPro;
 using UnityEngine;
 
@@ -19,6 +20,10 @@ public class FriendCard : MonoBehaviour
 	[SerializeField]
 	private float width = 0.25f;
 
+	private const string ResubscribeMessage = "RESUBSCRIBE TO UNLOCK!";
+
+	private const float ResubscribeMessageDuration = 2.5f;
+
 	private string emptyString = "";
 
 	private string privateString = "PRIVATE";
@@ -26,6 +31,8 @@ public class FriendCard : MonoBehaviour
 	private bool joinable;
 
 	private bool canRemove;
+
+	private bool _isVimSlot;
 
 	private GorillaPressableDelayButton _button;
 
@@ -96,11 +103,12 @@ public class FriendCard : MonoBehaviour
 		{
 			removeProgressBar.gameObject.SetActive(canRemove);
 		}
+		bool flag = _isVimSlot && !SubscriptionManager.IsLocalSubscribed();
 		if (canRemove)
 		{
 			SetButtonState((currentFriend != null) ? FriendDisplay.ButtonState.Alert : FriendDisplay.ButtonState.Default);
 		}
-		else if (joinable)
+		else if (joinable && !flag)
 		{
 			SetButtonState(FriendDisplay.ButtonState.Active);
 		}
@@ -140,7 +148,12 @@ public class FriendCard : MonoBehaviour
 
 	public void Populate(FriendBackendController.Friend friend)
 	{
-		SetEmpty();
+		Populate(friend, isVimSlot: false);
+	}
+
+	public void Populate(FriendBackendController.Friend friend, bool isVimSlot)
+	{
+		SetEmpty(isVimSlot);
 		if (friend != null && friend.Presence != null)
 		{
 			if (friend.Presence.UserName != null)
@@ -229,11 +242,18 @@ public class FriendCard : MonoBehaviour
 
 	public void SetEmpty()
 	{
+		SetEmpty(_isVimSlot);
+	}
+
+	public void SetEmpty(bool isVimSlot)
+	{
+		CancelInvoke("RestoreAfterResubscribeMessage");
 		SetName(emptyString);
 		SetRoom(emptyString);
 		SetZone(emptyString);
 		joinable = false;
 		currentFriend = null;
+		_isVimSlot = isVimSlot;
 		UpdateComponentStates();
 	}
 
@@ -339,15 +359,35 @@ public class FriendCard : MonoBehaviour
 	{
 		switch (_buttonState)
 		{
+		case FriendDisplay.ButtonState.Default:
+			if (_isVimSlot && currentFriend != null && !SubscriptionManager.IsLocalSubscribed())
+			{
+				ShowResubscribeMessage();
+			}
+			break;
 		case FriendDisplay.ButtonState.Active:
 			JoinButtonPressed();
 			break;
 		case FriendDisplay.ButtonState.Alert:
 			RemoveFriendButtonPressed();
 			break;
-		case FriendDisplay.ButtonState.Default:
-			break;
 		}
+	}
+
+	private void ShowResubscribeMessage()
+	{
+		CancelInvoke("RestoreAfterResubscribeMessage");
+		nameText.text = "RESUBSCRIBE TO UNLOCK!";
+		roomText.text = emptyString;
+		zoneText.text = emptyString;
+		Invoke("RestoreAfterResubscribeMessage", 2.5f);
+	}
+
+	private void RestoreAfterResubscribeMessage()
+	{
+		nameText.text = _friendName;
+		roomText.text = _friendRoom;
+		zoneText.text = _friendZone;
 	}
 
 	private bool HasKIDPermissionToJoinPrivateRooms()

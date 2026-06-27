@@ -1,8 +1,8 @@
+using GT_CustomMapSupportRuntime;
 using GorillaExtensions;
 using GorillaLocomotion;
 using GorillaTag.Rendering;
 using GorillaTagScripts.VirtualStumpCustomMaps;
-using GT_CustomMapSupportRuntime;
 using UnityEngine;
 
 public class CMSZoneShaderSettingsTrigger : MonoBehaviour

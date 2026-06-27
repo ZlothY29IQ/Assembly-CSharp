@@ -221,6 +221,12 @@ public class SizeManager : MonoBehaviour
 		}
 		case SizeChanger.ChangerType.Static:
 			return SizeOverTime(sC.MinScale, sC.StaticEasing, deltaTime);
+		case SizeChanger.ChangerType.Radius:
+		{
+			float value = Vector3.Distance(t.position, sC.StartPos.position);
+			float t2 = Mathf.InverseLerp(sC.startRadius, sC.endRadius, value);
+			return Mathf.Lerp(sC.MinScale, sC.MaxScale, t2);
+		}
 		default:
 			return 1f;
 		}

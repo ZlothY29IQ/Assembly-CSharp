@@ -35,6 +35,7 @@ public class SuperInfection : MonoBehaviour, IGorillaSliceableSimple
 
 	public SIResourceRegion[] perRoundResourceRegions;
 
+	[NonSerialized]
 	public SuperInfectionManager siManager;
 
 	public Transform resourceResetLoc;
@@ -105,7 +106,7 @@ public class SuperInfection : MonoBehaviour, IGorillaSliceableSimple
 
 	private void Awake()
 	{
-		resourceRegions = resourceNodeParent.GetComponentsInChildren<SIResourceRegion>(includeInactive: true);
+		resourceRegions = ((resourceNodeParent != null) ? resourceNodeParent.GetComponentsInChildren<SIResourceRegion>(includeInactive: true) : Array.Empty<SIResourceRegion>());
 		_resourcePrefabs = new List<SIResource>();
 		SIResourceRegion[] array = resourceRegions;
 		foreach (SIResourceRegion sIResourceRegion in array)
@@ -115,8 +116,8 @@ public class SuperInfection : MonoBehaviour, IGorillaSliceableSimple
 				_resourcePrefabs.Add(sIResourceRegion.resourcePrefab);
 			}
 		}
-		perRoundResourceRegions = perRoundResourceNodeParent.GetComponentsInChildren<SIResourceRegion>(includeInactive: true);
-		resourceResetHeight = resourceResetLoc.position.y;
+		perRoundResourceRegions = ((perRoundResourceNodeParent != null) ? perRoundResourceNodeParent.GetComponentsInChildren<SIResourceRegion>(includeInactive: true) : Array.Empty<SIResourceRegion>());
+		resourceResetHeight = ((resourceResetLoc != null) ? resourceResetLoc.position.y : float.MinValue);
 	}
 
 	public void OnEnable()
@@ -126,7 +127,7 @@ public class SuperInfection : MonoBehaviour, IGorillaSliceableSimple
 		{
 			siManager.OnEnableZoneSuperInfection(this);
 		}
-		if (siManager.isActiveAndEnabled)
+		if (siManager == null || siManager.isActiveAndEnabled)
 		{
 			DisableStations();
 		}
@@ -164,6 +165,7 @@ public class SuperInfection : MonoBehaviour, IGorillaSliceableSimple
 
 	public void OnZoneInit()
 	{
+		RebuildRegionItemsFromEntities();
 		EnableStations();
 	}
 
@@ -181,12 +183,19 @@ public class SuperInfection : MonoBehaviour, IGorillaSliceableSimple
 		for (int i = 0; i < siTerminals.Length; i++)
 		{
 			siTerminals[i].gameObject.SetActive(value: true);
+			if ((bool)siTerminals[i].dispenser && siTerminals[i].dispenser.isTryOn && siManager != null)
+			{
+				siManager.RegisterTryOnDispenser();
+			}
 		}
 		for (int j = 0; j < siDeposits.Length; j++)
 		{
 			siDeposits[j].gameObject.SetActive(value: true);
 		}
-		questBoard.gameObject.SetActive(value: true);
+		if (questBoard != null)
+		{
+			questBoard.gameObject.SetActive(value: true);
+		}
 		if (purchaseTerminal != null)
 		{
 			purchaseTerminal.gameObject.SetActive(value: true);
@@ -213,6 +222,10 @@ public class SuperInfection : MonoBehaviour, IGorillaSliceableSimple
 		}
 		for (int i = 0; i < siTerminals.Length; i++)
 		{
+			if (siManager != null && (bool)siTerminals[i].dispenser && siTerminals[i].dispenser.isTryOn)
+			{
+				siManager.UnregisterTryOnDispenser();
+			}
 			siTerminals[i].gameObject.SetActive(value: false);
 			siTerminals[i].Reset();
 		}
@@ -220,7 +233,10 @@ public class SuperInfection : MonoBehaviour, IGorillaSliceableSimple
 		{
 			siDeposits[j].gameObject.SetActive(value: false);
 		}
-		questBoard.gameObject.SetActive(value: false);
+		if (questBoard != null)
+		{
+			questBoard.gameObject.SetActive(value: false);
+		}
 		if (purchaseTerminal != null)
 		{
 			purchaseTerminal.gameObject.SetActive(value: false);
@@ -380,6 +396,107 @@ public class SuperInfection : MonoBehaviour, IGorillaSliceableSimple
 			{
 				siManager.gameEntityManager.RequestDestroyItem(activeGadgets[num].gameEntity.id);
 			}
+		}
+	}
+
+	private void RebuildRegionItemsFromEntities()
+	{
+		if (resourceRegions.Length + perRoundResourceRegions.Length == 0)
+		{
+			return;
+		}
+		int[] array = new int[resourceRegions.Length];
+		for (int i = 0; i < resourceRegions.Length; i++)
+		{
+			resourceRegions[i].Items.Clear();
+			array[i] = ((resourceRegions[i].resourcePrefab != null) ? resourceRegions[i].resourcePrefab.gameObject.name.GetStaticHash() : 0);
+		}
+		int[] array2 = new int[perRoundResourceRegions.Length];
+		for (int j = 0; j < perRoundResourceRegions.Length; j++)
+		{
+			perRoundResourceRegions[j].Items.Clear();
+			array2[j] = ((perRoundResourceRegions[j].resourcePrefab != null) ? perRoundResourceRegions[j].resourcePrefab.gameObject.name.GetStaticHash() : 0);
+		}
+		List<GameEntity> gameEntities = siManager.gameEntityManager.GetGameEntities();
+		int num = 0;
+		int num2 = 0;
+		for (int k = 0; k < gameEntities.Count; k++)
+		{
+			GameEntity gameEntity = gameEntities[k];
+			if (gameEntity == null || gameEntity.GetComponent<SIResource>() == null)
+			{
+				continue;
+			}
+			int typeId = gameEntity.typeId;
+			bool flag = false;
+			SIResourceRegion sIResourceRegion = null;
+			int num3 = int.MaxValue;
+			for (int l = 0; l < resourceRegions.Length; l++)
+			{
+				if (array[l] == typeId && resourceRegions[l].ItemCount < resourceRegions[l].MaxItems && resourceRegions[l].ItemCount < num3)
+				{
+					sIResourceRegion = resourceRegions[l];
+					num3 = resourceRegions[l].ItemCount;
+				}
+			}
+			if (sIResourceRegion != null)
+			{
+				sIResourceRegion.AddItem(gameEntity);
+				num++;
+				flag = true;
+			}
+			if (!flag)
+			{
+				for (int m = 0; m < perRoundResourceRegions.Length; m++)
+				{
+					if (array2[m] == typeId && perRoundResourceRegions[m].ItemCount < perRoundResourceRegions[m].MaxItems)
+					{
+						perRoundResourceRegions[m].AddItem(gameEntity);
+						num++;
+						flag = true;
+						break;
+					}
+				}
+			}
+			if (!flag)
+			{
+				num2++;
+			}
+		}
+		if (num2 > 0 && siManager.gameEntityManager.IsAuthority())
+		{
+			for (int num4 = gameEntities.Count - 1; num4 >= 0; num4--)
+			{
+				GameEntity gameEntity2 = gameEntities[num4];
+				if (!(gameEntity2 == null) && !(gameEntity2.GetComponent<SIResource>() == null) && gameEntity2.heldByActorNumber == 0)
+				{
+					bool flag2 = false;
+					for (int n = 0; n < resourceRegions.Length; n++)
+					{
+						if (flag2)
+						{
+							break;
+						}
+						flag2 = resourceRegions[n].Items.Contains(gameEntity2);
+					}
+					for (int num5 = 0; num5 < perRoundResourceRegions.Length; num5++)
+					{
+						if (flag2)
+						{
+							break;
+						}
+						flag2 = perRoundResourceRegions[num5].Items.Contains(gameEntity2);
+					}
+					if (!flag2)
+					{
+						siManager.gameEntityManager.RequestDestroyItem(gameEntity2.id);
+					}
+				}
+			}
+		}
+		if (num > 0)
+		{
+			_lastResourceSpawnTime = Time.time;
 		}
 	}
 

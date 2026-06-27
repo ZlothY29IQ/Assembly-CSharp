@@ -7,6 +7,7 @@ using BoingKit;
 using CjLib;
 using GorillaExtensions;
 using GorillaNetworking;
+using GorillaTag;
 using GorillaTagScripts.Builder;
 using Ionic.Zlib;
 using Photon.Pun;
@@ -466,6 +467,8 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 
 	public int maxPlacementChildDepth = 5;
 
+	public List<SimpleAABB> m_areaBounds = new List<SimpleAABB>();
+
 	private static List<BuilderPiece> tempPieces = new List<BuilderPiece>(256);
 
 	private static List<BuilderConveyor> tempConveyors = new List<BuilderConveyor>(256);
@@ -499,7 +502,7 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 	private SharedBlocksManager.StartingMapConfig startingMapConfig = new SharedBlocksManager.StartingMapConfig
 	{
 		pageNumber = 0,
-		pageSize = 10,
+		pageSize = 50,
 		sortMethod = SharedBlocksManager.MapSortMethod.Top.ToString(),
 		useMapID = false,
 		mapID = null
@@ -2520,8 +2523,9 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 			if (!isTableMutable)
 			{
 				GTDev.LogError($"Deserialized bad CreatePiece parameters. held piece in immutable table {pieceId}");
+				return false;
 			}
-			else if (localPosition.sqrMagnitude > 6.25f)
+			if (localPosition.sqrMagnitude > 6.25f)
 			{
 				return false;
 			}
@@ -2539,7 +2543,14 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 			break;
 		case BuilderPiece.State.OnShelf:
 		case BuilderPiece.State.Displayed:
-			if (shelfOwner == -1 && !ValidatePieceWorldTransform(localPosition, localRotation))
+			if (!isTableMutable || shelfOwner == -1)
+			{
+				if (!ValidatePieceWorldTransform(localPosition, localRotation))
+				{
+					return false;
+				}
+			}
+			else if (shelfOwner < 0 || shelfOwner > dispenserShelves.Count - 1)
 			{
 				return false;
 			}
@@ -2552,6 +2563,10 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 			if (!isTableMutable)
 			{
 				GTDev.LogError($"Deserialized bad CreatePiece parameters. OnConveyor piece in immutable table {pieceId}");
+				return false;
+			}
+			if (shelfOwner < 0 || shelfOwner > conveyors.Count - 1)
+			{
 				return false;
 			}
 			break;
@@ -2609,7 +2624,19 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 		{
 			return false;
 		}
-		return true;
+		return ValidatePositionInArea(position);
+	}
+
+	public bool ValidatePositionInArea(Vector3 position)
+	{
+		foreach (SimpleAABB areaBound in m_areaBounds)
+		{
+			if (areaBound.IsInBounds(position))
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private BuilderPiece CreatePieceInternal(int newPieceType, int newPieceId, Vector3 position, Quaternion rotation, BuilderPiece.State state, int materialType, int activateTimeStamp, BuilderTable table)
@@ -2717,6 +2744,10 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 
 	private bool ValidateAttachPieceParams(int pieceId, int attachIndex, int parentId, int parentAttachIndex, int piecePlacement)
 	{
+		if (pieceId == parentId)
+		{
+			return false;
+		}
 		BuilderPiece piece = GetPiece(pieceId);
 		if (piece == null)
 		{
@@ -2823,6 +2854,11 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 					{
 						piece2.ClearParentHeld();
 						playerToArmShelfLeft.Remove(actorNumber);
+						piece2.transform.GetPositionAndRotation(out var position, out var rotation);
+						if (!ValidatePieceWorldTransform(position, rotation))
+						{
+							RecyclePieceInternal(piece2.pieceId, ignoreHaptics: true, playFX: false, -1);
+						}
 					}
 				}
 				playerToArmShelfLeft.TryAdd(actorNumber, pieceId);
@@ -2838,6 +2874,11 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 					{
 						piece3.ClearParentHeld();
 						playerToArmShelfRight.Remove(actorNumber);
+						piece3.transform.GetPositionAndRotation(out var position2, out var rotation2);
+						if (!ValidatePieceWorldTransform(position2, rotation2))
+						{
+							RecyclePieceInternal(piece3.pieceId, ignoreHaptics: true, playFX: false, -1);
+						}
 					}
 				}
 				playerToArmShelfRight.TryAdd(actorNumber, pieceId);
@@ -3197,7 +3238,7 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 		{
 			return false;
 		}
-		if ((roomCenter.position - position).sqrMagnitude > acceptableSqrDistFromCenter)
+		if ((roomCenter.position - position).sqrMagnitude > acceptableSqrDistFromCenter || !ValidatePositionInArea(position))
 		{
 			return false;
 		}
@@ -3277,7 +3318,7 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 		int pieceId = cmd.pieceId;
 		int localCommandId = cmd.localCommandId;
 		int actorNumber = cmd.player.ActorNumber;
-		if ((cmd.player == null || !cmd.player.IsLocal) && !ValidateDropPieceParams(pieceId, cmd.localPosition, cmd.localRotation, cmd.velocity, cmd.angVelocity, cmd.player))
+		if (!ValidateDropPieceParams(pieceId, cmd.localPosition, cmd.localRotation, cmd.velocity, cmd.angVelocity, cmd.player))
 		{
 			return;
 		}
@@ -4834,6 +4875,7 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 			{
 				GTDev.LogError("BuilderTable " + tableZone.ToString() + " OnGetStartingMapConfigSuccess Unknown sort method " + startingMapConfig.sortMethod);
 			}
+			SharedBlocksManager.instance.RefreshPopularMapsForRandom();
 		}
 		catch (Exception ex)
 		{
@@ -4852,7 +4894,7 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 		startingMapConfig = new SharedBlocksManager.StartingMapConfig
 		{
 			pageNumber = 0,
-			pageSize = 10,
+			pageSize = 50,
 			sortMethod = SharedBlocksManager.MapSortMethod.Top.ToString(),
 			useMapID = false,
 			mapID = null
@@ -5796,6 +5838,9 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 		{
 			return;
 		}
+		VRRigCache.Instance.localRig.SpeakerHead.transform.GetPositionAndRotation(out var position, out var rotation);
+		bool flag = ValidatePieceWorldTransform(position, rotation);
+		int actorNumber = NetworkSystem.Instance.LocalPlayer.ActorNumber;
 		BinaryReader binaryReader = new BinaryReader(new MemoryStream(bytes));
 		tempPeiceIds.Clear();
 		tempParentPeiceIds.Clear();
@@ -5805,21 +5850,21 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 		tempInLeftHand.Clear();
 		tempPiecePlacement.Clear();
 		int num = binaryReader.ReadInt32();
-		bool flag = conveyors != null;
+		bool flag2 = conveyors != null;
 		for (int i = 0; i < num; i++)
 		{
 			int selection = binaryReader.ReadInt32();
-			if (flag && i < conveyors.Count)
+			if (flag2 && i < conveyors.Count)
 			{
 				conveyors[i].SetSelection(selection);
 			}
 		}
 		int num2 = binaryReader.ReadInt32();
-		bool flag2 = dispenserShelves != null;
+		bool flag3 = dispenserShelves != null;
 		for (int j = 0; j < num2; j++)
 		{
 			int selection2 = binaryReader.ReadInt32();
-			if (flag2 && j < dispenserShelves.Count)
+			if (flag3 && j < dispenserShelves.Count)
 			{
 				dispenserShelves[j].SetSelection(selection2);
 			}
@@ -5851,7 +5896,7 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 				num7 = num5;
 				num5 = -1;
 			}
-			if (!ValidateDeserializedRootPieceState(num4, state, num7, num5, v, q))
+			if ((num5 == actorNumber && !flag) || !ValidateDeserializedRootPieceState(num4, state, num7, num5, v, q))
 			{
 				continue;
 			}
@@ -5921,7 +5966,7 @@ public class BuilderTable : MonoBehaviour, ITickSystemTick
 				num12 = num10;
 				num10 = -1;
 			}
-			if (!ValidateDeserializedChildPieceState(num9, state2))
+			if ((num10 == actorNumber && !flag) || !ValidateDeserializedChildPieceState(num9, state2))
 			{
 				continue;
 			}

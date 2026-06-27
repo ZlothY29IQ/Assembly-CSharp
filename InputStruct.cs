@@ -4,8 +4,8 @@ using Fusion;
 using UnityEngine;
 
 [Serializable]
-[StructLayout(LayoutKind.Explicit, Size = 164)]
-[NetworkStructWeaved(41)]
+[StructLayout(LayoutKind.Explicit, Size = 168)]
+[NetworkStructWeaved(42)]
 public struct InputStruct : INetworkStruct
 {
 	[FieldOffset(0)]
@@ -36,68 +36,71 @@ public struct InputStruct : INetworkStruct
 	public int handPosition;
 
 	[FieldOffset(48)]
-	public int packedFields;
+	public int rotation;
 
 	[FieldOffset(52)]
-	public short packedCompetitiveData;
+	public int packedFields;
 
 	[FieldOffset(56)]
+	public short packedCompetitiveData;
+
+	[FieldOffset(60)]
 	public Vector3 velocity;
 
-	[FieldOffset(68)]
+	[FieldOffset(72)]
 	public int grabbedRopeIndex;
 
-	[FieldOffset(72)]
+	[FieldOffset(76)]
 	public int ropeBoneIndex;
 
-	[FieldOffset(76)]
+	[FieldOffset(80)]
 	public bool ropeGrabIsLeft;
 
-	[FieldOffset(80)]
+	[FieldOffset(84)]
 	public bool ropeGrabIsBody;
 
-	[FieldOffset(84)]
+	[FieldOffset(88)]
 	public Vector3 ropeGrabOffset;
 
-	[FieldOffset(96)]
+	[FieldOffset(100)]
 	public bool movingSurfaceIsMonkeBlock;
 
-	[FieldOffset(100)]
+	[FieldOffset(104)]
 	public long hoverboardPosRot;
 
-	[FieldOffset(108)]
+	[FieldOffset(112)]
 	public short hoverboardColor;
 
-	[FieldOffset(112)]
+	[FieldOffset(116)]
 	public long propHuntPosRot;
 
-	[FieldOffset(120)]
+	[FieldOffset(124)]
 	public double serverTimeStamp;
 
-	[FieldOffset(128)]
+	[FieldOffset(132)]
 	public short taggedById;
 
-	[FieldOffset(132)]
+	[FieldOffset(136)]
 	public bool isGroundedHand;
 
-	[FieldOffset(136)]
+	[FieldOffset(140)]
 	public bool isGroundedButt;
 
-	[FieldOffset(140)]
+	[FieldOffset(144)]
 	public int leftHandGrabbedActorNumber;
 
-	[FieldOffset(144)]
+	[FieldOffset(148)]
 	public bool leftGrabbedHandIsLeft;
 
-	[FieldOffset(148)]
+	[FieldOffset(152)]
 	public int rightHandGrabbedActorNumber;
 
-	[FieldOffset(152)]
+	[FieldOffset(156)]
 	public bool rightGrabbedHandIsLeft;
 
-	[FieldOffset(156)]
+	[FieldOffset(160)]
 	public float lastTouchedGroundAtTime;
 
-	[FieldOffset(160)]
+	[FieldOffset(164)]
 	public float lastHandTouchedGroundAtTime;
 }

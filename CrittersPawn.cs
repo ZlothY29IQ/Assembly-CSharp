@@ -25,11 +25,17 @@ public class CrittersPawn : CrittersActor, IEyeScannable
 		Spawning
 	}
 
-	internal struct CreatureUpdateData(CrittersPawn creature)
+	internal struct CreatureUpdateData
 	{
-		private double lastImpulseTime = creature.lastImpulseTime;
+		private double lastImpulseTime;
 
-		private CreatureState state = creature.currentState;
+		private CreatureState state;
+
+		internal CreatureUpdateData(CrittersPawn creature)
+		{
+			lastImpulseTime = creature.lastImpulseTime;
+			state = creature.currentState;
+		}
 
 		internal bool SameData(CrittersPawn creature)
 		{

@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class ZoneEntityBSP : MonoBehaviour, IGorillaSliceableSimple
 {
+	public delegate void PlayerZoneChange(VRRig rig, GTZone fromZone, GTZone toZone);
+
 	[Space]
 	[SerializeField]
 	private bool _emitTelemetry = true;
@@ -30,6 +32,8 @@ public class ZoneEntityBSP : MonoBehaviour, IGorillaSliceableSimple
 	public GTSubZone currentSubZone => currentNode?.subZoneId ?? GTSubZone.none;
 
 	public GroupJoinZoneAB GroupZone => currentNode?.groupZoneAB ?? default(GroupJoinZoneAB);
+
+	public static event PlayerZoneChange onPlayerZoneChange;
 
 	private void Start()
 	{
@@ -62,6 +66,16 @@ public class ZoneEntityBSP : MonoBehaviour, IGorillaSliceableSimple
 			lastExitedNode = currentNode;
 			currentNode = zoneDef;
 			lastEnteredNode = zoneDef;
+			if (_entityRig != null)
+			{
+				_ = _entityRig.isOfflineVRRig;
+			}
+			GTZone gTZone = (lastExitedNode ? lastExitedNode.zoneId : GTZone.none);
+			GTZone gTZone2 = (zoneDef ? zoneDef.zoneId : GTZone.none);
+			if (gTZone != gTZone2)
+			{
+				ZoneEntityBSP.onPlayerZoneChange?.Invoke(_entityRig, gTZone, gTZone2);
+			}
 			if (_emitTelemetry)
 			{
 				ZoneDef zoneDef2 = lastEnteredNode;

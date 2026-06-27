@@ -54,9 +54,9 @@ public class LckSocialCamera : NetworkComponent, IGorillaSliceableSimple
 
 	private IGtCameraVisuals m_CameraVisuals;
 
-	private CameraState _localState;
+	private CameraState _localOwnedState;
 
-	private CameraState _previousRenderedState;
+	private CameraState _networkOwnedState;
 
 	[WeaverGenerated]
 	[DefaultForProperty("_networkedData", 0, 1)]
@@ -85,13 +85,13 @@ public class LckSocialCamera : NetworkComponent, IGorillaSliceableSimple
 	{
 		get
 		{
-			return GetFlag(base.IsLocallyOwned ? _localState : _previousRenderedState, CameraState.OnNeck);
+			return GetFlag(base.IsLocallyOwned ? _localOwnedState : _networkOwnedState, CameraState.OnNeck);
 		}
 		set
 		{
 			if (base.IsLocallyOwned)
 			{
-				_localState = SetFlag(_localState, CameraState.OnNeck, value);
+				_localOwnedState = SetFlag(_localOwnedState, CameraState.OnNeck, value);
 			}
 		}
 	}
@@ -100,13 +100,13 @@ public class LckSocialCamera : NetworkComponent, IGorillaSliceableSimple
 	{
 		get
 		{
-			return GetFlag(base.IsLocallyOwned ? _localState : _previousRenderedState, CameraState.Visible);
+			return GetFlag(base.IsLocallyOwned ? _localOwnedState : _networkOwnedState, CameraState.Visible);
 		}
 		set
 		{
 			if (base.IsLocallyOwned)
 			{
-				_localState = SetFlag(_localState, CameraState.Visible, value);
+				_localOwnedState = SetFlag(_localOwnedState, CameraState.Visible, value);
 			}
 		}
 	}
@@ -115,13 +115,13 @@ public class LckSocialCamera : NetworkComponent, IGorillaSliceableSimple
 	{
 		get
 		{
-			return GetFlag(base.IsLocallyOwned ? _localState : _previousRenderedState, CameraState.Recording);
+			return GetFlag(base.IsLocallyOwned ? _localOwnedState : _networkOwnedState, CameraState.Recording);
 		}
 		set
 		{
 			if (base.IsLocallyOwned)
 			{
-				_localState = SetFlag(_localState, CameraState.Recording, value);
+				_localOwnedState = SetFlag(_localOwnedState, CameraState.Recording, value);
 			}
 		}
 	}
@@ -130,7 +130,7 @@ public class LckSocialCamera : NetworkComponent, IGorillaSliceableSimple
 	{
 		if (base.IsLocallyOwned)
 		{
-			_localState = CameraState.Empty;
+			_localOwnedState = CameraState.Empty;
 			visible = false;
 			recording = false;
 			IsOnNeck = false;
@@ -139,13 +139,13 @@ public class LckSocialCamera : NetworkComponent, IGorillaSliceableSimple
 		{
 			CameraState currentState = _networkedData.currentState;
 			ApplyVisualState(currentState);
-			_previousRenderedState = currentState;
+			_networkOwnedState = currentState;
 		}
 	}
 
 	public override void WriteDataFusion()
 	{
-		_networkedData = new CameraData(_localState);
+		_networkedData = new CameraData(_localOwnedState);
 	}
 
 	public override void ReadDataFusion()
@@ -158,7 +158,7 @@ public class LckSocialCamera : NetworkComponent, IGorillaSliceableSimple
 
 	protected override void WriteDataPUN(PhotonStream stream, PhotonMessageInfo info)
 	{
-		stream.SendNext(_localState);
+		stream.SendNext(_localOwnedState);
 	}
 
 	protected override void ReadDataPUN(PhotonStream stream, PhotonMessageInfo info)
@@ -172,10 +172,10 @@ public class LckSocialCamera : NetworkComponent, IGorillaSliceableSimple
 
 	private void ReadDataShared(CameraState newState)
 	{
-		if (newState != _previousRenderedState)
+		if (newState != _networkOwnedState)
 		{
 			ApplyVisualState(newState);
-			_previousRenderedState = newState;
+			_networkOwnedState = newState;
 		}
 	}
 
@@ -247,13 +247,6 @@ public class LckSocialCamera : NetworkComponent, IGorillaSliceableSimple
 		{
 			LckSocialCameraManager.OnManagerSpawned = (Action<LckSocialCameraManager>)Delegate.Remove(LckSocialCameraManager.OnManagerSpawned, new Action<LckSocialCameraManager>(OnManagerSpawned));
 		}
-	}
-
-	public void SetVisibility(bool isVisible)
-	{
-		CameraData networkedData = _networkedData;
-		networkedData.currentState = SetFlag(networkedData.currentState, CameraState.Visible, isVisible);
-		_networkedData = networkedData;
 	}
 
 	private void OnSuccesfullSpawn(in RigContainer rig, in PhotonMessageInfoWrapped info)

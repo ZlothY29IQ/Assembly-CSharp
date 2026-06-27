@@ -9,7 +9,6 @@ using GorillaTagScripts;
 using GorillaTagScripts.VirtualStumpCustomMaps;
 using KID.Model;
 using Photon.Pun;
-using Photon.Realtime;
 using PlayFab;
 using PlayFab.ClientModels;
 using PlayFab.CloudScriptModels;
@@ -22,7 +21,7 @@ using UnityEngine.XR.Interaction.Toolkit;
 
 namespace GorillaNetworking;
 
-public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSliceableSimple
+public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 {
 	public enum ComputerState
 	{
@@ -648,8 +647,6 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 	[Header("Mode select vars")]
 	public ModeSelectButton[] modeSelectButtons;
 
-	public string version;
-
 	public string buildDate;
 
 	public string buildCode;
@@ -735,6 +732,8 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 	private bool hasRequestedInitialTroopPopulation;
 
 	private int currentTroopPopulation = -1;
+
+	private List<string> topVstumpMaps = new List<string>();
 
 	private float lastCheckedWifi;
 
@@ -834,6 +833,8 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		}
 	}
 
+	public string version { get; private set; }
+
 	public string VStumpRoomPrepend => virtualStumpRoomPrepend;
 
 	public ComputerState currentState
@@ -908,6 +909,7 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 		{
 			UnityEngine.Object.Destroy(base.gameObject);
 		}
+		version = Application.version;
 		Debug.Log("==== GORILLA TAG - VERSION: " + version + ", BUILD NUMBER: " + buildCode + ", BUILD DATE: " + buildDate + " ====\r\n.\r\n.               _______\r\n.              /       \\\r\n.             /  _____  \\\r\n.            / / _   _ \\ \\\r\n.           [ | (O) (O) | ]\r\n.            | \\  . .  / |\r\n.     _______|  | _._ |  |_______\r\n.    /        \\  \\___/  /        \\\r\n.\r\n.\r\n");
 		_activeOrderList = OrderList;
 		defaultUpdateCooldown = updateCooldown;
@@ -1375,12 +1377,25 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 				GeneralFailureMessage(versionMismatch);
 				return;
 			}
-			if (jsonObject.TryGetValue("QueueStats", out value) && ((JsonObject)value).TryGetValue("TopTroops", out value))
+			if (jsonObject.TryGetValue("QueueStats", out value))
 			{
-				topTroops.Clear();
-				foreach (object item in (JsonArray)value)
+				JsonObject jsonObject2 = (JsonObject)value;
+				Debug.Log("QueueStats: " + jsonObject2);
+				if (jsonObject2.TryGetValue("TopTroops", out value))
 				{
-					topTroops.Add(item.ToString());
+					topTroops.Clear();
+					foreach (object item in (JsonArray)value)
+					{
+						topTroops.Add(item.ToString());
+					}
+				}
+				if (jsonObject2.TryGetValue("TopVstumpMapIds", out value))
+				{
+					topVstumpMaps.Clear();
+					foreach (object item2 in (JsonArray)value)
+					{
+						topVstumpMaps.Add(item2.ToString());
+					}
 				}
 			}
 			if (jsonObject.TryGetValue("BannedUsers", out value))
@@ -3764,42 +3779,6 @@ public class GorillaComputer : MonoBehaviour, IMatchmakingCallbacks, IGorillaSli
 			int value = (NametagsEnabled ? 1 : 0);
 			PlayerPrefs.SetInt(NameTagPlayerPref, value);
 			PlayerPrefs.Save();
-		}
-	}
-
-	void IMatchmakingCallbacks.OnFriendListUpdate(List<Photon.Realtime.FriendInfo> friendList)
-	{
-	}
-
-	void IMatchmakingCallbacks.OnCreatedRoom()
-	{
-	}
-
-	void IMatchmakingCallbacks.OnCreateRoomFailed(short returnCode, string message)
-	{
-	}
-
-	void IMatchmakingCallbacks.OnJoinedRoom()
-	{
-	}
-
-	void IMatchmakingCallbacks.OnJoinRandomFailed(short returnCode, string message)
-	{
-	}
-
-	void IMatchmakingCallbacks.OnLeftRoom()
-	{
-	}
-
-	void IMatchmakingCallbacks.OnPreLeavingRoom()
-	{
-	}
-
-	void IMatchmakingCallbacks.OnJoinRoomFailed(short returnCode, string message)
-	{
-		if (returnCode == 32765)
-		{
-			roomFull = true;
 		}
 	}
 

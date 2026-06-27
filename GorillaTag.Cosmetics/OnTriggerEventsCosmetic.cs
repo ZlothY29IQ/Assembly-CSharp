@@ -34,6 +34,9 @@ public class OnTriggerEventsCosmetic : MonoBehaviour
 		[Tooltip("If true, only fire while this item is held. Requires a TransferrableObject on this object or a parent.")]
 		public bool fireOnlyWhileHeld = true;
 
+		[Tooltip("Which hand determines the isLeftHand argument passed to the event.")]
+		public HandSource handSource;
+
 		[NonSerialized]
 		public HashSet<string> tagSet;
 	}
@@ -43,6 +46,14 @@ public class OnTriggerEventsCosmetic : MonoBehaviour
 		TriggerEnter,
 		TriggerStay,
 		TriggerExit
+	}
+
+	public enum HandSource
+	{
+		[Tooltip("isLeftHand = which hand is physically touching this trigger (GorillaGrabber). Falls back to the holding hand if no hand collider is detected.")]
+		TouchingHand,
+		[Tooltip("isLeftHand = which hand this cosmetic is equipped in (TransferrableObject). Falls back to the touching hand if no TransferrableObject is found.")]
+		HoldingHand
 	}
 
 	[Tooltip("List of per-condition listeners. Each entry specifies when (Enter/Stay/Exit), what to trigger with (layers/tags), and which UnityEvents to fire.")]
@@ -59,6 +70,8 @@ public class OnTriggerEventsCosmetic : MonoBehaviour
 	private VRRig rig;
 
 	private TransferrableObject parentTransferable;
+
+	private IHeldItem myHeldItem;
 
 	private bool IsMyItem()
 	{
@@ -98,6 +111,7 @@ public class OnTriggerEventsCosmetic : MonoBehaviour
 			rig = GorillaTagger.Instance.offlineVRRig;
 		}
 		parentTransferable = GetComponentInParent<TransferrableObject>();
+		myHeldItem = GetComponentInParent<IHeldItem>();
 		List<Listener> list = new List<Listener>();
 		List<Listener> list2 = new List<Listener>();
 		List<Listener> list3 = new List<Listener>();
@@ -181,10 +195,14 @@ public class OnTriggerEventsCosmetic : MonoBehaviour
 			return;
 		}
 		int layer = other.gameObject.layer;
-		bool arg = (bool)parentTransferable && parentTransferable.InLeftHand();
+		GorillaGrabber component = null;
+		bool flag = other.TryGetComponent<GorillaGrabber>(out component) && component.enabled;
+		bool flag2 = flag && component.IsLeftHand;
+		bool flag3 = ((parentTransferable != null) ? parentTransferable.InLeftHand() : (myHeldItem?.InLeftHand() ?? false));
 		Vector3 position = ((myCollider != null) ? myCollider.bounds.center : base.transform.position);
 		foreach (Listener listener in listeners)
 		{
+			bool arg = ((listener.handSource == HandSource.HoldingHand) ? flag3 : (flag ? flag2 : flag3));
 			if ((listener.syncForEveryoneInRoom || IsMyItem()) && (!listener.fireOnlyWhileHeld || !parentTransferable || parentTransferable.InHand()) && (listener.tagSet == null || listener.tagSet.Count <= 0 || CompareTagAny(other.gameObject, listener.tagSet)) && ((1 << layer) & listener.triggerLayerMask.value) != 0)
 			{
 				listener.listenerComponent?.Invoke(arg, other);

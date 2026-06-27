@@ -27,8 +27,8 @@ public class FingerFlexEvent2 : MonoBehaviour, ITickSystemTick
 
 		public enum HandType
 		{
-			TransferrableHeldHand,
-			TransferrableEquippedSide,
+			HeldItemHand,
+			EquippedSide,
 			LeftHand,
 			RightHand
 		}
@@ -84,12 +84,12 @@ public class FingerFlexEvent2 : MonoBehaviour, ITickSystemTick
 
 		public bool IsReleaseTrigger => triggerType == TriggerType.OnRelease;
 
-		public bool UsesTransferrable
+		public bool RequiresHeldItem
 		{
 			get
 			{
 				HandType handType = this.handType;
-				return handType == HandType.TransferrableHeldHand || handType == HandType.TransferrableEquippedSide;
+				return handType == HandType.HeldItemHand || handType == HandType.EquippedSide;
 			}
 		}
 
@@ -168,6 +168,8 @@ public class FingerFlexEvent2 : MonoBehaviour, ITickSystemTick
 
 	private TransferrableObject myTransferrable;
 
+	private IHeldItem myHeldItem;
+
 	public bool TickRunning { get; set; }
 
 	private bool TryLinkToNextEvent(int index)
@@ -190,10 +192,11 @@ public class FingerFlexEvent2 : MonoBehaviour, ITickSystemTick
 	{
 		myRig = GetComponentInParent<VRRig>();
 		myTransferrable = GetComponentInParent<TransferrableObject>();
+		myHeldItem = GetComponentInParent<IHeldItem>();
 		for (int i = 0; i < list.Length; i++)
 		{
 			FlexEvent flexEvent = list[i];
-			if (myTransferrable.IsNull() && flexEvent.UsesTransferrable)
+			if (myTransferrable.IsNull() && flexEvent.RequiresHeldItem)
 			{
 				myTransferrable = GetComponentInParent<TransferrableObject>();
 			}
@@ -216,7 +219,7 @@ public class FingerFlexEvent2 : MonoBehaviour, ITickSystemTick
 		for (int i = 0; i < list.Length; i++)
 		{
 			FlexEvent flexEvent = list[i];
-			if ((!flexEvent.networked && !myRig.isOfflineVRRig) || (flexEvent.UsesTransferrable && myTransferrable.IsNull()))
+			if ((!flexEvent.networked && !myRig.isOfflineVRRig) || (flexEvent.RequiresHeldItem && myTransferrable.IsNull() && myHeldItem == null) || (flexEvent.handType == FlexEvent.HandType.EquippedSide && myTransferrable.IsNull()))
 			{
 				continue;
 			}
@@ -231,12 +234,21 @@ public class FingerFlexEvent2 : MonoBehaviour, ITickSystemTick
 			case FlexEvent.HandType.RightHand:
 				flag2 = true;
 				break;
-			case FlexEvent.HandType.TransferrableHeldHand:
-				flag = myTransferrable.currentState == TransferrableObject.PositionState.InLeftHand;
-				flag2 = myTransferrable.currentState == TransferrableObject.PositionState.InRightHand;
-				flag3 = flag || flag2;
+			case FlexEvent.HandType.HeldItemHand:
+				if (!myTransferrable.IsNull())
+				{
+					flag = myTransferrable.currentState == TransferrableObject.PositionState.InLeftHand;
+					flag2 = myTransferrable.currentState == TransferrableObject.PositionState.InRightHand;
+					flag3 = flag || flag2;
+				}
+				else if (myHeldItem != null)
+				{
+					flag = myHeldItem.InLeftHand();
+					flag2 = !flag && myHeldItem.InHand();
+					flag3 = flag || flag2;
+				}
 				break;
-			case FlexEvent.HandType.TransferrableEquippedSide:
+			case FlexEvent.HandType.EquippedSide:
 				flag = (myTransferrable.storedZone & (BodyDockPositions.DropPositions.LeftArm | BodyDockPositions.DropPositions.LeftBack)) != 0;
 				flag2 = (myTransferrable.storedZone & (BodyDockPositions.DropPositions.RightArm | BodyDockPositions.DropPositions.RightBack)) != 0;
 				break;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using GameObjectScheduling;
 using GorillaNetworking;
 using GorillaTagScripts;
@@ -121,7 +122,7 @@ public class BuilderKiosk : MonoBehaviour
 		};
 	}
 
-	private void Start()
+	private async void Start()
 	{
 		_puchaseTextLocStr = _puchaseTextLoc.StringReference;
 		_itemNameVar = _puchaseTextLocStr["item-name"] as StringVariable;
@@ -153,6 +154,8 @@ public class BuilderKiosk : MonoBehaviour
 		{
 			SetupSetButtons();
 		}
+		await Task.Delay(TimeSpan.FromSeconds(5.0));
+		Debug.Log("Task await complete.");
 		if (availableItems.Count > 0 && BuilderSetManager.instance.pulledStoreItems)
 		{
 			hasInitFromPlayfab = true;

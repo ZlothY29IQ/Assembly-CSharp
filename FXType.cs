@@ -24,5 +24,7 @@ public enum FXType
 	MaterialCycler,
 	RequestOwnershipFromAuthority,
 	GroupJoin,
+	EnvironmentProximityReactor,
+	BroadcastCosmeticSignal,
 	Length
 }

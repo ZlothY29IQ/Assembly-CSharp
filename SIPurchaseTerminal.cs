@@ -81,13 +81,13 @@ public class SIPurchaseTerminal : MonoBehaviour, ITouchScreenStation
 		}
 		else
 		{
-			CosmeticsV2Spawner_Dirty.OnPreFinalizing = (Action)Delegate.Combine(CosmeticsV2Spawner_Dirty.OnPreFinalizing, new Action(DelayedOnEnable));
+			CosmeticsV2Spawner_Dirty.OnPostInstantiateAllPrefabs = (Action)Delegate.Combine(CosmeticsV2Spawner_Dirty.OnPostInstantiateAllPrefabs, new Action(DelayedOnEnable));
 		}
 	}
 
 	private void DelayedOnEnable()
 	{
-		CosmeticsV2Spawner_Dirty.OnPreFinalizing = (Action)Delegate.Remove(CosmeticsV2Spawner_Dirty.OnPreFinalizing, new Action(DelayedOnEnable));
+		CosmeticsV2Spawner_Dirty.OnPostInstantiateAllPrefabs = (Action)Delegate.Remove(CosmeticsV2Spawner_Dirty.OnPostInstantiateAllPrefabs, new Action(DelayedOnEnable));
 		CosmeticsController instance = CosmeticsController.instance;
 		instance.OnGetCurrency = (Action)Delegate.Combine(instance.OnGetCurrency, new Action(OnUpdateCurrencyBalance));
 		OnUpdateCurrencyBalance();
@@ -265,10 +265,5 @@ public class SIPurchaseTerminal : MonoBehaviour, ITouchScreenStation
 			UnableToCompletePurchasePopupScreen.SetActive(isEnabled);
 			break;
 		}
-	}
-
-	GameObject ITouchScreenStation.get_gameObject()
-	{
-		return base.gameObject;
 	}
 }

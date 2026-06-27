@@ -1,10 +1,16 @@
+using GorillaGameModes;
+
 namespace GorillaNetworking;
 
 public class GorillaNetworkRankedJoinTrigger : GorillaNetworkJoinTrigger
 {
 	public override string GetFullDesiredGameModeString()
 	{
-		return networkZone + GetDesiredGameType();
+		return new GameModeString
+		{
+			zone = networkZone,
+			gameType = GetDesiredGameType()
+		}.ToString();
 	}
 
 	public override void OnBoxTriggered()

@@ -186,6 +186,10 @@ public class PickupableCosmetic : PickupableVariant
 		{
 			interactionPoint.enabled = true;
 		}
+		if (bodyCollider != null)
+		{
+			bodyCollider.enabled = true;
+		}
 		base.enabled = false;
 	}
 
@@ -210,6 +214,10 @@ public class PickupableCosmetic : PickupableVariant
 		rb.useGravity = true;
 		rb.linearVelocity = velocity;
 		rb.detectCollisions = true;
+		if (bodyCollider != null)
+		{
+			bodyCollider.enabled = true;
+		}
 		if (!allowPickupFromGround && interactionPoint != null)
 		{
 			interactionPoint.enabled = false;
@@ -289,7 +297,10 @@ public class PickupableCosmetic : PickupableVariant
 	{
 		rb.isKinematic = true;
 		rb.useGravity = false;
-		rb.detectCollisions = false;
+		if (bodyCollider != null)
+		{
+			bodyCollider.enabled = false;
+		}
 		Vector3 normal = hitInfo.normal;
 		base.transform.position = hitInfo.point + normal * placementOffset;
 		Quaternion rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(base.transform.forward, normal).normalized, normal);

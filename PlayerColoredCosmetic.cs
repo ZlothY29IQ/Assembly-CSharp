@@ -24,7 +24,7 @@ public class PlayerColoredCosmetic : MonoBehaviour
 
 		private Material defaultMaterial;
 
-		public void Init()
+		public void Init(bool dontCreateMaterialInstance)
 		{
 			hashId = Shader.PropertyToID(shaderColorProperty);
 			if (meshRenderer == null)
@@ -44,14 +44,32 @@ public class PlayerColoredCosmetic : MonoBehaviour
 				{
 					Debug.LogError("ERROR!!!  ColoringRule.Init: Default material cannot be null! Path=" + meshRenderer.transform.GetPathQ(), meshRenderer);
 				}
+				if (dontCreateMaterialInstance)
+				{
+					instancedMaterial = value[materialIndex];
+					return;
+				}
 				instancedMaterial = new Material(value[materialIndex]);
 				value[materialIndex] = instancedMaterial;
 				meshRenderer.SetSharedMaterials(value);
 			}
 		}
 
-		public void Apply(Color color)
+		public void Apply(Color color, bool dontCreateMaterialInstance)
 		{
+			List<Material> value;
+			if (dontCreateMaterialInstance)
+			{
+				using (CollectionPool<List<Material>, Material>.Get(out value))
+				{
+					meshRenderer.GetSharedMaterials(value);
+					if (materialIndex >= 0 && materialIndex < value.Count && value[materialIndex] != null)
+					{
+						value[materialIndex].SetColor(hashId, color);
+					}
+					return;
+				}
+			}
 			instancedMaterial.SetColor(hashId, color);
 		}
 	}
@@ -72,6 +90,9 @@ public class PlayerColoredCosmetic : MonoBehaviour
 	private float lerpStrength;
 
 	[SerializeField]
+	private bool dontCreateMaterialInstance;
+
+	[SerializeField]
 	private ColoringRule[] coloringRules;
 
 	[SerializeField]
@@ -83,7 +104,7 @@ public class PlayerColoredCosmetic : MonoBehaviour
 	{
 		for (int i = 0; i < coloringRules.Length; i++)
 		{
-			coloringRules[i].Init();
+			coloringRules[i].Init(dontCreateMaterialInstance);
 		}
 	}
 
@@ -129,7 +150,7 @@ public class PlayerColoredCosmetic : MonoBehaviour
 		Color color2 = Color.Lerp(color, lerpToColor, lerpStrength);
 		for (int i = 0; i < coloringRules.Length; i++)
 		{
-			coloringRules[i].Apply(color2);
+			coloringRules[i].Apply(color2, dontCreateMaterialInstance);
 		}
 		for (int j = 0; j < particleSystems.Length; j++)
 		{

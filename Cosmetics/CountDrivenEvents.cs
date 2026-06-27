@@ -40,6 +40,10 @@ public class CountDrivenEvents : MonoBehaviour
 	[SerializeField]
 	private bool wrapCount;
 
+	[Tooltip("Minimum time (in seconds) that must pass before events can fire again")]
+	[SerializeField]
+	private float cooldown;
+
 	[Header("Count Triggers")]
 	[SerializeField]
 	private List<CountTrigger> triggers = new List<CountTrigger>();
@@ -75,7 +79,19 @@ public class CountDrivenEvents : MonoBehaviour
 
 	private CallLimiter callLimiter = new CallLimiter(10, 1f);
 
+	[NonSerialized]
+	private float lastEventTime = float.NegativeInfinity;
+
 	public int CurrentCount => currentCount;
+
+	private bool IsOnCooldown()
+	{
+		if (cooldown > 0f)
+		{
+			return Time.time - lastEventTime < cooldown;
+		}
+		return false;
+	}
 
 	private void OnEnable()
 	{
@@ -143,7 +159,7 @@ public class CountDrivenEvents : MonoBehaviour
 
 	public void SetCount(int newCount)
 	{
-		if (myRig != null && !myRig.isLocal)
+		if ((myRig != null && !myRig.isLocal) || IsOnCooldown())
 		{
 			return;
 		}
@@ -169,6 +185,7 @@ public class CountDrivenEvents : MonoBehaviour
 		{
 			bool flag = false;
 			currentCount = newCount;
+			lastEventTime = Time.time;
 			onCountChanged?.Invoke(currentCount);
 			onCountChangedShared?.Invoke(currentCount);
 			if (currentCount > num)

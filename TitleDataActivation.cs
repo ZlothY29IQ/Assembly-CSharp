@@ -190,7 +190,9 @@ public class TitleDataActivation : MonoBehaviour, IGorillaSliceableSimple
 		public int Seconds;
 	}
 
-	public static DateTime ReferenceDate = DateTime.MinValue;
+	public static DateTime ReferenceDate = DateTime.Parse("1/1/2001");
+
+	public static bool UpdatedReferenceDateFromTitleData = false;
 
 	[SerializeField]
 	private string titleDataKey;
@@ -209,7 +211,8 @@ public class TitleDataActivation : MonoBehaviour, IGorillaSliceableSimple
 	[RuntimeInitializeOnLoadMethod]
 	private static async void RuntimeInit()
 	{
-		ReferenceDate = DateTime.MinValue;
+		ReferenceDate = DateTime.Parse("1/1/2001");
+		UpdatedReferenceDateFromTitleData = false;
 		while (PlayFabTitleDataCache.Instance == null)
 		{
 			await Task.Yield();
@@ -223,11 +226,15 @@ public class TitleDataActivation : MonoBehaviour, IGorillaSliceableSimple
 		{
 			Debug.LogError("TitleDataActivation :: onTDReferenceDate :: No Reference Date Set!!");
 		}
+		else
+		{
+			UpdatedReferenceDateFromTitleData = true;
+		}
 	}
 
 	private static void onTDReferenceDateError(PlayFabError error)
 	{
-		Debug.LogError("TitleDataActivation :: onTDReferenceDateError :: No Reference Date Set!!");
+		Debug.LogError("TitleDataActivation :: onTDReferenceDateError :: No Reference Date Set!! :: " + error.ErrorMessage);
 	}
 
 	private async void Initialize()
@@ -247,7 +254,7 @@ public class TitleDataActivation : MonoBehaviour, IGorillaSliceableSimple
 		initialized = true;
 		if (!titleDataKey.IsNullOrEmpty())
 		{
-			while (PlayFabTitleDataCache.Instance == null)
+			while (PlayFabTitleDataCache.Instance == null || !UpdatedReferenceDateFromTitleData)
 			{
 				await Task.Yield();
 			}
@@ -264,7 +271,7 @@ public class TitleDataActivation : MonoBehaviour, IGorillaSliceableSimple
 		}
 		catch (Exception ex)
 		{
-			Debug.LogError("TitleDataActivation :: onTD :: " + ex.Message);
+			Debug.LogError("TitleDataActivation :: onTD ::" + ex.Message + " string was " + s);
 			return;
 		}
 		for (int i = 0; i < titleDataActivationData.Data.Length; i++)
@@ -279,7 +286,7 @@ public class TitleDataActivation : MonoBehaviour, IGorillaSliceableSimple
 
 	private void onTDError(PlayFabError error)
 	{
-		Debug.LogError($"TitleDataActivation :: onTDError :: {titleDataKey} :: {error}");
+		Debug.LogError($"TitleDataActivation on {AssetUtils.GetGameObjectPath(base.gameObject)} :: onTDError :: {titleDataKey} :: {error}");
 	}
 
 	private void OnEnable()

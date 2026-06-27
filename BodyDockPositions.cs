@@ -263,42 +263,6 @@ public class BodyDockPositions : MonoBehaviour
 				}
 			}
 		}
-		else if (myRig != null)
-		{
-			string itemNameFromDisplayName2 = CosmeticsController.instance.GetItemNameFromDisplayName(allObjects[allItemsIndex].gameObject.name);
-			if (!myRig.IsItemAllowed(itemNameFromDisplayName2))
-			{
-				return -1;
-			}
-			int num = -1;
-			for (int k = 0; k < myRig.ActiveTransferrableObjectIndexLength(); k++)
-			{
-				if (myRig.ActiveTransferrableObjectIndex(k) == allItemsIndex)
-				{
-					num = k;
-					break;
-				}
-			}
-			if (num >= 0)
-			{
-				myRig.SetTransferrablePosStates(num, startingState);
-				myRig.SetTransferrableDockPosition(num, startingPosition);
-				EnableTransferrableGameObject(allItemsIndex, startingPosition, startingState);
-				return num;
-			}
-			for (int l = 0; l < myRig.ActiveTransferrableObjectIndexLength(); l++)
-			{
-				if (myRig.ActiveTransferrableObjectIndex(l) == -1)
-				{
-					myRig.SetActiveTransferrableObjectIndex(l, allItemsIndex);
-					myRig.SetTransferrablePosStates(l, startingState);
-					myRig.SetTransferrableItemStates(l, (TransferrableObject.ItemStates)0);
-					myRig.SetTransferrableDockPosition(l, startingPosition);
-					EnableTransferrableGameObject(allItemsIndex, startingPosition, startingState);
-					return l;
-				}
-			}
-		}
 		return -1;
 	}
 
@@ -644,24 +608,24 @@ public class BodyDockPositions : MonoBehaviour
 			if (num < 0 || num >= allObjects.Length)
 			{
 				Debug.LogError($"Transferrable object index {num} out of range, expected [0..{allObjects.Length})");
+				continue;
 			}
-			else
+			string displayName = allObjects[num]?.gameObject.name;
+			string itemNameFromDisplayName = CosmeticsController.instance.GetItemNameFromDisplayName(displayName);
+			if (!myRig.IsItemAllowed(itemNameFromDisplayName))
 			{
-				if (!myRig.IsItemAllowed(CosmeticsController.instance.GetItemNameFromDisplayName(allObjects[num]?.gameObject.name)))
+				continue;
+			}
+			int num2 = myRig.ActiveTransferrableObjectIndex(i);
+			if (!(allObjects[num2] == null))
+			{
+				if (allObjects[num2].gameObject.activeSelf)
 				{
-					continue;
+					allObjects[num2].objectIndex = i;
 				}
-				int num2 = myRig.ActiveTransferrableObjectIndex(i);
-				if (!(allObjects[num2] == null))
+				else
 				{
-					if (allObjects[num2].gameObject.activeSelf)
-					{
-						allObjects[num2].objectIndex = i;
-					}
-					else
-					{
-						objectsToEnable.Add(i);
-					}
+					objectsToEnable.Add(i);
 				}
 			}
 		}
@@ -690,7 +654,8 @@ public class BodyDockPositions : MonoBehaviour
 		}
 		foreach (int item2 in objectsToEnable)
 		{
-			EnableTransferrableGameObject(myRig.ActiveTransferrableObjectIndex(item2), myRig.TransferrableDockPosition(item2), myRig.TransferrablePosStates(item2));
+			int allItemsIndex = myRig.ActiveTransferrableObjectIndex(item2);
+			EnableTransferrableGameObject(allItemsIndex, myRig.TransferrableDockPosition(item2), myRig.TransferrablePosStates(item2));
 		}
 		UpdateHandState();
 	}
@@ -732,25 +697,24 @@ public class BodyDockPositions : MonoBehaviour
 		};
 	}
 
-	private async void UpdateHandState()
+	private void UpdateHandState()
 	{
-		int i = 0;
-		while (i < 2)
+		for (int i = 0; i < 2; i++)
 		{
-			GameObject[] throwableGObjs = ((i == 0) ? leftHandThrowables : rightHandThrowables);
-			int activeThrowableIndex = ((i == 0) ? myRig.LeftThrowableProjectileIndex : myRig.RightThrowableProjectileIndex);
-			if (activeThrowableIndex > -1 && CosmeticsV2Spawner_Dirty.GetPlayfabIdFromThrowableIndex(i == 0, activeThrowableIndex, out var playfabId))
+			GameObject[] array = ((i == 0) ? leftHandThrowables : rightHandThrowables);
+			int num = ((i == 0) ? myRig.LeftThrowableProjectileIndex : myRig.RightThrowableProjectileIndex);
+			if (num > -1 && CosmeticsV2Spawner_Dirty.GetPlayfabIdFromThrowableIndex(i == 0, num, out var playfabId))
 			{
-				await myRig.cosmeticsObjectRegistry.AwaitCosmetic(playfabId);
+				myRig.cosmeticsObjectRegistry.Cosmetic(playfabId);
 			}
-			for (int j = 0; j < throwableGObjs.Length; j++)
+			for (int j = 0; j < array.Length; j++)
 			{
-				GameObject gameObject = throwableGObjs[j];
+				GameObject gameObject = array[j];
 				if (!(gameObject == null))
 				{
 					bool activeSelf = gameObject.activeSelf;
-					bool flag = gameObject.GetComponent<SnowballThrowable>().throwableMakerIndex == activeThrowableIndex;
-					throwableGObjs[j].SetActive(flag);
+					bool flag = gameObject.GetComponent<SnowballThrowable>().throwableMakerIndex == num;
+					array[j].SetActive(flag);
 					if (activeSelf && !flag)
 					{
 						throwableDisabledIndex[i] = j;
@@ -758,8 +722,6 @@ public class BodyDockPositions : MonoBehaviour
 					}
 				}
 			}
-			int num = i + 1;
-			i = num;
 		}
 	}
 

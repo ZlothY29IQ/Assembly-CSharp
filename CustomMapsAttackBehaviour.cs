@@ -1,7 +1,7 @@
 using System;
+using GT_CustomMapSupportRuntime;
 using GorillaExtensions;
 using GorillaGameModes;
-using GT_CustomMapSupportRuntime;
 using UnityEngine;
 
 public class CustomMapsAttackBehaviour : CustomMapsBehaviourBase

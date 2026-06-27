@@ -42,7 +42,7 @@ public class FittingRoom : MonoBehaviour
 		{
 			if (iterator < currentCart.Count)
 			{
-				bool isInTryOnSet = CosmeticsController.instance.AnyMatch(tryOnSet, currentCart[iterator]);
+				bool isInTryOnSet = CosmeticsController.instance.AnyMatch(tryOnSet, currentCart[iterator]) || (!CosmeticsController.instance.tryOnCollectableItem.isNullItem && currentCart[iterator].itemName == CosmeticsController.instance.tryOnCollectableItem.itemName);
 				fittingRoomButtons[iterator].SetItem(currentCart[iterator], isInTryOnSet);
 			}
 			else

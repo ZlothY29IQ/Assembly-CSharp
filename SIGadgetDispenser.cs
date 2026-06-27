@@ -33,44 +33,39 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 	public SICombinedTerminal parentTerminal;
 
 	[Header("TryOn")]
-	[FormerlySerializedAs("isTryOn")]
 	[SerializeField]
 	private bool m_isTryOn;
 
 	[SerializeField]
-	private float m_tryOnLifetime = 30f;
-
-	[SerializeField]
-	private AudioClip m_tryOnBeepClip;
-
-	[SerializeField]
-	private AudioClip m_tryOnExplosionClip;
-
-	[SerializeField]
-	private GameEntityDelayedDestroy.BeepPhase[] m_tryOnBeepPhases = new GameEntityDelayedDestroy.BeepPhase[3]
+	private GameEntityDelayedDestroy.Options m_tryOnOptions = new GameEntityDelayedDestroy.Options
 	{
-		new GameEntityDelayedDestroy.BeepPhase
+		delay = 30f,
+		explosionVolume = 1f,
+		beepVolume = 1f,
+		beepPhases = new GameEntityDelayedDestroy.BeepPhase[3]
 		{
-			timeRemaining = 10f,
-			interval = 1f
-		},
-		new GameEntityDelayedDestroy.BeepPhase
-		{
-			timeRemaining = 5f,
-			interval = 0.5f
-		},
-		new GameEntityDelayedDestroy.BeepPhase
-		{
-			timeRemaining = 2f,
-			interval = 0.1f
+			new GameEntityDelayedDestroy.BeepPhase
+			{
+				timeRemaining = 10f,
+				interval = 1f
+			},
+			new GameEntityDelayedDestroy.BeepPhase
+			{
+				timeRemaining = 5f,
+				interval = 0.5f
+			},
+			new GameEntityDelayedDestroy.BeepPhase
+			{
+				timeRemaining = 2f,
+				interval = 0.25f
+			}
 		}
 	};
 
-	[SerializeField]
-	private float m_tryOnBeepVolume = 1f;
-
-	[SerializeField]
-	private float m_tryOnExplosionVolume = 1f;
+	internal static GameEntityDelayedDestroy.Options g_tryOnOptions = new GameEntityDelayedDestroy.Options
+	{
+		delay = 1f
+	};
 
 	public GameObject waitingForScanScreen;
 
@@ -150,6 +145,8 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 
 	private bool initialized;
 
+	internal bool isTryOn => m_isTryOn;
+
 	public SIScreenRegion ScreenRegion => screenRegion;
 
 	public SIPlayer ActivePlayer => parentTerminal.activePlayer;
@@ -168,8 +165,12 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 
 	public SITechTreeSO TechTreeSO => parentTerminal.superInfection.techTreeSO;
 
-	private void OnEnable()
+	protected void OnEnable()
 	{
+		if (m_isTryOn)
+		{
+			g_tryOnOptions = m_tryOnOptions;
+		}
 		_RefreshButtonsUsableState();
 	}
 
@@ -229,6 +230,11 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 				sIDispenserGadgetListEntry.SetStation(this, parentTerminal.zeroZeroImage, parentTerminal.onePointTwoText);
 				gadgetEntries.Add(sIDispenserGadgetListEntry);
 			}
+			if (m_isTryOn && base.isActiveAndEnabled)
+			{
+				g_tryOnOptions = m_tryOnOptions;
+			}
+			_RefreshButtonsUsableState();
 			Reset();
 		}
 	}
@@ -366,7 +372,6 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 
 	public void UpdateGadgetListVisibility()
 	{
-		m_isTryOn = false;
 		foreach (SIDispenserGadgetListEntry gadgetEntry in gadgetEntries)
 		{
 			gadgetEntry.gameObject.SetActive(value: false);
@@ -379,7 +384,7 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 				SIDispenserGadgetListEntry sIDispenserGadgetListEntry = gadgetEntries[num++];
 				sIDispenserGadgetListEntry.SetTechTreeNode(dispensableGadget);
 				sIDispenserGadgetListEntry.gameObject.SetActive(value: true);
-				sIDispenserGadgetListEntry.DispenseButton.SetUsable(dispensableGadget.IsAllowed);
+				sIDispenserGadgetListEntry.DispenseButton.SetUsable(m_isTryOn || dispensableGadget.IsAllowed);
 			}
 		}
 		noDispensableGadgetsMessage.SetActive(num == 0);
@@ -466,7 +471,7 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 					if (treeNode2 != null && treeNode2.IsDispensableGadget)
 					{
 						_currentNode = data;
-						DispenseGadgetForPlayer(ActivePlayer);
+						AuthorityDispenseGadgetForPlayer(ActivePlayer);
 						UpdateState(GadgetDispenserTerminalState.GadgetDispensed);
 					}
 				}
@@ -482,7 +487,7 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 				}
 				if (buttonType == SITouchscreenButton.SITouchscreenButtonType.Dispense)
 				{
-					DispenseGadgetForPlayer(ActivePlayer);
+					AuthorityDispenseGadgetForPlayer(ActivePlayer);
 					UpdateState(GadgetDispenserTerminalState.GadgetDispensed);
 				}
 				break;
@@ -525,9 +530,12 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 		}
 	}
 
-	public void DispenseGadgetForPlayer(SIPlayer player)
+	public void AuthorityDispenseGadgetForPlayer(SIPlayer player)
 	{
-		m_isTryOn = false;
+		if (!IsAuthority)
+		{
+			return;
+		}
 		int num = 0;
 		int staticHash = CurrentNode.unlockedGadgetPrefab.name.GetStaticHash();
 		for (int num2 = player.activePlayerGadgets.Count - 1; num2 >= 0; num2--)
@@ -553,7 +561,7 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 		{
 			num3 |= 1 << allNode.Value.upgradeType.GetNodeId();
 		}
-		upgrades.SetBits(upgrades.GetBits() & num3);
+		upgrades.SetBits(m_isTryOn ? num3 : (upgrades.GetBits() & num3));
 		foreach (SITechTreeNode dispensableGadget in CurrentPage.DispensableGadgets)
 		{
 			if (dispensableGadget != CurrentNode)
@@ -561,15 +569,12 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 				upgrades.Remove(dispensableGadget.upgradeType);
 			}
 		}
-		GameEntityId id = GameEntityManager.RequestCreateItem(staticHash, gadgetDispensePosition.position, gadgetDispensePosition.rotation, upgrades.GetCreateData(player));
-		if (m_isTryOn && id.IsValid())
+		long num4 = upgrades.GetCreateData(player);
+		if (m_isTryOn)
 		{
-			GameEntity gameEntity = GameEntityManager.GetGameEntity(id);
-			if (gameEntity != null)
-			{
-				gameEntity.gameObject.AddComponent<GameEntityDelayedDestroy>().Configure(m_tryOnLifetime, m_tryOnBeepClip, m_tryOnExplosionClip, m_tryOnBeepPhases, m_tryOnBeepVolume, m_tryOnExplosionVolume);
-			}
+			num4 |= long.MinValue;
 		}
+		GameEntityManager.RequestCreateItem(staticHash, gadgetDispensePosition.position, gadgetDispensePosition.rotation, num4);
 		dispenseSoundBankPlayer.Play();
 	}
 
@@ -603,10 +608,5 @@ public class SIGadgetDispenser : MonoBehaviour, ITouchScreenStation
 			}
 		}
 		return false;
-	}
-
-	GameObject ITouchScreenStation.get_gameObject()
-	{
-		return base.gameObject;
 	}
 }

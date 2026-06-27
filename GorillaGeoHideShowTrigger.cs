@@ -91,11 +91,6 @@ public class GorillaGeoHideShowTrigger : GorillaTriggerBox, IGuidedRefReceiverMo
 		_guidedRefsAreFullyResolved = false;
 	}
 
-	Transform IGuidedRefMonoBehaviour.get_transform()
-	{
-		return base.transform;
-	}
-
 	int IGuidedRefObject.GetInstanceID()
 	{
 		return GetInstanceID();

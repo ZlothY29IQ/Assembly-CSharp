@@ -414,11 +414,6 @@ public class ScienceExperimentPlatformGenerator : MonoBehaviourPun, ITickSystemP
 		TickSystem<object>.RemovePostTickCallback(this);
 	}
 
-	Transform IGuidedRefMonoBehaviour.get_transform()
-	{
-		return base.transform;
-	}
-
 	int IGuidedRefObject.GetInstanceID()
 	{
 		return GetInstanceID();

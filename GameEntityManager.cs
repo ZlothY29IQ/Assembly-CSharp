@@ -6,11 +6,14 @@ using Cysharp.Text;
 using Fusion;
 using GorillaExtensions;
 using GorillaLocomotion;
+using GorillaNetworking;
+using GorillaTag;
 using Ionic.Zlib;
 using Photon.Pun;
 using Photon.Realtime;
 using Unity.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
 
 [NetworkBehaviourWeaved(0)]
@@ -47,8 +50,10 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 
 		public List<Player> zonePlayers;
 
+		[HideInInspector]
 		public byte[] recievedStateBytes;
 
+		[HideInInspector]
 		public int numRecievedStateBytes;
 	}
 
@@ -61,7 +66,19 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		GrabEntity,
 		ThrowEntity,
 		SendTableData,
-		HitEntity
+		HitEntity,
+		PlayerLeftZone
+	}
+
+	private struct ScenePlacedRecord
+	{
+		public GameEntity entity;
+
+		public Vector3 position;
+
+		public Quaternion rotation;
+
+		public float uniformScale;
 	}
 
 	private struct AttachmentData
@@ -103,6 +120,8 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 
 	private static List<GameEntityManager> allManagers = new List<GameEntityManager>(8);
 
+	internal static readonly Dictionary<int, GameEntityManager> managersByZone = new Dictionary<int, GameEntityManager>(8);
+
 	public GTZone zone;
 
 	public PhotonView photonView;
@@ -124,7 +143,7 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 
 	public SuperInfectionManager superInfectionManager;
 
-	private List<IGameEntityZoneComponent> zoneComponents;
+	protected List<IGameEntityZoneComponent> zoneComponents;
 
 	private List<GameEntity> entities;
 
@@ -188,11 +207,24 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 	[NonSerialized]
 	public Action<GameEntity> OnEntityAdded;
 
+	private int pendingTableDataSetFrame;
+
+	[DebugReadout]
 	private ZoneStateData zoneStateData;
 
 	private int nextNetId = 1;
 
 	public CallLimitersList<CallLimiter, RPC> m_RpcSpamChecks = new CallLimitersList<CallLimiter, RPC>();
+
+	private bool scenePlacedEntitiesRegistered;
+
+	private float scenePlacedBoundsCheckTimer;
+
+	private int _lastUpdateZoneStateAuthLogSig = int.MinValue;
+
+	private readonly List<ScenePlacedRecord> scenePlacedEntities = new List<ScenePlacedRecord>(16);
+
+	private readonly List<GameEntityId> _leavingItemScratch = new List<GameEntityId>(4);
 
 	private List<Collider> _collidersList = new List<Collider>(16);
 
@@ -202,7 +234,13 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 
 	private static List<AttachmentData> tempAttachments = new List<AttachmentData>(512);
 
-	private static byte[] tempSerializeGameState = new byte[15360];
+	private byte[] tempSerializeGameState = new byte[15360];
+
+	[OnEnterPlay_Clear]
+	private static readonly Dictionary<string, List<GameEntity>> s_scenePlacedEntities = new Dictionary<string, List<GameEntity>>();
+
+	[OnEnterPlay_Clear]
+	private static readonly Dictionary<int, string> s_scenePlacedHomeScenes = new Dictionary<int, string>();
 
 	public static GameEntityManager activeManager { get; private set; }
 
@@ -256,6 +294,201 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		}
 		BuildFactory();
 		allManagers.Add(this);
+		managersByZone[(int)zone] = this;
+		if (base.transform.parent != null)
+		{
+			base.transform.SetParent(null, worldPositionStays: true);
+		}
+		UnityEngine.Object.DontDestroyOnLoad(base.gameObject);
+	}
+
+	internal void RegisterScenePlacedEntities()
+	{
+		if (scenePlacedEntitiesRegistered)
+		{
+			return;
+		}
+		scenePlacedEntitiesRegistered = true;
+		string zoneSceneName = GetZoneSceneName();
+		s_scenePlacedEntities.TryGetValue(zoneSceneName, out var value);
+		if (value != null)
+		{
+			for (int i = 0; i < value.Count; i++)
+			{
+				RegisterSingleScenePlacedEntity(value[i]);
+			}
+		}
+	}
+
+	private void RegisterSingleScenePlacedEntity(GameEntity entity)
+	{
+		if (entity == null)
+		{
+			return;
+		}
+		XSceneRefTarget component;
+		int num = ((!entity.TryGetComponent<XSceneRefTarget>(out component) || component.UniqueID <= 0) ? ComputeNetIdFromHierarchyForCustomMaps(entity.transform) : NetIdFromXSceneRefId(component.UniqueID));
+		if (netIdToIndex.TryGetValue(num, out var value))
+		{
+			GameEntity gameEntity = ((value >= 0 && value < entities.Count) ? entities[value] : null);
+			if (gameEntity == entity)
+			{
+				EnsureScenePlacedRecord(entity);
+				return;
+			}
+			if (!(gameEntity == null))
+			{
+				Debug.LogError("[GT/GameEntityManager]  ERROR!!!  RegisterSingleScenePlacedEntity" + $": NetId collision for scene-placed entity '{entity.name}' (netId={num})" + $" with live entity '{gameEntity.name}' at index {value}. Skipping.");
+				return;
+			}
+			netIdToIndex.Remove(num);
+		}
+		if (!entity.scenePlacedInitialized)
+		{
+			entity.scenePlacedHomePosition = entity.transform.position;
+			entity.scenePlacedHomeRotation = entity.transform.rotation;
+			entity.scenePlacedHomeScale = entity.transform.lossyScale.x;
+			if (!entity.gameObject.activeSelf)
+			{
+				entity.gameObject.SetActive(value: true);
+			}
+			entity.IsScenePlaced = true;
+			entity.Create(this, num, -2147483647);
+			entity.Init(0L, -1);
+			AddGameEntity(num, entity);
+			entity.scenePlacedInitialized = true;
+		}
+		else
+		{
+			GameEntityManager manager = entity.manager;
+			if (manager != null && manager != this)
+			{
+				manager.RemoveGameEntity(entity);
+				if (entity.builtInEntities != null)
+				{
+					for (int i = 0; i < entity.builtInEntities.Count; i++)
+					{
+						manager.RemoveGameEntity(entity.builtInEntities[i]);
+					}
+				}
+			}
+			entity.manager = this;
+			AddGameEntity(num, entity);
+			if (entity.builtInEntities != null)
+			{
+				bool flag = num < -1 && num != int.MinValue;
+				for (int j = 0; j < entity.builtInEntities.Count; j++)
+				{
+					int netId = (flag ? (num - 1 - j) : (num + 1 + j));
+					entity.builtInEntities[j].manager = this;
+					AddGameEntity(netId, entity.builtInEntities[j]);
+				}
+			}
+			if (!entity.gameObject.activeSelf)
+			{
+				entity.gameObject.SetActive(value: true);
+			}
+		}
+		s_scenePlacedHomeScenes[num] = entity.gameObject.scene.name;
+		EnsureScenePlacedRecord(entity);
+	}
+
+	private void EnsureScenePlacedRecord(GameEntity entity)
+	{
+		for (int i = 0; i < scenePlacedEntities.Count; i++)
+		{
+			if (scenePlacedEntities[i].entity == entity)
+			{
+				return;
+			}
+		}
+		scenePlacedEntities.Add(new ScenePlacedRecord
+		{
+			entity = entity,
+			position = entity.scenePlacedHomePosition,
+			rotation = entity.scenePlacedHomeRotation,
+			uniformScale = entity.scenePlacedHomeScale
+		});
+	}
+
+	private static void ResetScenePlacedTransform(GameEntity entity, in ScenePlacedRecord record)
+	{
+		bool num = entity.transform.parent != null;
+		bool flag = entity.IsHeld() || entity.snappedByActorNumber != -1;
+		if (num || flag)
+		{
+			if (entity.manager != null)
+			{
+				entity.manager.ReleaseScenePlacedHold(entity);
+			}
+			else
+			{
+				DetachScenePlacedFromRig(entity);
+			}
+		}
+		entity.transform.SetPositionAndRotation(record.position, record.rotation);
+		entity.transform.localScale = Vector3.one * record.uniformScale;
+		Rigidbody component = entity.GetComponent<Rigidbody>();
+		if (component != null)
+		{
+			component.linearVelocity = Vector3.zero;
+			component.angularVelocity = Vector3.zero;
+		}
+	}
+
+	internal void ReleaseScenePlacedHold(GameEntity entity)
+	{
+		if (entity == null || !entity.IsScenePlaced)
+		{
+			return;
+		}
+		int heldByActorNumber = entity.heldByActorNumber;
+		int snappedByActorNumber = entity.snappedByActorNumber;
+		if (heldByActorNumber != -1 && GamePlayer.TryGetGamePlayer(heldByActorNumber, out var out_gamePlayer))
+		{
+			out_gamePlayer.ClearGrabbedIfHeld(entity.id, this);
+			if (out_gamePlayer.IsLocal())
+			{
+				GamePlayerLocal.instance?.ClearGrabbedIfHeld(entity.id, this);
+			}
+		}
+		if (snappedByActorNumber != -1 && GamePlayer.TryGetGamePlayer(snappedByActorNumber, out var out_gamePlayer2))
+		{
+			out_gamePlayer2.ClearSnappedIfSnapped(entity.id, this);
+		}
+		DetachScenePlacedFromRig(entity);
+		MoveScenePlacedToHomeScene(entity);
+		bool num = entity.heldByActorNumber != -1 || entity.snappedByActorNumber != -1 || entity.attachedToEntityId != GameEntityId.Invalid;
+		entity.heldByActorNumber = -1;
+		entity.heldByHandIndex = -1;
+		entity.snappedByActorNumber = -1;
+		entity.snappedJoint = SnapJointType.None;
+		entity.attachedToEntityId = GameEntityId.Invalid;
+		if (num)
+		{
+			entity.OnReleased?.Invoke();
+		}
+	}
+
+	private static void DetachScenePlacedFromRig(GameEntity entity)
+	{
+		Transform parent = entity.transform.parent;
+		if (!(parent == null) && parent.GetComponentInParent<VRRig>() != null)
+		{
+			entity.transform.SetParent(null, worldPositionStays: true);
+		}
+	}
+
+	private static void MoveScenePlacedToHomeScene(GameEntity entity)
+	{
+		if (!(entity == null) && entity.IsScenePlaced && !(entity.manager == null) && s_scenePlacedHomeScenes.TryGetValue(entity.GetNetId(), out var value))
+		{
+			Scene sceneByName = SceneManager.GetSceneByName(value);
+			if (sceneByName.IsValid() && sceneByName.isLoaded && !(entity.gameObject.scene == sceneByName))
+			{
+				SceneManager.MoveGameObjectToScene(entity.gameObject, sceneByName);
+			}
+		}
 	}
 
 	internal override void OnEnable()
@@ -290,6 +523,10 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		NetworkBehaviourUtils.InternalOnDestroy(this);
 		netIds.Dispose();
 		allManagers.Remove(this);
+		if (managersByZone.TryGetValue((int)zone, out var value) && value == this)
+		{
+			managersByZone.Remove((int)zone);
+		}
 	}
 
 	public static GameEntityManager GetManagerForZone(GTZone zone)
@@ -306,13 +543,32 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 
 	public void SliceUpdate()
 	{
-		UpdateZoneState();
 	}
 
 	public void Tick()
 	{
 		if (ApplicationQuittingState.IsQuitting)
 		{
+			return;
+		}
+		UpdateZoneState();
+		if (!IsZoneActive())
+		{
+			if (netIdsForCreate.Count > 0 || netIdsForDelete.Count > 0 || netIdsForState.Count > 0)
+			{
+				ClearPendingRPCBatches();
+			}
+			if (PendingTableData)
+			{
+				if (Time.frameCount - pendingTableDataSetFrame > 90)
+				{
+					ResolveTableData();
+				}
+				else
+				{
+					_ = Time.frameCount % 300;
+				}
+			}
 			return;
 		}
 		float time = Time.time;
@@ -325,32 +581,53 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 				gameEntity.LastTickTime = time;
 			}
 		}
-		if (IsAuthority())
+		if (!IsAuthority())
 		{
-			if (netIdsForCreate.Count > 0 && Time.time > lastCreateSent + createCooldown)
+			return;
+		}
+		if (scenePlacedEntities.Count > 0)
+		{
+			scenePlacedBoundsCheckTimer -= Time.deltaTime;
+			if (scenePlacedBoundsCheckTimer <= 0f)
 			{
-				lastCreateSent = Time.time;
-				photonView.RPC("CreateItemRPC", RpcTarget.Others, netIdsForCreate.ToArray(), entityTypeIdsForCreate.ToArray(), packedPositionsForCreate.ToArray(), packedRotationsForCreate.ToArray(), createDataForCreate.ToArray(), createdByEntityNetIdForCreate.ToArray());
-				netIdsForCreate.Clear();
-				entityTypeIdsForCreate.Clear();
-				packedPositionsForCreate.Clear();
-				packedRotationsForCreate.Clear();
-				createDataForCreate.Clear();
-				createdByEntityNetIdForCreate.Clear();
+				scenePlacedBoundsCheckTimer = 1f;
+				for (int j = 0; j < scenePlacedEntities.Count; j++)
+				{
+					ScenePlacedRecord record = scenePlacedEntities[j];
+					if (!(record.entity == null))
+					{
+						Vector3 position = record.entity.transform.position;
+						if (!((position - record.position).sqrMagnitude < 0.0625f) && !IsPositionInManagerBounds(position))
+						{
+							ResetScenePlacedTransform(record.entity, in record);
+						}
+					}
+				}
 			}
-			if (netIdsForDelete.Count > 0 && Time.time > lastDestroySent + destroyCooldown)
-			{
-				lastDestroySent = Time.time;
-				photonView.RPC("DestroyItemRPC", RpcTarget.Others, netIdsForDelete.ToArray());
-				netIdsForDelete.Clear();
-			}
-			if (netIdsForState.Count > 0 && Time.time > lastStateSent + stateCooldown)
-			{
-				lastDestroySent = Time.time;
-				photonView.RPC("ApplyStateRPC", RpcTarget.All, netIdsForState.ToArray(), statesForState.ToArray());
-				netIdsForState.Clear();
-				statesForState.Clear();
-			}
+		}
+		if (netIdsForCreate.Count > 0 && Time.time > lastCreateSent + createCooldown)
+		{
+			lastCreateSent = Time.time;
+			photonView.RPC("CreateItemRPC", RpcTarget.Others, netIdsForCreate.ToArray(), entityTypeIdsForCreate.ToArray(), packedPositionsForCreate.ToArray(), packedRotationsForCreate.ToArray(), createDataForCreate.ToArray(), createdByEntityNetIdForCreate.ToArray());
+			netIdsForCreate.Clear();
+			entityTypeIdsForCreate.Clear();
+			packedPositionsForCreate.Clear();
+			packedRotationsForCreate.Clear();
+			createDataForCreate.Clear();
+			createdByEntityNetIdForCreate.Clear();
+		}
+		if (netIdsForDelete.Count > 0 && Time.time > lastDestroySent + destroyCooldown)
+		{
+			lastDestroySent = Time.time;
+			photonView.RPC("DestroyItemRPC", RpcTarget.Others, netIdsForDelete.ToArray());
+			netIdsForDelete.Clear();
+		}
+		if (netIdsForState.Count > 0 && Time.time > lastStateSent + stateCooldown)
+		{
+			lastStateSent = Time.time;
+			photonView.RPC("ApplyStateRPC", RpcTarget.All, netIdsForState.ToArray(), statesForState.ToArray());
+			netIdsForState.Clear();
+			statesForState.Clear();
 		}
 	}
 
@@ -371,7 +648,12 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 			GameEntity gameEntity2 = GetGameEntity(value);
 			if (gameEntity2 != null)
 			{
-				Debug.LogError("[GT/GameEntityManager]  ERROR!!!  AddGameEntity: " + $"UH OH!!!! NetId {netId} is in use by '{gameEntity2.name}' but will be overwritten by '{gameEntity.name}'! Meaning there will be a zombie gameEntity on at least this client! (should probably abort but this is how it worked before so don't want to break existing behavior)");
+				if (gameEntity2 == gameEntity)
+				{
+					return gameEntity.id;
+				}
+				Debug.LogError("[GT/GameEntityManager]  ERROR!!!  AddGameEntity" + $": NetId {netId} collision: " + "'" + gameEntity2.name + "' replaced by '" + gameEntity.name + "'. Destroying old entity to prevent zombie.");
+				DestroyItemLocal(gameEntity2.id);
 			}
 		}
 		int num = FindNewEntityIndex();
@@ -476,6 +758,19 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		return netIds[id.index];
 	}
 
+	private void ClearPendingRPCBatches()
+	{
+		netIdsForCreate.Clear();
+		entityTypeIdsForCreate.Clear();
+		packedPositionsForCreate.Clear();
+		packedRotationsForCreate.Clear();
+		createDataForCreate.Clear();
+		createdByEntityNetIdForCreate.Clear();
+		netIdsForDelete.Clear();
+		netIdsForState.Clear();
+		statesForState.Clear();
+	}
+
 	public virtual bool IsAuthority()
 	{
 		if (NetworkSystem.Instance.InRoom)
@@ -498,7 +793,7 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 	{
 		if (player != null && guard.actualOwner != null)
 		{
-			return player == guard.actualOwner.GetPlayerRef();
+			return player.ActorNumber == guard.actualOwner.GetPlayerRef()?.ActorNumber;
 		}
 		return false;
 	}
@@ -524,27 +819,50 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 
 	public virtual bool IsZoneActive()
 	{
+		if (GorillaComputer.instance != null && GorillaComputer.instance.IsPlayerInVirtualStump() && IsSuppressZonesInVStumpEnabled())
+		{
+			if (CustomMapLoader.CanLoadEntities && zone == GTZone.customMaps)
+			{
+				return zoneStateData.state == ZoneState.Active;
+			}
+			return false;
+		}
 		return zoneStateData.state == ZoneState.Active;
 	}
 
-	public bool IsPositionInManagerBounds(Vector3 pos)
+	private static bool IsSuppressZonesInVStumpEnabled()
 	{
-		if (!(boundsBoxCollider == null))
+		GorillaServer instance = GorillaServer.Instance;
+		if (instance != null)
+		{
+			return instance.CheckIsSuppressZonesInVStumpEnabled();
+		}
+		return false;
+	}
+
+	public virtual bool IsPositionInManagerBounds(Vector3 pos)
+	{
+		if (boundsBoxCollider != null)
 		{
 			return boundsBoxCollider.bounds.Contains(pos);
+		}
+		ZoneGraphBSP instance = ZoneGraphBSP.Instance;
+		if (instance != null && instance.HasCompiledTree())
+		{
+			ZoneDef zoneDef = instance.FindZoneAtPoint(pos);
+			return zoneDef != null && zoneDef.zoneId == zone;
 		}
 		return true;
 	}
 
 	public virtual bool IsValidClientRPC(Player sender)
 	{
-		if (IsAuthorityPlayer(sender))
+		bool num = IsAuthorityPlayer(sender);
+		bool flag = IsZoneActive();
+		bool flag2 = sender.ActorNumber == PhotonNetwork.LocalPlayer.ActorNumber;
+		if (num)
 		{
-			if (!IsZoneActive())
-			{
-				return sender == PhotonNetwork.LocalPlayer;
-			}
-			return true;
+			return flag || flag2;
 		}
 		return false;
 	}
@@ -582,7 +900,7 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		{
 			if (!IsZoneActive())
 			{
-				return sender == PhotonNetwork.LocalPlayer;
+				return sender.ActorNumber == PhotonNetwork.LocalPlayer.ActorNumber;
 			}
 			return true;
 		}
@@ -662,6 +980,32 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		return gameEntity.GetComponent<T>();
 	}
 
+	public bool LocalValidateMigrationRecoveryItem(int entityTypeId, ref long createData)
+	{
+		GameObject gameObject = FactoryPrefabById(entityTypeId);
+		if (gameObject == null)
+		{
+			return false;
+		}
+		GameEntity component = gameObject.GetComponent<GameEntity>();
+		if (component != null)
+		{
+			for (int i = 0; i < zoneComponents.Count; i++)
+			{
+				createData = zoneComponents[i].ProcessMigratedGameEntityCreateData(component, createData);
+			}
+		}
+		int actorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
+		for (int j = 0; j < zoneComponents.Count; j++)
+		{
+			if (!zoneComponents[j].ValidateMigratedGameEntity(0, entityTypeId, Vector3.zero, Quaternion.identity, createData, actorNumber))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
 	public bool IsEntityValidToMigrate(GameEntity entity)
 	{
 		if (entity == null)
@@ -733,6 +1077,28 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		return result;
 	}
 
+	private void RecalculateNextNetId()
+	{
+		int num = 0;
+		for (int i = 0; i < entities.Count; i++)
+		{
+			if (!(entities[i] != null))
+			{
+				continue;
+			}
+			int num2 = netIds[i];
+			if (num2 >= 0)
+			{
+				int num3 = num2 + entities[i].builtInEntities.Count;
+				if (num3 > num)
+				{
+					num = num3;
+				}
+			}
+		}
+		nextNetId = num + 1;
+	}
+
 	public GameEntityId RequestCreateItem(int entityTypeId, Vector3 position, Quaternion rotation, long createData)
 	{
 		return RequestCreateItem(entityTypeId, position, rotation, createData, GameEntityId.Invalid);
@@ -744,6 +1110,18 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		{
 			return GameEntityId.Invalid;
 		}
+		int netIdFromEntityId = GetNetIdFromEntityId(createdByEntityId);
+		for (int i = 0; i < zoneComponents.Count; i++)
+		{
+			if (!zoneComponents[i].ValidateCreateItem(0, entityTypeId, position, rotation, createData, netIdFromEntityId))
+			{
+				if (zoneComponents[i] is MonoBehaviour monoBehaviour)
+				{
+					_ = monoBehaviour.name;
+				}
+				return GameEntityId.Invalid;
+			}
+		}
 		long item = BitPackUtils.PackWorldPosForNetwork(position);
 		int item2 = BitPackUtils.PackQuaternionForNetwork(rotation);
 		int numToCreate = 1 + FactoryGetBuiltInEntityCountById(entityTypeId);
@@ -753,8 +1131,8 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		packedPositionsForCreate.Add(item);
 		packedRotationsForCreate.Add(item2);
 		createDataForCreate.Add(createData);
-		createdByEntityNetIdForCreate.Add(GetNetIdFromEntityId(createdByEntityId));
-		return CreateAndInitItemLocal(num, entityTypeId, position, rotation, createData, GetNetIdFromEntityId(createdByEntityId));
+		createdByEntityNetIdForCreate.Add(netIdFromEntityId);
+		return CreateAndInitItemLocal(num, entityTypeId, position, rotation, createData, netIdFromEntityId);
 	}
 
 	[PunRPC]
@@ -776,6 +1154,10 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		}
 		for (int j = 0; j < netId.Length; j++)
 		{
+			if (IsScenePlacedNetId(netId[j]))
+			{
+				continue;
+			}
 			Vector3 v = BitPackUtils.UnpackWorldPosFromNetwork(packedPos[j]);
 			Quaternion q = BitPackUtils.UnpackQuaternionFromNetwork(packedRot[j]);
 			if (!v.IsValid(10000f) || !q.IsValid() || !FactoryHasEntity(entityTypeId[j]) || !IsPositionInManagerBounds(v))
@@ -789,7 +1171,10 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 			bool flag = true;
 			for (int k = 0; k < zoneComponents.Count; k++)
 			{
-				flag &= zoneComponents[k].ValidateCreateItem(num, entityTypeId2, v, q, createData2, createdByEntityNetId2);
+				if (!zoneComponents[k].ValidateCreateItem(num, entityTypeId2, v, q, createData2, createdByEntityNetId2))
+				{
+					flag = false;
+				}
 			}
 			if (flag)
 			{
@@ -837,9 +1222,7 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		}
 		try
 		{
-			byte[] array = GZipStream.UncompressBuffer(stateData);
-			_ = array.Length;
-			using MemoryStream input = new MemoryStream(array);
+			using MemoryStream input = new MemoryStream(GZipStream.UncompressBuffer(stateData));
 			using BinaryReader binaryReader = new BinaryReader(input);
 			int num = binaryReader.ReadInt32();
 			for (int i = 0; i < zoneComponents.Count; i++)
@@ -936,21 +1319,62 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 	[PunRPC]
 	public void PlayerLeftZoneRPC(PhotonMessageInfo info)
 	{
+		if (m_RpcSpamChecks.IsSpamming(RPC.PlayerLeftZone))
+		{
+			return;
+		}
 		GamePlayer gamePlayer = GamePlayer.GetGamePlayer(info.Sender);
+		if (gamePlayer == null)
+		{
+			return;
+		}
 		if (NetworkSystem.Instance.SessionIsPrivate)
 		{
 			gamePlayer.DidJoinWithItems = false;
 		}
+		_leavingItemScratch.Clear();
 		foreach (GameEntityId item in gamePlayer.IterateHeldAndSnappedItems(this))
 		{
-			if (!netIdsForDelete.Contains(GetNetIdFromEntityId(item)))
-			{
-				netIdsForDelete.Add(GetNetIdFromEntityId(item));
-			}
-			DestroyItemLocal(item);
+			_leavingItemScratch.Add(item);
 		}
+		for (int i = 0; i < _leavingItemScratch.Count; i++)
+		{
+			GameEntityId gameEntityId = _leavingItemScratch[i];
+			GameEntity gameEntity = GetGameEntity(gameEntityId);
+			if (gameEntity != null && gameEntity.IsScenePlaced)
+			{
+				ReleaseScenePlacedHold(gameEntity);
+				if (IsAuthority() && TryGetScenePlacedRecord(gameEntity, out var record))
+				{
+					ResetScenePlacedTransform(gameEntity, in record);
+				}
+			}
+			else
+			{
+				if (!netIdsForDelete.Contains(GetNetIdFromEntityId(gameEntityId)))
+				{
+					netIdsForDelete.Add(GetNetIdFromEntityId(gameEntityId));
+				}
+				DestroyItemLocal(gameEntityId);
+			}
+		}
+		_leavingItemScratch.Clear();
 		playerZoneJoinTimes.Remove(info.Sender.ActorNumber);
 		gamePlayer.OnPlayerLeftZone?.Invoke();
+	}
+
+	private bool TryGetScenePlacedRecord(GameEntity entity, out ScenePlacedRecord record)
+	{
+		for (int i = 0; i < scenePlacedEntities.Count; i++)
+		{
+			if (scenePlacedEntities[i].entity == entity)
+			{
+				record = scenePlacedEntities[i];
+				return true;
+			}
+		}
+		record = default(ScenePlacedRecord);
+		return false;
 	}
 
 	[PunRPC]
@@ -964,13 +1388,19 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 				return;
 			}
 		}
-		else if (!IsValidClientRPC(info.Sender))
+		else if (!IsAuthorityPlayer(info.Sender))
 		{
 			return;
 		}
 		float value;
 		bool flag = playerZoneJoinTimes.TryGetValue(joiningActorNum, out value) && Time.unscaledTime - value < 10f;
-		if (!GamePlayer.TryGetGamePlayer(joiningActorNum, out var joiningPlayer) || (!isAuthority && GetAuthorityPlayer() != info.Sender) || (isAuthority && info.Sender.ActorNumber != joiningActorNum) || stateData == null || stateData.Length >= 255 || (joiningPlayer.DidJoinWithItems && !flag) || !IsInZone())
+		GamePlayer joiningPlayer;
+		bool num = GamePlayer.TryGetGamePlayer(joiningActorNum, out joiningPlayer);
+		bool flag2 = !isAuthority && GetAuthorityPlayer()?.ActorNumber != info.Sender.ActorNumber;
+		bool flag3 = isAuthority && info.Sender.ActorNumber != joiningActorNum;
+		bool flag4 = stateData == null || stateData.Length >= 255;
+		bool flag5 = num && joiningPlayer.DidJoinWithItems && !flag;
+		if (!num || flag2 || flag3 || flag4 || flag5 || !IsInZone())
 		{
 			return;
 		}
@@ -985,18 +1415,16 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 			{
 				GamePlayer gamePlayer2 = joiningPlayer;
 				gamePlayer2.OnPlayerInitialized = (Action)Delegate.Remove(gamePlayer2.OnPlayerInitialized, createItemsCallback);
-				byte[] array = GZipStream.UncompressBuffer(stateData);
-				_ = array.Length;
-				using MemoryStream input = new MemoryStream(array);
+				using MemoryStream input = new MemoryStream(GZipStream.UncompressBuffer(stateData));
 				using BinaryReader binaryReader = new BinaryReader(input);
-				int num = binaryReader.ReadInt32();
-				if (num <= 4 && (isAuthority || netIds.Length == num))
+				int num2 = binaryReader.ReadInt32();
+				if (num2 <= 4 && (isAuthority || netIds.Length == num2))
 				{
 					if (isAuthority)
 					{
-						netIds = new int[num];
+						netIds = new int[num2];
 					}
-					for (int i = 0; i < num; i++)
+					for (int i = 0; i < num2; i++)
 					{
 						_JoinWithItems_ReadOne(binaryReader, out var entityTypeId, out var localPos, out var localRot, out var createData, out var createdByEntityNetId, out var slotIndex);
 						if (!joiningPlayer.TryGetSlotXform(slotIndex, out var slotXform))
@@ -1014,12 +1442,12 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 							Vector3 pos = slotXform.TransformPoint(localPos);
 							if (localPos.IsValid(10000f) && localRot.IsValid() && FactoryHasEntity(entityTypeId) && IsPositionInManagerBounds(pos))
 							{
-								bool flag2 = true;
-								for (int j = 0; j < zoneComponents.Count && flag2; j++)
+								bool flag6 = true;
+								for (int j = 0; j < zoneComponents.Count && flag6; j++)
 								{
-									flag2 &= zoneComponents[j].ValidateMigratedGameEntity(netId, entityTypeId, joiningPlayer.rig.transform.position, Quaternion.identity, createData, joiningActorNum);
+									flag6 &= zoneComponents[j].ValidateMigratedGameEntity(netId, entityTypeId, joiningPlayer.rig.transform.position, Quaternion.identity, createData, joiningActorNum);
 								}
-								if (flag2)
+								if (flag6)
 								{
 									GameEntityId gameEntityId = CreateAndInitItemLocal(netId, entityTypeId, joiningPlayer.rig.transform.position, Quaternion.identity, createData, createdByEntityNetId);
 									bool isLeftHand = slotIndex == 0;
@@ -1178,11 +1606,23 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 
 	public void RequestDestroyItem(GameEntityId entityId)
 	{
-		if (IsAuthority())
+		if (!IsAuthority())
 		{
-			if (!netIdsForDelete.Contains(GetNetIdFromEntityId(entityId)))
+			return;
+		}
+		GameEntity gameEntity = GetGameEntity(entityId);
+		if (!(gameEntity != null) || !gameEntity.IsScenePlaced)
+		{
+			int netIdFromEntityId = GetNetIdFromEntityId(entityId);
+			if (!netIdsForDelete.Contains(netIdFromEntityId))
 			{
-				netIdsForDelete.Add(GetNetIdFromEntityId(entityId));
+				netIdsForDelete.Add(netIdFromEntityId);
+			}
+			int num = netIdsForState.IndexOf(netIdFromEntityId);
+			if (num >= 0)
+			{
+				netIdsForState.RemoveAt(num);
+				statesForState.RemoveAt(num);
 			}
 			DestroyItemLocal(entityId);
 		}
@@ -1207,9 +1647,13 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 	[PunRPC]
 	public void DestroyItemRPC(int[] entityNetId, PhotonMessageInfo info)
 	{
-		if (entityNetId != null && !m_RpcSpamChecks.IsSpamming(RPC.DestroyItem))
+		if (entityNetId == null || m_RpcSpamChecks.IsSpamming(RPC.DestroyItem))
 		{
-			for (int i = 0; i < entityNetId.Length && IsValidClientRPC(info.Sender, entityNetId[i]); i++)
+			return;
+		}
+		for (int i = 0; i < entityNetId.Length && IsValidClientRPC(info.Sender, entityNetId[i]); i++)
+		{
+			if (!IsScenePlacedNetId(entityNetId[i]))
 			{
 				DestroyItemLocal(GetEntityIdFromNetId(entityNetId[i]));
 			}
@@ -1228,23 +1672,20 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 			createdItemTypeCount[gameEntity.typeId] = 1;
 		}
 		createdItemTypeCount[gameEntity.typeId]--;
-		if (RoomSystem.JoinedRoom)
+		if (GamePlayer.TryGetGamePlayer(gameEntity.heldByActorNumber, out var out_gamePlayer))
 		{
-			if (gameEntity.heldByActorNumber != -1 && GamePlayer.TryGetGamePlayer(gameEntity.heldByActorNumber, out var out_gamePlayer))
+			if (out_gamePlayer.IsLocal())
 			{
-				out_gamePlayer.ClearGrabbedIfHeld(gameEntity.id);
-				if (out_gamePlayer.IsLocal())
-				{
-					GamePlayerLocal.instance.ClearGrabbedIfHeld(gameEntity.id);
-				}
+				GamePlayerLocal.instance.ClearGrabbedIfHeld(gameEntity.id, this);
 			}
-			if (gameEntity.snappedByActorNumber != -1 && GamePlayer.TryGetGamePlayer(gameEntity.snappedByActorNumber, out var out_gamePlayer2))
-			{
-				out_gamePlayer2.ClearSnappedIfSnapped(gameEntity.id);
-			}
+			out_gamePlayer.ClearGrabbedIfHeld(gameEntity.id, this);
+		}
+		if (GamePlayer.TryGetGamePlayer(gameEntity.snappedByActorNumber, out var out_gamePlayer2))
+		{
+			out_gamePlayer2.ClearSnappedIfSnapped(gameEntity.id, this);
 		}
 		RemoveGameEntity(gameEntity);
-		if (gameEntity.isBuiltIn)
+		if (gameEntity.isBuiltIn || gameEntity.IsScenePlaced)
 		{
 			gameEntity.gameObject.SetActive(value: false);
 		}
@@ -1341,6 +1782,11 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 				flag = true;
 			}
 		}
+		IGameEntityCustomStateChange component8 = gameEntity.GetComponent<IGameEntityCustomStateChange>();
+		if (component8 != null)
+		{
+			flag = component8.CanChangeState(newState, info.Sender.ActorNumber);
+		}
 		if (flag)
 		{
 			if (netIdsForState.Contains(entityNetId))
@@ -1382,7 +1828,6 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		{
 			long num = BitPackUtils.PackHandPosRotForNetwork(localPosition, localRotation);
 			photonView.RPC("RequestGrabEntityRPC", GetAuthorityPlayer(), GetNetIdFromEntityId(gameEntityId), isLeftHand, num);
-			PhotonNetwork.SendAllOutgoingCommands();
 		}
 	}
 
@@ -1443,7 +1888,7 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		{
 			int num = out_gamePlayer2.FindHandIndex(gameEntityId);
 			bool flag = gameEntity.heldByActorNumber == PhotonNetwork.LocalPlayer.ActorNumber;
-			out_gamePlayer2.ClearGrabbedIfHeld(gameEntityId);
+			out_gamePlayer2.ClearGrabbedIfHeld(gameEntityId, this);
 			if (num != -1 && flag)
 			{
 				GamePlayerLocal.instance.ClearGrabbed(num);
@@ -1658,6 +2103,67 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		return nearbyEntities.Count > 0;
 	}
 
+	public void LogGrabDiagnostics(Vector3 handPosition, bool isLeftHand, int handIndex)
+	{
+		int actorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
+		int num = 0;
+		for (int i = 0; i < entities.Count; i++)
+		{
+			GameEntity gameEntity = entities[i];
+			if (!(gameEntity == null) && !((handPosition - gameEntity.transform.position).magnitude > 0.75f))
+			{
+				num++;
+				WhyGrabRejected(gameEntity, actorNumber, isLeftHand);
+			}
+		}
+	}
+
+	private string WhyGrabRejected(GameEntity gameEntity, int playerActorNumber, bool isLeftHand)
+	{
+		if (gameEntity == null)
+		{
+			return "null";
+		}
+		if (!gameEntity.pickupable)
+		{
+			return "not pickupable";
+		}
+		if (gameEntity.onlyGrabActorNumber != -1 && gameEntity.onlyGrabActorNumber != playerActorNumber)
+		{
+			return $"onlyGrabActor={gameEntity.onlyGrabActorNumber} (you={playerActorNumber})";
+		}
+		if (gameEntity.heldByActorNumber != -1 && gameEntity.heldByActorNumber != playerActorNumber && GamePlayer.TryGetGamePlayer(gameEntity.heldByActorNumber, out var out_gamePlayer))
+		{
+			return $"heldByActor={gameEntity.heldByActorNumber}";
+		}
+		if (gameEntity.snappedByActorNumber != -1 && gameEntity.snappedByActorNumber != playerActorNumber && GamePlayer.TryGetGamePlayer(gameEntity.snappedByActorNumber, out out_gamePlayer))
+		{
+			return $"snappedByActor={gameEntity.snappedByActorNumber}";
+		}
+		GameSnappable component = gameEntity.GetComponent<GameSnappable>();
+		if (component != null && !component.CanGrabWithHand(isLeftHand))
+		{
+			return "GameSnappable disallows " + (isLeftHand ? "left" : "right") + " hand";
+		}
+		if (IsValidEntity(gameEntity.attachedToEntityId))
+		{
+			GameEntity gameEntity2 = GetGameEntity(gameEntity.attachedToEntityId);
+			if (gameEntity2 != null)
+			{
+				if (gameEntity2.snappedByActorNumber != -1 && gameEntity2.snappedByActorNumber != playerActorNumber && GamePlayer.TryGetGamePlayer(gameEntity2.snappedByActorNumber, out out_gamePlayer))
+				{
+					return $"attachedTo '{gameEntity2.name}' snappedByActor={gameEntity2.snappedByActorNumber}";
+				}
+				GameSnappable component2 = gameEntity2.GetComponent<GameSnappable>();
+				if (component2 != null && !component2.CanGrabWithHand(isLeftHand))
+				{
+					return "attachedTo '" + gameEntity2.name + "' GameSnappable disallows " + (isLeftHand ? "left" : "right") + " hand";
+				}
+			}
+		}
+		return null;
+	}
+
 	private bool ValidateGrab(GameEntity gameEntity, int playerActorNumber, bool isLeftHand)
 	{
 		if (gameEntity == null || !gameEntity.pickupable)
@@ -1773,7 +2279,6 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		if (inRoom)
 		{
 			photonView.RPC("RequestThrowEntityRPC", GetAuthorityPlayer(), GetNetIdFromEntityId(entityId), isLeftHand, position, rotation, velocity, angVelocity);
-			PhotonNetwork.SendAllOutgoingCommands();
 		}
 	}
 
@@ -1812,6 +2317,10 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 			return;
 		}
 		gameEntity.transform.SetParent(null);
+		if (gameEntity.IsScenePlaced)
+		{
+			MoveScenePlacedToHomeScene(gameEntity);
+		}
 		gameEntity.transform.SetLocalPositionAndRotation(position, rotation);
 		Rigidbody component = gameEntity.GetComponent<Rigidbody>();
 		if (component != null)
@@ -1826,6 +2335,11 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		gameEntity.heldByActorNumber = -1;
 		gameEntity.heldByHandIndex = -1;
 		gameEntity.attachedToEntityId = GameEntityId.Invalid;
+		VRRig vRRig = GorillaGameManager.StaticFindRigForPlayer(thrownByPlayer);
+		if (vRRig != null && gameEntity.gravityController != null)
+		{
+			gameEntity.gravityController.SetPersonalGravityDirection(vRRig.transform.up);
+		}
 		bool num = thrownByPlayer.ActorNumber == PhotonNetwork.LocalPlayer.ActorNumber;
 		int handIndex = GamePlayer.GetHandIndex(isLeftHand);
 		RigContainer playerRig;
@@ -1840,8 +2354,8 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 			GamePlayer gamePlayerRef = playerRig.Rig.GamePlayerRef;
 			if (gamePlayerRef != null)
 			{
-				gamePlayerRef.ClearGrabbedIfHeld(entityId);
-				gamePlayerRef.ClearSnappedIfSnapped(entityId);
+				gamePlayerRef.ClearGrabbedIfHeld(entityId, this);
+				gamePlayerRef.ClearSnappedIfSnapped(entityId, this);
 			}
 		}
 		gameEntity.PlayThrowFx();
@@ -1870,7 +2384,6 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 				SnapEntityLocal(entityId, isLeftHand, position, rotation, (int)jointType, NetPlayer.Get(PhotonNetwork.LocalPlayer));
 			}
 			photonView.RPC("RequestSnapEntityRPC", GetAuthorityPlayer(), GetNetIdFromEntityId(entityId), isLeftHand, position, rotation, (int)jointType);
-			PhotonNetwork.SendAllOutgoingCommands();
 		}
 	}
 
@@ -1999,7 +2512,7 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 	{
 		if (GamePlayer.TryGetGamePlayer(gameEntity.snappedByActorNumber, out var out_gamePlayer))
 		{
-			out_gamePlayer.ClearSnappedIfSnapped(gameEntity.id);
+			out_gamePlayer.ClearSnappedIfSnapped(gameEntity.id, gameEntity.manager);
 		}
 		GameSnappable component = gameEntity.GetComponent<GameSnappable>();
 		if (component != null && component.snappedToJoint != null && component.snappedToJoint.jointType != SnapJointType.None)
@@ -2026,7 +2539,6 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 				AttachEntityLocal(entityId, attachToEntityId, slotId, localPosition, localRotation);
 			}
 			photonView.RPC("RequestAttachEntityRPC", GetAuthorityPlayer(), GetNetIdFromEntityId(entityId), GetNetIdFromEntityId(attachToEntityId), slotId, localPosition, localRotation);
-			PhotonNetwork.SendAllOutgoingCommands();
 		}
 	}
 
@@ -2035,7 +2547,6 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		if (!(GetGameEntity(entityId) == null) && IsAuthority())
 		{
 			photonView.RPC("AttachEntityRPC", RpcTarget.All, GetNetIdFromEntityId(entityId), GetNetIdFromEntityId(attachToEntityId), slotId, localPosition, localRotation, null, PhotonNetwork.Time);
-			PhotonNetwork.SendAllOutgoingCommands();
 		}
 	}
 
@@ -2182,9 +2693,9 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		{
 			if (heldByActorNumber == PhotonNetwork.LocalPlayer.ActorNumber)
 			{
-				GamePlayerLocal.instance.ClearGrabbedIfHeld(id);
+				GamePlayerLocal.instance.ClearGrabbedIfHeld(id, gameEntity.manager);
 			}
-			out_gamePlayer.ClearGrabbedIfHeld(id);
+			out_gamePlayer.ClearGrabbedIfHeld(id, gameEntity.manager);
 			gameEntity.OnReleased?.Invoke();
 		}
 		gameEntity.heldByActorNumber = -1;
@@ -2202,7 +2713,7 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		if (!(gameComponent == null))
 		{
 			gameComponent.ApplyHit(hit);
-			SendRPC("RequestHitRPC", GetAuthorityPlayer(), GetNetIdFromEntityId(hit.hitEntityId), GetNetIdFromEntityId(hit.hitByEntityId), hit.hitTypeId, hit.hitEntityPosition, hit.hitPosition, hit.hitImpulse, hit.hittablePoint);
+			photonView.RPC("RequestHitRPC", GetAuthorityPlayer(), GetNetIdFromEntityId(hit.hitEntityId), GetNetIdFromEntityId(hit.hitByEntityId), hit.hitTypeId, hit.hitEntityPosition, hit.hitPosition, hit.hitImpulse, hit.hittablePoint);
 		}
 	}
 
@@ -2334,61 +2845,60 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 
 	private void ClearZone(bool ignoreHeldGadgets = false)
 	{
+		GamePlayerLocal.instance.DebugSlotsReport($"Pre ClearZone zone={zone}");
+		ClearPendingRPCBatches();
 		if (ignoreHeldGadgets)
 		{
 			List<GameEntity> list = GamePlayerLocal.instance.gamePlayer.HeldAndSnappedEntities();
-			Vector3 position = VRRig.LocalRig.transform.position;
-			int actorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
 			for (int num = list.Count - 1; num >= 0; num--)
 			{
 				if (list[num] == null || list[num].manager != this)
 				{
 					list.RemoveAt(num);
 				}
-				else
+				else if (list[num].shouldDestroyOnZoneExit)
 				{
-					GameEntity gameEntity = list[num];
-					bool flag = true;
-					int netIdFromEntityId = GetNetIdFromEntityId(gameEntity.id);
-					for (int i = 0; i < zoneComponents.Count && flag; i++)
-					{
-						flag &= zoneComponents[i].ValidateMigratedGameEntity(netIdFromEntityId, gameEntity.typeId, position, Quaternion.identity, gameEntity.createData, actorNumber);
-					}
-					if (!flag)
-					{
-						list.RemoveAt(num);
-					}
+					list.RemoveAt(num);
 				}
 			}
 			for (int num2 = entities.Count - 1; num2 >= 0; num2--)
 			{
-				if (!(entities[num2] == null) && !list.Contains(entities[num2]))
+				if (!(entities[num2] == null) && !entities[num2].IsScenePlaced && !list.Contains(entities[num2]))
 				{
 					DestroyItemLocal(entities[num2].id);
 				}
 			}
+			GamePlayerLocal.instance.joinWithItemsSentForCurrentMigration = false;
 			GamePlayerLocal.instance.gamePlayer.DidJoinWithItems = false;
+			GamePlayerLocal.instance.DebugSlotsReport($"ClearZone post-preserve zone={zone}");
 		}
 		else
 		{
-			for (int j = 0; j < entities.Count; j++)
+			for (int i = 0; i < entities.Count; i++)
 			{
-				if (entities[j] != null && entities[j].manager == this)
+				if (!(entities[i] == null) && !(entities[i].manager != this) && !entities[i].IsScenePlaced)
 				{
-					DestroyItemLocal(entities[j].id);
+					DestroyItemLocal(entities[i].id);
 				}
 			}
+			GamePlayerLocal.instance.DebugSlotsReport($"ClearZone post-destroy zone={zone}");
 			GamePlayer gamePlayerRef = VRRig.LocalRig.GamePlayerRef;
 			if (gamePlayerRef != null)
 			{
 				gamePlayerRef.ClearZone(this);
 			}
+			GamePlayerLocal.instance.DebugSlotsReport($"ClearZone post-ClearZone(player) zone={zone}");
 		}
-		for (int k = 0; k < entities.Count; k++)
+		for (int j = 0; j < entities.Count; j++)
 		{
-			if (entities[k] != null && entities[k].manager != this)
+			if (entities[j] != null && entities[j].manager != this)
 			{
-				entities[k] = null;
+				int key = netIds[j];
+				if (netIdToIndex.TryGetValue(key, out var value) && value == j)
+				{
+					netIdToIndex.Remove(key);
+				}
+				entities[j] = null;
 			}
 		}
 		foreach (VRRig activeRig in VRRigCache.ActiveRigs)
@@ -2400,10 +2910,14 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 			}
 		}
 		gameEntityData.Clear();
-		for (int l = 0; l < zoneComponents.Count; l++)
+		entitiesActiveCount = 0;
+		scenePlacedEntitiesRegistered = false;
+		scenePlacedEntities.Clear();
+		for (int k = 0; k < zoneComponents.Count; k++)
 		{
-			zoneComponents[l].OnZoneClear(zoneClearReason);
+			zoneComponents[k].OnZoneClear(zoneClearReason);
 		}
+		GamePlayerLocal.instance.DebugSlotsReport($"ClearZone END zone={zone}");
 	}
 
 	public int SerializeGameState(int zoneId, byte[] bytes, int maxBytes)
@@ -2418,15 +2932,33 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		for (int j = 0; j < entities.Count; j++)
 		{
 			GameEntity gameEntity = entities[j];
-			if (!(gameEntity == null))
+			if (gameEntity == null)
 			{
-				tempEntitiesToSerialize.Add(gameEntity);
+				continue;
 			}
+			int attachedPlayerActorNr = gameEntity.AttachedPlayerActorNr;
+			if (attachedPlayerActorNr != -1)
+			{
+				bool flag = false;
+				for (int k = 0; k < tempRigs.Count; k++)
+				{
+					if (tempRigs[k].Creator.ActorNumber == attachedPlayerActorNr)
+					{
+						flag = true;
+						break;
+					}
+				}
+				if (!flag)
+				{
+					continue;
+				}
+			}
+			tempEntitiesToSerialize.Add(gameEntity);
 		}
 		binaryWriter.Write(tempEntitiesToSerialize.Count);
-		for (int k = 0; k < tempEntitiesToSerialize.Count; k++)
+		for (int l = 0; l < tempEntitiesToSerialize.Count; l++)
 		{
-			GameEntity gameEntity2 = tempEntitiesToSerialize[k];
+			GameEntity gameEntity2 = tempEntitiesToSerialize[l];
 			if (!(gameEntity2 == null))
 			{
 				int netIdFromEntityId = GetNetIdFromEntityId(gameEntity2.id);
@@ -2438,9 +2970,9 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 				binaryWriter.Write(value2);
 			}
 		}
-		for (int l = 0; l < tempEntitiesToSerialize.Count; l++)
+		for (int m = 0; m < tempEntitiesToSerialize.Count; m++)
 		{
-			GameEntity gameEntity3 = tempEntitiesToSerialize[l];
+			GameEntity gameEntity3 = tempEntitiesToSerialize[m];
 			if (gameEntity3 == null)
 			{
 				continue;
@@ -2463,9 +2995,9 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 				binaryWriter.Write(value3);
 			}
 			GameAgent component = gameEntity3.GetComponent<GameAgent>();
-			bool flag = component != null;
-			binaryWriter.Write(flag);
-			if (flag)
+			bool flag2 = component != null;
+			binaryWriter.Write(flag2);
+			if (flag2)
 			{
 				Vector3 worldPos = Vector3.zero;
 				if (component.navAgent != null)
@@ -2479,31 +3011,31 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 			}
 			byte b = (byte)gameEntity3.entitySerialize.Count;
 			binaryWriter.Write(b);
-			for (int m = 0; m < b; m++)
+			for (int n = 0; n < b; n++)
 			{
-				gameEntity3.entitySerialize[m].OnGameEntitySerialize(binaryWriter);
+				gameEntity3.entitySerialize[n].OnGameEntitySerialize(binaryWriter);
 			}
-			for (int n = 0; n < zoneComponents.Count; n++)
+			for (int num2 = 0; num2 < zoneComponents.Count; num2++)
 			{
-				zoneComponents[n].SerializeZoneEntityData(binaryWriter, gameEntity3);
+				zoneComponents[num2].SerializeZoneEntityData(binaryWriter, gameEntity3);
 			}
 		}
 		int count = tempRigs.Count;
 		binaryWriter.Write(count);
-		for (int num2 = 0; num2 < tempRigs.Count; num2++)
+		for (int num3 = 0; num3 < tempRigs.Count; num3++)
 		{
-			VRRig vRRig = tempRigs[num2];
+			VRRig vRRig = tempRigs[num3];
 			NetPlayer owningNetPlayer = vRRig.OwningNetPlayer;
 			binaryWriter.Write(owningNetPlayer.ActorNumber);
 			GamePlayer gamePlayerRef = vRRig.GamePlayerRef;
-			bool flag2 = gamePlayerRef != null;
-			binaryWriter.Write(flag2);
-			if (flag2)
+			bool flag3 = gamePlayerRef != null;
+			binaryWriter.Write(flag3);
+			if (flag3)
 			{
 				gamePlayerRef.SerializeNetworkState(binaryWriter, owningNetPlayer, this);
-				for (int num3 = 0; num3 < zoneComponents.Count; num3++)
+				for (int num4 = 0; num4 < zoneComponents.Count; num4++)
 				{
-					zoneComponents[num3].SerializeZonePlayerData(binaryWriter, owningNetPlayer.ActorNumber);
+					zoneComponents[num4].SerializeZonePlayerData(binaryWriter, owningNetPlayer.ActorNumber);
 				}
 			}
 		}
@@ -2524,6 +3056,7 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 			zoneComponents[i].DeserializeZoneData(binaryReader);
 		}
 		int num = binaryReader.ReadInt32();
+		Span<bool> span = stackalloc bool[num];
 		for (int j = 0; j < num; j++)
 		{
 			int netId = binaryReader.ReadInt32();
@@ -2532,7 +3065,23 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 			int data2 = binaryReader.ReadInt32();
 			Vector3 position = BitPackUtils.UnpackWorldPosFromNetwork(data);
 			Quaternion rotation = BitPackUtils.UnpackQuaternionFromNetwork(data2);
-			CreateItemLocal(netId, entityTypeId, position, rotation);
+			GameEntity gameEntityFromNetId = GetGameEntityFromNetId(netId);
+			if (gameEntityFromNetId != null)
+			{
+				span[j] = true;
+				if (gameEntityFromNetId.IsScenePlaced)
+				{
+					gameEntityFromNetId.transform.SetPositionAndRotation(position, rotation);
+				}
+			}
+			else if (IsScenePlacedNetId(netId))
+			{
+				span[j] = true;
+			}
+			else
+			{
+				CreateItemLocal(netId, entityTypeId, position, rotation);
+			}
 		}
 		for (int k = 0; k < num; k++)
 		{
@@ -2540,17 +3089,24 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 			long createData = binaryReader.ReadInt64();
 			int createdByEntityNetId = binaryReader.ReadInt32();
 			long state = binaryReader.ReadInt64();
-			GameEntity gameEntityFromNetId = GetGameEntityFromNetId(num2);
-			if (gameEntityFromNetId != null)
+			GameEntity gameEntityFromNetId2 = GetGameEntityFromNetId(num2);
+			if (gameEntityFromNetId2 != null)
 			{
-				InitItemLocal(gameEntityFromNetId, createData, createdByEntityNetId);
-				gameEntityFromNetId.SetState(state);
+				if (!span[k])
+				{
+					InitItemLocal(gameEntityFromNetId2, createData, createdByEntityNetId);
+					gameEntityFromNetId2.SetState(state);
+				}
+				else if (gameEntityFromNetId2.IsScenePlaced)
+				{
+					gameEntityFromNetId2.SetState(state);
+				}
 			}
 			int num3 = binaryReader.ReadInt32();
 			if (num3 != -1)
 			{
 				long data3 = binaryReader.ReadInt64();
-				if (gameEntityFromNetId == null)
+				if (gameEntityFromNetId2 == null)
 				{
 					continue;
 				}
@@ -2568,7 +3124,7 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 				long data4 = binaryReader.ReadInt64();
 				int playerID = binaryReader.ReadInt32();
 				Vector3 destination = BitPackUtils.UnpackWorldPosFromNetwork(data4);
-				GameAgent component = gameEntityFromNetId.GetComponent<GameAgent>();
+				GameAgent component = gameEntityFromNetId2.GetComponent<GameAgent>();
 				if (component != null)
 				{
 					if (component.IsOnNavMesh())
@@ -2581,11 +3137,11 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 			byte b = binaryReader.ReadByte();
 			for (int l = 0; l < b; l++)
 			{
-				gameEntityFromNetId.entitySerialize[l].OnGameEntityDeserialize(binaryReader);
+				gameEntityFromNetId2.entitySerialize[l].OnGameEntityDeserialize(binaryReader);
 			}
 			for (int m = 0; m < zoneComponents.Count; m++)
 			{
-				zoneComponents[m].DeserializeZoneEntityData(binaryReader, gameEntityFromNetId);
+				zoneComponents[m].DeserializeZoneEntityData(binaryReader, gameEntityFromNetId2);
 			}
 		}
 		int num4 = binaryReader.ReadInt32();
@@ -2780,9 +3336,10 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		zoneStateData.numRecievedStateBytes += bytes.Length;
 		if (zoneStateData.numRecievedStateBytes >= totalBytes)
 		{
-			if (superInfectionManager != null && superInfectionManager.zoneSuperInfection == null)
+			if (superInfectionManager != null && superInfectionManager.zoneSuperInfection == null && !scenePlacedEntitiesRegistered)
 			{
 				PendingTableData = true;
+				pendingTableDataSetFrame = Time.frameCount;
 			}
 			else
 			{
@@ -2799,17 +3356,15 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 			activeManager.zoneClearReason = ZoneClearReason.MigrateGameEntityZone;
 			activeManager.ClearZone(ignoreHeldGadgets: true);
 		}
-		ClearZone();
+		ClearZone(ignoreHeldGadgets: true);
+		RegisterScenePlacedEntities();
 		try
 		{
 			byte[] array = GZipStream.UncompressBuffer(zoneStateData.recievedStateBytes);
 			int numBytes = array.Length;
 			DeserializeTableState(array, numBytes);
+			RecalculateNextNetId();
 			SetZoneState(ZoneState.Active);
-			for (int i = 0; i < zoneComponents.Count; i++)
-			{
-				zoneComponents[i].OnZoneInit();
-			}
 		}
 		catch (Exception exception)
 		{
@@ -2844,17 +3399,23 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		if ((uint)state > 2u)
 		{
 			_ = 3;
+			return;
 		}
-		else if (IsInZone() && PhotonNetwork.InRoom)
+		bool flag = IsInZone();
+		bool inRoom = PhotonNetwork.InRoom;
+		bool flag2 = HasAnyScenePlacedInScene(GetZoneSceneName());
+		bool flag3 = scenePlacedEntitiesRegistered;
+		int num = (int)((uint)zoneStateData.state | (uint)((flag ? 1 : 0) << 4) | (uint)((inRoom ? 1 : 0) << 5) | (uint)((flag2 ? 1 : 0) << 6) | (uint)((flag3 ? 1 : 0) << 7) | (uint)(entities.Count << 8)) | (zoneComponents.Count << 20);
+		if (num != _lastUpdateZoneStateAuthLogSig)
+		{
+			_lastUpdateZoneStateAuthLogSig = num;
+		}
+		if (flag && inRoom)
 		{
 			SetZoneState(ZoneState.Active);
 			for (int i = 0; i < zoneComponents.Count; i++)
 			{
 				zoneComponents[i].OnZoneCreate();
-			}
-			for (int j = 0; j < zoneComponents.Count; j++)
-			{
-				zoneComponents[j].OnZoneInit();
 			}
 		}
 	}
@@ -2877,7 +3438,7 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 			if (entities.Count > 0 && ShouldClearZone())
 			{
 				zoneClearReason = ZoneClearReason.LeaveZone;
-				ClearZone();
+				ClearZone(ignoreHeldGadgets: true);
 				return;
 			}
 		}
@@ -2892,18 +3453,28 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		case ZoneState.WaitingToRequestState:
 			if (Time.timeAsDouble - zoneStateData.stateStartTime > 1.0)
 			{
-				nextNetId = 1;
+				RecalculateNextNetId();
+				List<GameEntity> list = GamePlayerLocal.instance.gamePlayer.HeldAndSnappedEntities();
 				SetZoneState(ZoneState.WaitingForState);
 				photonView.RPC("RequestZoneStateRPC", GetAuthorityPlayer(), (int)zone);
-				JoinWithItems(GamePlayerLocal.instance.gamePlayer.HeldAndSnappedEntities());
+				JoinWithItems(list);
+				GamePlayerLocal.instance.joinWithItemsSentForCurrentMigration = true;
 			}
 			break;
 		}
 	}
 
-	private bool IsInZone()
+	protected virtual bool IsInZone()
 	{
-		bool flag = true;
+		if (GorillaComputer.instance.IsPlayerInVirtualStump() && IsSuppressZonesInVStumpEnabled())
+		{
+			if (CustomMapLoader.CanLoadEntities)
+			{
+				return zone == GTZone.customMaps;
+			}
+			return false;
+		}
+		bool flag = VRRig.LocalRig.zoneEntity.currentZone == zone;
 		for (int i = 0; i < zoneComponents.Count; i++)
 		{
 			flag &= zoneComponents[i].IsZoneReady();
@@ -2932,34 +3503,78 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		switch (zoneStateData.state)
 		{
 		case ZoneState.WaitingToEnterZone:
+		{
+			bool num = ShouldClearZone();
+			bool flag = zoneClearReason == ZoneClearReason.MigrateGameEntityZone;
+			bool flag2 = zoneClearReason == ZoneClearReason.Disconnect;
+			bool ignoreHeldGadgets = !num && !flag && !flag2;
+			if (flag2 && activeManager == this)
+			{
+				activeManager = null;
+				GamePlayerLocal.instance.currGameEntityManager = null;
+			}
 			if (!IsAuthority())
 			{
 				photonView.RPC("PlayerLeftZoneRPC", GetAuthorityPlayer());
 			}
-			ClearZone(!ShouldClearZone() && zoneClearReason != ZoneClearReason.MigrateGameEntityZone);
+			ClearZone(ignoreHeldGadgets);
 			break;
+		}
 		case ZoneState.WaitingForState:
 		{
 			zoneStateData.numRecievedStateBytes = 0;
-			for (int i = 0; i < zoneStateData.recievedStateBytes.Length; i++)
+			for (int k = 0; k < zoneStateData.recievedStateBytes.Length; k++)
 			{
-				zoneStateData.recievedStateBytes[i] = 0;
+				zoneStateData.recievedStateBytes[k] = 0;
+			}
+			RegisterScenePlacedEntities();
+			if (scenePlacedEntities.Count > 0 && GamePlayerLocal.instance != null && GamePlayerLocal.instance.currGameEntityManager != this)
+			{
+				GamePlayerLocal.instance.currGameEntityManager = this;
+				GamePlayerLocal.instance.pendingFullMigration = true;
 			}
 			break;
 		}
 		case ZoneState.Active:
-			if (!(activeManager == this))
+		{
+			if (activeManager == this)
 			{
-				GameEntityManager gameEntityManager = activeManager;
-				activeManager = this;
-				GamePlayerLocal.instance.MigrateToEntityManager(this);
-				if (gameEntityManager.IsNotNull())
+				for (int i = 0; i < zoneComponents.Count; i++)
 				{
-					gameEntityManager.zoneClearReason = ZoneClearReason.MigrateGameEntityZone;
-					gameEntityManager.SetZoneState(ZoneState.WaitingToEnterZone);
+					try
+					{
+						zoneComponents[i].OnZoneInit();
+					}
+					catch (Exception exception)
+					{
+						Debug.LogException(exception);
+					}
+				}
+				RegisterScenePlacedEntities();
+				break;
+			}
+			GameEntityManager gameEntityManager = activeManager;
+			activeManager = this;
+			for (int j = 0; j < zoneComponents.Count; j++)
+			{
+				try
+				{
+					zoneComponents[j].OnZoneInit();
+				}
+				catch (Exception exception2)
+				{
+					Debug.LogException(exception2);
 				}
 			}
+			RegisterScenePlacedEntities();
+			GamePlayerLocal.instance.MigrateToEntityManager(this);
+			if (gameEntityManager.IsNotNull())
+			{
+				gameEntityManager.zoneClearReason = ZoneClearReason.MigrateGameEntityZone;
+				gameEntityManager.SetZoneState(ZoneState.WaitingToEnterZone);
+			}
 			break;
+		}
 		case ZoneState.WaitingToRequestState:
 			break;
 		}
@@ -2973,14 +3588,16 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 	[PunRPC]
 	public void RequestZoneStateRPC(int zoneId, PhotonMessageInfo info)
 	{
+		int actorNumber = info.Sender.ActorNumber;
 		if (!IsAuthority() || zoneId != (int)zone || zoneStateData.zoneStateRequests == null || !GamePlayer.TryGetGamePlayer(info.Sender, out var gamePlayer) || !gamePlayer.newJoinZoneLimiter.CheckCallTime(Time.time))
 		{
 			return;
 		}
-		playerZoneJoinTimes[info.Sender.ActorNumber] = Time.unscaledTime;
+		playerZoneJoinTimes[actorNumber] = Time.unscaledTime;
 		for (int i = 0; i < zoneStateData.zoneStateRequests.Count; i++)
 		{
-			if (zoneStateData.zoneStateRequests[i].player == info.Sender)
+			Player player = zoneStateData.zoneStateRequests[i].player;
+			if (player != null && player.ActorNumber == actorNumber)
 			{
 				return;
 			}
@@ -3019,33 +3636,95 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 
 	private void OnNetworkJoinedRoom()
 	{
+		HasAnyScenePlacedInScene(GetZoneSceneName());
 		zoneClearReason = ZoneClearReason.JoinZone;
 		SetZoneState(ZoneState.WaitingToEnterZone);
 	}
 
 	private void OnNetworkLeftRoom()
 	{
+		for (int i = 0; i < entities.Count; i++)
+		{
+		}
 		zoneClearReason = ZoneClearReason.Disconnect;
-		SetZoneState(ZoneState.WaitingToEnterZone);
+		if (zoneStateData.state != ZoneState.WaitingToEnterZone)
+		{
+			SetZoneState(ZoneState.WaitingToEnterZone);
+		}
+		else
+		{
+			if (activeManager == this)
+			{
+				activeManager = null;
+				GamePlayerLocal.instance.currGameEntityManager = null;
+			}
+			ClearZone();
+		}
 		playerZoneJoinTimes.Clear();
 	}
 
 	private void OnNetworkPlayerLeft(NetPlayer leavingPlayer)
 	{
+		int num = 0;
+		foreach (GameEntity entity in entities)
+		{
+			if (entity != null && entity.IsAttachedToPlayer(leavingPlayer))
+			{
+				num++;
+			}
+		}
 		playerZoneJoinTimes.Remove(leavingPlayer.ActorNumber);
 	}
 
 	public void OnRigDeactivated(RigContainer container)
 	{
-		if (!(this != activeManager))
+		GamePlayer component = container.GetComponent<GamePlayer>();
+		int? num = component?.rig?.OwningNetPlayer?.ActorNumber;
+		if (num.HasValue)
 		{
-			GamePlayer component = container.GetComponent<GamePlayer>();
-			if (IsAuthority())
-			{
-				RequestDestroyItems(component.HeldAndSnappedItems(this));
-			}
-			component.ResetData();
+			num.GetValueOrDefault();
 		}
+		if (this != activeManager)
+		{
+			int num2 = 0;
+			{
+				foreach (GameEntity entity in entities)
+				{
+					if (entity != null && entity.IsAttachedToPlayer(component?.rig?.OwningNetPlayer))
+					{
+						num2++;
+					}
+				}
+				return;
+			}
+		}
+		if (component != null)
+		{
+			List<GameEntityId> list = component.HeldAndSnappedItems(this);
+			_leavingItemScratch.Clear();
+			for (int i = 0; i < list.Count; i++)
+			{
+				GameEntity gameEntity = GetGameEntity(list[i]);
+				if (gameEntity != null && gameEntity.IsScenePlaced)
+				{
+					ReleaseScenePlacedHold(gameEntity);
+					if (IsAuthority() && TryGetScenePlacedRecord(gameEntity, out var record))
+					{
+						ResetScenePlacedTransform(gameEntity, in record);
+					}
+				}
+				else if (IsAuthority())
+				{
+					_leavingItemScratch.Add(list[i]);
+				}
+			}
+			if (IsAuthority() && _leavingItemScratch.Count > 0)
+			{
+				RequestDestroyItems(_leavingItemScratch);
+			}
+			_leavingItemScratch.Clear();
+		}
+		component.ResetData();
 	}
 
 	public void OnOwnershipTransferred(NetPlayer toPlayer, NetPlayer fromPlayer)
@@ -3054,14 +3733,33 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		{
 			return;
 		}
+		_leavingItemScratch.Clear();
 		foreach (GameEntityId item in out_gamePlayer.IterateHeldAndSnappedItems(this))
 		{
-			if (!netIdsForDelete.Contains(GetNetIdFromEntityId(item)))
-			{
-				netIdsForDelete.Add(GetNetIdFromEntityId(item));
-			}
-			DestroyItemLocal(item);
+			_leavingItemScratch.Add(item);
 		}
+		for (int i = 0; i < _leavingItemScratch.Count; i++)
+		{
+			GameEntityId gameEntityId = _leavingItemScratch[i];
+			GameEntity gameEntity = GetGameEntity(gameEntityId);
+			if (gameEntity != null && gameEntity.IsScenePlaced)
+			{
+				ReleaseScenePlacedHold(gameEntity);
+				if (IsAuthority() && TryGetScenePlacedRecord(gameEntity, out var record))
+				{
+					ResetScenePlacedTransform(gameEntity, in record);
+				}
+			}
+			else
+			{
+				if (!netIdsForDelete.Contains(GetNetIdFromEntityId(gameEntityId)))
+				{
+					netIdsForDelete.Add(GetNetIdFromEntityId(gameEntityId));
+				}
+				DestroyItemLocal(gameEntityId);
+			}
+		}
+		_leavingItemScratch.Clear();
 		out_gamePlayer.OnPlayerLeftZone?.Invoke();
 	}
 
@@ -3088,6 +3786,137 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		tempRigs.Clear();
 		tempRigs.Add(VRRig.LocalRig);
 		VRRigCache.Instance.GetAllUsedRigs(tempRigs);
+	}
+
+	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+	private static void InitSceneUnloadHandler()
+	{
+		SceneManager.sceneUnloaded += OnZoneSceneUnloaded;
+	}
+
+	private static void OnZoneSceneUnloaded(Scene scene)
+	{
+		if (!s_scenePlacedEntities.TryGetValue(scene.name, out var value))
+		{
+			return;
+		}
+		for (int num = value.Count - 1; num >= 0; num--)
+		{
+			GameEntity gameEntity = value[num];
+			if (!(gameEntity == null))
+			{
+				UnityEngine.Object.Destroy(gameEntity.gameObject);
+			}
+		}
+		s_scenePlacedEntities.Remove(scene.name);
+	}
+
+	private string GetZoneSceneName()
+	{
+		string text = ((ZoneManagement.instance != null) ? ZoneManagement.instance.GetSceneNameForZone(zone) : null);
+		if (!string.IsNullOrEmpty(text))
+		{
+			return text;
+		}
+		return base.gameObject.scene.name;
+	}
+
+	internal static bool HasAnyScenePlacedInScene(string sceneName)
+	{
+		if (s_scenePlacedEntities.TryGetValue(sceneName, out var value))
+		{
+			return value.Count > 0;
+		}
+		return false;
+	}
+
+	internal static void RegisterScenePlacedEntity(GameEntity entity)
+	{
+		string text = entity.gameObject.scene.name;
+		if (!s_scenePlacedEntities.TryGetValue(text, out var value))
+		{
+			value = new List<GameEntity>(8);
+			s_scenePlacedEntities[text] = value;
+		}
+		if (!value.Contains(entity))
+		{
+			value.Add(entity);
+			NotifyManagersOfLateScenePlacedEntity(entity, text);
+		}
+	}
+
+	private static void NotifyManagersOfLateScenePlacedEntity(GameEntity entity, string sceneName)
+	{
+		foreach (KeyValuePair<int, GameEntityManager> item in managersByZone)
+		{
+			GameEntityManager value = item.Value;
+			if (!(value == null) && value.scenePlacedEntitiesRegistered && !(value.GetZoneSceneName() != sceneName))
+			{
+				value.RegisterSingleScenePlacedEntity(entity);
+			}
+		}
+	}
+
+	internal static void UnregisterScenePlacedEntity(GameEntity entity)
+	{
+		int num = ((entity.manager != null) ? entity.GetNetId() : 0);
+		string key;
+		if (num != 0 && s_scenePlacedHomeScenes.TryGetValue(num, out var value))
+		{
+			key = value;
+			s_scenePlacedHomeScenes.Remove(num);
+		}
+		else
+		{
+			key = entity.gameObject.scene.name;
+		}
+		if (s_scenePlacedEntities.TryGetValue(key, out var value2))
+		{
+			value2.Remove(entity);
+			if (value2.Count == 0)
+			{
+				s_scenePlacedEntities.Remove(key);
+			}
+		}
+	}
+
+	internal static bool IsScenePlacedNetId(int netId)
+	{
+		if (netId < -1)
+		{
+			return netId != int.MinValue;
+		}
+		return false;
+	}
+
+	public static int NetIdFromXSceneRefId(int uniqueId)
+	{
+		int num = -uniqueId;
+		if (num == -1)
+		{
+			num = -2;
+		}
+		return num;
+	}
+
+	internal static int ComputeNetIdFromHierarchyForCustomMaps(Transform t)
+	{
+		int num = t.gameObject.scene.name.GetStaticHash();
+		Transform transform = t;
+		while (transform != null)
+		{
+			num = StaticHash.Compute(num, transform.name.GetStaticHash());
+			transform = transform.parent;
+		}
+		if (num > 0)
+		{
+			num = -num;
+		}
+		if (num == 0 || num == -1 || num == int.MinValue)
+		{
+			num = -2;
+		}
+		return num;
 	}
 
 	[WeaverGenerated]

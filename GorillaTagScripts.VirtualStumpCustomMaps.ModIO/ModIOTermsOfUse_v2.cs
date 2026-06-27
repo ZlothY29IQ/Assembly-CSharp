@@ -68,7 +68,7 @@ public class ModIOTermsOfUse_v2 : LegalAgreements
 		if (!legalAgreementsStarted)
 		{
 			legalAgreementsStarted = true;
-			PrivateUIRoom.ForceStartOverlay();
+			PrivateUIRoom.ForceStartOverlay(PrivateUIRoom.OverlaySource.ModIO);
 			PrivateUIRoom.AddUI(uiParent);
 			_pressAndHoldToConfirmButton.SetText(confirmString);
 			_pressAndHoldToConfirmButton.gameObject.SetActive(value: false);
@@ -76,7 +76,7 @@ public class ModIOTermsOfUse_v2 : LegalAgreements
 			UpdateTextFromTerms();
 			await WaitForAcknowledgement();
 			scrollBar.value = 1f;
-			PrivateUIRoom.StopForcedOverlay();
+			PrivateUIRoom.StopForcedOverlay(PrivateUIRoom.OverlaySource.ModIO);
 			PrivateUIRoom.RemoveUI(uiParent);
 			UnityEngine.Object.Destroy(base.gameObject);
 		}

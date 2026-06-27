@@ -24,6 +24,8 @@ public class FeatherDusterHoldable : MonoBehaviour, IGorillaSliceableSimple
 
 	private Vector3 lastWorldPos;
 
+	private float lastSliceTime;
+
 	private Collider[] colliderResult = new Collider[1];
 
 	public void Awake()
@@ -37,6 +39,7 @@ public class FeatherDusterHoldable : MonoBehaviour, IGorillaSliceableSimple
 	{
 		GorillaSlicerSimpleManager.RegisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
 		lastWorldPos = base.transform.position;
+		lastSliceTime = Time.unscaledTime;
 		emissionModule.rateOverTimeMultiplier = 0f;
 	}
 
@@ -47,12 +50,15 @@ public class FeatherDusterHoldable : MonoBehaviour, IGorillaSliceableSimple
 
 	public void SliceUpdate()
 	{
-		timeSinceLastSound += Time.deltaTime;
+		float unscaledTime = Time.unscaledTime;
+		float num = Mathf.Max(unscaledTime - lastSliceTime, Mathf.Epsilon);
+		lastSliceTime = unscaledTime;
+		timeSinceLastSound += num;
 		Transform transform = base.transform;
 		Vector3 position = transform.position;
-		float num = (position - lastWorldPos).sqrMagnitude / Time.deltaTime;
+		float num2 = (position - lastWorldPos).sqrMagnitude / num;
 		emissionModule.rateOverTimeMultiplier = 0f;
-		if (num >= collideMinSpeed * collideMinSpeed && Physics.OverlapSphereNonAlloc(position, overlapSphereRadius * transform.localScale.x, colliderResult, collisionLayer) > 0)
+		if (num2 >= collideMinSpeed * collideMinSpeed && Physics.OverlapSphereNonAlloc(position, overlapSphereRadius * transform.localScale.x, colliderResult, collisionLayer) > 0)
 		{
 			emissionModule.rateOverTimeMultiplier = initialRateOverTime;
 			if (timeSinceLastSound >= soundCooldown)

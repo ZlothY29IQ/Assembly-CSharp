@@ -1,7 +1,7 @@
 using GorillaTag;
 using UnityEngine;
 
-[GTStripGameObjectFromBuild("!GT_AUTOMATED_PERF_TEST")]
+[GTStripGameObjectFromBuild("!GT_AUTOMATED_PERF_TEST && !BETA")]
 public class PerfTestGorillaSlot : MonoBehaviour
 {
 	public enum SlotType

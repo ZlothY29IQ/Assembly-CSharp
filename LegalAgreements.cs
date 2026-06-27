@@ -163,7 +163,7 @@ public class LegalAgreements : MonoBehaviour
 				continue;
 			}
 			base.enabled = true;
-			PrivateUIRoom.ForceStartOverlay();
+			PrivateUIRoom.ForceStartOverlay(PrivateUIRoom.OverlaySource.KID);
 			if (!screen.confirmString.IsNullOrEmpty())
 			{
 				_pressAndHoldToConfirmButton.SetText(screen.confirmString);

@@ -1,5 +1,4 @@
 using System;
-using GorillaLocomotion;
 using GorillaNetworking;
 using Photon.Pun;
 using TMPro;
@@ -44,13 +43,21 @@ public class GrabbingColorPicker : MonoBehaviour, IGorillaSliceableSimple
 	[SerializeField]
 	private UnityEvent<Vector3> UpdateColor;
 
-	private int Segment1;
+	private float _cachedR = float.MinValue;
 
-	private int Segment2;
+	private float _cachedG = float.MinValue;
 
-	private int Segment3;
+	private float _cachedB = float.MinValue;
 
 	private bool hasUpdated;
+
+	public int Segment1 { get; private set; }
+
+	public int Segment2 { get; private set; }
+
+	public int Segment3 { get; private set; }
+
+	public event Action ColorChanged;
 
 	private void Start()
 	{
@@ -59,11 +66,11 @@ public class GrabbingColorPicker : MonoBehaviour, IGorillaSliceableSimple
 			float r = PlayerPrefs.GetFloat("redValue", 0f);
 			float g = PlayerPrefs.GetFloat("greenValue", 0f);
 			float b = PlayerPrefs.GetFloat("blueValue", 0f);
-			LoadPlayerColor(r, g, b);
+			LoadColor(r, g, b);
 		}
 	}
 
-	private void LoadPlayerColor(float r, float g, float b)
+	public void LoadColor(float r, float g, float b)
 	{
 		Segment1 = Mathf.RoundToInt(Mathf.Lerp(0f, 9f, r));
 		Segment2 = Mathf.RoundToInt(Mathf.Lerp(0f, 9f, g));
@@ -79,7 +86,7 @@ public class GrabbingColorPicker : MonoBehaviour, IGorillaSliceableSimple
 		GorillaSlicerSimpleManager.RegisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
 		if (setPlayerColor)
 		{
-			CosmeticsController.OnPlayerColorSet = (Action<float, float, float>)Delegate.Combine(CosmeticsController.OnPlayerColorSet, new Action<float, float, float>(LoadPlayerColor));
+			CosmeticsController.OnPlayerColorSet = (Action<float, float, float>)Delegate.Combine(CosmeticsController.OnPlayerColorSet, new Action<float, float, float>(LoadColor));
 			if ((bool)GorillaTagger.Instance && (bool)GorillaTagger.Instance.offlineVRRig)
 			{
 				GorillaTagger.Instance.offlineVRRig.OnColorChanged += HandleLocalColorChanged;
@@ -92,7 +99,7 @@ public class GrabbingColorPicker : MonoBehaviour, IGorillaSliceableSimple
 		GorillaSlicerSimpleManager.UnregisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
 		if (setPlayerColor)
 		{
-			CosmeticsController.OnPlayerColorSet = (Action<float, float, float>)Delegate.Remove(CosmeticsController.OnPlayerColorSet, new Action<float, float, float>(LoadPlayerColor));
+			CosmeticsController.OnPlayerColorSet = (Action<float, float, float>)Delegate.Remove(CosmeticsController.OnPlayerColorSet, new Action<float, float, float>(LoadColor));
 			if ((bool)GorillaTagger.Instance && (bool)GorillaTagger.Instance.offlineVRRig)
 			{
 				GorillaTagger.Instance.offlineVRRig.OnColorChanged -= HandleLocalColorChanged;
@@ -102,18 +109,24 @@ public class GrabbingColorPicker : MonoBehaviour, IGorillaSliceableSimple
 
 	public void SliceUpdate()
 	{
-		float num = Vector3.Distance(base.transform.position, GTPlayer.Instance.transform.position);
 		hasUpdated = false;
-		if (!(num < 5f))
+		float progress = R_PushSlider.GetProgress();
+		float progress2 = G_PushSlider.GetProgress();
+		float progress3 = B_PushSlider.GetProgress();
+		if (Mathf.Approximately(progress, _cachedR) && Mathf.Approximately(progress2, _cachedG) && Mathf.Approximately(progress3, _cachedB))
 		{
 			return;
 		}
+		hasUpdated = true;
+		_cachedR = progress;
+		_cachedG = progress2;
+		_cachedB = progress3;
 		int segment = Segment1;
 		int segment2 = Segment2;
 		int segment3 = Segment3;
-		Segment1 = Mathf.RoundToInt(Mathf.Lerp(0f, 9f, R_PushSlider.GetProgress()));
-		Segment2 = Mathf.RoundToInt(Mathf.Lerp(0f, 9f, G_PushSlider.GetProgress()));
-		Segment3 = Mathf.RoundToInt(Mathf.Lerp(0f, 9f, B_PushSlider.GetProgress()));
+		Segment1 = Mathf.RoundToInt(Mathf.Lerp(0f, 9f, _cachedR));
+		Segment2 = Mathf.RoundToInt(Mathf.Lerp(0f, 9f, _cachedG));
+		Segment3 = Mathf.RoundToInt(Mathf.Lerp(0f, 9f, _cachedB));
 		if (segment != Segment1 || segment2 != Segment2 || segment3 != Segment3)
 		{
 			hasUpdated = true;
@@ -125,19 +138,17 @@ public class GrabbingColorPicker : MonoBehaviour, IGorillaSliceableSimple
 			UpdateColor.Invoke(new Vector3((float)Segment1 / 9f, (float)Segment2 / 9f, (float)Segment3 / 9f));
 			if (segment != Segment1)
 			{
-				R_SliderAudio.transform.position = R_PushSlider.transform.position;
 				R_SliderAudio.GTPlay();
 			}
 			if (segment2 != Segment2)
 			{
-				G_SliderAudio.transform.position = G_PushSlider.transform.position;
 				G_SliderAudio.GTPlay();
 			}
 			if (segment3 != Segment3)
 			{
-				B_SliderAudio.transform.position = B_PushSlider.transform.position;
 				B_SliderAudio.GTPlay();
 			}
+			this.ColorChanged?.Invoke();
 		}
 	}
 

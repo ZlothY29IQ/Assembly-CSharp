@@ -20,24 +20,28 @@ public class LckSocialCameraManager : MonoBehaviour
 	[SerializeField]
 	public CoconutCamera CoconutCamera;
 
-	private LckSocialCamera _socialCameraCococamInstance;
+	private LckSocialCamera _networkedCococam;
 
-	private LckSocialCamera _socialCameraTabletInstance;
+	private LckSocialCamera _networkedTablet;
 
 	private Camera _lckCamera;
 
-	private CameraMode _lckActiveCameraMode;
+	private CameraMode _cameraMode;
+
+	private LckBodyCameraSpawner.CameraState _cameraState;
 
 	[OnEnterPlay_SetNull]
 	private static LckSocialCameraManager _instance;
 
 	public static Action<LckSocialCameraManager> OnManagerSpawned;
 
+	private bool _isRecording;
+
+	private bool _isForceHidden;
+
+	private bool _needsUpdate = true;
+
 	private Vector3 _tabletPositionOffset = new Vector3(0f, 0.11f, -0.08f);
-
-	private bool _recording;
-
-	private bool _forceHidden;
 
 	public LckDirectGrabbable lckDirectGrabbable => _lckDirectGrabbable;
 
@@ -51,10 +55,10 @@ public class LckSocialCameraManager : MonoBehaviour
 		}
 		set
 		{
-			_localCameras.SetActive(value);
-			if (!value)
+			if (_localCameras.activeSelf != value)
 			{
-				_gtLckController.StopRecording();
+				_localCameras.SetActive(value);
+				_needsUpdate = true;
 			}
 		}
 	}
@@ -71,31 +75,10 @@ public class LckSocialCameraManager : MonoBehaviour
 		}
 	}
 
-	public void SetForceHidden(bool hidden)
-	{
-		_forceHidden = hidden;
-	}
-
 	private void Awake()
 	{
 		SetManagerInstance();
 		_lckCamera = _gtLckController.GetActiveCamera();
-	}
-
-	public void SetLckSocialCococamCamera(LckSocialCamera socialCamera)
-	{
-		_socialCameraCococamInstance = socialCamera;
-	}
-
-	public void SetLckSocialTabletCamera(LckSocialCamera socialCameraTablet)
-	{
-		_socialCameraTabletInstance = socialCameraTablet;
-	}
-
-	private void SetManagerInstance()
-	{
-		_instance = this;
-		OnManagerSpawned?.Invoke(this);
 	}
 
 	private void OnEnable()
@@ -110,81 +93,39 @@ public class LckSocialCameraManager : MonoBehaviour
 		}
 		LckBodyCameraSpawner.OnCameraStateChange += OnBodyCameraStateChanged;
 		_gtLckController.OnCameraModeChanged += OnCameraModeChanged;
-	}
-
-	private void OnBodyCameraStateChanged(LckBodyCameraSpawner.CameraState state)
-	{
-		if (_socialCameraTabletInstance == null)
-		{
-			return;
-		}
-		if (_forceHidden)
-		{
-			_socialCameraTabletInstance.visible = false;
-			_socialCameraCococamInstance.visible = false;
-			return;
-		}
-		switch (state)
-		{
-		case LckBodyCameraSpawner.CameraState.CameraDisabled:
-			_socialCameraTabletInstance.visible = false;
-			_socialCameraCococamInstance.visible = false;
-			_socialCameraTabletInstance.IsOnNeck = false;
-			break;
-		case LckBodyCameraSpawner.CameraState.CameraOnNeck:
-			_socialCameraTabletInstance.visible = true;
-			_socialCameraTabletInstance.IsOnNeck = true;
-			break;
-		case LckBodyCameraSpawner.CameraState.CameraSpawned:
-			_socialCameraTabletInstance.visible = true;
-			_socialCameraTabletInstance.IsOnNeck = false;
-			if (_lckActiveCameraMode == CameraMode.ThirdPerson)
-			{
-				_socialCameraCococamInstance.visible = true;
-			}
-			break;
-		}
+		_cameraMode = _gtLckController.CurrentCameraMode;
 	}
 
 	private void Update()
 	{
-		if (_socialCameraCococamInstance != null && _socialCameraTabletInstance != null && _lckCamera != null)
+		if (_lckCamera != null)
 		{
 			Transform transform = _lckCamera.transform;
-			_socialCameraCococamInstance.transform.position = transform.position;
-			_socialCameraCococamInstance.transform.rotation = transform.rotation;
-			if (_socialCameraTabletInstance.IsOnNeck)
+			if (_networkedCococam != null)
 			{
-				_socialCameraTabletInstance.transform.position = base.transform.position;
+				_networkedCococam.transform.position = transform.position;
+				_networkedCococam.transform.rotation = transform.rotation;
 			}
-			else
+			if (_networkedTablet != null)
 			{
-				_socialCameraTabletInstance.transform.position = base.transform.position + _tabletPositionOffset * _socialCameraTabletInstance.VrRig.scaleFactor;
-			}
-			_socialCameraTabletInstance.transform.rotation = base.transform.rotation;
-			Camera main = Camera.main;
-			if (main != null)
-			{
-				_lckCamera.nearClipPlane = main.nearClipPlane;
-				_lckCamera.farClipPlane = main.farClipPlane;
+				if (_networkedTablet.IsOnNeck)
+				{
+					_networkedTablet.transform.position = base.transform.position;
+				}
+				else
+				{
+					_networkedTablet.transform.position = base.transform.position + _tabletPositionOffset * _networkedTablet.VrRig.scaleFactor;
+				}
+				_networkedTablet.transform.rotation = base.transform.rotation;
 			}
 		}
-		if (CoconutCamera.gameObject.activeSelf)
+		if (_needsUpdate)
 		{
-			switch (_lckActiveCameraMode)
-			{
-			case CameraMode.ThirdPerson:
-			case CameraMode.Drone:
-				CoconutCamera.SetVisualsActive(cameraActive);
-				break;
-			case CameraMode.Selfie:
-				CoconutCamera.SetVisualsActive(active: false);
-				break;
-			default:
-				CoconutCamera.SetVisualsActive(active: false);
-				break;
-			}
-			CoconutCamera.SetRecordingState(_recording);
+			UpdateCococamVisibility(_cameraState, _cameraMode, _isForceHidden, cameraActive);
+			UpdateTabletVisibility(_cameraState, _isForceHidden, cameraActive);
+			UpdateCococamRecording(_isRecording);
+			UpdateTabletRecording(_isRecording);
+			_needsUpdate = false;
 		}
 	}
 
@@ -194,76 +135,138 @@ public class LckSocialCameraManager : MonoBehaviour
 		if (service.Result != null)
 		{
 			service.Result.OnRecordingStarted -= OnRecordingStarted;
+			service.Result.OnStreamingStarted -= OnRecordingStarted;
 			service.Result.OnRecordingStopped -= OnRecordingStopped;
-			service.Result.OnStreamingStopped -= OnRecordingStopped;
 			service.Result.OnStreamingStopped -= OnRecordingStopped;
 		}
 		LckBodyCameraSpawner.OnCameraStateChange -= OnBodyCameraStateChanged;
 		_gtLckController.OnCameraModeChanged -= OnCameraModeChanged;
 	}
 
-	private void OnRecordingStarted(LckResult result)
+	public void SetForceHidden(bool hidden)
 	{
-		_recording = result.Success;
-		if (_socialCameraCococamInstance != null && _socialCameraTabletInstance != null)
+		if (_isForceHidden != hidden)
 		{
-			_socialCameraCococamInstance.recording = result.Success;
-			_socialCameraTabletInstance.recording = result.Success;
+			_isForceHidden = hidden;
+			_needsUpdate = true;
 		}
 	}
 
-	private void OnRecordingStopped(LckResult result)
+	public void SetLckSocialCococamCamera(LckSocialCamera socialCamera)
 	{
-		_recording = false;
-		if (_socialCameraCococamInstance != null && _socialCameraTabletInstance != null)
+		if (!(_networkedCococam == socialCamera))
 		{
-			_socialCameraCococamInstance.recording = false;
-			_socialCameraTabletInstance.recording = false;
+			_networkedCococam = socialCamera;
+			_needsUpdate = true;
+		}
+	}
+
+	public void SetLckSocialTabletCamera(LckSocialCamera socialCameraTablet)
+	{
+		if (!(_networkedTablet == socialCameraTablet))
+		{
+			_networkedTablet = socialCameraTablet;
+			_needsUpdate = true;
+		}
+	}
+
+	private void SetManagerInstance()
+	{
+		_instance = this;
+		OnManagerSpawned?.Invoke(this);
+	}
+
+	private void OnBodyCameraStateChanged(LckBodyCameraSpawner.CameraState state)
+	{
+		if (_cameraState != state)
+		{
+			_cameraState = state;
+			_needsUpdate = true;
 		}
 	}
 
 	private void OnCameraModeChanged(CameraMode mode, ILckCamera lckCamera)
 	{
 		_lckCamera = lckCamera.GetCameraComponent();
-		_lckActiveCameraMode = mode;
-		if (_socialCameraCococamInstance == null || _socialCameraTabletInstance == null)
+		if (_cameraMode != mode)
 		{
-			return;
+			_cameraMode = mode;
+			_needsUpdate = true;
 		}
-		if (_forceHidden)
+	}
+
+	private void OnRecordingStarted(LckResult result)
+	{
+		if (_isRecording != result.Success)
 		{
-			_socialCameraTabletInstance.visible = false;
-			_socialCameraCococamInstance.visible = false;
-			return;
+			_isRecording = result.Success;
+			_needsUpdate = true;
 		}
-		switch (_lckActiveCameraMode)
+	}
+
+	private void OnRecordingStopped(LckResult result)
+	{
+		if (_isRecording)
 		{
-		case CameraMode.FirstPerson:
-			if (_socialCameraCococamInstance.visible)
+			_isRecording = false;
+			_needsUpdate = true;
+		}
+	}
+
+	private void UpdateCococamRecording(bool recording)
+	{
+		CoconutCamera.SetRecordingState(recording);
+		if (!(_networkedCococam == null))
+		{
+			_networkedCococam.recording = recording;
+		}
+	}
+
+	private void UpdateCococamVisibility(LckBodyCameraSpawner.CameraState cameraState, CameraMode cameraMode, bool forceHidden, bool cameraActive)
+	{
+		if (cameraMode == CameraMode.ThirdPerson || cameraMode == CameraMode.Drone)
+		{
+			CoconutCamera.SetVisualsActive(cameraActive);
+		}
+		else
+		{
+			CoconutCamera.SetVisualsActive(active: false);
+		}
+		if (!(_networkedCococam == null))
+		{
+			if (cameraState == LckBodyCameraSpawner.CameraState.CameraDisabled || forceHidden || !cameraActive)
 			{
-				_socialCameraCococamInstance.visible = false;
+				_networkedCococam.visible = false;
 			}
-			break;
-		case CameraMode.ThirdPerson:
-			if (!_socialCameraCococamInstance.visible)
+			else
 			{
-				_socialCameraCococamInstance.visible = true;
+				_networkedCococam.visible = cameraMode == CameraMode.ThirdPerson || cameraMode == CameraMode.Drone;
 			}
-			break;
-		case CameraMode.Selfie:
-			if (_socialCameraCococamInstance.visible)
+		}
+	}
+
+	private void UpdateTabletRecording(bool recording)
+	{
+		if (!(_networkedTablet == null))
+		{
+			_networkedTablet.recording = recording;
+		}
+	}
+
+	private void UpdateTabletVisibility(LckBodyCameraSpawner.CameraState cameraState, bool forceHidden, bool cameraActive)
+	{
+		if (!(_networkedTablet == null))
+		{
+			if (cameraState == LckBodyCameraSpawner.CameraState.CameraDisabled || forceHidden)
 			{
-				_socialCameraCococamInstance.visible = false;
+				_networkedTablet.visible = false;
+				_networkedTablet.IsOnNeck = false;
 			}
-			break;
-		case CameraMode.Drone:
-			_socialCameraCococamInstance.visible = !_forceHidden && cameraActive;
-			_socialCameraTabletInstance.visible = cameraActive;
-			break;
-		default:
-			_socialCameraCococamInstance.visible = cameraActive;
-			_socialCameraTabletInstance.visible = cameraActive;
-			break;
+			else
+			{
+				_networkedTablet.visible = cameraActive;
+				_networkedTablet.IsOnNeck = cameraState == LckBodyCameraSpawner.CameraState.CameraOnNeck;
+			}
 		}
 	}
 }

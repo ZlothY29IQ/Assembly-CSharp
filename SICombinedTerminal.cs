@@ -119,6 +119,7 @@ public class SICombinedTerminal : MonoBehaviour, IGorillaSliceableSimple
 
 	public void Reset()
 	{
+		activePlayer = null;
 		SetActivePage(0);
 		dispenser.Initialize();
 		techTree.Initialize();

@@ -100,6 +100,7 @@ public class BuilderAttachGridPlane : MonoBehaviour
 			SetConnected(snapOverlap.bounds, connect: false);
 			pool.DestroySnapOverlap(snapOverlap);
 		}
+		firstOverlap = null;
 		int num = width * length;
 		for (int i = 0; i < num; i++)
 		{

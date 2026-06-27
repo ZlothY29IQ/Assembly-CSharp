@@ -16,6 +16,8 @@ public class CosmeticButton : GorillaPressableButton
 
 	protected Vector3 posOffset;
 
+	public string SetCosmeticItemID;
+
 	public bool Initialized { get; private set; }
 
 	public void Awake()
@@ -26,6 +28,12 @@ public class CosmeticButton : GorillaPressableButton
 
 	public override void UpdateColor()
 	{
+		if (isSubscriberOnlyButton && !_localPlayerSubscribed)
+		{
+			SetUnsubscribedMaterial();
+			SetOffText(myText.IsNotNull(), myTmpText.IsNotNull(), myTmpText2.IsNotNull());
+			return;
+		}
 		if (!base.enabled)
 		{
 			buttonRenderer.material = disabledMaterial;

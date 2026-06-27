@@ -40,7 +40,17 @@ public class ScavengerManager : MonoBehaviour
 
 		private HashSet<string>? _collectedTargetNamesNullable;
 
-		public bool IsCompleted => Targets.Count == CollectedTargetNames.Count;
+		public bool IsCompleted
+		{
+			get
+			{
+				if (Targets.Count > 0)
+				{
+					return Targets.Count == CollectedTargetNames.Count;
+				}
+				return false;
+			}
+		}
 
 		public IReadOnlyList<ScavengerTarget> Targets => _targets ?? (_targets = new List<ScavengerTarget>());
 
@@ -63,11 +73,11 @@ public class ScavengerManager : MonoBehaviour
 			{
 				if (!initialLoad || SendTargetCollectedEventsOnLoad)
 				{
-					SendTargetCollectedEvents(target);
+					SendTargetCollectedEvents(target, initialLoad);
 				}
 				if (IsCompleted && (!initialLoad || SendHuntCompletedEventsOnLoad))
 				{
-					SendHuntCompletedEvents();
+					SendHuntCompletedEvents(initialLoad);
 				}
 				return true;
 			}
@@ -76,20 +86,27 @@ public class ScavengerManager : MonoBehaviour
 
 		public void RegisterTarget(ScavengerTarget target)
 		{
-			if (!Targets.Contains<ScavengerTarget>(target))
+			if (Targets.Contains<ScavengerTarget>(target))
 			{
-				if (!Enumerable.Contains<string>(TargetNames, target.TargetName))
+				return;
+			}
+			if (!Enumerable.Contains<string>(TargetNames, target.TargetName))
+			{
+				Debug.LogError("Scavenger hunt " + Name + " tried to register target " + target.TargetName + " even though it is not defined in the hunt in ScavengerManager.");
+				return;
+			}
+			_targets.Add(target);
+			if (!(Instance == null))
+			{
+				Tuple<string, string> item = new Tuple<string, string>(Name, target.TargetName);
+				if (Instance._collectOnLoad.Contains(item))
 				{
-					Debug.LogError("Scavenger hunt " + Name + " tried to register target " + target.TargetName + " even though it is not defined in the hunt in ScavengerManager.");
-				}
-				else
-				{
-					_targets.Add(target);
+					Collect(target, initialLoad: true);
 				}
 			}
 		}
 
-		private void SendTargetCollectedEvents(ScavengerTarget target)
+		private void SendTargetCollectedEvents(ScavengerTarget target, bool initialLoad)
 		{
 			if (!Deprecated)
 			{
@@ -97,15 +114,17 @@ public class ScavengerManager : MonoBehaviour
 				TargetCollectedArg.InvokeAll(target);
 				target.TargetCollected.InvokeAll();
 				target.TargetCollectedArg.InvokeAll(target);
+				OnTargetCollected?.Invoke(Name, target.name, !initialLoad);
 			}
 		}
 
-		private void SendHuntCompletedEvents()
+		private void SendHuntCompletedEvents(bool initialLoad)
 		{
 			if (!Deprecated)
 			{
 				HuntCompleted.InvokeAll();
 				HuntCompletedArg.InvokeAll(this);
+				OnHuntCompleted?.Invoke(Name, !initialLoad);
 			}
 		}
 
@@ -238,7 +257,13 @@ public class ScavengerManager : MonoBehaviour
 		}
 	}
 
+	public static Action<string, bool> OnHuntCompleted;
+
+	public static Action<string, string, bool> OnTargetCollected;
+
 	public const string MothershipKey = "ScavengerHunt";
+
+	private List<Tuple<string, string>> _collectOnLoad = new List<Tuple<string, string>>();
 
 	public Hunt[] Hunts = new Hunt[0];
 
@@ -251,7 +276,7 @@ public class ScavengerManager : MonoBehaviour
 			Instance = this;
 			return;
 		}
-		throw new Exception("Too ScavengerManagers exist at once, this should never happen.");
+		throw new Exception("Two ScavengerManagers exist at once, this should never happen.");
 	}
 
 	private void Start()
@@ -361,6 +386,7 @@ public class ScavengerManager : MonoBehaviour
 
 	public void FromJson(ScavengerJson json)
 	{
+		_collectOnLoad.Clear();
 		Hunt[] hunts = Hunts;
 		for (int i = 0; i < hunts.Length; i++)
 		{
@@ -373,24 +399,23 @@ public class ScavengerManager : MonoBehaviour
 			{
 				throw new Exception("Cannot import scavenger data, no hunt by name " + collectedTarget.Key + ".");
 			}
-			string[] value = collectedTarget.Value;
-			foreach (string text in value)
+			if (hunt.Deprecated)
 			{
-				ScavengerTarget target = hunt.GetTarget(text);
-				if ((object)target == null)
-				{
-					if (!hunt.Deprecated)
-					{
-						throw new Exception("Cannot import scavenger data, no hunt/target by name " + collectedTarget.Key + "." + text);
-					}
-				}
-				else
+				continue;
+			}
+			string[] value = collectedTarget.Value;
+			foreach (string item in value)
+			{
+				ScavengerTarget target = hunt.GetTarget(item);
+				if (target != null)
 				{
 					hunt.Collect(target, initialLoad: true);
 				}
+				else
+				{
+					_collectOnLoad.Add(new Tuple<string, string>(collectedTarget.Key, item));
+				}
 			}
 		}
-		int num = Hunts.Sum((Hunt hunt2) => hunt2.Targets.Count);
-		Debug.Log($"Imported {num} targets from {Hunts.Length} scavenger hunts.");
 	}
 }

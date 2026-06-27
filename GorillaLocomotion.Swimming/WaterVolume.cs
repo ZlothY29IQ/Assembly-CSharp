@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using CjLib;
+using GT_CustomMapSupportRuntime;
 using GorillaLocomotion.Climbing;
 using GorillaTag.GuidedRefs;
 using GorillaTagScripts;
-using GT_CustomMapSupportRuntime;
 using UnityEngine;
 
 namespace GorillaLocomotion.Swimming;
@@ -136,32 +136,61 @@ public class WaterVolume : BaseGuidedRefTargetMono, ITickSystemTick
 			volumeMaxHeight = num;
 			volumeMinHeight = num2;
 		}
-		Ray ray = new Ray(new Vector3(point.x, volumeMaxHeight, point.z), Vector3.down);
-		Ray ray2 = new Ray(new Vector3(point.x, volumeMinHeight, point.z), Vector3.up);
-		float num3 = volumeMaxHeight - volumeMinHeight;
-		float num4 = float.MinValue;
-		float num5 = float.MaxValue;
+		Vector3 vector = ((surfacePlane != null) ? surfacePlane.up : Vector3.up);
+		Vector3 rhs = new Vector3(Mathf.Abs(vector.x), Mathf.Abs(vector.y), Mathf.Abs(vector.z));
+		float num3 = float.MinValue;
+		float num4 = float.MaxValue;
+		for (int j = 0; j < volumeColliders.Count; j++)
+		{
+			Bounds bounds = volumeColliders[j].bounds;
+			float num5 = Vector3.Dot(bounds.center, vector);
+			float num6 = Vector3.Dot(bounds.extents, rhs);
+			float num7 = num5 + num6;
+			float num8 = num5 - num6;
+			if (num7 > num3)
+			{
+				num3 = num7;
+			}
+			if (num8 < num4)
+			{
+				num4 = num8;
+			}
+		}
+		float num9 = Vector3.Dot(point, vector);
+		Ray ray = new Ray(point + vector * (num3 - num9), -vector);
+		Ray ray2 = new Ray(point + vector * (num4 - num9), vector);
+		float num10 = num3 - num4;
+		float num11 = float.MinValue;
+		float num12 = float.MaxValue;
 		bool flag = false;
 		bool flag2 = false;
-		float num6 = 0f;
-		for (int j = 0; j < surfaceColliders.Count; j++)
+		float num13 = 0f;
+		for (int k = 0; k < surfaceColliders.Count; k++)
 		{
-			bool flag3 = surfaceColliders[j].enabled;
-			surfaceColliders[j].enabled = true;
-			if (surfaceColliders[j].Raycast(ray, out var hitInfo, num3) && hitInfo.point.y > num4 && HitOutsideSurfaceOfMesh(ray.direction, surfaceColliders[j], hitInfo))
+			bool flag3 = surfaceColliders[k].enabled;
+			surfaceColliders[k].enabled = true;
+			if (surfaceColliders[k].Raycast(ray, out var hitInfo, num10))
 			{
-				num4 = hitInfo.point.y;
-				flag = true;
-				result.surfacePoint = hitInfo.point;
-				result.surfaceNormal = hitInfo.normal;
+				float num14 = Vector3.Dot(hitInfo.point, vector);
+				if (num14 > num11 && HitOutsideSurfaceOfMesh(ray.direction, surfaceColliders[k], hitInfo))
+				{
+					num11 = num14;
+					flag = true;
+					result.surfacePoint = hitInfo.point;
+					result.surfaceNormal = hitInfo.normal;
+				}
 			}
-			if (surfaceColliders[j].Raycast(ray2, out var hitInfo2, num3) && hitInfo2.point.y < num5 && HitOutsideSurfaceOfMesh(ray2.direction, surfaceColliders[j], hitInfo2))
+			if (surfaceColliders[k].Raycast(ray2, out var hitInfo2, num10))
 			{
-				num5 = hitInfo2.point.y;
-				flag2 = true;
-				num6 = hitInfo2.point.y;
+				float num15 = Vector3.Dot(hitInfo2.point, vector);
+				if (num15 < num12 && HitOutsideSurfaceOfMesh(ray2.direction, surfaceColliders[k], hitInfo2))
+				{
+					num12 = num15;
+					flag2 = true;
+					num13 = num15;
+				}
 			}
-			surfaceColliders[j].enabled = flag3;
+			surfaceColliders[k].enabled = flag3;
 		}
 		if (!flag && surfacePlane != null)
 		{
@@ -171,31 +200,31 @@ public class WaterVolume : BaseGuidedRefTargetMono, ITickSystemTick
 		}
 		if (flag && flag2)
 		{
-			result.maxDepth = result.surfacePoint.y - num6;
+			result.maxDepth = Vector3.Dot(result.surfacePoint, vector) - num13;
 		}
 		else if (flag)
 		{
-			result.maxDepth = result.surfacePoint.y - volumeMinHeight;
+			result.maxDepth = Vector3.Dot(result.surfacePoint, vector) - num4;
 		}
 		else
 		{
-			result.maxDepth = volumeMaxHeight - volumeMinHeight;
+			result.maxDepth = num3 - num4;
 		}
 		if (debugDraw)
 		{
 			if (flag)
 			{
-				DebugUtil.DrawLine(ray.origin, ray.origin + ray.direction * num3, Color.green, depthTest: false);
+				DebugUtil.DrawLine(ray.origin, ray.origin + ray.direction * num10, Color.green, depthTest: false);
 				DebugUtil.DrawSphere(result.surfacePoint, 0.001f, 12, 12, Color.green, depthTest: false, DebugUtil.Style.SolidColor);
 			}
 			else
 			{
-				DebugUtil.DrawLine(ray.origin, ray.origin + ray.direction * num3, Color.red, depthTest: false);
+				DebugUtil.DrawLine(ray.origin, ray.origin + ray.direction * num10, Color.red, depthTest: false);
 			}
 			if (flag2)
 			{
-				DebugUtil.DrawLine(ray2.origin, ray2.origin + ray2.direction * num3, Color.yellow, depthTest: false);
-				DebugUtil.DrawSphere(new Vector3(result.surfacePoint.x, num6, result.surfacePoint.z), 0.001f, 12, 12, Color.yellow, depthTest: false, DebugUtil.Style.SolidColor);
+				DebugUtil.DrawLine(ray2.origin, ray2.origin + ray2.direction * num10, Color.yellow, depthTest: false);
+				DebugUtil.DrawSphere(result.surfacePoint + vector * (num13 - Vector3.Dot(result.surfacePoint, vector)), 0.001f, 12, 12, Color.yellow, depthTest: false, DebugUtil.Style.SolidColor);
 			}
 		}
 		return flag;

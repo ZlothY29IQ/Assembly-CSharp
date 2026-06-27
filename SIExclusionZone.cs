@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class SIExclusionZone : MonoBehaviour
 {
+	public SIExclusionType exclusionType = SIExclusionType.AffectsOthers;
+
 	private List<SIGadget> gadgetsInZone = new List<SIGadget>();
 
 	private List<SIPlayer> playersInZone = new List<SIPlayer>();
@@ -17,11 +19,14 @@ public class SIExclusionZone : MonoBehaviour
 			}
 		}
 		gadgetsInZone.Clear();
-		foreach (SIPlayer item2 in playersInZone)
+		if ((exclusionType & SIExclusionType.AffectsOthers) != 0)
 		{
-			if (item2 != null)
+			foreach (SIPlayer item2 in playersInZone)
 			{
-				item2.exclusionZoneCount--;
+				if (item2 != null)
+				{
+					item2.exclusionZoneCount--;
+				}
 			}
 		}
 		playersInZone.Clear();
@@ -42,7 +47,10 @@ public class SIExclusionZone : MonoBehaviour
 		if (componentInParent2 != null && !playersInZone.Contains(componentInParent2))
 		{
 			playersInZone.Add(componentInParent2);
-			componentInParent2.exclusionZoneCount++;
+			if ((exclusionType & SIExclusionType.AffectsOthers) != 0)
+			{
+				componentInParent2.exclusionZoneCount++;
+			}
 		}
 	}
 
@@ -58,7 +66,10 @@ public class SIExclusionZone : MonoBehaviour
 		if (componentInParent2 != null && playersInZone.Contains(componentInParent2))
 		{
 			playersInZone.Remove(componentInParent2);
-			componentInParent2.exclusionZoneCount--;
+			if ((exclusionType & SIExclusionType.AffectsOthers) != 0)
+			{
+				componentInParent2.exclusionZoneCount--;
+			}
 		}
 	}
 

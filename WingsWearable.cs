@@ -12,6 +12,8 @@ public class WingsWearable : MonoBehaviour, IGorillaSliceableSimple
 
 	private Vector3 oldPos;
 
+	private float lastSliceTime;
+
 	private readonly int flapSpeedParamID = Animator.StringToHash("FlapSpeed");
 
 	private void Awake()
@@ -30,6 +32,7 @@ public class WingsWearable : MonoBehaviour, IGorillaSliceableSimple
 	{
 		GorillaSlicerSimpleManager.RegisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
 		oldPos = xform.localPosition;
+		lastSliceTime = Time.unscaledTime;
 	}
 
 	public void OnDisable()
@@ -40,9 +43,12 @@ public class WingsWearable : MonoBehaviour, IGorillaSliceableSimple
 	public void SliceUpdate()
 	{
 		Vector3 position = xform.position;
-		float f = (position - oldPos).magnitude / Time.deltaTime;
+		float unscaledTime = Time.unscaledTime;
+		float num = Mathf.Max(unscaledTime - lastSliceTime, Mathf.Epsilon);
+		float f = (position - oldPos).magnitude / num;
 		float value = flapSpeedCurve.Evaluate(Mathf.Abs(f));
 		animator.SetFloat(flapSpeedParamID, value);
 		oldPos = position;
+		lastSliceTime = unscaledTime;
 	}
 }

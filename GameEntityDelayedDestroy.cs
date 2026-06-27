@@ -1,9 +1,31 @@
 using System;
+using GorillaTag.Audio;
 using UnityEngine;
-using UnityEngine.Serialization;
 
-public class GameEntityDelayedDestroy : MonoBehaviour, IGorillaSliceableSimple
+public class GameEntityDelayedDestroy : MonoBehaviour, IDelayedExecListener
 {
+	[Serializable]
+	public struct Options
+	{
+		public float delay;
+
+		[Tooltip("Optional. If not set then a sound will be played at the transforms position. Which if it is a long clip on a transform that moves a lot then it will feel wrong without this set.")]
+		public AudioSource audioSource;
+
+		public AudioClip explosionSound;
+
+		public float explosionVolume;
+
+		public GameObject pooledExplosionPrefab;
+
+		public AudioClip beepSound;
+
+		public float beepVolume;
+
+		[Tooltip("Beep phases keyed by seconds remaining. Must be ordered from most to least time remaining.")]
+		public BeepPhase[] beepPhases;
+	}
+
 	[Serializable]
 	public struct BeepPhase
 	{
@@ -14,67 +36,49 @@ public class GameEntityDelayedDestroy : MonoBehaviour, IGorillaSliceableSimple
 		public float interval;
 	}
 
-	[FormerlySerializedAs("Lifetime")]
 	[SerializeField]
-	internal float m_delay = 3f;
-
-	[Header("Countdown Audio")]
-	[SerializeField]
-	private AudioSource m_audioSource;
-
-	[SerializeField]
-	private AudioClip m_beepClip;
-
-	[SerializeField]
-	private AudioClip m_explosionClip;
-
-	[Tooltip("Beep phases keyed by seconds remaining. Must be ordered from most to least time remaining.")]
-	[SerializeField]
-	private BeepPhase[] m_beepPhases = new BeepPhase[3]
+	private Options m_options = new Options
 	{
-		new BeepPhase
-		{
-			timeRemaining = 10f,
-			interval = 1f
-		},
-		new BeepPhase
-		{
-			timeRemaining = 5f,
-			interval = 0.5f
-		},
-		new BeepPhase
-		{
-			timeRemaining = 2f,
-			interval = 0.1f
-		}
+		delay = 3f,
+		audioSource = null,
+		explosionSound = null,
+		explosionVolume = 1f,
+		pooledExplosionPrefab = null,
+		beepSound = null,
+		beepVolume = 1f,
+		beepPhases = null
 	};
-
-	[SerializeField]
-	private float m_beepVolume = 1f;
-
-	[SerializeField]
-	private float m_explosionVolume = 1f;
 
 	private GameEntity _entity;
 
-	private float _startTime;
+	private int _callGenerationId;
 
-	private float _nextBeepTime;
+	private int _delayedExplosionAudioIndex = -1;
 
-	public void Configure(float delay, AudioClip beepClip, AudioClip explosionClip, BeepPhase[] beepPhases, float beepVolume, float explosionVolume)
+	private int _delayedExplosionPoolIndex = -1;
+
+	private const int k_contextId_deferredStart = 0;
+
+	internal void Configure(Options options)
 	{
-		m_delay = delay;
-		m_beepClip = beepClip;
-		m_explosionClip = explosionClip;
-		if (beepPhases != null)
+		m_options = options;
+		if ((m_options.beepSound != null || m_options.explosionSound != null) && m_options.audioSource == null)
 		{
-			m_beepPhases = beepPhases;
+			m_options.audioSource = GetComponentInChildren<AudioSource>();
 		}
-		m_beepVolume = beepVolume;
-		m_explosionVolume = explosionVolume;
-		if ((m_beepClip != null || m_explosionClip != null) && m_audioSource == null)
+	}
+
+	protected void OnDestroy()
+	{
+		if (_delayedExplosionAudioIndex >= 0)
 		{
-			m_audioSource = GetComponentInChildren<AudioSource>();
+			GTAudioOneShot.CancelDelayed(_delayedExplosionAudioIndex);
+			_delayedExplosionAudioIndex = -1;
+		}
+		if (_delayedExplosionPoolIndex >= 0)
+		{
+			ObjectPools.CancelDelayedInstantiate(_delayedExplosionPoolIndex);
+			_delayedExplosionPoolIndex = -1;
 		}
 	}
 
@@ -84,53 +88,102 @@ public class GameEntityDelayedDestroy : MonoBehaviour, IGorillaSliceableSimple
 		if (_entity == null)
 		{
 			Debug.LogError("GameEntityDelayedDestroy: No GameEntity found. Must be added to the same GameObject of the GameEntity you are trying to destroy with a delay.");
+		}
+		else
+		{
+			GTDelayedExec.Add(this, 0f, 0);
+		}
+	}
+
+	internal void ResetTimer()
+	{
+		_callGenerationId++;
+		int callGenerationId = _callGenerationId;
+		int contextId = (callGenerationId << 1) | 1;
+		Options options = m_options;
+		GTDelayedExec.Add(this, options.delay, contextId);
+		if (options.explosionSound != null)
+		{
+			_delayedExplosionAudioIndex = GTAudioOneShot.PlayDelayed(options.explosionSound, base.transform.parent, base.transform.localPosition, options.delay, options.explosionVolume);
+		}
+		else
+		{
+			_delayedExplosionAudioIndex = -1;
+		}
+		if (options.pooledExplosionPrefab != null)
+		{
+			_delayedExplosionPoolIndex = ObjectPools.InstantiateDelayed(options.pooledExplosionPrefab, base.transform.parent, base.transform.localPosition, options.delay);
+		}
+		else
+		{
+			_delayedExplosionPoolIndex = -1;
+		}
+		if (options.beepSound == null || options.beepPhases == null || options.beepPhases.Length == 0)
+		{
 			return;
 		}
-		_startTime = Time.unscaledTime;
-		BeepPhase[] beepPhases = m_beepPhases;
-		_nextBeepTime = ((beepPhases != null && beepPhases.Length > 0) ? (_startTime + (m_delay - m_beepPhases[0].timeRemaining)) : float.MaxValue);
-		GorillaSlicerSimpleManager.RegisterSliceable(this);
-	}
-
-	protected void OnDestroy()
-	{
-		GorillaSlicerSimpleManager.UnregisterSliceable(this);
-	}
-
-	void IGorillaSliceableSimple.SliceUpdate()
-	{
-		float unscaledTime = Time.unscaledTime;
-		float num = unscaledTime - _startTime;
-		if (num >= m_delay && _entity != null)
+		int contextId2 = callGenerationId << 1;
+		for (int i = 0; i < options.beepPhases.Length; i++)
 		{
-			if (m_audioSource != null && m_explosionClip != null)
+			float interval = options.beepPhases[i].interval;
+			if (interval <= 0f)
 			{
-				m_audioSource.GTPlayOneShot(m_explosionClip, m_explosionVolume);
+				continue;
 			}
-			_entity.manager.RequestDestroyItem(_entity.id);
-		}
-		else if (unscaledTime >= _nextBeepTime && m_audioSource != null && m_beepClip != null)
-		{
-			m_audioSource.GTPlayOneShot(m_beepClip, m_beepVolume);
-			float remaining = m_delay - num;
-			float interval = GetInterval(remaining);
-			_nextBeepTime = ((interval > 0f) ? (unscaledTime + interval) : (-1f));
-		}
-	}
-
-	private float GetInterval(float remaining)
-	{
-		if (m_beepPhases == null || m_beepPhases.Length == 0)
-		{
-			return float.MaxValue;
-		}
-		for (int num = m_beepPhases.Length - 1; num >= 0; num--)
-		{
-			if (remaining <= m_beepPhases[num].timeRemaining)
+			float num = ((i + 1 < options.beepPhases.Length) ? options.beepPhases[i + 1].timeRemaining : 0f);
+			float num2 = Mathf.Min(options.beepPhases[i].timeRemaining, options.delay);
+			if (!(num2 <= num))
 			{
-				return m_beepPhases[num].interval;
+				float num3 = options.delay - num2;
+				float num4 = options.delay - num;
+				for (float num5 = num3; num5 < num4; num5 += interval)
+				{
+					GTDelayedExec.Add(this, num5, contextId2);
+				}
 			}
 		}
-		return m_beepPhases[0].interval;
+	}
+
+	void IDelayedExecListener.OnDelayedAction(int contextId)
+	{
+		if (contextId == 0)
+		{
+			if (_callGenerationId == 0 && _entity != null)
+			{
+				ResetTimer();
+			}
+		}
+		else
+		{
+			if (contextId >> 1 != _callGenerationId || _entity == null)
+			{
+				return;
+			}
+			Options options = m_options;
+			if ((contextId & 1) != 0)
+			{
+				_entity.manager.RequestDestroyItem(_entity.id);
+				return;
+			}
+			if (_delayedExplosionAudioIndex >= 0)
+			{
+				GTAudioOneShot.UpdateDelayed(_delayedExplosionAudioIndex, base.transform.parent, base.transform.localPosition);
+			}
+			if (_delayedExplosionPoolIndex >= 0)
+			{
+				ObjectPools.UpdateDelayedInstantiate(_delayedExplosionPoolIndex, base.transform.parent, base.transform.localPosition);
+			}
+			if (options.beepSound != null)
+			{
+				if (options.audioSource != null && options.audioSource.isActiveAndEnabled)
+				{
+					options.audioSource.GTPlayOneShot(options.beepSound, options.beepVolume);
+				}
+				else
+				{
+					GTAudioOneShot.Play(options.beepSound, base.transform.position, options.beepVolume);
+				}
+			}
+		}
 	}
 }

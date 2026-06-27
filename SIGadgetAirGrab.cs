@@ -210,6 +210,11 @@ public class SIGadgetAirGrab : SIGadget
 		{
 			ClearGravityOverride();
 		}
+		if (m_airGrabXform != null)
+		{
+			m_airGrabXform.gameObject.SetActive(value: false);
+			m_airGrabXform.SetParent(base.transform, worldPositionStays: false);
+		}
 	}
 
 	private void _HandleStartInteraction()
@@ -264,7 +269,7 @@ public class SIGadgetAirGrab : SIGadget
 		switch (_state)
 		{
 		case EState.Idle:
-			if (_isActivated)
+			if (_isActivated && !IsBlocked(SIExclusionType.AffectsLocalMovement))
 			{
 				if (_groundedUseCounter.TryUse())
 				{

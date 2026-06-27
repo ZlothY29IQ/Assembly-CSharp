@@ -3,9 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Security.Cryptography;
-using System.Text;
 using GorillaExtensions;
+using GorillaUtil;
 using LitJson;
 using PlayFab;
 using UnityEngine;
@@ -31,6 +30,10 @@ public class PlayFabTitleDataCache : MonoBehaviour
 
 	private static Action<PlayFabTitleDataCache> k_onnLoaded;
 
+	public static Action<string, string> OnValueRetieved;
+
+	public static Action<string, string> OnCachedValueRetieved;
+
 	public DataUpdate OnTitleDataUpdate;
 
 	private const string FileName = "TitleDataCache.json";
@@ -45,6 +48,9 @@ public class PlayFabTitleDataCache : MonoBehaviour
 
 	private Coroutine updateDataCoroutine;
 
+	[SerializeField]
+	private StringTable betaTitleDataOveride;
+
 	public static PlayFabTitleDataCache Instance { get; private set; }
 
 	private static string FilePath => Path.Combine(Application.persistentDataPath, "TitleDataCache.json");
@@ -54,6 +60,7 @@ public class PlayFabTitleDataCache : MonoBehaviour
 		if (!ignoreCache && !isFirstLoad && localizedTitleData.TryGetValue(LocalisationManager.CurrentLanguage.Identifier.Code, out var value) && value.TryGetValue(name, out var value2))
 		{
 			callback.SafeInvoke(value2);
+			OnCachedValueRetieved?.Invoke(name, value2);
 			return;
 		}
 		DataRequest item = new DataRequest
@@ -176,6 +183,11 @@ public class PlayFabTitleDataCache : MonoBehaviour
 						MothershipTitleDataShort mothershipTitleDataShort = response.Results[i];
 						if (!string.IsNullOrEmpty(mothershipTitleDataShort.key))
 						{
+							if (mothershipTitleDataShort.data.Contains("#EN_FALLBACK="))
+							{
+								UnityEngine.Debug.LogWarning("[PlayFabTitleDataCache::UpdateDataCo] Key '" + mothershipTitleDataShort.key + "' exists, but it doesn't have a translation for locale '" + currentLocale + "'. Falling back to English.");
+								mothershipTitleDataShort.data = mothershipTitleDataShort.data.Split("#EN_FALLBACK=")[1];
+							}
 							newTitleData[mothershipTitleDataShort.key] = mothershipTitleDataShort.data;
 						}
 					}
@@ -220,9 +232,16 @@ public class PlayFabTitleDataCache : MonoBehaviour
 					DataRequest dataRequest = requests[num];
 					if (dataRequest.Name == text3)
 					{
-						dataRequest.Callback?.Invoke(text5);
+						try
+						{
+							dataRequest.Callback?.Invoke(text5);
+							OnValueRetieved?.Invoke(text3, text5);
+						}
+						catch (Exception ex)
+						{
+							UnityEngine.Debug.LogError("[PlayFabTitleDataCache::UpdateDataCo] Error running callback for key: '" + text3 + "' value: '" + text5 + "' exception: " + ex.Message);
+						}
 						requests.RemoveAt(num);
-						break;
 					}
 				}
 				if (oldLocalizedCache.TryGetValue(text3, out var value) && value != text5)
@@ -242,25 +261,14 @@ public class PlayFabTitleDataCache : MonoBehaviour
 		}
 	}
 
-	private static string MD5(string value)
-	{
-		MD5CryptoServiceProvider mD5CryptoServiceProvider = new MD5CryptoServiceProvider();
-		byte[] bytes = Encoding.Default.GetBytes(value);
-		byte[] array = mD5CryptoServiceProvider.ComputeHash(bytes);
-		StringBuilder stringBuilder = new StringBuilder();
-		byte[] array2 = array;
-		foreach (byte b in array2)
-		{
-			stringBuilder.Append(b.ToString("x2"));
-		}
-		return stringBuilder.ToString();
-	}
-
 	private void ClearRequestWithError(PlayFabError e = null)
 	{
 		if (e == null)
 		{
-			e = new PlayFabError();
+			e = new PlayFabError
+			{
+				ErrorMessage = "PlayFabError was null. Maybe an exception was encountered."
+			};
 		}
 		foreach (DataRequest request in requests)
 		{

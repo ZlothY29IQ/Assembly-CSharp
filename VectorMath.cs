@@ -55,10 +55,7 @@ public static class VectorMath
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static Vector3 Add(this Vector3 v, float amount)
 	{
-		v.x += amount;
-		v.y += amount;
-		v.z += amount;
-		return v;
+		return new Vector3(v.x + amount, v.y + amount, v.z + amount);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -33,28 +33,21 @@ public class GorillaScoreboardTotalUpdater : MonoBehaviour, IGorillaSliceableSim
 		}
 	}
 
-	public static GorillaScoreboardTotalUpdater instance;
+	private static GorillaScoreboardTotalUpdater _instance = null;
 
-	[OnEnterPlay_Set(false)]
-	public static bool hasInstance = false;
-
-	public static List<GorillaPlayerScoreboardLine> allScoreboardLines = new List<GorillaPlayerScoreboardLine>();
+	public static readonly List<GorillaPlayerScoreboardLine> allScoreboardLines = new List<GorillaPlayerScoreboardLine>();
 
 	public static int lineIndex = 0;
 
-	private static int linesPerFrame = 2;
+	private const int linesPerFrame = 2;
 
 	public static List<GorillaScoreBoard> allScoreboards = new List<GorillaScoreBoard>();
-
-	public static int boardIndex = 0;
 
 	private List<NetPlayer> playersInRoom = new List<NetPlayer>();
 
 	private bool joinedRoom;
 
 	private bool wasGameManagerNull;
-
-	public bool forOverlay;
 
 	public string offlineTextErrorString;
 
@@ -63,6 +56,10 @@ public class GorillaScoreboardTotalUpdater : MonoBehaviour, IGorillaSliceableSim
 	private static readonly Dictionary<int, ReportMuteTimer> m_reportMuteTimerDict = new Dictionary<int, ReportMuteTimer>(20);
 
 	private static readonly ObjectPool<ReportMuteTimer> m_reportMuteTimerPool = new ObjectPool<ReportMuteTimer>(20);
+
+	public static GorillaScoreboardTotalUpdater instance => _instance ?? (_instance = CreateManager());
+
+	public static bool hasInstance => instance != null;
 
 	public void UpdateLineState(GorillaPlayerScoreboardLine line)
 	{
@@ -81,13 +78,21 @@ public class GorillaScoreboardTotalUpdater : MonoBehaviour, IGorillaSliceableSim
 
 	protected void Awake()
 	{
-		if (hasInstance && instance != this)
+		if (_instance == this)
 		{
-			UnityEngine.Object.Destroy(this);
+			return;
+		}
+		if (_instance == null)
+		{
+			_instance = this;
+			if (Application.isPlaying)
+			{
+				UnityEngine.Object.DontDestroyOnLoad(this);
+			}
 		}
 		else
 		{
-			SetInstance(this);
+			UnityEngine.Object.Destroy(this);
 		}
 	}
 
@@ -99,27 +104,18 @@ public class GorillaScoreboardTotalUpdater : MonoBehaviour, IGorillaSliceableSim
 		RoomSystem.PlayerLeftEvent += new Action<NetPlayer>(OnPlayerLeftRoom);
 	}
 
-	public static void CreateManager()
+	private static GorillaScoreboardTotalUpdater CreateManager()
 	{
-		SetInstance(new GameObject("GorillaScoreboardTotalUpdater").AddComponent<GorillaScoreboardTotalUpdater>());
-	}
-
-	private static void SetInstance(GorillaScoreboardTotalUpdater manager)
-	{
-		instance = manager;
-		hasInstance = true;
+		GorillaScoreboardTotalUpdater gorillaScoreboardTotalUpdater = new GameObject("GorillaScoreboardTotalUpdater").AddComponent<GorillaScoreboardTotalUpdater>();
 		if (Application.isPlaying)
 		{
-			UnityEngine.Object.DontDestroyOnLoad(manager);
+			UnityEngine.Object.DontDestroyOnLoad(gorillaScoreboardTotalUpdater);
 		}
+		return gorillaScoreboardTotalUpdater;
 	}
 
 	public static void RegisterSL(GorillaPlayerScoreboardLine sL)
 	{
-		if (!hasInstance)
-		{
-			CreateManager();
-		}
 		if (!allScoreboardLines.Contains(sL))
 		{
 			allScoreboardLines.Add(sL);
@@ -128,10 +124,6 @@ public class GorillaScoreboardTotalUpdater : MonoBehaviour, IGorillaSliceableSim
 
 	public static void UnregisterSL(GorillaPlayerScoreboardLine sL)
 	{
-		if (!hasInstance)
-		{
-			CreateManager();
-		}
 		if (allScoreboardLines.Contains(sL))
 		{
 			allScoreboardLines.Remove(sL);
@@ -140,10 +132,6 @@ public class GorillaScoreboardTotalUpdater : MonoBehaviour, IGorillaSliceableSim
 
 	public static void RegisterScoreboard(GorillaScoreBoard sB)
 	{
-		if (!hasInstance)
-		{
-			CreateManager();
-		}
 		if (!allScoreboards.Contains(sB))
 		{
 			allScoreboards.Add(sB);
@@ -153,10 +141,6 @@ public class GorillaScoreboardTotalUpdater : MonoBehaviour, IGorillaSliceableSim
 
 	public static void UnregisterScoreboard(GorillaScoreBoard sB)
 	{
-		if (!hasInstance)
-		{
-			CreateManager();
-		}
 		if (allScoreboards.Contains(sB))
 		{
 			allScoreboards.Remove(sB);
@@ -201,6 +185,7 @@ public class GorillaScoreboardTotalUpdater : MonoBehaviour, IGorillaSliceableSim
 			{
 				sB.lines[i].ResetData();
 			}
+			sB.CleanupRoomControls();
 			return;
 		}
 		if (sB.notInRoomText != null)
@@ -240,7 +225,7 @@ public class GorillaScoreboardTotalUpdater : MonoBehaviour, IGorillaSliceableSim
 		{
 			return;
 		}
-		for (int i = 0; i < linesPerFrame; i++)
+		for (int i = 0; i < 2; i++)
 		{
 			if (lineIndex >= allScoreboardLines.Count)
 			{
@@ -275,7 +260,7 @@ public class GorillaScoreboardTotalUpdater : MonoBehaviour, IGorillaSliceableSim
 	{
 		if (netPlayer == null)
 		{
-			Debug.LogError("Null netplayer");
+			Debug.LogError("Null NetPlayer.");
 		}
 		playersInRoom.Remove(netPlayer);
 		UpdateActiveScoreboards();

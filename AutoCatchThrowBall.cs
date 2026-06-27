@@ -103,7 +103,7 @@ public class AutoCatchThrowBall : MonoBehaviour
 				}
 			}
 		}
-		if (Keyboard.current.tKey.wasPressedThisFrame && ballPrefab != null)
+		if (!TestScript.IsUIOpen && Keyboard.current.tKey.wasPressedThisFrame && ballPrefab != null)
 		{
 			TransferrableObject componentInChildren = Object.Instantiate(ballPrefab, vector, Quaternion.identity, null).GetComponentInChildren<TransferrableObject>();
 			componentInChildren.OnGrab(null, null);

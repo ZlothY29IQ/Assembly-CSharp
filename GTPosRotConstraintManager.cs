@@ -84,7 +84,7 @@ public class GTPosRotConstraintManager : MonoBehaviour
 			for (int i = 0; i < constraintsToDisable[num].constraints.Length; i++)
 			{
 				Transform follower = constraintsToDisable[num].constraints[i].follower;
-				if (originalParent.ContainsKey(follower))
+				if (originalParent.TryGetValue(follower, out var value) && !(follower == null) && !(value == null))
 				{
 					follower.SetParent(originalParent[follower], worldPositionStays: true);
 					follower.localRotation = originalRot[follower];

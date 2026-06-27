@@ -18,6 +18,13 @@ public class GorillaScoreBoard : MonoBehaviour
 
 	public bool isActive;
 
+	public GameObject leftPanel;
+
+	public float leftPanelRoomControlXOffset = -36f;
+
+	public GameObject rightPanel;
+
+	[Space]
 	public GameObject linesParent;
 
 	public float bigRoomYOffset = 32.5f;
@@ -33,11 +40,17 @@ public class GorillaScoreBoard : MonoBehaviour
 
 	public TextMeshPro buttonText;
 
+	public TextMeshPro roomControlsText;
+
+	public GameObject roomControlsToggle;
+
 	public bool needsUpdate;
 
 	public TextMeshPro notInRoomText;
 
 	public string initialGameMode;
+
+	private bool roomControlsActive;
 
 	private string tempGmName;
 
@@ -53,6 +66,8 @@ public class GorillaScoreBoard : MonoBehaviour
 
 	private StringBuilder buttonStringBuilder = new StringBuilder(720);
 
+	public bool RoomControlsActive => roomControlsActive;
+
 	public bool IsDirty
 	{
 		get
@@ -62,10 +77,6 @@ public class GorillaScoreBoard : MonoBehaviour
 				return string.IsNullOrEmpty(initialGameMode);
 			}
 			return true;
-		}
-		set
-		{
-			_isDirty = value;
 		}
 	}
 
@@ -77,6 +88,7 @@ public class GorillaScoreBoard : MonoBehaviour
 		{
 			linesParent.SetActive(awake);
 		}
+		ToggleRoomControlButton();
 	}
 
 	private string GetBeginningString()
@@ -86,7 +98,7 @@ public class GorillaScoreBoard : MonoBehaviour
 		{
 			text = $" ({20})";
 		}
-		return "ROOM ID: " + (NetworkSystem.Instance.SessionIsPrivate ? "-PRIVATE- GAME: " : (NetworkSystem.Instance.RoomName + "   GAME: ")) + RoomType() + text + "\n  PLAYER     COLOR  MUTE   REPORT";
+		return "ROOM ID: " + (NetworkSystem.Instance.SessionIsPrivate ? "-PRIVATE- GAME: " : (NetworkSystem.Instance.RoomName + "   GAME: ")) + RoomType() + text + "\n  PLAYER     COLOR   MUTE  REPORT";
 	}
 
 	private string RoomType()
@@ -123,6 +135,33 @@ public class GorillaScoreBoard : MonoBehaviour
 		return gmName;
 	}
 
+	[ContextMenu("Toggle Room Controls")]
+	public void ToggleRoomControls()
+	{
+		if (!RoomControls.CanModerate(out var cannotReason))
+		{
+			Debug.LogWarning("Cannot toggle room controls: " + cannotReason + ".");
+			return;
+		}
+		roomControlsActive = !roomControlsActive;
+		SetDirty();
+	}
+
+	public void CleanupRoomControls()
+	{
+		roomControlsActive = false;
+		rightPanel.SetActive(value: false);
+		for (int i = 0; i < lines.Count; i++)
+		{
+			lines[i].ToggleRoomControlButtons(toggle: false);
+		}
+	}
+
+	private void ToggleRoomControlButton()
+	{
+		roomControlsToggle.gameObject.SetActive(RoomControls.CanModerate());
+	}
+
 	public void RedrawPlayerLines()
 	{
 		stringBuilder.Clear();
@@ -136,6 +175,18 @@ public class GorillaScoreBoard : MonoBehaviour
 			{
 				num++;
 			}
+		}
+		if (roomControlsActive)
+		{
+			leftPanel.transform.localScale = new Vector3(0.7f, 1f, 1f);
+			leftPanel.transform.localPosition = new Vector3(leftPanelRoomControlXOffset, 0f);
+			rightPanel.SetActive(value: true);
+		}
+		else
+		{
+			leftPanel.transform.localScale = Vector3.one;
+			leftPanel.transform.localPosition = Vector3.zero;
+			rightPanel.SetActive(value: false);
 		}
 		if (num > 10)
 		{
@@ -151,47 +202,58 @@ public class GorillaScoreBoard : MonoBehaviour
 		}
 		for (int j = 0; j < lines.Count; j++)
 		{
-			try
+			if (!lines[j].IsLineActive())
 			{
-				if (!lines[j].gameObject.activeInHierarchy)
+				continue;
+			}
+			linesRTs[j].localPosition = new Vector3(0f, startingYValue - lineHeight * j, 0f);
+			if (!lines[j].IsPlayerInRoom())
+			{
+				continue;
+			}
+			stringBuilder.Append("\n ");
+			SubscriptionManager.SubscriptionDetails subscriptionDetails = SubscriptionManager.GetSubscriptionDetails(lines[j].linePlayer);
+			if (subscriptionDetails.active && subscriptionDetails.tier > 0)
+			{
+				stringBuilder.Append("<color=#ffc600>");
+			}
+			else
+			{
+				stringBuilder.Append("<color=#ffffff>");
+			}
+			stringBuilder.Append(flag ? lines[j].playerNameVisible : lines[j].linePlayer.DefaultName);
+			stringBuilder.Append("</color>");
+			if (lines[j].linePlayer != NetworkSystem.Instance.LocalPlayer)
+			{
+				bool flag2 = lines[j].IsReportButtonActive();
+				if (flag2)
 				{
-					continue;
-				}
-				linesRTs[j].localPosition = new Vector3(0f, startingYValue - lineHeight * j, 0f);
-				if (lines[j].linePlayer == null || !lines[j].linePlayer.InRoom)
-				{
-					continue;
-				}
-				stringBuilder.Append("\n ");
-				SubscriptionManager.SubscriptionDetails subscriptionDetails = SubscriptionManager.GetSubscriptionDetails(lines[j].linePlayer);
-				if (subscriptionDetails.active && subscriptionDetails.tier > 0)
-				{
-					stringBuilder.Append("<color=#ffc600>");
-				}
-				else
-				{
-					stringBuilder.Append("<color=#ffffff>");
-				}
-				stringBuilder.Append(flag ? lines[j].playerNameVisible : lines[j].linePlayer.DefaultName);
-				stringBuilder.Append("</color>");
-				if (lines[j].linePlayer != NetworkSystem.Instance.LocalPlayer)
-				{
-					if (lines[j].reportButton.isActiveAndEnabled)
+					if (!roomControlsActive)
 					{
 						buttonStringBuilder.Append("MUTE                                REPORT\n");
 					}
+					else if (!lines[j].IsConfirmButtonsActive())
+					{
+						buttonStringBuilder.Append("MUTE                                REPORT                              SILENCE                      KICK                      BLOCK\n");
+					}
+					else if (lines[j].IsConfirmParentKick())
+					{
+						buttonStringBuilder.Append("MUTE                                REPORT                              SILENCE           CONFIRM            CANCEL\n");
+					}
 					else
 					{
-						buttonStringBuilder.Append("MUTE                HATE SPEECH    TOXICITY     CHEATING       CANCEL\n");
+						buttonStringBuilder.Append("MUTE                                REPORT                              SILENCE                                      CONFIRM            CANCEL\n");
 					}
 				}
 				else
 				{
-					buttonStringBuilder.Append("\n");
+					buttonStringBuilder.Append("MUTE                HATE SPEECH    TOXICITY     CHEATING       CANCEL\n");
 				}
+				lines[j].ToggleRoomControlButtons(roomControlsActive && flag2, hideConfirm: false);
 			}
-			catch
+			else
 			{
+				buttonStringBuilder.Append("\n");
 			}
 		}
 		boardText.text = stringBuilder.ToString();
@@ -199,38 +261,68 @@ public class GorillaScoreBoard : MonoBehaviour
 		_isDirty = false;
 	}
 
-	public string NormalizeName(bool doIt, string text)
-	{
-		if (doIt)
-		{
-			text = new string(Array.FindAll(text.ToCharArray(), (char c) => Utils.IsASCIILetterOrDigit(c)));
-			if (text.Length > 12)
-			{
-				text = text.Substring(0, 10);
-			}
-			text = text.ToUpper();
-		}
-		return text;
-	}
-
-	private void Start()
+	private void Awake()
 	{
 		linesRTs.Clear();
 		for (int i = 0; i < lines.Count; i++)
 		{
 			linesRTs.Add(lines[i].GetComponent<RectTransform>());
 		}
+	}
+
+	private void Start()
+	{
 		GorillaScoreboardTotalUpdater.RegisterScoreboard(this);
 	}
 
 	private void OnEnable()
 	{
 		GorillaScoreboardTotalUpdater.RegisterScoreboard(this);
-		_isDirty = true;
+		SetDirty();
+		SubscriptionManager.OnSubscriptionData = (Action)Delegate.Remove(SubscriptionManager.OnSubscriptionData, new Action(OnSubscribeReady));
+		SubscriptionManager.OnSubscriptionData = (Action)Delegate.Combine(SubscriptionManager.OnSubscriptionData, new Action(OnSubscribeReady));
+		NetworkSystem.Instance.OnMasterClientSwitchedEvent -= new Action<NetPlayer>(OnMasterClientSwitched);
+		NetworkSystem.Instance.OnMasterClientSwitchedEvent += new Action<NetPlayer>(OnMasterClientSwitched);
+		RoomControls.OnRoomControlsEnabledChanged -= new Action<bool>(OnRoomControlsEnabledChanged);
+		RoomControls.OnRoomControlsEnabledChanged += new Action<bool>(OnRoomControlsEnabledChanged);
+		roomControlsToggle.gameObject.SetActive(value: false);
 	}
 
 	private void OnDisable()
 	{
 		GorillaScoreboardTotalUpdater.UnregisterScoreboard(this);
+		SubscriptionManager.OnSubscriptionData = (Action)Delegate.Remove(SubscriptionManager.OnSubscriptionData, new Action(OnSubscribeReady));
+		NetworkSystem.Instance.OnMasterClientSwitchedEvent -= new Action<NetPlayer>(OnMasterClientSwitched);
+		RoomControls.OnRoomControlsEnabledChanged -= new Action<bool>(OnRoomControlsEnabledChanged);
+	}
+
+	private void OnSubscribeReady()
+	{
+		RefreshRoomControlUI();
+	}
+
+	private void OnMasterClientSwitched(NetPlayer newMasterClient)
+	{
+		RefreshRoomControlUI();
+	}
+
+	private void OnRoomControlsEnabledChanged(bool enabled)
+	{
+		RefreshRoomControlUI();
+	}
+
+	private void RefreshRoomControlUI()
+	{
+		if (roomControlsActive && !RoomControls.CanModerate())
+		{
+			roomControlsActive = false;
+		}
+		SetDirty();
+		ToggleRoomControlButton();
+	}
+
+	public void SetDirty()
+	{
+		_isDirty = true;
 	}
 }

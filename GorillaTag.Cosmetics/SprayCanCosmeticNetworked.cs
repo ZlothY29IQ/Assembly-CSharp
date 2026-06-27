@@ -40,7 +40,10 @@ public class SprayCanCosmeticNetworked : MonoBehaviour
 	{
 		if (_events != null)
 		{
-			_events.Activate -= new Action<int, int, object[], PhotonMessageInfoWrapped>(OnShakeEvent);
+			if (_events.Activate != null)
+			{
+				_events.Activate -= new Action<int, int, object[], PhotonMessageInfoWrapped>(OnShakeEvent);
+			}
 			_events.Dispose();
 			_events = null;
 		}

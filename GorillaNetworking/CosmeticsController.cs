@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using CosmeticRoom;
 using Cosmetics;
 using ExitGames.Client.Photon;
@@ -10,6 +11,9 @@ using GorillaLocomotion;
 using GorillaNetworking.Store;
 using GorillaTag;
 using GorillaTag.CosmeticSystem;
+using GorillaTag.Cosmetics;
+using GorillaTagScripts;
+using GorillaTagScripts.Subscription;
 using GorillaTagScripts.VirtualStumpCustomMaps;
 using Photon.Pun;
 using Photon.Realtime;
@@ -52,7 +56,8 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		Pants,
 		TagEffect,
 		Count,
-		Set
+		Set,
+		Collectable
 	}
 
 	public enum CosmeticSlots
@@ -353,105 +358,177 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 			return "slot_" + slot;
 		}
 
-		private async Awaitable ActivateCosmetic(CosmeticSet prevSet, VRRig rig, int slotIndex, CosmeticItemRegistry cosmeticsObjectRegistry, BodyDockPositions bDock, int activationVersion)
+		private void ActivateCosmetic(CosmeticSet prevSet, VRRig rig, int slotIndex, CosmeticItemRegistry cosmeticsObjectRegistry, BodyDockPositions bDock)
 		{
 			CosmeticItem cosmeticItem = prevSet.items[slotIndex];
 			string itemNameFromDisplayName = instance.GetItemNameFromDisplayName(cosmeticItem.displayName);
-			CosmeticItem newItem = items[slotIndex];
-			string newItemName = instance.GetItemNameFromDisplayName(newItem.displayName);
-			BodyDockPositions.DropPositions dropPosition = CosmeticSlotToDropPosition((CosmeticSlots)slotIndex);
-			if ((newItem.itemCategory != CosmeticCategory.None && !CompareCategoryToSavedCosmeticSlots(newItem.itemCategory, (CosmeticSlots)slotIndex)) || (newItem.isHoldable && dropPosition == BodyDockPositions.DropPositions.None))
+			CosmeticItem parentItem = items[slotIndex];
+			string itemNameFromDisplayName2 = instance.GetItemNameFromDisplayName(parentItem.displayName);
+			BodyDockPositions.DropPositions dropPositions = CosmeticSlotToDropPosition((CosmeticSlots)slotIndex);
+			if ((parentItem.itemCategory != CosmeticCategory.None && !CompareCategoryToSavedCosmeticSlots(parentItem.itemCategory, (CosmeticSlots)slotIndex)) || (parentItem.isHoldable && dropPositions == BodyDockPositions.DropPositions.None))
 			{
 				return;
 			}
-			if (itemNameFromDisplayName == newItemName)
+			if (itemNameFromDisplayName == itemNameFromDisplayName2)
 			{
-				if (newItem.isNullItem)
+				if (parentItem.isNullItem)
 				{
 					return;
 				}
-				CosmeticItemInstance cosmeticItemInstance = await cosmeticsObjectRegistry.AwaitCosmetic(newItem.displayName);
-				if ((activationVersion >= 0 && rig._cosmeticsActivationVersion != activationVersion) || cosmeticItemInstance == null)
+				CosmeticItemInstance cosmeticItemInstance = cosmeticsObjectRegistry.Cosmetic(parentItem.displayName);
+				if (cosmeticItemInstance == null)
 				{
 					return;
 				}
-				if (!rig.IsItemAllowed(newItemName))
+				if (!rig.IsItemAllowed(itemNameFromDisplayName2))
 				{
 					cosmeticItemInstance.DisableItem((CosmeticSlots)slotIndex);
 					return;
 				}
-				if (newItem.isHoldable)
+				if (parentItem.isHoldable)
 				{
-					bDock.TransferrableItemEnableAtPosition(newItem.displayName, dropPosition);
+					bDock.TransferrableItemEnableAtPosition(parentItem.displayName, dropPositions);
 				}
 				cosmeticItemInstance.EnableItem((CosmeticSlots)slotIndex, rig);
+				PopulateCollectionDisplay(cosmeticItemInstance, parentItem, rig);
 				return;
 			}
 			if (!cosmeticItem.isNullItem)
 			{
 				if (cosmeticItem.isHoldable)
 				{
-					bDock.TransferrableItemDisableAtPosition(dropPosition);
+					bDock.TransferrableItemDisableAtPosition(dropPositions);
 				}
-				CosmeticItemInstance cosmeticItemInstance2 = await cosmeticsObjectRegistry.AwaitCosmetic(cosmeticItem.displayName);
-				if (activationVersion >= 0 && rig._cosmeticsActivationVersion != activationVersion)
-				{
-					return;
-				}
-				cosmeticItemInstance2?.DisableItem((CosmeticSlots)slotIndex);
+				cosmeticsObjectRegistry.Cosmetic(cosmeticItem.displayName)?.DisableItem((CosmeticSlots)slotIndex);
 			}
-			if (newItem.isNullItem)
+			if (parentItem.isNullItem)
 			{
 				return;
 			}
-			CosmeticItemInstance cosmeticItemInstance3 = await cosmeticsObjectRegistry.AwaitCosmetic(newItem.displayName);
-			if ((activationVersion < 0 || rig._cosmeticsActivationVersion == activationVersion) && rig.IsItemAllowed(newItemName) && cosmeticItemInstance3 != null)
+			if (parentItem.isHoldable)
 			{
-				if (newItem.isHoldable)
-				{
-					bDock.TransferrableItemEnableAtPosition(newItem.displayName, dropPosition);
-				}
-				cosmeticItemInstance3.EnableItem((CosmeticSlots)slotIndex, rig);
+				bDock.TransferrableItemEnableAtPosition(parentItem.displayName, dropPositions);
+			}
+			CosmeticItemInstance cosmeticItemInstance2 = cosmeticsObjectRegistry.Cosmetic(parentItem.displayName);
+			if (rig.IsItemAllowed(itemNameFromDisplayName2) && cosmeticItemInstance2 != null)
+			{
+				cosmeticItemInstance2.EnableItem((CosmeticSlots)slotIndex, rig);
 				if (rig.isLocal && (slotIndex == 0 || slotIndex == 2))
 				{
 					PlayerPrefFlags.TouchIf(PlayerPrefFlags.Flag.SHOW_1P_COSMETICS, value: false);
 				}
+				PopulateCollectionDisplay(cosmeticItemInstance2, parentItem, rig);
 			}
 		}
 
-		public async Awaitable ActivateCosmetics(CosmeticSet prevSet, VRRig rig, BodyDockPositions bDock, CosmeticItemRegistry cosmeticsObjectRegistry, int activationVersion = -1)
+		public void ActivateCosmetics(CosmeticSet prevSet, VRRig rig, BodyDockPositions bDock, CosmeticItemRegistry cosmeticsObjectRegistry)
 		{
-			int numSlots = 16;
-			int slotIndex = 0;
-			while (slotIndex < numSlots)
+			int num = 16;
+			for (int i = 0; i < num; i++)
 			{
-				if (activationVersion >= 0 && rig._cosmeticsActivationVersion != activationVersion)
-				{
-					return;
-				}
-				await ActivateCosmetic(prevSet, rig, slotIndex, cosmeticsObjectRegistry, bDock, activationVersion);
-				int num = slotIndex + 1;
-				slotIndex = num;
+				ActivateCosmetic(prevSet, rig, i, cosmeticsObjectRegistry, bDock);
 			}
 			OnSetActivated(prevSet, this, rig.creator);
 		}
 
-		public async Awaitable DeactivateAllCosmetcs(BodyDockPositions bDock, CosmeticItem nullItem, CosmeticItemRegistry cosmeticObjectRegistry)
+		private static void PopulateCollectionDisplay(CosmeticItemInstance instance, CosmeticItem parentItem, VRRig rig)
+		{
+			if (parentItem.collectionSlotCount <= 0 || !hasInstance)
+			{
+				return;
+			}
+			GameObject gameObject = FindFirstPickupableVariantRoot(instance.objects) ?? FindFirstPickupableVariantRoot(instance.holdableObjects);
+			if (gameObject == null)
+			{
+				CosmeticCollectionDisplay.GetAllForParent(rig, parentItem.itemName, scratchDisplayList);
+				for (int i = 0; i < scratchDisplayList.Count; i++)
+				{
+					CosmeticCollectionDisplay cosmeticCollectionDisplay = scratchDisplayList[i];
+					if (cosmeticCollectionDisplay != null && cosmeticCollectionDisplay.gameObject != null && cosmeticCollectionDisplay.GetComponent<PickupableVariant>() != null)
+					{
+						gameObject = cosmeticCollectionDisplay.gameObject;
+						break;
+					}
+				}
+			}
+			if (gameObject == null)
+			{
+				gameObject = FindFirstNonNull(instance.objects) ?? FindFirstNonNull(instance.holdableObjects);
+			}
+			if (gameObject != null)
+			{
+				CosmeticCollectionDisplay.DestroyAllForParentExcept(rig, parentItem.itemName, gameObject);
+				RemoveStaleDisplaysForParent(rig, parentItem.itemName, gameObject);
+				PopulateCollectionDisplayOnRoot(gameObject, parentItem, rig);
+			}
+		}
+
+		private static void RemoveStaleDisplaysForParent(VRRig rig, string parentPlayFabID, GameObject host)
+		{
+			if (rig == null || string.IsNullOrEmpty(parentPlayFabID))
+			{
+				return;
+			}
+			CosmeticCollectionDisplay[] componentsInChildren = rig.GetComponentsInChildren<CosmeticCollectionDisplay>(includeInactive: true);
+			foreach (CosmeticCollectionDisplay cosmeticCollectionDisplay in componentsInChildren)
+			{
+				if (!(cosmeticCollectionDisplay == null) && !(cosmeticCollectionDisplay.gameObject == host) && !(cosmeticCollectionDisplay.ParentPlayFabID != parentPlayFabID))
+				{
+					UnityEngine.Object.Destroy(cosmeticCollectionDisplay);
+				}
+			}
+		}
+
+		private static GameObject FindFirstPickupableVariantRoot(IList<GameObject> roots)
+		{
+			if (roots == null)
+			{
+				return null;
+			}
+			for (int i = 0; i < roots.Count; i++)
+			{
+				GameObject gameObject = roots[i];
+				if (!(gameObject == null))
+				{
+					PickupableVariant componentInChildren = gameObject.GetComponentInChildren<PickupableVariant>(includeInactive: true);
+					if (componentInChildren != null)
+					{
+						return componentInChildren.gameObject;
+					}
+				}
+			}
+			return null;
+		}
+
+		private static GameObject FindFirstNonNull(IList<GameObject> roots)
+		{
+			if (roots == null)
+			{
+				return null;
+			}
+			for (int i = 0; i < roots.Count; i++)
+			{
+				if (roots[i] != null)
+				{
+					return roots[i];
+				}
+			}
+			return null;
+		}
+
+		public void DeactivateAllCosmetcs(BodyDockPositions bDock, CosmeticItem nullItem, CosmeticItemRegistry cosmeticObjectRegistry)
 		{
 			bDock.DisableAllTransferableItems();
-			int numSlots = 16;
-			int cosmeticIdx = 0;
-			while (cosmeticIdx < numSlots)
+			int num = 16;
+			for (int i = 0; i < num; i++)
 			{
-				CosmeticItem cosmeticItem = items[cosmeticIdx];
+				CosmeticItem cosmeticItem = items[i];
 				if (!cosmeticItem.isNullItem)
 				{
-					CosmeticSlots cosmeticSlot = (CosmeticSlots)cosmeticIdx;
-					(await cosmeticObjectRegistry.AwaitCosmetic(cosmeticItem.displayName))?.DisableItem(cosmeticSlot);
-					items[cosmeticIdx] = nullItem;
+					CosmeticSlots cosmeticSlot = (CosmeticSlots)i;
+					cosmeticObjectRegistry.Cosmetic(cosmeticItem.displayName)?.DisableItem(cosmeticSlot);
+					items[i] = nullItem;
 				}
-				int num = cosmeticIdx + 1;
-				cosmeticIdx = num;
 			}
 		}
 
@@ -472,6 +549,11 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 				{
 					Debug.Log("LoadFromPlayerPreferences: Could not find item stored in player prefs: \"" + text + "\"");
 					items[i] = controller.nullItem;
+				}
+				else if (item.itemName == "Slingshot")
+				{
+					items[i] = controller.nullItem;
+					PlayerPrefs.SetString(SlotPlayerPreferenceName(slot), "NOTHING");
 				}
 				else if (!CompareCategoryToSavedCosmeticSlots(item.itemCategory, slot))
 				{
@@ -576,7 +658,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 			int num3 = 16;
 			for (int i = 0; i < num3; i++)
 			{
-				if (!items[i].isNullItem && (items[i].itemName.Length == 6 || items[i].itemName == "Slingshot"))
+				if (!items[i].isNullItem && !string.IsNullOrEmpty(items[i].itemName) && (items[i].itemName.Length == 6 || items[i].itemName == "Slingshot"))
 				{
 					num |= 1 << i;
 					num2++;
@@ -671,6 +753,14 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 	}
 
 	[Serializable]
+	public struct CollectionState
+	{
+		public int activeIndex;
+
+		public int visibleMask;
+	}
+
+	[Serializable]
 	public struct CosmeticItem
 	{
 		[Tooltip("Should match the spreadsheet item name.")]
@@ -726,6 +816,80 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 
 		[HideInInspector]
 		public bool isNullItem;
+
+		[NonSerialized]
+		public CosmeticCollectionParentLink[] collectionParentLinks;
+
+		[NonSerialized]
+		public int collectionSlotCount;
+
+		[NonSerialized]
+		public bool collectionIsCycling;
+
+		[NonSerialized]
+		public bool collectionUsesIndexTargeting;
+
+		[NonSerialized]
+		public string appliedCosmeticPlayFabID;
+
+		public bool IsCollectable
+		{
+			get
+			{
+				CosmeticCollectionParentLink[] array = collectionParentLinks;
+				if (array != null)
+				{
+					return array.Length > 0;
+				}
+				return false;
+			}
+		}
+
+		public bool IsCollectableOf(string parentPlayFabID)
+		{
+			if (collectionParentLinks == null)
+			{
+				return false;
+			}
+			for (int i = 0; i < collectionParentLinks.Length; i++)
+			{
+				if (collectionParentLinks[i].parentPlayFabID == parentPlayFabID)
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+
+		public int GetTargetSlotIndexForParent(string parentPlayFabID)
+		{
+			if (collectionParentLinks != null)
+			{
+				for (int i = 0; i < collectionParentLinks.Length; i++)
+				{
+					if (collectionParentLinks[i].parentPlayFabID == parentPlayFabID)
+					{
+						return collectionParentLinks[i].targetSlotIndex;
+					}
+				}
+			}
+			return -1;
+		}
+
+		public int GetSeriesIndexForParent(string parentPlayFabID)
+		{
+			if (collectionParentLinks != null)
+			{
+				for (int i = 0; i < collectionParentLinks.Length; i++)
+				{
+					if (collectionParentLinks[i].parentPlayFabID == parentPlayFabID)
+					{
+						return collectionParentLinks[i].seriesIndex;
+					}
+				}
+			}
+			return -1;
+		}
 	}
 
 	[Serializable]
@@ -804,6 +968,8 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 	public Action V2_OnGetCosmeticsPlayFabCatalogData_PostSuccess;
 
 	public Action OnGetCurrency;
+
+	private string purchaseLocation;
 
 	[FormerlySerializedAs("allCosmetics")]
 	[SerializeField]
@@ -907,9 +1073,26 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 	[NonSerialized]
 	public CosmeticSet activeMergedSet = new CosmeticSet();
 
+	[NonSerialized]
+	public CosmeticItem tryOnCollectableItem;
+
 	public string concatStringCosmeticsAllowed = "";
 
 	public Action OnCosmeticsUpdated;
+
+	[NonSerialized]
+	public Dictionary<string, List<CosmeticItem>> collectablesByParentID = new Dictionary<string, List<CosmeticItem>>();
+
+	[NonSerialized]
+	public Dictionary<(VRRig rig, string parentID), CollectionState> localCycleStates = new Dictionary<(VRRig, string), CollectionState>();
+
+	private static readonly List<CosmeticCollectionDisplay> scratchDisplayList = new List<CosmeticCollectionDisplay>();
+
+	private static int[] cycleStatesArray = Array.Empty<int>();
+
+	private static readonly List<CosmeticItem> scratchCanonicalCollectables = new List<CosmeticItem>();
+
+	private static readonly List<CosmeticItem> scratchCanonicalIndexList = new List<CosmeticItem>();
 
 	public int currencyBalance;
 
@@ -999,6 +1182,8 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 
 	private static int selectedOutfit = 0;
 
+	private static int maxOutfits = -1;
+
 	private static readonly Vector3 defaultColor = new Vector3(0f, 0f, 0f);
 
 	public Action OnOutfitsUpdated;
@@ -1017,6 +1202,18 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 
 	[field: OnEnterPlay_Set(false)]
 	public static bool hasInstance { get; private set; }
+
+	public string PurchaseLocation
+	{
+		get
+		{
+			return purchaseLocation;
+		}
+		set
+		{
+			purchaseLocation = value;
+		}
+	}
 
 	public List<CosmeticItem> allCosmetics
 	{
@@ -1105,7 +1302,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 			CosmeticInfoV2 value = v2_allCosmetics[j];
 			string playFabID = value.playFabID;
 			_allCosmeticsDictV2[playFabID] = value;
-			CosmeticItem item = new CosmeticItem
+			CosmeticItem cosmeticItem = new CosmeticItem
 			{
 				itemName = playFabID,
 				itemCategory = value.category,
@@ -1114,9 +1311,38 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 				itemPicture = value.icon,
 				overrideDisplayName = value.displayName,
 				bothHandsHoldable = value.usesBothHandSlots,
-				isNullItem = false
+				isNullItem = false,
+				collectionParentLinks = value.collectionParentLinks
 			};
+			CosmeticCollectionSlotDefinition[] collectionSlots = value.collectionSlots;
+			cosmeticItem.collectionSlotCount = ((collectionSlots != null) ? collectionSlots.Length : 0);
+			cosmeticItem.collectionIsCycling = value.collectionIsCycling;
+			cosmeticItem.collectionUsesIndexTargeting = value.collectionUsesIndexTargeting;
+			cosmeticItem.appliedCosmeticPlayFabID = value.appliedCosmeticPlayFabID ?? string.Empty;
+			CosmeticItem item = cosmeticItem;
 			_allCosmetics.Add(item);
+		}
+		collectablesByParentID = new Dictionary<string, List<CosmeticItem>>();
+		for (int k = 0; k < _allCosmetics.Count; k++)
+		{
+			CosmeticCollectionParentLink[] collectionParentLinks = _allCosmetics[k].collectionParentLinks;
+			if (collectionParentLinks == null)
+			{
+				continue;
+			}
+			for (int l = 0; l < collectionParentLinks.Length; l++)
+			{
+				string parentPlayFabID = collectionParentLinks[l].parentPlayFabID;
+				if (!string.IsNullOrEmpty(parentPlayFabID))
+				{
+					if (!collectablesByParentID.TryGetValue(parentPlayFabID, out var value2))
+					{
+						value2 = new List<CosmeticItem>();
+						collectablesByParentID[parentPlayFabID] = value2;
+					}
+					value2.Add(_allCosmetics[k]);
+				}
+			}
 		}
 		v2_allCosmeticsInfoAssetRef_isLoaded = true;
 		V2_allCosmeticsInfoAssetRef_OnPostLoad?.Invoke();
@@ -1148,6 +1374,17 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		}
 	}
 
+	private string ConsumePurchaseLocation()
+	{
+		if (purchaseLocation.IsNullOrEmpty())
+		{
+			return GorillaTagger.Instance.offlineVRRig.zoneEntity.currentZone.ToString();
+		}
+		string result = purchaseLocation;
+		purchaseLocation = null;
+		return result;
+	}
+
 	public void AddWardrobeInstance(WardrobeInstance instance)
 	{
 		wardrobes.Add(instance);
@@ -1157,6 +1394,176 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 	public void RemoveWardrobeInstance(WardrobeInstance instance)
 	{
 		wardrobes.Remove(instance);
+	}
+
+	public bool IsOwnedByPlayFabID(string playFabID)
+	{
+		return unlockedCosmetics.FindIndex((CosmeticItem x) => x.itemName == playFabID) >= 0;
+	}
+
+	public int GetOwnedCollectableCount(string parentPlayFabID)
+	{
+		int num = 0;
+		for (int i = 0; i < unlockedCosmetics.Count; i++)
+		{
+			if (unlockedCosmetics[i].IsCollectableOf(parentPlayFabID))
+			{
+				num++;
+			}
+		}
+		return num;
+	}
+
+	private int GetRemainingCollectableSlots(string parentPlayFabID)
+	{
+		if (!allCosmeticsDict.TryGetValue(parentPlayFabID, out var value))
+		{
+			return 0;
+		}
+		List<CosmeticItem> value2;
+		int num = ((!value.collectionIsCycling) ? value.collectionSlotCount : (collectablesByParentID.TryGetValue(parentPlayFabID, out value2) ? value2.Count : 0)) - GetOwnedCollectableCount(parentPlayFabID);
+		if (num <= 0)
+		{
+			return 0;
+		}
+		return num;
+	}
+
+	public bool CanPurchaseCollectable(string collectablePlayFabID)
+	{
+		if (!allCosmeticsDict.TryGetValue(collectablePlayFabID, out var value))
+		{
+			return false;
+		}
+		if (!value.IsCollectable)
+		{
+			return true;
+		}
+		CosmeticCollectionParentLink[] collectionParentLinks = value.collectionParentLinks;
+		for (int i = 0; i < collectionParentLinks.Length; i++)
+		{
+			string parentPlayFabID = collectionParentLinks[i].parentPlayFabID;
+			if (!string.IsNullOrEmpty(parentPlayFabID) && IsOwnedByPlayFabID(parentPlayFabID) && GetRemainingCollectableSlots(parentPlayFabID) > 0)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public void BuildCanonicalCollectableOrder(string parentPlayFabID, List<CosmeticItem> result)
+	{
+		result.Clear();
+		if (string.IsNullOrEmpty(parentPlayFabID) || !collectablesByParentID.TryGetValue(parentPlayFabID, out var value))
+		{
+			return;
+		}
+		result.AddRange(value);
+		CosmeticInfoV2 cosmeticInfo;
+		bool seriesOrder = TryGetCosmeticInfoV2(parentPlayFabID, out cosmeticInfo) && cosmeticInfo.collectionIsCycling && cosmeticInfo.collectionUsesSeriesOrder;
+		result.Sort(delegate(CosmeticItem a, CosmeticItem b)
+		{
+			if (seriesOrder)
+			{
+				int num = a.GetSeriesIndexForParent(parentPlayFabID);
+				int num2 = b.GetSeriesIndexForParent(parentPlayFabID);
+				if (num < 0)
+				{
+					num = int.MaxValue;
+				}
+				if (num2 < 0)
+				{
+					num2 = int.MaxValue;
+				}
+				if (num != num2)
+				{
+					return num.CompareTo(num2);
+				}
+			}
+			return string.CompareOrdinal(a.itemName, b.itemName);
+		});
+	}
+
+	public int GetCanonicalCollectableIndex(string parentPlayFabID, string itemName)
+	{
+		BuildCanonicalCollectableOrder(parentPlayFabID, scratchCanonicalIndexList);
+		for (int i = 0; i < scratchCanonicalIndexList.Count; i++)
+		{
+			if (scratchCanonicalIndexList[i].itemName == itemName)
+			{
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	public static void PopulateCollectionDisplayOnRoot(GameObject rootObj, CosmeticItem parentItem, VRRig rig)
+	{
+		if (rootObj == null || parentItem.collectionSlotCount <= 0 || !hasInstance || !instance.TryGetCosmeticInfoV2(parentItem.itemName, out var cosmeticInfo) || cosmeticInfo.collectionSlots == null || cosmeticInfo.collectionSlots.Length == 0)
+		{
+			return;
+		}
+		if (!rootObj.TryGetComponent<CosmeticCollectionDisplay>(out var component))
+		{
+			component = rootObj.AddComponent<CosmeticCollectionDisplay>();
+		}
+		List<CosmeticItem> list = new List<CosmeticItem>();
+		bool flag = false;
+		if (rig.isLocal)
+		{
+			instance.BuildCanonicalCollectableOrder(parentItem.itemName, scratchCanonicalCollectables);
+			CosmeticItem cosmeticItem = instance.tryOnCollectableItem;
+			flag = !cosmeticItem.isNullItem && cosmeticItem.IsCollectableOf(parentItem.itemName) && VRRig.LocalRig != null && VRRig.LocalRig.inTryOnRoom;
+			for (int i = 0; i < scratchCanonicalCollectables.Count; i++)
+			{
+				CosmeticItem item = scratchCanonicalCollectables[i];
+				bool num = instance.IsOwnedByPlayFabID(item.itemName);
+				bool flag2 = flag && item.itemName == cosmeticItem.itemName;
+				if (num || flag2)
+				{
+					list.Add(item);
+				}
+			}
+			if (component.ContentMatches(list))
+			{
+				CosmeticCollectionDisplay.Register(rig, parentItem.itemName, component, rig.isLocal);
+				return;
+			}
+		}
+		else
+		{
+			instance.BuildCanonicalCollectableOrder(parentItem.itemName, list);
+			if (component.ContentMatches(list))
+			{
+				CosmeticCollectionDisplay.Register(rig, parentItem.itemName, component, rig.isLocal);
+				if (rig.remoteCycleStates.TryGetValue(parentItem.itemName, out var value))
+				{
+					component.SetVisibleMask(value.visibleMask);
+					component.SetActiveIndex(value.activeIndex);
+				}
+				return;
+			}
+		}
+		component.Populate(list, cosmeticInfo, rootObj.transform);
+		if (flag)
+		{
+			component.PersistLocalState();
+		}
+		CosmeticCollectionDisplay.Register(rig, parentItem.itemName, component, rig.isLocal);
+		CollectionState value3;
+		if (rig.isLocal)
+		{
+			if (instance.localCycleStates.TryGetValue((rig, parentItem.itemName), out var value2))
+			{
+				component.SetVisibleMask(value2.visibleMask);
+				component.SetActiveIndex(value2.activeIndex);
+			}
+		}
+		else if (rig.remoteCycleStates.TryGetValue(parentItem.itemName, out value3))
+		{
+			component.SetVisibleMask(value3.visibleMask);
+			component.SetActiveIndex(value3.activeIndex);
+		}
 	}
 
 	public void Awake()
@@ -1188,6 +1595,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 			nullItem.isNullItem = true;
 			_allCosmeticsDict[nullItem.itemName] = nullItem;
 			_allCosmeticsItemIDsfromDisplayNamesDict[nullItem.displayName] = nullItem.itemName;
+			tryOnCollectableItem = nullItem;
 			for (int i = 0; i < 16; i++)
 			{
 				tryOnSet.items[i] = nullItem;
@@ -1386,7 +1794,12 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		for (int i = 0; i < 16; i++)
 		{
 			CosmeticSlots slot = (CosmeticSlots)i;
-			SaveItemPreference(slot, i, currentWornSet.items[i]);
+			CosmeticItem newItem = currentWornSet.items[i];
+			if (newItem.itemName == "Slingshot")
+			{
+				newItem = nullItem;
+			}
+			SaveItemPreference(slot, i, newItem);
 		}
 	}
 
@@ -1401,13 +1814,33 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		appliedSlots.Add(slot);
 	}
 
-	private async Awaitable PrivApplyCosmeticItemToSet(CosmeticSet set, CosmeticItem newItem, bool isLeftHand, bool applyToPlayerPrefs, List<CosmeticSlots> appliedSlots)
+	public static void ClearTryOnCollectable()
+	{
+		if (hasInstance)
+		{
+			instance.tryOnCollectableItem = instance.nullItem;
+		}
+	}
+
+	private void PrivApplyCosmeticItemToSet(CosmeticSet set, CosmeticItem newItem, bool isLeftHand, bool applyToPlayerPrefs, List<CosmeticSlots> appliedSlots)
 	{
 		if (newItem.isNullItem)
 		{
 			return;
 		}
-		await VRRig.LocalRig.cosmeticsObjectRegistry.AwaitCosmetic(newItem.itemName);
+		if (newItem.itemCategory == CosmeticCategory.Collectable)
+		{
+			if (set == tryOnSet)
+			{
+				tryOnCollectableItem = newItem;
+			}
+			return;
+		}
+		if (set == tryOnSet)
+		{
+			ClearTryOnCollectable();
+		}
+		VRRig.LocalRig.cosmeticsObjectRegistry.Cosmetic(newItem.itemName);
 		if (CosmeticSet.IsHoldable(newItem))
 		{
 			BodyDockPositions.DockingResult dockingResult = GorillaTagger.Instance.offlineVRRig.GetComponent<BodyDockPositions>().ToggleWithHandedness(newItem.displayName, isLeftHand, newItem.bothHandsHoldable);
@@ -1471,17 +1904,17 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		}
 	}
 
-	public async Awaitable ApplyCosmeticItemToSet(CosmeticSet set, CosmeticItem newItem, bool isLeftHand, bool applyToPlayerPrefs)
+	public void ApplyCosmeticItemToSet(CosmeticSet set, CosmeticItem newItem, bool isLeftHand, bool applyToPlayerPrefs)
 	{
-		await ApplyCosmeticItemToSet(set, newItem, isLeftHand, applyToPlayerPrefs, _g_default_outAppliedSlotsList_for_applyCosmeticItemToSet);
+		ApplyCosmeticItemToSet(set, newItem, isLeftHand, applyToPlayerPrefs, _g_default_outAppliedSlotsList_for_applyCosmeticItemToSet);
 	}
 
-	public async Awaitable ApplyCosmeticItemToSet(CosmeticSet set, CosmeticItem newItem, bool isLeftHand, bool applyToPlayerPrefs, List<CosmeticSlots> outAppliedSlotsList)
+	public void ApplyCosmeticItemToSet(CosmeticSet set, CosmeticItem newItem, bool isLeftHand, bool applyToPlayerPrefs, List<CosmeticSlots> outAppliedSlotsList)
 	{
 		outAppliedSlotsList.Clear();
 		if (newItem.itemCategory == CosmeticCategory.Set)
 		{
-			bool partOfSetWorn = false;
+			bool flag = false;
 			Dictionary<CosmeticItem, bool> dictionary = new Dictionary<CosmeticItem, bool>();
 			string[] bundledItems = newItem.bundledItems;
 			foreach (string itemID in bundledItems)
@@ -1489,7 +1922,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 				CosmeticItem itemFromDict = GetItemFromDict(itemID);
 				if (AnyMatch(set, itemFromDict))
 				{
-					partOfSetWorn = true;
+					flag = true;
 					dictionary.Add(itemFromDict, value: true);
 				}
 				else
@@ -1497,28 +1930,28 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 					dictionary.Add(itemFromDict, value: false);
 				}
 			}
-			foreach (KeyValuePair<CosmeticItem, bool> item in dictionary)
 			{
-				if (partOfSetWorn)
+				foreach (KeyValuePair<CosmeticItem, bool> item in dictionary)
 				{
-					if (item.Value)
+					if (flag)
 					{
-						await PrivApplyCosmeticItemToSet(set, item.Key, isLeftHand, applyToPlayerPrefs, outAppliedSlotsList);
+						if (item.Value)
+						{
+							PrivApplyCosmeticItemToSet(set, item.Key, isLeftHand, applyToPlayerPrefs, outAppliedSlotsList);
+						}
+					}
+					else
+					{
+						PrivApplyCosmeticItemToSet(set, item.Key, isLeftHand, applyToPlayerPrefs, outAppliedSlotsList);
 					}
 				}
-				else
-				{
-					await PrivApplyCosmeticItemToSet(set, item.Key, isLeftHand, applyToPlayerPrefs, outAppliedSlotsList);
-				}
+				return;
 			}
 		}
-		else
-		{
-			await PrivApplyCosmeticItemToSet(set, newItem, isLeftHand, applyToPlayerPrefs, outAppliedSlotsList);
-		}
+		PrivApplyCosmeticItemToSet(set, newItem, isLeftHand, applyToPlayerPrefs, outAppliedSlotsList);
 	}
 
-	public async void RemoveCosmeticItemFromSet(CosmeticSet set, string itemName, bool applyToPlayerPrefs)
+	public void RemoveCosmeticItemFromSet(CosmeticSet set, string itemName, bool applyToPlayerPrefs)
 	{
 		cachedSet.CopyItems(set);
 		for (int i = 0; i < 16; i++)
@@ -1534,30 +1967,78 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		}
 		VRRig offlineVRRig = GorillaTagger.Instance.offlineVRRig;
 		BodyDockPositions component = offlineVRRig.GetComponent<BodyDockPositions>();
-		await set.ActivateCosmetics(cachedSet, offlineVRRig, component, offlineVRRig.cosmeticsObjectRegistry);
+		set.ActivateCosmetics(cachedSet, offlineVRRig, component, offlineVRRig.cosmeticsObjectRegistry);
 	}
 
-	public async void PressFittingRoomButton(FittingRoomButton pressedFittingRoomButton, bool isLeftHand)
+	private async void RepressButton(FittingRoomButton pressedButton, bool isLeftHand)
+	{
+		float timeEntered = Time.time;
+		float maxTime = 1f;
+		if (pressedButton.currentCosmeticItem.itemCategory == CosmeticCategory.Set)
+		{
+			CosmeticItem itemSet = pressedButton.currentCosmeticItem;
+			bool flag = true;
+			while (flag)
+			{
+				if (Time.time > timeEntered + maxTime)
+				{
+					return;
+				}
+				await Awaitable.EndOfFrameAsync();
+				flag = false;
+				for (int i = 0; i < itemSet.bundledItems.Length; i++)
+				{
+					if (VRRig.LocalRig.cosmeticsObjectRegistry.Cosmetic(itemSet.bundledItems[i]) == null)
+					{
+						flag = true;
+					}
+				}
+			}
+		}
+		else
+		{
+			while (VRRig.LocalRig.cosmeticsObjectRegistry.Cosmetic(pressedButton.currentCosmeticItem.itemName) == null)
+			{
+				if (Time.time > timeEntered + maxTime)
+				{
+					return;
+				}
+				await Awaitable.EndOfFrameAsync();
+			}
+		}
+		PressFittingRoomButton(pressedButton, isLeftHand);
+	}
+
+	public void PressFittingRoomButton(FittingRoomButton pressedFittingRoomButton, bool isLeftHand)
 	{
 		if (pressedFittingRoomButton.currentCosmeticItem.itemName == null || pressedFittingRoomButton.currentCosmeticItem.itemName == nullItem.itemName || pressedFittingRoomButton.currentCosmeticItem.itemName == "")
 		{
 			return;
 		}
-		CosmeticItemRegistry registry = VRRig.LocalRig.cosmeticsObjectRegistry;
-		if (pressedFittingRoomButton.currentCosmeticItem.itemCategory != CosmeticCategory.Set)
+		if (pressedFittingRoomButton.currentCosmeticItem.itemCategory == CosmeticCategory.Set)
 		{
-			await registry.AwaitCosmetic(pressedFittingRoomButton.currentCosmeticItem.itemName);
-		}
-		else
-		{
-			CosmeticItem itemSet = pressedFittingRoomButton.currentCosmeticItem;
-			for (int i = 0; i < itemSet.bundledItems.Length; i++)
+			CosmeticItem currentCosmeticItem = pressedFittingRoomButton.currentCosmeticItem;
+			bool flag = false;
+			for (int i = 0; i < currentCosmeticItem.bundledItems.Length; i++)
 			{
-				await registry.AwaitCosmetic(itemSet.bundledItems[i]);
+				if (VRRig.LocalRig.cosmeticsObjectRegistry.Cosmetic(currentCosmeticItem.bundledItems[i]) == null)
+				{
+					flag = true;
+				}
+			}
+			if (flag)
+			{
+				RepressButton(pressedFittingRoomButton, isLeftHand);
+				return;
 			}
 		}
+		else if (VRRig.LocalRig.cosmeticsObjectRegistry.Cosmetic(pressedFittingRoomButton.currentCosmeticItem.itemName) == null)
+		{
+			RepressButton(pressedFittingRoomButton, isLeftHand);
+			return;
+		}
 		BundleManager.instance._tryOnBundlesStand?.ClearSelectedBundle();
-		await ApplyCosmeticItemToSet(tryOnSet, pressedFittingRoomButton.currentCosmeticItem, isLeftHand, applyToPlayerPrefs: false);
+		ApplyCosmeticItemToSet(tryOnSet, pressedFittingRoomButton.currentCosmeticItem, isLeftHand, applyToPlayerPrefs: false);
 		UpdateShoppingCart();
 		UpdateWornCosmetics(sync: true);
 	}
@@ -1640,43 +2121,43 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		UpdateShoppingCart();
 	}
 
-	public async void PressWardrobeItemButton(CosmeticItem cosmeticItem, bool isLeftHand, bool isTempCosm)
+	public void PressWardrobeItemButton(CosmeticItem cosmeticItem, bool isLeftHand, bool isTempCosm)
 	{
 		if (!cosmeticItem.isNullItem)
 		{
 			CosmeticItem itemFromDict = GetItemFromDict(cosmeticItem.itemName);
-			if (!isTempCosm)
+			if (isTempCosm)
 			{
-				await PressWardrobeItemButton(itemFromDict, isLeftHand);
+				PressTemporaryWardrobeItemButton(itemFromDict, isLeftHand);
 			}
 			else
 			{
-				await PressTemporaryWardrobeItemButton(itemFromDict, isLeftHand);
+				PressWardrobeItemButton(itemFromDict, isLeftHand);
 			}
 			UpdateWornCosmetics(sync: true);
 			OnCosmeticsUpdated?.Invoke();
 		}
 	}
 
-	private async Awaitable PressWardrobeItemButton(CosmeticItem item, bool isLeftHand)
+	private void PressWardrobeItemButton(CosmeticItem item, bool isLeftHand)
 	{
-		List<CosmeticSlots> slots = CollectionPool<List<CosmeticSlots>, CosmeticSlots>.Get();
-		if (slots.Capacity < 16)
+		List<CosmeticSlots> list = CollectionPool<List<CosmeticSlots>, CosmeticSlots>.Get();
+		if (list.Capacity < 16)
 		{
-			slots.Capacity = 16;
+			list.Capacity = 16;
 		}
-		await ApplyCosmeticItemToSet(currentWornSet, item, isLeftHand, applyToPlayerPrefs: true, slots);
-		foreach (CosmeticSlots item2 in slots)
+		ApplyCosmeticItemToSet(currentWornSet, item, isLeftHand, applyToPlayerPrefs: true, list);
+		foreach (CosmeticSlots item2 in list)
 		{
 			tryOnSet.items[(int)item2] = nullItem;
 		}
-		CollectionPool<List<CosmeticSlots>, CosmeticSlots>.Release(slots);
+		CollectionPool<List<CosmeticSlots>, CosmeticSlots>.Release(list);
 		UpdateShoppingCart();
 	}
 
-	private async Awaitable PressTemporaryWardrobeItemButton(CosmeticItem item, bool isLeftHand)
+	private void PressTemporaryWardrobeItemButton(CosmeticItem item, bool isLeftHand)
 	{
-		await ApplyCosmeticItemToSet(tempUnlockedSet, item, isLeftHand, applyToPlayerPrefs: false);
+		ApplyCosmeticItemToSet(tempUnlockedSet, item, isLeftHand, applyToPlayerPrefs: false);
 	}
 
 	public void PressWardrobeFunctionButton(string function)
@@ -1813,6 +2294,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 	{
 		currentCart.Clear();
 		tryOnSet.ClearSet(nullItem);
+		ClearTryOnCollectable();
 		ClearCheckout(sendEvent);
 	}
 
@@ -1822,6 +2304,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		{
 			currentPurchaseItemStage = PurchaseItemStages.CheckoutButtonPressed;
 			tryOnSet.ClearSet(nullItem);
+			ClearTryOnCollectable();
 			if (itemToBuy.displayName == pressedCheckoutCartButton.currentCosmeticItem.displayName)
 			{
 				itemToBuy = nullItem;
@@ -1838,7 +2321,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		}
 	}
 
-	private async void RefreshItemToBuyPreview()
+	private void RefreshItemToBuyPreview()
 	{
 		if (itemToBuy.bundledItems != null && itemToBuy.bundledItems.Length != 0)
 		{
@@ -1867,7 +2350,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 				}
 			}
 		}
-		await ApplyCosmeticItemToSet(tryOnSet, itemToBuy, checkoutCartButtonPressedWithLeft, applyToPlayerPrefs: false);
+		ApplyCosmeticItemToSet(tryOnSet, itemToBuy, checkoutCartButtonPressedWithLeft, applyToPlayerPrefs: false);
 		UpdateWornCosmetics(sync: true);
 	}
 
@@ -1929,7 +2412,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		SteamPurchase();
 	}
 
-	public async void ProcessPurchaseItemState(string buttonSide, bool isLeftHand)
+	public void ProcessPurchaseItemState(string buttonSide, bool isLeftHand)
 	{
 		switch (currentPurchaseItemStage)
 		{
@@ -2001,8 +2484,9 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 				}
 			}
 			tryOnSet.ClearSet(nullItem);
+			ClearTryOnCollectable();
 			UpdateShoppingCart();
-			await ApplyCosmeticItemToSet(currentWornSet, itemFromDict, isLeftHand, applyToPlayerPrefs: true);
+			ApplyCosmeticItemToSet(currentWornSet, itemFromDict, isLeftHand, applyToPlayerPrefs: true);
 			UpdateShoppingCart();
 			UpdateWornCosmetics();
 			UpdateWardrobeModelsAndButtons();
@@ -2120,10 +2604,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 			ModifyUnlockList(unlockedFaces, num, relock);
 			break;
 		case CosmeticCategory.Chest:
-			if (allCosmetics[num].itemName != "Slingshot")
-			{
-				ModifyUnlockList(unlockedChests, num, relock);
-			}
+			ModifyUnlockList(unlockedChests, num, relock);
 			break;
 		case CosmeticCategory.Paw:
 			if (!allCosmetics[num].isThrowable)
@@ -2160,6 +2641,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 			break;
 		}
 		case CosmeticCategory.Count:
+		case CosmeticCategory.Collectable:
 			break;
 		}
 	}
@@ -2364,16 +2846,36 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		VRRig localRig = VRRig.LocalRig;
 		activeMergedSet.MergeInSets(currentWornSet, tempUnlockedSet, (string id) => PlayerCosmeticsSystem.LocalPlayerInTemporaryCosmeticSpace() || PlayerCosmeticsSystem.IsTemporaryCosmeticAllowed(localRig, id));
 		GorillaTagger.Instance.offlineVRRig.LocalUpdateCosmeticsWithTryon(activeMergedSet, tryOnSet, playfx);
-		if (sync && GorillaTagger.Instance.myVRRig != null)
+		if (!sync || !(GorillaTagger.Instance.myVRRig != null))
 		{
-			if (isHidingCosmeticsFromRemotePlayers)
+			return;
+		}
+		if (isHidingCosmeticsFromRemotePlayers)
+		{
+			GorillaTagger.Instance.myVRRig.SendRPC("RPC_HideAllCosmetics", RpcTarget.All);
+			return;
+		}
+		int[] array = activeMergedSet.ToPackedIDArray();
+		int[] array2 = tryOnSet.ToPackedIDArray();
+		GorillaTagger.Instance.myVRRig.SendRPC("RPC_UpdateCosmeticsWithTryonPacked", RpcTarget.Others, array, array2, playfx);
+		CosmeticCollectionDisplay.GetDisplaysForRig(GorillaTagger.Instance.offlineVRRig, scratchDisplayList);
+		if (scratchDisplayList.Count > 0)
+		{
+			int num = scratchDisplayList.Count * 3;
+			if (cycleStatesArray.Length != num)
 			{
-				GorillaTagger.Instance.myVRRig.SendRPC("RPC_HideAllCosmetics", RpcTarget.All);
-				return;
+				cycleStatesArray = new int[num];
 			}
-			int[] array = activeMergedSet.ToPackedIDArray();
-			int[] array2 = tryOnSet.ToPackedIDArray();
-			GorillaTagger.Instance.myVRRig.SendRPC("RPC_UpdateCosmeticsWithTryonPacked", RpcTarget.Others, array, array2, playfx);
+			for (int num2 = 0; num2 < scratchDisplayList.Count; num2++)
+			{
+				CosmeticCollectionDisplay cosmeticCollectionDisplay = scratchDisplayList[num2];
+				string parentPlayFabID = cosmeticCollectionDisplay.ParentPlayFabID;
+				cycleStatesArray[num2 * 3] = parentPlayFabID[0] - 65 + 26 * (parentPlayFabID[1] - 65 + 26 * (parentPlayFabID[2] - 65 + 26 * (parentPlayFabID[3] - 65 + 26 * (parentPlayFabID[4] - 65))));
+				CosmeticItem? activeCollectable = cosmeticCollectionDisplay.ActiveCollectable;
+				cycleStatesArray[num2 * 3 + 1] = (activeCollectable.HasValue ? GetCanonicalCollectableIndex(parentPlayFabID, activeCollectable.Value.itemName) : cosmeticCollectionDisplay.ActiveIndex);
+				cycleStatesArray[num2 * 3 + 2] = cosmeticCollectionDisplay.VisibleMask;
+			}
+			GorillaTagger.Instance.myVRRig.SendRPC("RPC_UpdateCosmeticsWithCollectablesPacked", RpcTarget.Others, cycleStatesArray);
 		}
 	}
 
@@ -2532,30 +3034,38 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		{
 			yield return new WaitForSecondsRealtime(1f);
 		}
+		while (!PlayFabClientAPI.IsClientLoggedIn())
+		{
+			yield return new WaitForSecondsRealtime(1f);
+		}
 		while (true)
 		{
 			if (GorillaComputer.instance != null && GorillaComputer.instance.startupMillis != 0L)
 			{
 				currentTime = new DateTime((GorillaComputer.instance.startupMillis + (long)(Time.realtimeSinceStartup * 1000f)) * 10000);
 				secondsUntilTomorrow = (int)(currentTime.AddDays(1.0).Date - currentTime).TotalSeconds;
-				if (lastDailyLogin == null || lastDailyLogin == "")
+				if (string.IsNullOrEmpty(lastDailyLogin))
 				{
 					GetLastDailyLogin();
 				}
-				else if (currentTime.ToString("o").Substring(0, 10) == lastDailyLogin)
+				else
 				{
-					checkedDaily = true;
-					gotMyDaily = true;
-				}
-				else if (currentTime.ToString("o").Substring(0, 10) != lastDailyLogin)
-				{
-					checkedDaily = true;
-					gotMyDaily = false;
-					StartCoroutine(GetMyDaily());
-				}
-				else if (lastDailyLogin == "FAILED")
-				{
-					GetLastDailyLogin();
+					string text = currentTime.ToString("o").Substring(0, 10);
+					if (text == lastDailyLogin)
+					{
+						checkedDaily = true;
+						gotMyDaily = true;
+					}
+					else if (text != lastDailyLogin)
+					{
+						checkedDaily = true;
+						gotMyDaily = false;
+						StartCoroutine(GetMyDaily());
+					}
+					else if (lastDailyLogin == "FAILED")
+					{
+						GetLastDailyLogin();
+					}
 				}
 				secondsToWaitToCheckDaily = (checkedDaily ? 60f : 10f);
 				UpdateCurrencyBoards();
@@ -2807,7 +3317,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 					{
 						unlockedBacks.Add(unlockedCosmetic);
 					}
-					else if (unlockedCosmetic.itemCategory == CosmeticCategory.Chest && unlockedCosmetic.itemName != "Slingshot" && !unlockedChests.Contains(unlockedCosmetic))
+					else if (unlockedCosmetic.itemCategory == CosmeticCategory.Chest && !unlockedChests.Contains(unlockedCosmetic))
 					{
 						unlockedChests.Add(unlockedCosmetic);
 					}
@@ -2944,6 +3454,10 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 
 	private void ProcessSteamCallback(MicroTxnAuthorizationResponse_t callBackResponse)
 	{
+		if (SubscriptionKiosk.ProcessingSubscriptionPurchase)
+		{
+			return;
+		}
 		Debug.Log("Steam has called back that the user has finished the payment interaction");
 		if (callBackResponse.m_bAuthorized == 0)
 		{
@@ -2975,7 +3489,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 			},
 			{
 				"Location",
-				GorillaTagger.Instance.offlineVRRig.zoneEntity.currentZone.ToString()
+				ConsumePurchaseLocation()
 			}
 		};
 		if (validatedCreatorCode != null)
@@ -3000,7 +3514,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 			},
 			{
 				"Location",
-				GorillaTagger.Instance.offlineVRRig.zoneEntity.currentZone.ToString()
+				ConsumePurchaseLocation()
 			}
 		};
 		if (validatedCreatorCode != null)
@@ -3024,11 +3538,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 				PushTerminalMessage(validatedCreatorCode.terminalId, "THIS PURCHASE SUPPORTED\n" + CreatorCodes.supportedMember.name + "!");
 			}
 			buyingBundle = false;
-			if (PhotonNetwork.InRoom)
-			{
-				object[] data = new object[0];
-				NetworkSystemRaiseEvent.RaiseEvent(9, data, NetworkSystemRaiseEvent.newWeb, reliable: true);
-			}
+			UpdateMyCosmetics();
 			StartCoroutine(CheckIfMyCosmeticsUpdated(BundlePlayfabItemName));
 		}
 		else
@@ -3163,7 +3673,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 
 	public void UpdateMyCosmetics()
 	{
-		if (GorillaServer.Instance != null)
+		if (!(GorillaServer.Instance == null))
 		{
 			GorillaServer.Instance.UpdateUserCosmetics();
 		}
@@ -3255,7 +3765,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		}
 	}
 
-	public async void ProcessExternalUnlock(string itemID, bool autoEquip, bool isLeftHand)
+	public void ProcessExternalUnlock(string itemID, bool autoEquip, bool isLeftHand)
 	{
 		UnlockItem(itemID);
 		GorillaTagger.Instance.offlineVRRig.AddCosmetic(itemID);
@@ -3266,17 +3776,17 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		}
 		CosmeticItem itemFromDict = GetItemFromDict(itemID);
 		GorillaTelemetry.PostShopEvent(GorillaTagger.Instance.offlineVRRig, GTShopEventType.external_item_claim, itemFromDict);
-		List<CosmeticSlots> slots = CollectionPool<List<CosmeticSlots>, CosmeticSlots>.Get();
-		if (slots.Capacity < 16)
+		List<CosmeticSlots> list = CollectionPool<List<CosmeticSlots>, CosmeticSlots>.Get();
+		if (list.Capacity < 16)
 		{
-			slots.Capacity = 16;
+			list.Capacity = 16;
 		}
-		await ApplyCosmeticItemToSet(currentWornSet, itemFromDict, isLeftHand, applyToPlayerPrefs: true, slots);
-		foreach (CosmeticSlots item in slots)
+		ApplyCosmeticItemToSet(currentWornSet, itemFromDict, isLeftHand, applyToPlayerPrefs: true, list);
+		foreach (CosmeticSlots item in list)
 		{
 			tryOnSet.items[(int)item] = nullItem;
 		}
-		CollectionPool<List<CosmeticSlots>, CosmeticSlots>.Release(slots);
+		CollectionPool<List<CosmeticSlots>, CosmeticSlots>.Release(list);
 		UpdateShoppingCart();
 		UpdateWornCosmetics(sync: true);
 		OnCosmeticsUpdated?.Invoke();
@@ -3304,10 +3814,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 			ModifyUnlockList(unlockedFaces, num, relock: false);
 			break;
 		case CosmeticCategory.Chest:
-			if (allCosmetics[num].itemName != "Slingshot")
-			{
-				ModifyUnlockList(unlockedChests, num, relock: false);
-			}
+			ModifyUnlockList(unlockedChests, num, relock: false);
 			break;
 		case CosmeticCategory.Paw:
 			if (!allCosmetics[num].isThrowable)
@@ -3370,10 +3877,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 			ModifyUnlockList(unlockedFaces, num, relock: true);
 			break;
 		case CosmeticCategory.Chest:
-			if (allCosmetics[num].itemName != "Slingshot")
-			{
-				ModifyUnlockList(unlockedChests, num, relock: true);
-			}
+			ModifyUnlockList(unlockedChests, num, relock: true);
 			break;
 		case CosmeticCategory.Paw:
 			if (!allCosmetics[num].isThrowable)
@@ -3456,6 +3960,42 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		return packed.Length == num + 1;
 	}
 
+	public static int[] PackCollectableItems(List<CosmeticItem> items)
+	{
+		if (items == null || items.Count == 0)
+		{
+			return Array.Empty<int>();
+		}
+		int[] array = new int[items.Count];
+		for (int i = 0; i < items.Count; i++)
+		{
+			string itemName = items[i].itemName;
+			array[i] = itemName[0] - 65 + 26 * (itemName[1] - 65 + 26 * (itemName[2] - 65 + 26 * (itemName[3] - 65 + 26 * (itemName[4] - 65))));
+		}
+		return array;
+	}
+
+	public CosmeticItem[] UnpackCollectableItems(int[] packed)
+	{
+		if (packed == null || packed.Length == 0)
+		{
+			return Array.Empty<CosmeticItem>();
+		}
+		char[] array = new char[6] { '\0', '\0', '\0', '\0', '\0', '.' };
+		CosmeticItem[] array2 = new CosmeticItem[packed.Length];
+		for (int i = 0; i < packed.Length; i++)
+		{
+			int num = packed[i];
+			array[0] = (char)(65 + num % 26);
+			array[1] = (char)(65 + num / 26 % 26);
+			array[2] = (char)(65 + num / 676 % 26);
+			array[3] = (char)(65 + num / 17576 % 26);
+			array[4] = (char)(65 + num / 456976 % 26);
+			array2[i] = GetItemFromDict(new string(array));
+		}
+		return array2;
+	}
+
 	public void SetValidatedCreatorCode(string memberCode, string groupCode, string terminalId)
 	{
 		validatedCreatorCode = new ValidatedCreatorCode();
@@ -3478,14 +4018,14 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		int num = selectedOutfit;
 		if (forward)
 		{
-			num = (num + 1) % outfitSystemConfig.maxOutfits;
+			num = (num + 1) % maxOutfits;
 		}
 		else
 		{
 			num--;
 			if (num < 0)
 			{
-				num = outfitSystemConfig.maxOutfits - 1;
+				num = maxOutfits - 1;
 			}
 		}
 		LoadSavedOutfit(num);
@@ -3493,7 +4033,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 
 	public void LoadSavedOutfit(int newOutfitIndex)
 	{
-		if (!CanScrollOutfits() || newOutfitIndex == selectedOutfit || newOutfitIndex < 0 || newOutfitIndex >= outfitSystemConfig.maxOutfits)
+		if (!CanScrollOutfits() || newOutfitIndex == selectedOutfit || newOutfitIndex < 0 || newOutfitIndex >= maxOutfits)
 		{
 			return;
 		}
@@ -3530,21 +4070,33 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		}
 	}
 
-	private void LoadSavedOutfits()
+	private async void LoadSavedOutfits()
 	{
-		if (!loadedSavedOutfits && !loadOutfitsInProgress)
+		try
 		{
-			loadOutfitsInProgress = true;
-			savedOutfits = new CosmeticSet[outfitSystemConfig.maxOutfits];
-			savedColors = new Vector3[outfitSystemConfig.maxOutfits];
-			if (!MothershipClientApiUnity.GetUserDataValue(outfitSystemConfig.mothershipKey, GetSavedOutfitsSuccess, GetSavedOutfitsFail))
+			while (!SubscriptionManager.LocalSubscriptionDataInitialized)
 			{
-				GTDev.LogError("CosmeticsController LoadSavedOutfits GetUserDataValue failed");
-				ClearOutfits();
-				loadOutfitsInProgress = false;
-				loadedSavedOutfits = true;
-				OnOutfitsUpdated?.Invoke();
+				await Task.Yield();
 			}
+			maxOutfits = (SubscriptionManager.IsLocalSubscribed() ? outfitSystemConfig.subscriberMaxOutfits : outfitSystemConfig.nonSubscriberMaxOutfits);
+			if (!loadedSavedOutfits && !loadOutfitsInProgress)
+			{
+				loadOutfitsInProgress = true;
+				savedOutfits = new CosmeticSet[maxOutfits];
+				savedColors = new Vector3[maxOutfits];
+				if (!MothershipClientApiUnity.GetUserDataValue(outfitSystemConfig.mothershipKey, GetSavedOutfitsSuccess, GetSavedOutfitsFail))
+				{
+					GTDev.LogError("CosmeticsController LoadSavedOutfits GetUserDataValue failed");
+					ClearOutfits();
+					loadOutfitsInProgress = false;
+					loadedSavedOutfits = true;
+					OnOutfitsUpdated?.Invoke();
+				}
+			}
+		}
+		catch (Exception exception)
+		{
+			Debug.LogException(exception);
 		}
 	}
 
@@ -3581,7 +4133,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 	private void GetSavedOutfitsComplete()
 	{
 		int num = PlayerPrefs.GetInt(outfitSystemConfig.selectedOutfitPref, 0);
-		if (num < 0 || num >= outfitSystemConfig.maxOutfits)
+		if (num < 0 || num >= maxOutfits)
 		{
 			num = 0;
 		}
@@ -3717,7 +4269,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		try
 		{
 			string[] array = response.Split(outfitSystemConfig.outfitSeparator);
-			for (int i = 0; i < outfitSystemConfig.maxOutfits; i++)
+			for (int i = 0; i < maxOutfits; i++)
 			{
 				savedOutfits[i] = new CosmeticSet();
 				if (i >= array.Length)

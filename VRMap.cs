@@ -1,4 +1,5 @@
 using System;
+using GorillaExtensions;
 using UnityEngine;
 using UnityEngine.XR;
 
@@ -72,8 +73,14 @@ public class VRMap
 			}
 			if (hasInputDevice && myInputDevice.TryGetFeatureValue(CommonUsages.deviceRotation, out var value) && myInputDevice.TryGetFeatureValue(CommonUsages.devicePosition, out var value2))
 			{
-				rigTarget.SetPositionAndRotation(value2 + rotation * trackingPositionOffset * ratio + playerOffsetTransform.position, value * Quaternion.Euler(trackingRotationOffset));
-				rigTarget.RotateAround(playerOffsetTransform.position, Vector3.up, playerOffsetTransform.eulerAngles.y);
+				Quaternion quaternion = Quaternion.identity;
+				Transform parent = playerOffsetTransform.parent;
+				if (parent.IsNotNull())
+				{
+					quaternion = parent.rotation;
+				}
+				rigTarget.SetPositionAndRotation(value2 + rotation * trackingPositionOffset * ratio + playerOffsetTransform.position, quaternion * value * Quaternion.Euler(trackingRotationOffset));
+				rigTarget.RotateAround(playerOffsetTransform.position, playerOffsetTransform.up, playerOffsetTransform.localEulerAngles.y);
 			}
 		}
 		if (handholdOverrideTarget != null)

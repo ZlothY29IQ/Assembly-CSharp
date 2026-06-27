@@ -42,21 +42,6 @@ public abstract class NetworkHoldableObject : NetworkComponent, IHoldableObject
 	{
 	}
 
-	GameObject IHoldableObject.get_gameObject()
-	{
-		return base.gameObject;
-	}
-
-	string IHoldableObject.get_name()
-	{
-		return base.name;
-	}
-
-	void IHoldableObject.set_name(string value)
-	{
-		base.name = value;
-	}
-
 	[WeaverGenerated]
 	public override void CopyBackingFieldsToState(bool P_0)
 	{

@@ -108,9 +108,4 @@ public class NoncontrollableBroomstick : MonoBehaviour, IGorillaGrabable
 	{
 		return momentaryGrabOnly;
 	}
-
-	string IGorillaGrabable.get_name()
-	{
-		return base.name;
-	}
 }

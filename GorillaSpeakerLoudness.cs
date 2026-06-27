@@ -7,7 +7,7 @@ using Photon.Voice.PUN;
 using Photon.Voice.Unity;
 using UnityEngine;
 
-public class GorillaSpeakerLoudness : MonoBehaviour, IGorillaSliceableSimple, IDynamicFloat
+public class GorillaSpeakerLoudness : MonoBehaviour, IGorillaSliceableSimple, IDynamicFloat, ISpeakerLoudness
 {
 	private bool isSpeaking;
 
@@ -146,7 +146,7 @@ public class GorillaSpeakerLoudness : MonoBehaviour, IGorillaSliceableSimple, ID
 		{
 			offlineMic = Microphone.Start(UnityMicrophone.devices[0], loop: true, 1, 16000);
 		}
-		if ((rig.remoteUseReplacementVoice || rig.localUseReplacementVoice || GorillaComputer.instance.voiceChatOn == "FALSE") && rig.SpeakingLoudness > 0f && !rigContainer.ForceMute && !rigContainer.Muted)
+		if ((rig.remoteUseReplacementVoice || rig.localUseReplacementVoice || GorillaComputer.instance.voiceChatOn == "FALSE") && rig.SpeakingLoudness > 0f && !rigContainer.IsMutedFor(~RigContainer.MuteReason.Auto))
 		{
 			isSpeaking = true;
 			loudness = rig.SpeakingLoudness;

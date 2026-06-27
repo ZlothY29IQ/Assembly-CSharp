@@ -65,6 +65,7 @@ public class LckTabletSizeManager : MonoBehaviour
 				SetCustomNearClip(_firstPersonCamera);
 				break;
 			case CameraMode.ThirdPerson:
+			case CameraMode.Headset:
 			case CameraMode.Drone:
 				break;
 			}
@@ -112,10 +113,20 @@ public class LckTabletSizeManager : MonoBehaviour
 
 	private void SetCameraOnNeck()
 	{
-		GameObject gameObject = Camera.main.transform.Find("LCKBodyCameraSpawner(Clone)").gameObject;
-		if (gameObject != null)
+		GTPlayer instance = GTPlayer.Instance;
+		if (instance == null)
 		{
-			gameObject.GetComponent<LckBodyCameraSpawner>().ManuallySetCameraOnNeck();
+			Debug.LogError("Unable to find playerInstance!");
+			return;
+		}
+		LckBodyCameraSpawner componentInChildren = instance.GetComponentInChildren<LckBodyCameraSpawner>(includeInactive: true);
+		if (componentInChildren == null)
+		{
+			Debug.LogError("Unable to find bodyCameraSpawner!");
+		}
+		else
+		{
+			componentInChildren.ManuallySetCameraOnNeck();
 		}
 	}
 

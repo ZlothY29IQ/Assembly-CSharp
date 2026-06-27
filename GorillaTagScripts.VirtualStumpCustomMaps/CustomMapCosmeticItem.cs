@@ -1,6 +1,6 @@
 using System;
-using GorillaNetworking.Store;
 using GT_CustomMapSupportRuntime;
+using GorillaNetworking.Store;
 
 namespace GorillaTagScripts.VirtualStumpCustomMaps;
 

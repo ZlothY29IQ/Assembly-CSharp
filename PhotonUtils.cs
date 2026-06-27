@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using ExitGames.Client.Photon;
+using Unity.Mathematics;
 using UnityEngine;
+using Voxels;
 
 public static class PhotonUtils
 {
@@ -18,12 +20,23 @@ public static class PhotonUtils
 
 	public static class CustomTypes
 	{
+		private static StaticArrayBag<byte> _arrayBag = new StaticArrayBag<byte>();
+
 		private const short LEN_C32 = 4;
+
+		private const int SizeVox = 2;
+
+		private static readonly byte[] memVox = new byte[2];
 
 		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
 		private static void InitOnLoad()
 		{
 			PhotonPeer.RegisterType(typeof(Color32), 67, SerializeColor32, DeserializeColor32);
+			PhotonPeer.RegisterType(typeof(UnityEngine.BoundsInt), 73, SerializeBoundsInt, DeserializeBoundsInt);
+			PhotonPeer.RegisterType(typeof(int3), 74, SerializeInt3, DeserializeInt3);
+			PhotonPeer.RegisterType(typeof(Voxel), 88, SerializeVoxel, DeserializeVoxel);
+			PhotonPeer.RegisterType(typeof(VoxelAction), 89, SerializeVoxelAction, DeserializeVoxelAction);
+			PhotonPeer.RegisterType(typeof(VoxelOperation), 90, SerializeVoxelOperation, DeserializeVoxelOperation);
 		}
 
 		public static byte[] SerializeColor32(object value)
@@ -36,22 +49,85 @@ public static class PhotonUtils
 			return CastToStruct<Color32>(data);
 		}
 
+		public static byte[] SerializeBoundsInt(object value)
+		{
+			return CastToBytes((UnityEngine.BoundsInt)value);
+		}
+
+		public static object DeserializeBoundsInt(byte[] data)
+		{
+			return CastToStruct<UnityEngine.BoundsInt>(data);
+		}
+
+		public static byte[] SerializeInt3(object value)
+		{
+			return CastToBytes((int3)value);
+		}
+
+		public static object DeserializeInt3(byte[] data)
+		{
+			return CastToStruct<int3>(data);
+		}
+
+		public static byte[] SerializeVoxelAction(object value)
+		{
+			return CastToBytes((VoxelAction)value);
+		}
+
+		public static object DeserializeVoxelAction(byte[] data)
+		{
+			return CastToStruct<VoxelAction>(data);
+		}
+
+		public static byte[] SerializeVoxelOperation(object value)
+		{
+			return CastToBytes((VoxelOperation)value);
+		}
+
+		public static object DeserializeVoxelOperation(byte[] data)
+		{
+			return CastToStruct<VoxelOperation>(data);
+		}
+
+		private static short SerializeVoxel(StreamBuffer stream, object value)
+		{
+			Voxel voxel = (Voxel)value;
+			lock (memVox)
+			{
+				byte[] array = memVox;
+				array[0] = voxel.Material;
+				array[1] = voxel.Density;
+				stream.Write(array, 0, 2);
+			}
+			return 2;
+		}
+
+		private static object DeserializeVoxel(StreamBuffer stream, short length)
+		{
+			Voxel voxel = default(Voxel);
+			if (length == 2)
+			{
+				return voxel;
+			}
+			lock (memVox)
+			{
+				stream.Read(memVox, 0, 2);
+				voxel.Material = memVox[0];
+				voxel.Density = memVox[1];
+			}
+			return voxel;
+		}
+
 		private static T CastToStruct<T>(byte[] bytes) where T : struct
 		{
-			GCHandle gCHandle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
-			T result = Marshal.PtrToStructure<T>(gCHandle.AddrOfPinnedObject());
-			gCHandle.Free();
-			return result;
+			return MemoryMarshal.Read<T>(bytes);
 		}
 
 		private static byte[] CastToBytes<T>(T data) where T : struct
 		{
-			byte[] array = new byte[Marshal.SizeOf<T>()];
-			GCHandle gCHandle = GCHandle.Alloc(array, GCHandleType.Pinned);
-			IntPtr ptr = gCHandle.AddrOfPinnedObject();
-			Marshal.StructureToPtr(data, ptr, fDeleteOld: true);
-			gCHandle.Free();
-			return array;
+			byte[] staticArray = _arrayBag.GetStaticArray(Marshal.SizeOf<T>());
+			MemoryMarshal.Write(staticArray, ref data);
+			return staticArray;
 		}
 	}
 

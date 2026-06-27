@@ -6,6 +6,7 @@ using UnityEngine.Events;
 
 namespace GorillaTag.Cosmetics;
 
+[Obsolete]
 public class EvolvingCosmetic : MonoBehaviour, ITickSystemTick
 {
 	[Serializable]

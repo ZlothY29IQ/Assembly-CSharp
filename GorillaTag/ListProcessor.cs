@@ -41,24 +41,26 @@ public class ListProcessor<T>
 		m_itemProcessorDelegate = itemProcessorDelegate;
 	}
 
-	public void Add(in T item)
+	public virtual void Add(in T item)
 	{
 		m_listCount++;
 		m_list.Add(item);
 	}
 
-	public void Remove(in T item)
+	public virtual bool Remove(in T item)
 	{
 		int num = m_list.IndexOf(item);
-		if (num >= 0)
+		if (num < 0)
 		{
-			if (num < m_currentIndex)
-			{
-				m_currentIndex--;
-			}
-			m_listCount--;
-			m_list.RemoveAt(num);
+			return false;
 		}
+		if (num < m_currentIndex)
+		{
+			m_currentIndex--;
+		}
+		m_listCount--;
+		m_list.RemoveAt(num);
+		return true;
 	}
 
 	public void Clear()
@@ -75,7 +77,12 @@ public class ListProcessor<T>
 
 	public virtual void ProcessListSafe()
 	{
-		if (m_itemProcessorDelegate == null)
+		ProcessListSafe(m_itemProcessorDelegate);
+	}
+
+	public virtual void ProcessListSafe(InAction<T> customDelegate)
+	{
+		if (customDelegate == null)
 		{
 			Debug.LogError("ListProcessor: ItemProcessor is null");
 			return;
@@ -85,7 +92,7 @@ public class ListProcessor<T>
 		{
 			try
 			{
-				m_itemProcessorDelegate(m_list[m_currentIndex]);
+				customDelegate(m_list[m_currentIndex]);
 			}
 			catch (Exception ex)
 			{
@@ -96,7 +103,12 @@ public class ListProcessor<T>
 
 	public virtual void ProcessList()
 	{
-		if (m_itemProcessorDelegate == null)
+		ProcessList(m_itemProcessorDelegate);
+	}
+
+	public virtual void ProcessList(InAction<T> customDelegate)
+	{
+		if (customDelegate == null)
 		{
 			Debug.LogError("ListProcessor: ItemProcessor is null");
 			return;
@@ -104,7 +116,12 @@ public class ListProcessor<T>
 		m_listCount = m_list.Count;
 		for (m_currentIndex = 0; m_currentIndex < m_listCount; m_currentIndex++)
 		{
-			m_itemProcessorDelegate(m_list[m_currentIndex]);
+			customDelegate(m_list[m_currentIndex]);
 		}
+	}
+
+	public IReadOnlyList<T> GetReadonlyList()
+	{
+		return m_list;
 	}
 }

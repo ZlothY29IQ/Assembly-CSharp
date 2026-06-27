@@ -1,12 +1,12 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using GameObjectScheduling;
-using Photon.Pun;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class MonkeBusinessStation : MonoBehaviourPunCallbacks
+public class MonkeBusinessStation : MonoBehaviour
 {
 	[SerializeField]
 	private RectTransform _questContainerParent;
@@ -83,28 +83,30 @@ public class MonkeBusinessStation : MonoBehaviourPunCallbacks
 
 	private Dictionary<NetPlayer, Coroutine> perPlayerRedemptionSequence = new Dictionary<NetPlayer, Coroutine>();
 
-	public override void OnEnable()
+	private void OnEnable()
 	{
-		base.OnEnable();
 		FindQuestManager();
 		ProgressionController.OnQuestSelectionChanged += OnQuestSelectionChanged;
 		ProgressionController.OnProgressEvent += OnProgress;
 		ProgressionController.RequestProgressUpdate();
+		RoomSystem.OnMonkePointsRedeemedReceived = (Action<NetPlayer, int>)Delegate.Combine(RoomSystem.OnMonkePointsRedeemedReceived, new Action<NetPlayer, int>(OnRemotePointsRedeemed));
+		RoomSystem.PlayerLeftEvent += new Action<NetPlayer>(OnPlayerLeftRoom);
 		UpdateCountdownTimers();
 	}
 
-	public override void OnDisable()
+	private void OnDisable()
 	{
-		base.OnDisable();
 		ProgressionController.OnQuestSelectionChanged -= OnQuestSelectionChanged;
 		ProgressionController.OnProgressEvent -= OnProgress;
+		RoomSystem.OnMonkePointsRedeemedReceived = (Action<NetPlayer, int>)Delegate.Remove(RoomSystem.OnMonkePointsRedeemedReceived, new Action<NetPlayer, int>(OnRemotePointsRedeemed));
+		RoomSystem.PlayerLeftEvent -= new Action<NetPlayer>(OnPlayerLeftRoom);
 	}
 
 	private void FindQuestManager()
 	{
 		if (!_questManager)
 		{
-			_questManager = Object.FindAnyObjectByType<RotatingQuestsManager>();
+			_questManager = UnityEngine.Object.FindAnyObjectByType<RotatingQuestsManager>();
 		}
 	}
 
@@ -175,10 +177,7 @@ public class MonkeBusinessStation : MonoBehaviourPunCallbacks
 			_tempTotalPoints = item2;
 			_claimButton.isOn = false;
 			ProgressionController.RedeemProgress();
-			if (PhotonNetwork.InRoom)
-			{
-				base.photonView.RPC("BroadcastRedeemQuestPoints", RpcTarget.Others, _tempUnclaimedPoints);
-			}
+			RoomSystem.SendMonkePointsRedeemed(_tempUnclaimedPoints);
 			StartCoroutine(PerformPointRedemptionSequence());
 		}
 	}
@@ -204,27 +203,36 @@ public class MonkeBusinessStation : MonoBehaviourPunCallbacks
 		UpdateProgressDisplays();
 	}
 
-	[PunRPC]
-	private void BroadcastRedeemQuestPoints(int redeemedPointCount, PhotonMessageInfo info)
+	private void OnRemotePointsRedeemed(NetPlayer sender, int redeemedPointCount)
 	{
-		MonkeAgent.IncrementRPCCall(info, "BroadcastRedeemQuestPoints");
-		if (new PhotonMessageInfoWrapped(info).Sender == null || !VRRigCache.Instance.TryGetVrrig(info.Sender, out var playerRig) || !FXSystem.CheckCallSpam(playerRig.Rig.fxSettings, 10, Time.unscaledTime))
+		if (sender == null || !VRRigCache.Instance.TryGetVrrig(sender, out var playerRig) || !FXSystem.CheckCallSpam(playerRig.Rig.fxSettings, 10, Time.unscaledTime))
 		{
 			return;
 		}
-		redeemedPointCount = Mathf.Min(redeemedPointCount, 50);
-		if (perPlayerRedemptionSequence.TryGetValue(info.Sender, out var value))
+		if (perPlayerRedemptionSequence.TryGetValue(sender, out var value))
 		{
 			if (value != null)
 			{
 				StopCoroutine(value);
 			}
-			perPlayerRedemptionSequence.Remove(info.Sender);
+			perPlayerRedemptionSequence.Remove(sender);
 		}
 		if (base.gameObject.activeInHierarchy)
 		{
-			Coroutine value2 = StartCoroutine(PerformRemotePointRedemptionSequence(info.Sender, redeemedPointCount));
-			perPlayerRedemptionSequence.Add(info.Sender, value2);
+			Coroutine value2 = StartCoroutine(PerformRemotePointRedemptionSequence(sender, redeemedPointCount));
+			perPlayerRedemptionSequence.Add(sender, value2);
+		}
+	}
+
+	private void OnPlayerLeftRoom(NetPlayer player)
+	{
+		if (player != null && perPlayerRedemptionSequence.TryGetValue(player, out var value))
+		{
+			if (value != null)
+			{
+				StopCoroutine(value);
+			}
+			perPlayerRedemptionSequence.Remove(player);
 		}
 	}
 
@@ -256,7 +264,7 @@ public class MonkeBusinessStation : MonoBehaviourPunCallbacks
 			{
 				if (quest.isQuestActive)
 				{
-					QuestDisplay questDisplay = Object.Instantiate(_questDisplayPrefab, _dailyQuestContainer);
+					QuestDisplay questDisplay = UnityEngine.Object.Instantiate(_questDisplayPrefab, _dailyQuestContainer);
 					questDisplay.quest = quest;
 					_quests.Add(questDisplay);
 				}
@@ -268,7 +276,7 @@ public class MonkeBusinessStation : MonoBehaviourPunCallbacks
 			{
 				if (quest2.isQuestActive)
 				{
-					QuestDisplay questDisplay2 = Object.Instantiate(_questDisplayPrefab, _weeklyQuestContainer);
+					QuestDisplay questDisplay2 = UnityEngine.Object.Instantiate(_questDisplayPrefab, _weeklyQuestContainer);
 					questDisplay2.quest = quest2;
 					_quests.Add(questDisplay2);
 				}
@@ -298,7 +306,7 @@ public class MonkeBusinessStation : MonoBehaviourPunCallbacks
 		{
 			for (int num = parent.childCount - 1; num >= 0; num--)
 			{
-				Object.Destroy(parent.GetChild(num).gameObject);
+				UnityEngine.Object.Destroy(parent.GetChild(num).gameObject);
 			}
 		}
 	}

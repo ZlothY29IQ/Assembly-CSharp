@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using GorillaLocomotion;
 using GorillaNetworking;
+using GorillaTagScripts;
 using Photon.Pun;
 using TMPro;
 using UnityEngine;
@@ -79,9 +80,17 @@ public class FriendDisplay : MonoBehaviour
 	[SerializeField]
 	private Material[] _pageButtonAlerttMaterials;
 
-	private int cardsPerPage = 9;
+	public const int PageCapacity = 9;
 
-	private int totalPages = 5;
+	public const int VIMPageCapacity = 9;
+
+	[SerializeField]
+	private int freeExtraPageCount = 1;
+
+	[SerializeField]
+	private int vimPageCount;
+
+	private int cardsPerPage = 9;
 
 	[SerializeField]
 	private float pageButtonInactiveZPos;
@@ -95,7 +104,29 @@ public class FriendDisplay : MonoBehaviour
 
 	private bool localPlayerAtDisplay;
 
+	private int _currentPage;
+
+	public static int ConfiguredVimPageCount { get; private set; } = 0;
+
+	public static int ConfiguredFreeExtraPageCount { get; private set; } = 1;
+
+	private int totalPages => 1 + freeExtraPageCount + vimPageCount;
+
+	public int TotalCapacity => 9 + (freeExtraPageCount + vimPageCount) * 9;
+
+	public int VIMTotalCapacity => vimPageCount * 9;
+
+	public int FreeExtraTotalCapacity => freeExtraPageCount * 9;
+
+	public int VimPageCount => vimPageCount;
+
 	public bool InRemoveMode => inRemoveMode;
+
+	private void Awake()
+	{
+		ConfiguredVimPageCount = vimPageCount;
+		ConfiguredFreeExtraPageCount = freeExtraPageCount;
+	}
 
 	private void Start()
 	{
@@ -105,6 +136,7 @@ public class FriendDisplay : MonoBehaviour
 		triggerNotifier.TriggerEnterEvent += TriggerEntered;
 		triggerNotifier.TriggerExitEvent += TriggerExited;
 		NetworkSystem.Instance.OnJoinedRoomEvent += new Action(OnJoinedRoom);
+		SubscriptionManager.OnLocalSubscriptionData = (Action)Delegate.Combine(SubscriptionManager.OnLocalSubscriptionData, new Action(OnLocalSubscriptionChanged));
 	}
 
 	private void OnDestroy()
@@ -117,6 +149,15 @@ public class FriendDisplay : MonoBehaviour
 		{
 			triggerNotifier.TriggerEnterEvent -= TriggerEntered;
 			triggerNotifier.TriggerExitEvent -= TriggerExited;
+		}
+		SubscriptionManager.OnLocalSubscriptionData = (Action)Delegate.Remove(SubscriptionManager.OnLocalSubscriptionData, new Action(OnLocalSubscriptionChanged));
+	}
+
+	private void OnLocalSubscriptionChanged()
+	{
+		if (localPlayerAtDisplay)
+		{
+			GoToFriendPage(_currentPage);
 		}
 	}
 
@@ -196,15 +237,53 @@ public class FriendDisplay : MonoBehaviour
 
 	private void UpdatePageButtons(int selectedPage)
 	{
-		for (int i = 0; i < totalPages; i++)
+		int count = FriendBackendController.Instance.FriendsList.Count;
+		bool flag = SubscriptionManager.IsLocalSubscribed();
+		int num = 1 + freeExtraPageCount;
+		int num2 = 9 + freeExtraPageCount * 9;
+		bool flag2 = freeExtraPageCount > 0;
+		int num3 = Mathf.Min(totalPages, PageButtons.Length);
+		if (!flag2)
 		{
-			if (FriendBackendController.Instance.FriendsList.Count > cardsPerPage * Mathf.Max(i, 1))
+			for (int i = num; i < num3; i++)
 			{
-				SetPageButtonAppearance(PageButtons[i], (i != selectedPage) ? ButtonState.Active : ButtonState.Alert);
+				int num4 = i - num;
+				bool flag3 = count > num2 + num4 * 9;
+				if (flag || flag3)
+				{
+					flag2 = true;
+					break;
+				}
+			}
+		}
+		for (int j = 0; j < PageButtons.Length; j++)
+		{
+			bool flag4;
+			if (j >= num3)
+			{
+				flag4 = false;
+			}
+			else if (j == 0)
+			{
+				flag4 = flag2;
+			}
+			else if (j < num)
+			{
+				flag4 = true;
 			}
 			else
 			{
-				SetPageButtonAppearance(PageButtons[i], active: false);
+				int num5 = j - num;
+				bool flag5 = count > num2 + num5 * 9;
+				flag4 = flag || flag5;
+			}
+			if (flag4)
+			{
+				SetPageButtonAppearance(PageButtons[j], (j == selectedPage) ? ButtonState.Active : ButtonState.Default);
+			}
+			else
+			{
+				HidePageButton(PageButtons[j]);
 			}
 		}
 	}
@@ -229,49 +308,30 @@ public class FriendDisplay : MonoBehaviour
 	{
 		for (int i = 0; i < PageButtons.Length; i++)
 		{
-			SetPageButtonAppearance(PageButtons[i], active: false);
+			HidePageButton(PageButtons[i]);
 		}
 	}
 
-	private void SetPageButtonAppearance(MeshRenderer buttonRenderer, bool active)
+	private void HidePageButton(MeshRenderer buttonRenderer)
 	{
-		SetPageButtonAppearance(buttonRenderer, active ? ButtonState.Active : ButtonState.Default);
+		buttonRenderer.enabled = false;
+		buttonRenderer.GetComponent<BoxCollider>().enabled = false;
+		buttonRenderer.transform.localPosition = new Vector3(buttonRenderer.transform.localPosition.x, buttonRenderer.transform.localPosition.y, pageButtonInactiveZPos);
 	}
 
 	private void SetPageButtonAppearance(MeshRenderer buttonRenderer, ButtonState state)
 	{
-		MeshRenderer meshRenderer = buttonRenderer;
-		meshRenderer.enabled = state switch
-		{
-			ButtonState.Default => false, 
-			ButtonState.Active => true, 
-			ButtonState.Alert => true, 
-			_ => throw new ArgumentOutOfRangeException("state", state, null), 
-		};
-		meshRenderer = buttonRenderer;
-		meshRenderer.sharedMaterials = state switch
+		buttonRenderer.enabled = true;
+		buttonRenderer.GetComponent<BoxCollider>().enabled = true;
+		buttonRenderer.sharedMaterials = state switch
 		{
 			ButtonState.Default => _pageButtonDefaultMaterials, 
 			ButtonState.Active => _pageButtonActiveMaterials, 
 			ButtonState.Alert => _pageButtonAlerttMaterials, 
 			_ => throw new ArgumentOutOfRangeException("state", state, null), 
 		};
-		Transform transform = buttonRenderer.transform;
-		transform.localPosition = state switch
-		{
-			ButtonState.Default => new Vector3(buttonRenderer.transform.localPosition.x, buttonRenderer.transform.localPosition.y, pageButtonInactiveZPos), 
-			ButtonState.Active => new Vector3(buttonRenderer.transform.localPosition.x, buttonRenderer.transform.localPosition.y, pageButtonActiveZPos), 
-			ButtonState.Alert => new Vector3(buttonRenderer.transform.localPosition.x, buttonRenderer.transform.localPosition.y, pageButtonActiveZPos), 
-			_ => throw new ArgumentOutOfRangeException("state", state, null), 
-		};
-		BoxCollider component = buttonRenderer.GetComponent<BoxCollider>();
-		component.enabled = state switch
-		{
-			ButtonState.Default => false, 
-			ButtonState.Active => true, 
-			ButtonState.Alert => true, 
-			_ => throw new ArgumentOutOfRangeException("state", state, null), 
-		};
+		Vector3 localPosition = buttonRenderer.transform.localPosition;
+		buttonRenderer.transform.localPosition = new Vector3(localPosition.x, localPosition.y, pageButtonActiveZPos);
 	}
 
 	public void ToggleRemoveFriendMode()
@@ -329,39 +389,39 @@ public class FriendDisplay : MonoBehaviour
 
 	public void OnGetFriendsReceived(List<FriendBackendController.Friend> friendsList)
 	{
-		PopulateFriendCards(friendsList);
 		UpdateLocalPlayerPrivacyButtons();
 		PopulateLocalPlayerCard();
-		UpdatePageButtons(0);
-	}
-
-	private void PopulateFriendCards(List<FriendBackendController.Friend> friendsList)
-	{
-		int num = Mathf.Min(friendCards.Length, friendsList.Count);
-		for (int i = 0; i < num && friendsList[i] != null; i++)
-		{
-			friendCards[i].Populate(friendsList[i]);
-		}
+		GoToFriendPage(_currentPage);
 	}
 
 	public void GoToFriendPage(int currentPage)
 	{
+		int num = Mathf.Min(totalPages, PageButtons.Length);
+		if (currentPage < 0 || currentPage >= num)
+		{
+			currentPage = 0;
+		}
+		_currentPage = currentPage;
 		UpdatePageButtons(currentPage);
 		for (int i = 0; i < friendCards.Length; i++)
 		{
 			friendCards[i].SetEmpty();
 		}
-		int num = currentPage * cardsPerPage;
-		Mathf.Min(num + cardsPerPage, FriendBackendController.Instance.FriendsList.Count);
-		int num2 = 0;
+		List<FriendBackendController.Friend> friendsList = FriendBackendController.Instance.FriendsList;
+		int num2 = currentPage * cardsPerPage;
+		int num3 = 9 + freeExtraPageCount * 9;
 		for (int j = 0; j < friendCards.Length; j++)
 		{
-			if (FriendBackendController.Instance.FriendsList.Count <= num + num2)
+			int num4 = num2 + j;
+			bool flag = num4 >= num3;
+			if (num4 < friendsList.Count)
 			{
-				break;
+				friendCards[j].Populate(friendsList[num4], flag);
 			}
-			friendCards[j].Populate(FriendBackendController.Instance.FriendsList[num + num2]);
-			num2++;
+			else
+			{
+				friendCards[j].SetEmpty(flag);
+			}
 		}
 	}
 

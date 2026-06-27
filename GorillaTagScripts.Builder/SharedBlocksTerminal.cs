@@ -142,6 +142,9 @@ public class SharedBlocksTerminal : MonoBehaviour
 	private float loadMapCooldown = 30f;
 
 	[SerializeField]
+	private float loadRandomMapCooldown = 3f;
+
+	[SerializeField]
 	private GorillaFriendCollider lobbyTrigger;
 
 	private SharedBlocksManager.SharedBlocksMap selectedMap;
@@ -168,7 +171,13 @@ public class SharedBlocksTerminal : MonoBehaviour
 
 	private bool isLoadingMap;
 
+	private bool pendingRandomAfterMapsLoaded;
+
+	private bool randomMapsRequestInProgress;
+
 	private float lastLoadTime;
+
+	private float lastRandomLoadTime;
 
 	private bool useNametags;
 
@@ -280,6 +289,12 @@ public class SharedBlocksTerminal : MonoBehaviour
 			NetworkSystem.Instance.OnMultiplayerStarted -= new Action(OnJoinedRoom);
 			NetworkSystem.Instance.OnReturnedToSinglePlayer -= new Action(OnReturnedToSinglePlayer);
 		}
+		if (SharedBlocksManager.instance != null)
+		{
+			SharedBlocksManager.instance.OnGetPopularMapsComplete -= OnRandomMapsLoadedForRandomButton;
+		}
+		pendingRandomAfterMapsLoaded = false;
+		randomMapsRequestInProgress = false;
 		if (linkedTable != null)
 		{
 			linkedTable.OnMapLoaded.RemoveListener(OnSharedBlocksMapLoaded);
@@ -495,6 +510,10 @@ public class SharedBlocksTerminal : MonoBehaviour
 
 	public void PressButton(SharedBlocksKeyboardBindings buttonPressed)
 	{
+		if (localState.driverID == -2)
+		{
+			return;
+		}
 		if (!IsDriver)
 		{
 			if (!LocalisationManager.TryGetKeyForCurrentLocale("SHARE_BLOCKS_TERMINAL_STATUS_NOT_CONTROLLER", out var result, "NOT TERMINAL CONTROLLER"))
@@ -522,6 +541,9 @@ public class SharedBlocksTerminal : MonoBehaviour
 				return;
 			case SharedBlocksKeyboardBindings.enter:
 				OnSelectButtonPressed();
+				return;
+			case SharedBlocksKeyboardBindings.random:
+				OnRandomizeButtonPressed();
 				return;
 			case SharedBlocksKeyboardBindings.zero:
 			case SharedBlocksKeyboardBindings.one:
@@ -568,6 +590,26 @@ public class SharedBlocksTerminal : MonoBehaviour
 		else if (currentScreen != null)
 		{
 			currentScreen.OnSelectPressed();
+		}
+	}
+
+	private void OnRandomizeButtonPressed()
+	{
+		if (IsDriver && !awaitingWebRequest && !isLoadingMap && localState.state != TerminalState.Searching && localState.state != TerminalState.Loading)
+		{
+			SharedBlocksManager.SharedBlocksMap map;
+			if (Time.time < lastRandomLoadTime + loadRandomMapCooldown)
+			{
+				SetStatusText("PLEASE WAIT BEFORE LOADING ANOTHER RANDOM MAP.");
+			}
+			else if (!SharedBlocksManager.instance.TryGetRandomPopularMap(out map))
+			{
+				LoadPopularMapsThenRandomize();
+			}
+			else
+			{
+				LoadRandomMap(map);
+			}
 		}
 	}
 
@@ -629,7 +671,7 @@ public class SharedBlocksTerminal : MonoBehaviour
 		}
 	}
 
-	public void OnLoadMapPressed()
+	public void OnLoadMapPressed(bool isRandom = false)
 	{
 		string disallowedReason;
 		if (!IsDriver)
@@ -666,13 +708,22 @@ public class SharedBlocksTerminal : MonoBehaviour
 			{
 				return;
 			}
-			if (Time.time > lastLoadTime + loadMapCooldown)
+			if (Time.time > lastLoadTime + loadMapCooldown || isRandom)
 			{
-				if (!LocalisationManager.TryGetKeyForCurrentLocale("SHARE_BLOCKS_TERMINAL_STATUS_LOADING", out var _, "LOADING BLOCKS ..."))
+				if (!LocalisationManager.TryGetKeyForCurrentLocale("SHARE_BLOCKS_TERMINAL_STATUS_LOADING", out var result4, "LOADING BLOCKS ..."))
 				{
 					Debug.LogError("[LOCALIZATION::BUILDER_SCAN_KIOSK] Failed to get key for SHARE MY BLOCKS TERMINAL localization [SHARE_BLOCKS_TERMINAL_STATUS_LOADING]");
 				}
-				SetStatusText("LOADING BLOCKS ...");
+				if (isRandom)
+				{
+					GorillaTelemetry.EnqueueTelemetryEvent("sharedblocks_random_button_pressed", new Dictionary<string, object>());
+				}
+				GorillaTelemetry.EnqueueTelemetryEvent("sharedblocks_map_loaded", new Dictionary<string, object>
+				{
+					{ "isRandom", isRandom },
+					{ "mapID", selectedMap.MapID }
+				});
+				SetStatusText((!isRandom) ? result4 : "LOADING RANDOM MAP ...");
 				isLoadingMap = true;
 				lastLoadTime = Time.time;
 				linkedTable.LoadSharedMap(selectedMap);
@@ -689,6 +740,68 @@ public class SharedBlocksTerminal : MonoBehaviour
 				SetStatusText(result5);
 			}
 		}
+	}
+
+	private void LoadPopularMapsThenRandomize()
+	{
+		SharedBlocksManager instance = SharedBlocksManager.instance;
+		if (instance == null)
+		{
+			SetStatusText("RANDOM MAPS NOT READY.");
+			return;
+		}
+		pendingRandomAfterMapsLoaded = true;
+		if (!randomMapsRequestInProgress)
+		{
+			randomMapsRequestInProgress = true;
+			instance.OnGetPopularMapsComplete -= OnRandomMapsLoadedForRandomButton;
+			instance.OnGetPopularMapsComplete += OnRandomMapsLoadedForRandomButton;
+		}
+		SetStatusText("LOADING RANDOM MAP LIST.");
+		instance.RefreshPopularMapsForRandom();
+	}
+
+	private void OnRandomMapsLoadedForRandomButton(bool success)
+	{
+		SharedBlocksManager instance = SharedBlocksManager.instance;
+		if (instance != null)
+		{
+			instance.OnGetPopularMapsComplete -= OnRandomMapsLoadedForRandomButton;
+		}
+		randomMapsRequestInProgress = false;
+		if (!pendingRandomAfterMapsLoaded)
+		{
+			return;
+		}
+		pendingRandomAfterMapsLoaded = false;
+		if (IsDriver && !awaitingWebRequest && !isLoadingMap && localState.state != TerminalState.Searching && localState.state != TerminalState.Loading)
+		{
+			if (!success || instance == null || !instance.TryGetRandomPopularMap(out var map))
+			{
+				SetStatusText("NO RANDOM MAPS AVAILABLE.");
+			}
+			else
+			{
+				LoadRandomMap(map);
+			}
+		}
+	}
+
+	private void LoadRandomMap(SharedBlocksManager.SharedBlocksMap randomMap)
+	{
+		if (randomMap == null || !SharedBlocksManager.IsMapIDValid(randomMap.MapID))
+		{
+			SetStatusText("NO VALID RANDOM MAP AVAILABLE.");
+			return;
+		}
+		lastRandomLoadTime = Time.time;
+		selectedMap = randomMap;
+		Debug.Log("Selected random map: " + randomMap.MapID);
+		if (searchScreen != null)
+		{
+			searchScreen.SetMapCode(selectedMap.MapID);
+		}
+		OnLoadMapPressed(isRandom: true);
 	}
 
 	public bool IsPlayerDriver(Player player)
@@ -850,6 +963,12 @@ public class SharedBlocksTerminal : MonoBehaviour
 		localState.driverID = -2;
 		isTerminalLocked = false;
 		selectedMap = null;
+		if (SharedBlocksManager.instance != null)
+		{
+			SharedBlocksManager.instance.OnGetPopularMapsComplete -= OnRandomMapsLoadedForRandomButton;
+		}
+		pendingRandomAfterMapsLoaded = false;
+		randomMapsRequestInProgress = false;
 		SetTerminalState(TerminalState.NoStatus);
 		RefreshActiveScreen();
 		UpdateTerminalButton();

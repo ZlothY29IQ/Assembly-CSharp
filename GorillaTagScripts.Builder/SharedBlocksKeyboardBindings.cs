@@ -42,5 +42,6 @@ public enum SharedBlocksKeyboardBindings
 	down,
 	delete,
 	enter,
-	back
+	back,
+	random
 }

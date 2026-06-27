@@ -114,26 +114,35 @@ public class SubscriberExclusiveZone : MonoBehaviour, IGorillaSliceableSimple
 
 	private void OnEnable()
 	{
-		GorillaSlicerSimpleManager.RegisterSliceable(this);
+		if (!ApplicationQuittingState.IsQuitting)
+		{
+			GorillaSlicerSimpleManager.RegisterSliceable(this);
+		}
 	}
 
 	private void OnDisable()
 	{
-		GorillaSlicerSimpleManager.UnregisterSliceable(this);
-		ClearAllRigOverrides();
+		if (!ApplicationQuittingState.IsQuitting)
+		{
+			GorillaSlicerSimpleManager.UnregisterSliceable(this);
+			ClearAllRigOverrides();
+		}
 	}
 
 	private void Update()
 	{
-		UpdateDoor();
-		if (!SubscriptionManager.IsLocalSubscribed())
+		if (!ApplicationQuittingState.IsQuitting)
 		{
-			HandleZoneBehavior();
-		}
-		else if (bodyColliderWasDisabled)
-		{
-			SetBodyCollider(GTPlayer.Instance, enabled: true);
-			bodyColliderWasDisabled = false;
+			UpdateDoor();
+			if (!SubscriptionManager.IsLocalSubscribed())
+			{
+				HandleZoneBehavior();
+			}
+			else if (bodyColliderWasDisabled)
+			{
+				SetBodyCollider(GTPlayer.Instance, enabled: true);
+				bodyColliderWasDisabled = false;
+			}
 		}
 	}
 
@@ -189,7 +198,7 @@ public class SubscriberExclusiveZone : MonoBehaviour, IGorillaSliceableSimple
 			if (Time.time - lastShoveTime >= shoveCooldown)
 			{
 				lastShoveTime = Time.time;
-				instance.TeleportTo(ejectionPoint.position, instance.transform.rotation, keepVelocity: true);
+				instance.TeleportTo(ejectionPoint.transform);
 				OnEnterRestrictedZone?.Invoke();
 			}
 		}

@@ -8,6 +8,20 @@ using UnityEngine;
 
 public class VRRigReliableState : MonoBehaviour, IWrappedSerializable, INetworkStruct
 {
+	public enum StateSyncSlots
+	{
+		Hat,
+		Shirt,
+		Face,
+		Length
+	}
+
+	[NonSerialized]
+	private ICosmeticStateSync[] m_cosmeticStateTargets = new ICosmeticStateSync[3];
+
+	[NonSerialized]
+	private int[] m_cosmeticStates = new int[3];
+
 	[NonSerialized]
 	public int[] activeTransferrableObjectIndex;
 
@@ -129,6 +143,61 @@ public class VRRigReliableState : MonoBehaviour, IWrappedSerializable, INetworkS
 		transferableDockPositions = new BodyDockPositions.DropPositions[5];
 	}
 
+	public void RegisterCosmeticStateSyncTarget(StateSyncSlots slot, ICosmeticStateSync target)
+	{
+		if (m_cosmeticStateTargets[(int)slot] != null)
+		{
+			Debug.LogWarning(string.Format("{0}-CosmeticStateSync: instance already registered at slot {1}, this will be overriden", "VRRigReliableState", slot));
+		}
+		m_cosmeticStateTargets[(int)slot] = target;
+		if (bDock.myRig.isOfflineVRRig)
+		{
+			m_cosmeticStates[(int)slot] = target.StateValue;
+			isDirty = true;
+		}
+		else
+		{
+			target.OnStateUpdate(m_cosmeticStates[(int)slot]);
+		}
+	}
+
+	public void UnRegisterCosmeticStateSyncTarget(StateSyncSlots slot, ICosmeticStateSync target)
+	{
+		if (m_cosmeticStateTargets[(int)slot] != target)
+		{
+			Debug.LogWarning(string.Format("{0}-CosmeticStateSync: target is not the value stored at slot {1}, ignoring", "VRRigReliableState", slot));
+			return;
+		}
+		m_cosmeticStateTargets[(int)slot] = null;
+		m_cosmeticStates[(int)slot] = -1;
+		if (bDock.myRig.isOfflineVRRig)
+		{
+			isDirty = true;
+		}
+	}
+
+	private void CopyStateSyncToSyncArray()
+	{
+		for (int i = 0; i < m_cosmeticStateTargets.Length; i++)
+		{
+			int num = m_cosmeticStateTargets[i]?.StateValue ?? (-1);
+			if (num != m_cosmeticStates[i])
+			{
+				isDirty = true;
+			}
+			m_cosmeticStates[i] = num;
+		}
+	}
+
+	public int GetCachedStateAtSlot(StateSyncSlots slot)
+	{
+		if (slot < StateSyncSlots.Hat || (int)slot >= m_cosmeticStates.Length)
+		{
+			return -1;
+		}
+		return m_cosmeticStates[(int)slot];
+	}
+
 	void IWrappedSerializable.OnSerializeRead(object newData)
 	{
 		Data = (ReliableStateData)newData;
@@ -221,6 +290,7 @@ public class VRRigReliableState : MonoBehaviour, IWrappedSerializable, INetworkS
 
 	void IWrappedSerializable.OnSerializeWrite(PhotonStream stream, PhotonMessageInfo info)
 	{
+		CopyStateSyncToSyncArray();
 		if (!isDirty)
 		{
 			return;
@@ -237,19 +307,24 @@ public class VRRigReliableState : MonoBehaviour, IWrappedSerializable, INetworkS
 		stream.SendNext(rThrowableProjectileIndex);
 		stream.SendNext(sizeLayerMask);
 		stream.SendNext(randomThrowableIndex);
+		int[] cosmeticStates = m_cosmeticStates;
+		foreach (int num in cosmeticStates)
+		{
+			stream.SendNext(num);
+		}
 		if (braceletBeadColors.Count <= 0)
 		{
 			return;
 		}
-		long num = PackBeadColors(braceletBeadColors, 0);
+		long num2 = PackBeadColors(braceletBeadColors, 0);
 		if (braceletBeadColors.Count <= 3)
 		{
-			num |= (long)braceletSelfIndex << 30;
-			stream.SendNext((int)num);
+			num2 |= (long)braceletSelfIndex << 30;
+			stream.SendNext((int)num2);
 			return;
 		}
-		num |= (long)braceletSelfIndex << 60;
-		stream.SendNext(num);
+		num2 |= (long)braceletSelfIndex << 60;
+		stream.SendNext(num2);
 		if (braceletBeadColors.Count > 6)
 		{
 			stream.SendNext(PackBeadColors(braceletBeadColors, 6));
@@ -292,26 +367,32 @@ public class VRRigReliableState : MonoBehaviour, IWrappedSerializable, INetworkS
 		rThrowableProjectileIndex = (int)stream.ReceiveNext();
 		sizeLayerMask = (int)stream.ReceiveNext();
 		randomThrowableIndex = (int)stream.ReceiveNext();
+		for (int j = 0; j < m_cosmeticStates.Length; j++)
+		{
+			int num4 = (int)stream.ReceiveNext();
+			m_cosmeticStates[j] = num4;
+			m_cosmeticStateTargets[j]?.OnStateUpdate(num4);
+		}
 		braceletBeadColors.Clear();
 		if (num2 > 0)
 		{
 			if (num2 <= 3)
 			{
-				int num4 = (int)stream.ReceiveNext();
-				braceletSelfIndex = num4 >> 30;
-				UnpackBeadColors(num4, 0, num2, braceletBeadColors);
+				int num5 = (int)stream.ReceiveNext();
+				braceletSelfIndex = num5 >> 30;
+				UnpackBeadColors(num5, 0, num2, braceletBeadColors);
 			}
 			else
 			{
-				long num5 = (long)stream.ReceiveNext();
-				braceletSelfIndex = (int)(num5 >> 60);
+				long num6 = (long)stream.ReceiveNext();
+				braceletSelfIndex = (int)(num6 >> 60);
 				if (num2 <= 6)
 				{
-					UnpackBeadColors(num5, 0, num2, braceletBeadColors);
+					UnpackBeadColors(num6, 0, num2, braceletBeadColors);
 				}
 				else
 				{
-					UnpackBeadColors(num5, 0, 6, braceletBeadColors);
+					UnpackBeadColors(num6, 0, 6, braceletBeadColors);
 					UnpackBeadColors((long)stream.ReceiveNext(), 6, num2, braceletBeadColors);
 				}
 			}

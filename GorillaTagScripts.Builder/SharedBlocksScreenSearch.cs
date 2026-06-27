@@ -140,13 +140,16 @@ public class SharedBlocksScreenSearch : SharedBlocksScreen, IGorillaSliceableSim
 
 	private void UpdateInput()
 	{
-		string defaultResult = "MAP SEARCH : ";
-		if (!LocalisationManager.TryGetKeyForCurrentLocale("SHARE_BLOCKS_TERMINAL_SEARCH_MAP_SEARCH", out var result, defaultResult))
+		if (!ApplicationQuittingState.IsQuitting)
 		{
-			Debug.LogError("[LOCALIZATION::BUILDER_SCAN_KIOSK] Failed to get key for SHARE MY BLOCKS SEARCH TERMINAL localization [SHARE_BLOCKS_TERMINAL_SEARCH_MAP_SEARCH]");
+			string defaultResult = "MAP SEARCH : ";
+			if (!LocalisationManager.TryGetKeyForCurrentLocale("SHARE_BLOCKS_TERMINAL_SEARCH_MAP_SEARCH", out var result, defaultResult))
+			{
+				Debug.LogError("[LOCALIZATION::BUILDER_SCAN_KIOSK] Failed to get key for SHARE MY BLOCKS SEARCH TERMINAL localization [SHARE_BLOCKS_TERMINAL_SEARCH_MAP_SEARCH]");
+			}
+			result += SharedBlocksTerminal.MapIDToDisplayedString(currentMapCode);
+			inputText.text = result;
 		}
-		result += SharedBlocksTerminal.MapIDToDisplayedString(currentMapCode);
-		inputText.text = result;
 	}
 
 	public void SetMapCode(string mapCode)
@@ -176,6 +179,10 @@ public class SharedBlocksScreenSearch : SharedBlocksScreen, IGorillaSliceableSim
 
 	private void DrawScreen()
 	{
+		if (ApplicationQuittingState.IsQuitting)
+		{
+			return;
+		}
 		UpdateInput();
 		if (!LocalisationManager.TryGetKeyForCurrentLocale("SHARE_BLOCKS_TERMINAL_SEARCH_VOTES", out var result, "RECENT VOTES"))
 		{

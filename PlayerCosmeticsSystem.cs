@@ -11,11 +11,13 @@ using UnityEngine;
 internal class PlayerCosmeticsSystem : MonoBehaviour, ITickSystemPre
 {
 	[Serializable]
-	public class PlayFabSubscriptionData
+	public class SharedSubscriptionData
 	{
 		public string Sku;
 
-		public bool IsActive;
+		public DateTimeOffset? ExpirationTime;
+
+		public int TotalLifetimeSeconds;
 	}
 
 	public float playerLookUpCooldown = 3f;
@@ -222,18 +224,23 @@ internal class PlayerCosmeticsSystem : MonoBehaviour, ITickSystemPre
 							if (netPlayer != null)
 							{
 								bool isSubscribed = false;
+								int daysAccrued = 0;
 								if (!string.IsNullOrEmpty(datum.Value.Value))
 								{
 									try
 									{
-										isSubscribed = JsonConvert.DeserializeObject<PlayFabSubscriptionData>(datum.Value.Value).IsActive;
+										SharedSubscriptionData? sharedSubscriptionData = JsonConvert.DeserializeObject<SharedSubscriptionData>(datum.Value.Value);
+										DateTimeOffset utcNow = DateTimeOffset.UtcNow;
+										DateTimeOffset? expirationTime = sharedSubscriptionData.ExpirationTime;
+										isSubscribed = utcNow < expirationTime;
+										daysAccrued = sharedSubscriptionData.TotalLifetimeSeconds / 86400;
 									}
 									catch (Exception ex)
 									{
 										Debug.LogError("Failed to deserialize subscription data for " + netPlayer.NickName + ": " + ex.Message);
 									}
 								}
-								SubscriptionManager.UpdatePlayerSubscriptionData(netPlayer, isSubscribed);
+								SubscriptionManager.UpdatePlayerSubscriptionData(netPlayer, isSubscribed, daysAccrued);
 							}
 						}
 					}
@@ -345,10 +352,15 @@ internal class PlayerCosmeticsSystem : MonoBehaviour, ITickSystemPre
 			{
 				GorillaTelemetry.PostShopEvent(rig, GTShopEventType.item_try_on, rig.tryOnSet.items);
 			}
+			if (rig.isOfflineVRRig)
+			{
+				CosmeticsController.ClearTryOnCollectable();
+			}
 		}
 		else if (rig.isOfflineVRRig)
 		{
 			rig.tryOnSet.ClearSet(CosmeticsController.instance.nullItem);
+			CosmeticsController.ClearTryOnCollectable();
 			CosmeticsController.instance.ClearCheckout(sendEvent: false);
 			CosmeticsController.instance.UpdateShoppingCart();
 			CosmeticsController.instance.UpdateWornCosmetics(sync: true);

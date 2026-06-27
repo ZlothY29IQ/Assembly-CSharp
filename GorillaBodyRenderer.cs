@@ -92,6 +92,33 @@ public class GorillaBodyRenderer : MonoBehaviour
 		bodySkeleton.gameObject.SetActive(active);
 	}
 
+	public static void EnableSkeletonOverlays(Material bodyMaterial, Material skeletonMaterial)
+	{
+		ShowSkeletonOverlay(GorillaTagger.Instance.offlineVRRig);
+		VRRigCache.ApplyToAllRigs(ShowSkeletonOverlay);
+		void ShowSkeletonOverlay(VRRig rig)
+		{
+			GorillaBodyRenderer bodyRenderer = rig.bodyRenderer;
+			bodyRenderer.SetBodyEnabled(GorillaBodyType.Skeleton, enabled: true);
+			rig.skeleton.SetMaterialIndex(bodyRenderer._lastMatIndex);
+			rig.skeleton.UpdateColor(rig.playerColor);
+			bodyRenderer.bodyDefault.sharedMaterial = bodyMaterial;
+			bodyRenderer.bodySkeleton.sharedMaterial = skeletonMaterial;
+		}
+	}
+
+	public static void DisableSkeletonOverlays()
+	{
+		HideSkeletonOverlay(GorillaTagger.Instance.offlineVRRig);
+		VRRigCache.ApplyToAllRigs(HideSkeletonOverlay);
+	}
+
+	private static void HideSkeletonOverlay(VRRig rig)
+	{
+		rig.bodyRenderer.Refresh();
+		rig.bodyRenderer.bodyDefault.sharedMaterial = rig.bodyRenderer.myDefaultSkinMaterialInstance;
+	}
+
 	public void SetGameModeBodyType(GorillaBodyType bodyType)
 	{
 		if (gameModeBodyType != bodyType)

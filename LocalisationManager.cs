@@ -90,7 +90,8 @@ public class LocalisationManager : MonoBehaviour
 			return;
 		}
 		_instance = this;
-		UnityEngine.Object.DontDestroyOnLoad(this);
+		base.transform.SetParent(null);
+		UnityEngine.Object.DontDestroyOnLoad(base.gameObject);
 		_localisationFontDict.Clear();
 		for (int i = 0; i < _localisationFonts.Count; i++)
 		{
@@ -98,7 +99,6 @@ public class LocalisationManager : MonoBehaviour
 			{
 				if (!(_localisationFonts[i].locales[j] == null) && !_localisationFontDict.ContainsKey(_localisationFonts[i].locales[j].Identifier.Code) && !(_localisationFonts[i].fontAsset == null))
 				{
-					_ = _localisationFonts[i].fontAsset == null;
 					_localisationFontDict.Add(_localisationFonts[i].locales[j].Identifier.Code, _localisationFonts[i]);
 					Debug.Log("[LOCALIZATION::MANAGER] Added new Locale-Font pair to Dictionary: [" + _localisationFonts[i].locales[j].LocaleName + "]");
 				}
@@ -344,6 +344,10 @@ public class LocalisationManager : MonoBehaviour
 	public static bool TryGetKeyForCurrentLocale(string key, out string result, string defaultResult = "")
 	{
 		result = defaultResult;
+		if (ApplicationQuittingState.IsQuitting)
+		{
+			return false;
+		}
 		if (_localeTablePairs.Count == 0)
 		{
 			return false;

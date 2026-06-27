@@ -41,7 +41,6 @@ public class LuauHud : MonoBehaviour
 		}
 		_instance = this;
 		path = Path.Combine(Application.persistentDataPath, "script.luau");
-		base.transform.RotateAround(base.transform.position, Vector3.up, 180f);
 	}
 
 	private void OnDestroy()
@@ -60,6 +59,7 @@ public class LuauHud : MonoBehaviour
 		debugHud = instance.gameObject;
 		text = instance.text;
 		text.gameObject.SetActive(value: false);
+		text.gameObject.transform.Rotate(180f * Vector3.up, Space.World);
 		builder = new StringBuilder(50);
 	}
 

@@ -164,16 +164,13 @@ public class ShakeReactorCosmetic : MonoBehaviour, ISpawnable
 
 	private void Update()
 	{
-		if (myRig != null && !myRig.isLocal)
-		{
-			return;
-		}
+		bool flag = myRig == null || myRig.isLocal;
 		if (speedTracker == null)
 		{
 			if (isShaking)
 			{
 				isShaking = false;
-				if (PhotonNetwork.InRoom && _events != null && _events.Activate != null)
+				if (flag && PhotonNetwork.InRoom && _events != null && _events.Activate != null)
 				{
 					_events.Activate.RaiseOthers(isShaking);
 				}
@@ -193,7 +190,7 @@ public class ShakeReactorCosmetic : MonoBehaviour, ISpawnable
 		Vector3 worldVelocity = speedTracker.GetWorldVelocity();
 		float magnitude2 = worldVelocity.magnitude;
 		Vector3 to = ((worldVelocity.sqrMagnitude > 1E-06f) ? worldVelocity.normalized : lastVelocityDir);
-		bool flag = false;
+		bool flag2 = false;
 		if (hasLastDir)
 		{
 			if (Vector3.Angle(lastVelocityDir, to) >= angleToleranceDeg && magnitude2 >= minSpeedForReversal)
@@ -205,7 +202,7 @@ public class ShakeReactorCosmetic : MonoBehaviour, ISpawnable
 					lastAmplitudeMeters = pathSinceLastReversal;
 					lastReversalTime = Time.time;
 					pathSinceLastReversal = 0f;
-					flag = true;
+					flag2 = true;
 				}
 			}
 		}
@@ -221,43 +218,46 @@ public class ShakeReactorCosmetic : MonoBehaviour, ISpawnable
 		float b = Time.time - lastReversalTime;
 		float num2 = Mathf.Max((averageHalfCycleDuration > 1E-05f) ? averageHalfCycleDuration : float.PositiveInfinity, b);
 		float num3 = (debugCurrentRateHz = ((num2 < float.PositiveInfinity) ? (0.5f / num2) : 0f));
-		bool flag2 = num3 >= shakeRateThreshold;
-		bool flag3 = lastAmplitudeMeters >= shakeAmplitudeThreshold;
-		if (!isShaking)
+		bool flag3 = num3 >= shakeRateThreshold;
+		bool flag4 = lastAmplitudeMeters >= shakeAmplitudeThreshold;
+		if (flag)
 		{
-			if (Time.time >= nextAllowedShakeStartTime && flag2 && flag3)
+			if (!isShaking)
 			{
-				isShaking = true;
-				if (PhotonNetwork.InRoom && _events != null && _events.Activate != null)
+				if (Time.time >= nextAllowedShakeStartTime && flag3 && flag4)
 				{
-					_events.Activate.RaiseOthers(isShaking);
+					isShaking = true;
+					if (PhotonNetwork.InRoom && _events != null && _events.Activate != null)
+					{
+						_events.Activate.RaiseOthers(isShaking);
+					}
+					ShakeStartLocal?.Invoke();
+					ShakeStartShared?.Invoke();
 				}
-				ShakeStartLocal?.Invoke();
-				ShakeStartShared?.Invoke();
 			}
-		}
-		else
-		{
-			float num4 = ((shakeRateThreshold > 1E-05f) ? (0.5f / shakeRateThreshold) : float.PositiveInfinity);
-			float num5 = 1f * num4;
-			bool flag4 = Time.time - lastReversalTime > num5;
-			if ((!flag2 && !flag) || flag4)
+			else
 			{
-				isShaking = false;
-				if (PhotonNetwork.InRoom && _events != null && _events.Activate != null)
+				float num4 = ((shakeRateThreshold > 1E-05f) ? (0.5f / shakeRateThreshold) : float.PositiveInfinity);
+				float num5 = 1f * num4;
+				bool flag5 = Time.time - lastReversalTime > num5;
+				if ((!flag3 && !flag2) || flag5)
 				{
-					_events.Activate.RaiseOthers(isShaking);
+					isShaking = false;
+					if (PhotonNetwork.InRoom && _events != null && _events.Activate != null)
+					{
+						_events.Activate.RaiseOthers(isShaking);
+					}
+					ShakeEndLocal?.Invoke();
+					ShakeEndShared?.Invoke();
+					nextAllowedShakeStartTime = Time.time + Mathf.Max(0f, startCooldownSeconds);
 				}
-				ShakeEndLocal?.Invoke();
-				ShakeEndShared?.Invoke();
-				nextAllowedShakeStartTime = Time.time + Mathf.Max(0f, startCooldownSeconds);
 			}
 		}
 		if (useMaxes && isShaking)
 		{
 			bool num6 = num3 >= maxShakeRate;
-			bool flag5 = lastAmplitudeMeters >= maxShakeAmplitude;
-			if (num6 || flag5)
+			bool flag6 = lastAmplitudeMeters >= maxShakeAmplitude;
+			if (num6 || flag6)
 			{
 				MaxShake?.Invoke();
 			}
@@ -317,14 +317,10 @@ public class ShakeReactorCosmetic : MonoBehaviour, ISpawnable
 			return;
 		}
 		MonkeAgent.IncrementRPCCall(info, "OnShake");
-		if (!callLimiter.CheckCallTime(Time.time) || args.Length != 1)
+		if (callLimiter.CheckCallTime(Time.time) && args.Length == 1 && args[0] is bool flag)
 		{
-			return;
-		}
-		object obj = args[0];
-		if (obj is bool)
-		{
-			if ((bool)obj)
+			isShaking = flag;
+			if (flag)
 			{
 				ShakeStartShared?.Invoke();
 			}

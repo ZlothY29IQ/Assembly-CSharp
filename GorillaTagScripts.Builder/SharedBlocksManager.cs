@@ -184,7 +184,7 @@ public class SharedBlocksManager : MonoBehaviour
 	private StartingMapConfig startingMapConfig = new StartingMapConfig
 	{
 		pageNumber = 0,
-		pageSize = 10,
+		pageSize = 50,
 		sortMethod = MapSortMethod.Top.ToString(),
 		useMapID = false,
 		mapID = null
@@ -332,6 +332,28 @@ public class SharedBlocksManager : MonoBehaviour
 		await WaitForPlayfabSessionToken();
 		FetchConfigurationFromTitleData();
 		LoadPlayerPrefs();
+		if (NetworkSystem.Instance != null)
+		{
+			NetworkSystem.Instance.OnMultiplayerStarted += new Action(OnJoinedRoom);
+		}
+		if (NetworkSystem.Instance != null && NetworkSystem.Instance.InRoom)
+		{
+			RefreshPopularMapsForRandom();
+		}
+	}
+
+	private void OnDestroy()
+	{
+		if (NetworkSystem.Instance != null)
+		{
+			NetworkSystem.Instance.OnMultiplayerStarted -= new Action(OnJoinedRoom);
+		}
+	}
+
+	private void OnJoinedRoom()
+	{
+		Debug.Log("OnJoinedRoom inside SharedBlocksManager");
+		RefreshPopularMapsForRandom();
 	}
 
 	private bool TryGetCachedSharedBlocksMapByMapID(string mapID, out SharedBlocksMap result)
@@ -624,6 +646,26 @@ public class SharedBlocksManager : MonoBehaviour
 				callback?.Invoke(arg1: false, "CONNECTION ERROR");
 			}
 		}
+	}
+
+	public void RefreshPopularMapsForRandom()
+	{
+		if (ZoneManagement.instance.IsZoneActive(GTZone.monkeBlocksShared) && MothershipClientContext.IsClientLoggedIn() && !getTopMapsInProgress)
+		{
+			if (hasCachedTopMaps && Time.realtimeSinceStartupAsDouble <= lastGetTopMapsTime + 60.0 && latestPopularMaps != null && latestPopularMaps.Count > 0)
+			{
+				this.OnGetPopularMapsComplete?.Invoke(obj: true);
+			}
+			else
+			{
+				RequestGetConfiguredTopMaps();
+			}
+		}
+	}
+
+	public bool RequestGetConfiguredTopMaps()
+	{
+		return RequestGetTopMaps(startingMapConfig.pageNumber, startingMapConfig.pageSize, startingMapConfig.sortMethod);
 	}
 
 	private void RequestPublishMap(string userMetadataKey)
@@ -1145,27 +1187,21 @@ public class SharedBlocksManager : MonoBehaviour
 
 	private void FetchConfigurationFromTitleData()
 	{
-		PlayFabClientAPI.GetTitleData(new GetTitleDataRequest
-		{
-			Keys = new List<string> { serializationConfig.tableConfigurationKey }
-		}, OnGetConfigurationSuccess, OnGetConfigurationFail);
+		PlayFabTitleDataCache.Instance.GetTitleData(serializationConfig.tableConfigurationKey, OnGetConfigurationSuccess, OnGetConfigurationFail);
 	}
 
-	private void OnGetConfigurationSuccess(GetTitleDataResult result)
+	private void OnGetConfigurationSuccess(string dataRecord)
 	{
 		GTDev.Log("SharedBlocksManager OnGetConfigurationSuccess");
-		if (result.Data.TryGetValue(serializationConfig.tableConfigurationKey, out var value))
-		{
-			tableConfigResponse = value;
-			fetchedTableConfig = true;
-			this.OnGetTableConfiguration?.Invoke(tableConfigResponse);
-		}
+		tableConfigResponse = dataRecord;
+		fetchedTableConfig = true;
+		this.OnGetTableConfiguration?.Invoke(tableConfigResponse);
 	}
 
 	private void OnGetConfigurationFail(PlayFabError error)
 	{
-		GTDev.LogWarning("SharedBlocksManager OnGetConfigurationFail " + error.Error);
-		if (error.Error == PlayFabErrorCode.ConnectionError && fetchTableConfigRetryCount < maxRetriesOnFail)
+		GTDev.LogWarning("SharedBlocksManager OnGetConfigurationFail " + error);
+		if (fetchTableConfigRetryCount < maxRetriesOnFail)
 		{
 			float waitTime = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, fetchTableConfigRetryCount + 1));
 			fetchTableConfigRetryCount++;
@@ -1194,29 +1230,17 @@ public class SharedBlocksManager : MonoBehaviour
 		else if (!fetchTitleDataBuildInProgress)
 		{
 			fetchTitleDataBuildInProgress = true;
-			StartCoroutine(SendTitleDataRequest(new GetTitleDataRequest
-			{
-				Keys = new List<string> { serializationConfig.titleDataKey }
-			}, OnGetTitleDataBuildSuccess, OnGetTitleDataBuildFail));
+			PlayFabTitleDataCache.Instance.GetTitleData(serializationConfig.titleDataKey, OnGetTitleDataBuildSuccess, OnGetTitleDataBuildFail);
 		}
 	}
 
-	private IEnumerator SendTitleDataRequest(GetTitleDataRequest request, Action<GetTitleDataResult> successCallback, Action<PlayFabError> failCallback)
-	{
-		while (!PlayFabSettings.staticPlayer.IsClientLoggedIn())
-		{
-			yield return new WaitForSecondsRealtime(5f);
-		}
-		PlayFabClientAPI.GetTitleData(request, successCallback, failCallback);
-	}
-
-	private void OnGetTitleDataBuildSuccess(GetTitleDataResult result)
+	private void OnGetTitleDataBuildSuccess(string dataRecord)
 	{
 		fetchTitleDataBuildInProgress = false;
 		GTDev.Log("SharedBlocksManager OnGetTitleDataBuildSuccess");
-		if (result.Data.TryGetValue(serializationConfig.titleDataKey, out var value) && !value.IsNullOrEmpty())
+		if (!dataRecord.IsNullOrEmpty())
 		{
-			titleDataBuildCache = value;
+			titleDataBuildCache = dataRecord;
 			fetchTitleDataBuildComplete = true;
 			this.OnGetTitleDataBuildComplete?.Invoke(titleDataBuildCache);
 		}
@@ -1231,8 +1255,8 @@ public class SharedBlocksManager : MonoBehaviour
 	private void OnGetTitleDataBuildFail(PlayFabError error)
 	{
 		fetchTitleDataBuildInProgress = false;
-		GTDev.LogWarning("SharedBlocksManager FetchTitleDataBuildFail " + error.Error);
-		if (error.Error == PlayFabErrorCode.ConnectionError && fetchTitleDataRetryCount < maxRetriesOnFail)
+		GTDev.LogWarning("SharedBlocksManager FetchTitleDataBuildFail " + error);
+		if (fetchTitleDataRetryCount < maxRetriesOnFail)
 		{
 			float waitTime = UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, fetchTitleDataRetryCount + 1));
 			fetchTitleDataRetryCount++;
@@ -1386,6 +1410,37 @@ public class SharedBlocksManager : MonoBehaviour
 			this.OnFetchPrivateScanComplete?.Invoke(currentGetScanIndex, arg2: false);
 			currentGetScanIndex = -1;
 		}
+	}
+
+	public bool TryGetRandomPopularMap(out SharedBlocksMap map)
+	{
+		map = null;
+		if (latestPopularMaps == null || latestPopularMaps.Count == 0)
+		{
+			return false;
+		}
+		GTDev.Log($"[SharedBlocksManager] Selecting from {latestPopularMaps.Count} popular maps");
+		for (int i = 0; i < Mathf.Min(10, latestPopularMaps.Count); i++)
+		{
+			int num = UnityEngine.Random.Range(0, latestPopularMaps.Count);
+			GTDev.Log($"[SharedBlocksManager] Random pick index: {num}");
+			SharedBlocksMap sharedBlocksMap = latestPopularMaps[num];
+			if (sharedBlocksMap != null && IsMapIDValid(sharedBlocksMap.MapID))
+			{
+				map = sharedBlocksMap;
+				return true;
+			}
+		}
+		for (int j = 0; j < latestPopularMaps.Count; j++)
+		{
+			SharedBlocksMap sharedBlocksMap2 = latestPopularMaps[j];
+			if (sharedBlocksMap2 != null && IsMapIDValid(sharedBlocksMap2.MapID))
+			{
+				map = sharedBlocksMap2;
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private async Task WaitForMothership()

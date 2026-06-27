@@ -39,7 +39,7 @@ public class DeployableObject : TransferrableObject
 	private Component[] _rigAwareObjects = new Component[0];
 
 	[SerializeField]
-	private CallLimiter m_spamChecker = new CallLimiter(2, 1f);
+	private CallLimiter m_spamChecker = new CallLimiter(1, 0.4f);
 
 	private VRRig m_VRRig;
 
@@ -149,7 +149,7 @@ public class DeployableObject : TransferrableObject
 			Vector3 inVel = BitPackUtils.UnpackWorldPosFromNetwork(packedVel) / 100f;
 			if (v.IsValid(10000f) && q.IsValid() && m_VRRig.IsPositionInRange(v, _maxDeployDistance))
 			{
-				DeployLocal(v, q, m_VRRig.ClampVelocityRelativeToPlayerSafe(inVel, _maxThrowVelocity), isRemote: true);
+				DeployLocal(v, q, m_VRRig.ClampVelocityRelativeToPlayerSafe(inVel, _maxThrowVelocity, 30f), isRemote: true);
 			}
 		}
 	}

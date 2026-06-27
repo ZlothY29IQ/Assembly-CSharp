@@ -1,7 +1,7 @@
 using ExitGames.Client.Photon;
+using POpusCodec.Enums;
 using Photon.Voice;
 using Photon.Voice.Unity;
-using POpusCodec.Enums;
 using UnityEngine;
 
 namespace GorillaNetworking;

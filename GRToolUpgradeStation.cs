@@ -238,7 +238,7 @@ public class GRToolUpgradeStation : MonoBehaviour
 		{
 			GamePlayer gamePlayer = GamePlayer.GetGamePlayer(gameEntity.heldByActorNumber);
 			int handIndex = gamePlayer.FindHandIndex(entityId);
-			gamePlayer.ClearGrabbedIfHeld(entityId);
+			gamePlayer.ClearGrabbedIfHeld(entityId, gameEntity.manager);
 			if (gameEntity.heldByActorNumber == PhotonNetwork.LocalPlayer.ActorNumber)
 			{
 				GamePlayerLocal.instance.gamePlayer.ClearGrabbed(handIndex);

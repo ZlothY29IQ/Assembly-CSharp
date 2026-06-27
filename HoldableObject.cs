@@ -30,19 +30,4 @@ public abstract class HoldableObject : MonoBehaviour, IHoldableObject
 		}
 		return true;
 	}
-
-	GameObject IHoldableObject.get_gameObject()
-	{
-		return base.gameObject;
-	}
-
-	string IHoldableObject.get_name()
-	{
-		return base.name;
-	}
-
-	void IHoldableObject.set_name(string value)
-	{
-		base.name = value;
-	}
 }

@@ -49,22 +49,35 @@ public class ActivateGO : MonoBehaviour
 
 	private async void SetGOsActive(int fls)
 	{
-		if (!flashing)
+		if (flashing)
 		{
-			List<Renderer> renderers = new List<Renderer>();
-			renderers.AddRange(targetGO.GetComponentsInChildren<MeshRenderer>(includeInactive: true));
-			renderers.AddRange(targetGO.GetComponentsInChildren<SkinnedMeshRenderer>(includeInactive: true));
-			for (int i = 0; i < fls; i++)
-			{
-				flashing = true;
-				toggle(renderers, active);
-				await Task.Delay(150);
-				toggle(renderers, !active);
-				await Task.Delay(100);
-			}
-			toggle(renderers, active);
-			flashing = false;
+			return;
 		}
+		List<Renderer> renderers = new List<Renderer>();
+		renderers.AddRange(targetGO.GetComponentsInChildren<MeshRenderer>(includeInactive: true));
+		renderers.AddRange(targetGO.GetComponentsInChildren<SkinnedMeshRenderer>(includeInactive: true));
+		FirstPersonToggleOverride[] componentsInChildren = targetGO.GetComponentsInChildren<FirstPersonToggleOverride>(includeInactive: true);
+		for (int i = 0; i < componentsInChildren.Length; i++)
+		{
+			if (componentsInChildren[i].Toggle && !renderers.Contains(componentsInChildren[i].Renderer))
+			{
+				renderers.Add(componentsInChildren[i].Renderer);
+			}
+			else if (!componentsInChildren[i].Toggle && renderers.Contains(componentsInChildren[i].Renderer))
+			{
+				renderers.Remove(componentsInChildren[i].Renderer);
+			}
+		}
+		for (int j = 0; j < fls; j++)
+		{
+			flashing = true;
+			toggle(renderers, active);
+			await Task.Delay(150);
+			toggle(renderers, !active);
+			await Task.Delay(100);
+		}
+		toggle(renderers, active);
+		flashing = false;
 	}
 
 	private void toggle(List<Renderer> renderers, bool state)

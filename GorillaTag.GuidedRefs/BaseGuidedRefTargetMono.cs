@@ -35,11 +35,6 @@ public abstract class BaseGuidedRefTargetMono : MonoBehaviour, IGuidedRefTargetM
 		GuidedRefHub.RegisterTarget(this, guidedRefTargetInfo.hubIds, this);
 	}
 
-	Transform IGuidedRefMonoBehaviour.get_transform()
-	{
-		return base.transform;
-	}
-
 	int IGuidedRefObject.GetInstanceID()
 	{
 		return GetInstanceID();

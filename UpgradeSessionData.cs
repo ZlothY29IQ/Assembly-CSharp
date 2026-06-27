@@ -7,6 +7,6 @@ public class UpgradeSessionData
 	public UpgradeSessionData(UpgradeSessionResponse response)
 	{
 		status = response.status;
-		session = new TMPSession(response.session, null, null, status);
+		session = new TMPSession(response.session, null, status);
 	}
 }

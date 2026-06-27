@@ -48,9 +48,4 @@ public class SizeLayerChangerGrabable : MonoBehaviour, IGorillaGrabable
 			playerRig.Rig.sizeManager.currentSizeLayerMaskValue = releasedSizeLayerMask.Mask;
 		}
 	}
-
-	string IGorillaGrabable.get_name()
-	{
-		return base.name;
-	}
 }

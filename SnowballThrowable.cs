@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
 using GorillaTag;
+using GorillaTag.Cosmetics;
 using GorillaTagScripts;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Serialization;
 
-public class SnowballThrowable : HoldableObject
+public class SnowballThrowable : HoldableObject, IHeldItem
 {
 	[GorillaSoundLookup]
 	public List<int> matDataIndexes = new List<int> { 32 };
@@ -15,6 +16,15 @@ public class SnowballThrowable : HoldableObject
 	public GameObject projectilePrefab;
 
 	public SoundBankPlayer pickupSoundBankPlayer;
+
+	[Tooltip("If true, plays a haptic pulse on the grabbing hand when the snowball is picked up.")]
+	public bool playHapticsOnPickup = true;
+
+	[Tooltip("Strength of the haptic pulse on pickup. Defaults to tapHapticStrength if left at 0.")]
+	public float pickupHapticStrength;
+
+	[Tooltip("Duration of the haptic pulse on pickup. Defaults to tapHapticDuration if left at 0.")]
+	public float pickupHapticDuration;
 
 	public bool isLeftHanded;
 
@@ -102,6 +112,25 @@ public class SnowballThrowable : HoldableObject
 		return false;
 	}
 
+	bool IHeldItem.InLeftHand()
+	{
+		if (isLeftHanded)
+		{
+			return base.gameObject.activeSelf;
+		}
+		return false;
+	}
+
+	bool IHeldItem.InHand()
+	{
+		return base.gameObject.activeSelf;
+	}
+
+	bool IHeldItem.IsMyItem()
+	{
+		return IsMine();
+	}
+
 	public virtual void OnEnable()
 	{
 		if (targetRig == null)
@@ -164,6 +193,10 @@ public class SnowballThrowable : HoldableObject
 		if (num && pickupSoundBankPlayer != null)
 		{
 			pickupSoundBankPlayer.Play();
+			if (playHapticsOnPickup)
+			{
+				GorillaTagger.Instance.StartVibration(isLeftHanded, (pickupHapticStrength > 0f) ? pickupHapticStrength : GorillaTagger.Instance.tapHapticStrength, (pickupHapticDuration > 0f) ? pickupHapticDuration : GorillaTagger.Instance.tapHapticDuration);
+			}
 		}
 		if (randomModelSelection)
 		{

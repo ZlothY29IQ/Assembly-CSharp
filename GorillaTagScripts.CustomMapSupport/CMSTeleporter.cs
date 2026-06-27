@@ -1,6 +1,6 @@
 using System.Collections.Generic;
-using GorillaLocomotion;
 using GT_CustomMapSupportRuntime;
+using GorillaLocomotion;
 using JetBrains.Annotations;
 using UnityEngine;
 

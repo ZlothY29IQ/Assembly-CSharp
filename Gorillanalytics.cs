@@ -47,11 +47,11 @@ public class Gorillanalytics : MonoBehaviour
 
 	public PhotonNetworkController photonNetworkController;
 
-	public MapModeQueueSet mapModeQueueSet;
-
 	public GameModeZoneMapping gameModeData;
 
 	private readonly UploadData uploadData = new UploadData();
+
+	public const string GORILLANALYTICS_EVENT_NAME = "periodic_player_state";
 
 	private IEnumerator Start()
 	{
@@ -96,6 +96,7 @@ public class Gorillanalytics : MonoBehaviour
 			uploadData.cosmetics_owned = string.Join(";", CosmeticsController.instance.unlockedCosmetics.Select((CosmeticsController.CosmeticItem c) => c.itemName));
 			uploadData.cosmetics_worn = string.Join(";", CosmeticsController.instance.currentWornSet.items.Select((CosmeticsController.CosmeticItem c) => c.itemName));
 			GorillaServer.Instance.UploadGorillanalytics(uploadData);
+			GorillaTelemetry.EnqueueTelemetryEvent("periodic_player_state", uploadData);
 		}
 		catch (Exception message)
 		{
@@ -114,7 +115,7 @@ public class Gorillanalytics : MonoBehaviour
 		}
 		object value = null;
 		PhotonNetwork.CurrentRoom?.CustomProperties.TryGetValue("gameMode", out value);
-		string gameMode = value?.ToString() ?? "";
+		GameModeString gameModeString = GameModeString.FromString(value?.ToString() ?? "");
 		GTZone gTZone = GorillaTagger.Instance.offlineVRRig.zoneEntity.currentZone;
 		if (gTZone == GTZone.cityNoBuildings || gTZone == GTZone.cityWithSkyJungle || gTZone == GTZone.mall)
 		{
@@ -133,18 +134,15 @@ public class Gorillanalytics : MonoBehaviour
 		{
 			map += "private";
 		}
-		int num = gameMode.LastIndexOf('|');
-		string modeTestString;
-		if (num != -1)
+		mode = gameModeString?.gameType.ToUpper();
+		if (mode.IsNullOrEmpty())
 		{
-			modeTestString = gameMode.Substring(num + 1).ToUpper();
-			mode = mapModeQueueSet.modes.FirstOrDefault((string s) => modeTestString == s) ?? "unknown";
+			mode = "none";
 		}
-		else
+		queue = gameModeString?.queue.ToUpper();
+		if (queue.IsNullOrEmpty())
 		{
-			modeTestString = gameMode.ToUpper();
-			mode = mapModeQueueSet.modes.FirstOrDefault((string s) => modeTestString.EndsWith(s)) ?? "unknown";
+			queue = "none";
 		}
-		queue = mapModeQueueSet.queues.FirstOrDefault((string s) => gameMode.Contains(s)) ?? "unknown";
 	}
 }

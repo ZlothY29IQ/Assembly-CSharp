@@ -42,9 +42,18 @@ public class Tappable : MonoBehaviour
 		return true;
 	}
 
+	public void OnTap()
+	{
+		OnTap(1f);
+	}
+
 	public void OnTap(float tapStrength)
 	{
-		if (NetworkSystem.Instance.InRoom && (bool)manager)
+		if (!NetworkSystem.Instance.InRoom)
+		{
+			OnTapLocal(tapStrength, Time.time, default(PhotonMessageInfoWrapped));
+		}
+		else if ((bool)manager)
 		{
 			manager.photonView.RPC("SendOnTapRPC", RpcTarget.All, tappableId, tapStrength);
 		}
@@ -52,7 +61,11 @@ public class Tappable : MonoBehaviour
 
 	public void OnGrab()
 	{
-		if (NetworkSystem.Instance.InRoom && (bool)manager)
+		if (!NetworkSystem.Instance.InRoom)
+		{
+			OnGrabLocal(Time.time, default(PhotonMessageInfoWrapped));
+		}
+		else if ((bool)manager)
 		{
 			manager.photonView.RPC("SendOnGrabRPC", RpcTarget.All, tappableId);
 		}
@@ -60,7 +73,11 @@ public class Tappable : MonoBehaviour
 
 	public void OnRelease()
 	{
-		if (NetworkSystem.Instance.InRoom && (bool)manager)
+		if (!NetworkSystem.Instance.InRoom)
+		{
+			OnReleaseLocal(Time.time, default(PhotonMessageInfoWrapped));
+		}
+		else if ((bool)manager)
 		{
 			manager.photonView.RPC("SendOnReleaseRPC", RpcTarget.All, tappableId);
 		}

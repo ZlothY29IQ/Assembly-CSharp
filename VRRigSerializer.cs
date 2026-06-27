@@ -228,6 +228,7 @@ internal class VRRigSerializer : GorillaWrappedSerializer, IFXContextParems<Hand
 		if (networkSpeaker != null)
 		{
 			CleanupLoudSpeakerNetwork();
+			networkSpeaker.gameObject.SetActive(value: false);
 			if (netDestroy)
 			{
 				networkSpeaker.SetParent(base.transform, worldPositionStays: false);
@@ -236,7 +237,6 @@ internal class VRRigSerializer : GorillaWrappedSerializer, IFXContextParems<Hand
 			{
 				networkSpeaker.SetParent(null);
 			}
-			networkSpeaker.gameObject.SetActive(value: false);
 		}
 		vrrig = null;
 	}
@@ -303,6 +303,30 @@ internal class VRRigSerializer : GorillaWrappedSerializer, IFXContextParems<Hand
 	public void RPC_UpdateCosmeticsWithTryonPacked(int[] currentItemsPacked, int[] tryOnItemsPacked, bool playfx, PhotonMessageInfo info)
 	{
 		UpdateCosmeticsWithTryonShared(currentItemsPacked, tryOnItemsPacked, playfx, info);
+	}
+
+	[PunRPC]
+	public void RPC_UpdateCosmeticsWithCollectablesPacked(int[] data, PhotonMessageInfo info)
+	{
+		vrrig?.UpdateCosmeticsWithCollectables(data ?? Array.Empty<int>(), info);
+	}
+
+	[PunRPC]
+	public void RPC_SetCollectionCycleIndex(int[] data, PhotonMessageInfo info)
+	{
+		if (data != null && data.Length == 3)
+		{
+			vrrig?.SetCollectionCycleIndex(data[0], data[1], data[2], info);
+		}
+	}
+
+	[PunRPC]
+	public void RPC_BroadcastSubCosmeticSignal(int[] data, PhotonMessageInfo info)
+	{
+		if (data != null && data.Length == 2)
+		{
+			vrrig?.BroadcastSubCosmeticSignal(data[0], data[1], info);
+		}
 	}
 
 	[PunRPC]

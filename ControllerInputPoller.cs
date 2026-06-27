@@ -387,6 +387,11 @@ public class ControllerInputPoller : MonoBehaviour
 		}
 	}
 
+	public static bool HandTrackingActive()
+	{
+		return instance.handTrackingActive;
+	}
+
 	public static bool GetIndexPressed(XRNode node)
 	{
 		return node switch

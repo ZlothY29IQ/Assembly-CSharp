@@ -20,6 +20,9 @@ public class CustomMapsModTile : CustomMapsScreenTouchPoint
 	[SerializeField]
 	private GameObject highlight;
 
+	[SerializeField]
+	private TMP_Text _playerCountText;
+
 	private const float LOGO_WIDTH = 320f;
 
 	private const float LOGO_HEIGHT = 180f;
@@ -33,6 +36,18 @@ public class CustomMapsModTile : CustomMapsScreenTouchPoint
 	private bool newDownloadRequest;
 
 	private bool isActive;
+
+	public string PlayerCountText
+	{
+		get
+		{
+			return _playerCountText.text;
+		}
+		set
+		{
+			_playerCountText.text = value;
+		}
+	}
 
 	public Mod CurrentMod => currentMod;
 
@@ -50,8 +65,10 @@ public class CustomMapsModTile : CustomMapsScreenTouchPoint
 			ratingsText.gameObject.SetActive(value: false);
 			mapNameText.gameObject.SetActive(value: false);
 			thumsbUp.SetActive(value: false);
+			_playerCountText.gameObject.SetActive(value: false);
+			return;
 		}
-		else if (useMapName)
+		if (useMapName)
 		{
 			mapNameText.gameObject.SetActive(value: true);
 			ratingsText.gameObject.SetActive(value: false);
@@ -63,6 +80,7 @@ public class CustomMapsModTile : CustomMapsScreenTouchPoint
 			thumsbUp.SetActive(value: true);
 			mapNameText.gameObject.SetActive(value: false);
 		}
+		_playerCountText.gameObject.SetActive(value: true);
 	}
 
 	public void ActivateTile(bool useMapName)
@@ -92,6 +110,7 @@ public class CustomMapsModTile : CustomMapsScreenTouchPoint
 
 	public async void SetMod(Mod mod, bool useMapName)
 	{
+		_playerCountText.text = "-";
 		ActivateTile(useMapName);
 		touchPointRenderer.sprite = defaultLogo;
 		highlight.SetActive(value: false);

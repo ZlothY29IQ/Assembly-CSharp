@@ -201,7 +201,7 @@ public class SIGadgetSlipMitt : SIGadget
 		switch (_state)
 		{
 		case EState.Idle:
-			if (_isActivated)
+			if (_isActivated && !IsBlocked(SIExclusionType.AffectsLocalMovement))
 			{
 				_PlayHaptic(0.1f);
 				GTPlayer.Instance.SetGravityOverride(this, _HandleGTPlayerOnUpdateGravity);

@@ -138,16 +138,8 @@ public class Slingshot : ProjectileWeapon
 	{
 		if (base.IsSpawned)
 		{
-			GameObject gameObject = myRig.cosmeticReferences.Get(CosmeticRefID.SlingshotSnapLeft);
-			if (gameObject != null)
-			{
-				leftHandSnap = gameObject.transform;
-			}
-			GameObject gameObject2 = myRig.cosmeticReferences.Get(CosmeticRefID.SlingshotSnapRight);
-			if (gameObject2 != null)
-			{
-				rightHandSnap = gameObject2.transform;
-			}
+			leftHandSnap = myRig.cosmeticReferences.Get(CosmeticRefID.SlingshotSnapLeft).transform;
+			rightHandSnap = myRig.cosmeticReferences.Get(CosmeticRefID.SlingshotSnapRight).transform;
 			currentState = PositionState.OnChest;
 			itemState = ItemStates.State0;
 			if ((bool)elasticLeft)

@@ -90,8 +90,6 @@ public class GhostReactorProgression : MonoBehaviour
 	{
 		if (_reactor != null && _reactor.toolProgression != null)
 		{
-			_reactor.toolProgression.UpdateInventory();
-			_reactor.toolProgression.SetPendingTreeToProcess();
 			_reactor.UpdateLocalPlayerFromProgression();
 		}
 	}

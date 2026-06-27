@@ -1,6 +1,6 @@
 using System.Collections.Generic;
-using GorillaNetworking;
 using GTMathUtil;
+using GorillaNetworking;
 using Unity.Profiling;
 using UnityEngine;
 

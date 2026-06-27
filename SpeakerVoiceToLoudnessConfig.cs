@@ -35,10 +35,10 @@ internal static class SpeakerVoiceToLoudnessConfig
 
 	private static void OnTitleDataCacheReady(PlayFabTitleDataCache titleDataCache)
 	{
-		titleDataCache.GetTitleData("SpeakerVoiceToLoudnessConfig", OnTitleDataCacheRespsonse, OnTitleDataCacheError);
+		titleDataCache.GetTitleData("SpeakerVoiceToLoudnessConfig", OnTitleDataCacheResponse, OnTitleDataCacheError);
 	}
 
-	private static void OnTitleDataCacheRespsonse(string json)
+	private static void OnTitleDataCacheResponse(string json)
 	{
 		SerializedConfig serializedConfig = default(SerializedConfig);
 		try

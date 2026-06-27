@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class XRaySkeleton : SyncToPlayerColor
+public class XRaySkeleton : SyncToPlayerColor, IGorillaSimpleBackgroundWorker
 {
 	public SkinnedMeshRenderer renderer;
 
@@ -10,6 +10,10 @@ public class XRaySkeleton : SyncToPlayerColor
 
 	private int _lastMatIndex;
 
+	private Material[] mats;
+
+	private int currentIndex = 1;
+
 	private static readonly ShaderHashId _BaseColor = "_BaseColor";
 
 	private static readonly ShaderHashId _EmissionColor = "_EmissionColor";
@@ -18,13 +22,20 @@ public class XRaySkeleton : SyncToPlayerColor
 	{
 		base.Awake();
 		target = renderer.material;
-		Material[] materialsToChangeTo = rig.materialsToChangeTo;
-		tagMaterials = new Material[materialsToChangeTo.Length];
+		mats = rig.materialsToChangeTo;
+		tagMaterials = new Material[mats.Length];
 		tagMaterials[0] = new Material(target);
-		for (int i = 1; i < materialsToChangeTo.Length; i++)
+		GorillaSimpleBackgroundWorkerManager.WorkerSignup(this);
+	}
+
+	public void SimpleWork()
+	{
+		if (currentIndex >= 0 && currentIndex < mats.Length)
 		{
-			Material material = new Material(materialsToChangeTo[i]);
-			tagMaterials[i] = material;
+			Material material = new Material(mats[currentIndex]);
+			tagMaterials[currentIndex] = material;
+			currentIndex++;
+			GorillaSimpleBackgroundWorkerManager.WorkerSignup(this);
 		}
 	}
 

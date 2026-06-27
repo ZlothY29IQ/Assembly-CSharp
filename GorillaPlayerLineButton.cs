@@ -3,7 +3,7 @@ using Photon.Pun;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class GorillaPlayerLineButton : MonoBehaviour
+public class GorillaPlayerLineButton : MonoBehaviour, IClickable
 {
 	public enum ButtonType
 	{
@@ -12,7 +12,11 @@ public class GorillaPlayerLineButton : MonoBehaviour
 		Toxicity,
 		Mute,
 		Report,
-		Cancel
+		Cancel,
+		MuteAllRoom,
+		KickRoom,
+		BanRoom,
+		Confirm
 	}
 
 	public GorillaPlayerScoreboardLine parentLine;
@@ -45,18 +49,10 @@ public class GorillaPlayerLineButton : MonoBehaviour
 
 	private void OnEnable()
 	{
-		if (Application.isEditor)
-		{
-			StartCoroutine(TestPressCheck());
-		}
 	}
 
 	private void OnDisable()
 	{
-		if (Application.isEditor)
-		{
-			StopAllCoroutines();
-		}
 	}
 
 	private IEnumerator TestPressCheck()
@@ -78,12 +74,24 @@ public class GorillaPlayerLineButton : MonoBehaviour
 
 	private void OnTriggerEnter(Collider collider)
 	{
-		if (!base.enabled || !(touchTime + debounceTime < Time.time) || !(collider.GetComponentInParent<GorillaTriggerColliderHandIndicator>() != null))
+		if (base.enabled && !(touchTime + debounceTime >= Time.time))
 		{
-			return;
+			GorillaTriggerColliderHandIndicator component = collider.GetComponent<GorillaTriggerColliderHandIndicator>();
+			if (!(component == null))
+			{
+				SetTouchTime();
+				Click(component.isLeftHand);
+			}
 		}
-		touchTime = Time.time;
-		GorillaTriggerColliderHandIndicator component = collider.GetComponent<GorillaTriggerColliderHandIndicator>();
+	}
+
+	public void SetTouchTime(float add = 0f)
+	{
+		touchTime = Time.time + add;
+	}
+
+	public void Click(bool leftHand = false)
+	{
 		if (buttonType == ButtonType.Mute)
 		{
 			if (isAutoOn)
@@ -95,18 +103,14 @@ public class GorillaPlayerLineButton : MonoBehaviour
 				isOn = !isOn;
 			}
 		}
-		if (buttonType != ButtonType.Mute && buttonType != ButtonType.HateSpeech && buttonType != ButtonType.Cheating && buttonType != ButtonType.Cancel && !parentLine.canPressNextReportButton)
+		if (buttonType == ButtonType.Mute || buttonType == ButtonType.HateSpeech || buttonType == ButtonType.Cheating || buttonType == ButtonType.Cancel || parentLine.canPressNextReportButton)
 		{
-			return;
-		}
-		parentLine.PressButton(isOn, buttonType);
-		if (component != null)
-		{
-			GorillaTagger.Instance.StartVibration(component.isLeftHand, GorillaTagger.Instance.tapHapticStrength / 2f, GorillaTagger.Instance.tapHapticDuration);
-			GorillaTagger.Instance.offlineVRRig.PlayHandTapLocal(67, component.isLeftHand, 0.05f);
+			parentLine.PressButton(isOn, buttonType);
+			GorillaTagger.Instance.StartVibration(leftHand, GorillaTagger.Instance.tapHapticStrength / 2f, GorillaTagger.Instance.tapHapticDuration);
+			GorillaTagger.Instance.offlineVRRig.PlayHandTapLocal(67, leftHand, 0.05f);
 			if (PhotonNetwork.InRoom && GorillaTagger.Instance.myVRRig != null)
 			{
-				GorillaTagger.Instance.myVRRig.SendRPC("RPC_PlayHandTap", RpcTarget.Others, 67, component.isLeftHand, 0.05f);
+				GorillaTagger.Instance.myVRRig.SendRPC("RPC_PlayHandTap", RpcTarget.Others, 67, leftHand, 0.05f);
 			}
 		}
 	}

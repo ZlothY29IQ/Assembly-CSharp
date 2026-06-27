@@ -12,6 +12,8 @@ public class ScavengerTarget : MonoBehaviour, IGorillaGrabable
 
 	public string TargetName;
 
+	public string DisplayName;
+
 	public UnityEvent[] TargetCollected;
 
 	public UnityEvent<ScavengerTarget>[] TargetCollectedArg;
@@ -67,10 +69,5 @@ public class ScavengerTarget : MonoBehaviour, IGorillaGrabable
 
 	public void OnGrabReleased(GorillaGrabber grabber)
 	{
-	}
-
-	string IGorillaGrabable.get_name()
-	{
-		return base.name;
 	}
 }

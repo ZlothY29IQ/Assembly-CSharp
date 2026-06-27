@@ -1,12 +1,29 @@
+using System;
 using System.Collections.Generic;
 using GorillaExtensions;
 using GorillaLocomotion;
+using TMPro;
 using Unity.Cinemachine;
 using UnityEngine;
 using Valve.VR;
 
 public class PrivateUIRoom : MonoBehaviourTick
 {
+	[Flags]
+	public enum OverlaySource
+	{
+		KID = 1,
+		ModIO = 2,
+		CustomMap = 4,
+		AlarmClock = 8
+	}
+
+	[SerializeField]
+	private TextMeshPro _text;
+
+	[SerializeField]
+	private float _textDistance = 4f;
+
 	[SerializeField]
 	private GameObject occluder;
 
@@ -41,7 +58,7 @@ public class PrivateUIRoom : MonoBehaviourTick
 
 	private bool inOverlay;
 
-	private bool overlayForcedActive;
+	private OverlaySource overlayForcedSources;
 
 	private static PrivateUIRoom instance;
 
@@ -64,6 +81,8 @@ public class PrivateUIRoom : MonoBehaviourTick
 
 	private static CinemachineVirtualCamera _virtualCameraReference;
 
+	private bool overlayForcedActive => overlayForcedSources != (OverlaySource)0;
+
 	private GTPlayer localPlayer => GTPlayer.Instance;
 
 	private void Awake()
@@ -82,7 +101,7 @@ public class PrivateUIRoom : MonoBehaviourTick
 		}
 		else
 		{
-			Object.Destroy(this);
+			UnityEngine.Object.Destroy(this);
 		}
 	}
 
@@ -216,6 +235,7 @@ public class PrivateUIRoom : MonoBehaviourTick
 		{
 			return;
 		}
+		instance._text.text = "";
 		AssignShoulderCameraToCanvases(focus);
 		instance.uiParents.Add(focus, focus.parent);
 		focus.gameObject.SetActive(value: false);
@@ -252,7 +272,7 @@ public class PrivateUIRoom : MonoBehaviourTick
 			}
 			else
 			{
-				Object.Destroy(focus.gameObject);
+				UnityEngine.Object.Destroy(focus.gameObject);
 			}
 			if (instance.ui.Count > 0)
 			{
@@ -266,24 +286,25 @@ public class PrivateUIRoom : MonoBehaviourTick
 		}
 	}
 
-	public static void ForceStartOverlay()
+	public static void ForceStartOverlay(OverlaySource source, string text = "")
 	{
 		if (!(instance == null))
 		{
-			instance.overlayForcedActive = true;
+			instance.overlayForcedSources |= source;
 			if (!instance.inOverlay)
 			{
+				instance._text.text = text;
 				StartOverlay();
 			}
 		}
 	}
 
-	public static void StopForcedOverlay()
+	public static void StopForcedOverlay(OverlaySource source)
 	{
 		if (!(instance == null))
 		{
-			instance.overlayForcedActive = false;
-			if (instance.ui.Count == 0 && instance.inOverlay)
+			instance.overlayForcedSources &= ~source;
+			if (!instance.overlayForcedActive && instance.ui.Count == 0 && instance.inOverlay)
 			{
 				StopOverlay();
 			}
@@ -354,6 +375,16 @@ public class PrivateUIRoom : MonoBehaviourTick
 		_shoulderCameraReference.transform.position = _uiRoot.position;
 		_shoulderCameraReference.transform.rotation = _uiRoot.rotation;
 		backgroundRenderer.material.SetVector(backgroundDirectionPropertyID, backgroundRenderer.transform.InverseTransformDirection(normalized));
+		SetTextPositionAndRotation(transform);
+	}
+
+	private void SetTextPositionAndRotation(Transform pov)
+	{
+		if (_text.enabled && !string.IsNullOrEmpty(_text.text))
+		{
+			_text.transform.position = pov.position + _textDistance * (pov.rotation * Vector3.forward);
+			_text.transform.rotation = Quaternion.LookRotation(pov.rotation * Vector3.forward, Vector3.up);
+		}
 	}
 
 	private void UpdateUIPosition()
@@ -362,6 +393,7 @@ public class PrivateUIRoom : MonoBehaviourTick
 		lastStablePosition = transform.position;
 		_uiRoot.position = lastStablePosition + lastStableRotation * new Vector3(0f, 0f, 0.02f);
 		_shoulderCameraReference.transform.position = _uiRoot.position;
+		SetTextPositionAndRotation(transform);
 	}
 
 	public static bool GetInOverlay()

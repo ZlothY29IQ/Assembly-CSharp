@@ -49,11 +49,10 @@ public class TMPSession
 		}
 	}
 
-	public TMPSession(Session session, KIDDefaultSession defaultSession, int? age, SessionStatus status)
+	public TMPSession(Session session, KIDDefaultSession defaultSession, SessionStatus status)
 	{
 		Permissions = new Dictionary<EKIDFeatures, Permission>();
 		OptedInPermissions = new HashSet<EKIDFeatures>();
-		Age = age.GetValueOrDefault();
 		SessionStatus = status;
 		if (session == null && defaultSession == null)
 		{
@@ -63,6 +62,7 @@ public class TMPSession
 		{
 			IsDefault = true;
 			AgeStatus = defaultSession.AgeStatus;
+			Age = defaultSession.Age;
 			InitialiseDefaultPermissionSet(defaultSession);
 			return;
 		}

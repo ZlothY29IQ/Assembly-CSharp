@@ -23,11 +23,12 @@ public class LookDirectionStabilizer : MonoBehaviour, ISpawnable
 	private void Update()
 	{
 		Transform rigTarget = myRig.head.rigTarget;
-		if (rigTarget.forward.y < 0f)
+		Vector3 up = myRig.transform.up;
+		if (Vector3.Dot(rigTarget.forward, up) < 0f)
 		{
-			Quaternion b = Quaternion.LookRotation(rigTarget.up.ProjectOntoPlane(Vector3.up));
+			Quaternion b = Quaternion.LookRotation(rigTarget.up.ProjectOntoPlane(up), up);
 			Quaternion rotation = base.transform.parent.rotation;
-			float value = Vector3.Dot(rigTarget.up, Vector3.up);
+			float value = Vector3.Dot(rigTarget.up, up);
 			base.transform.rotation = Quaternion.Lerp(rotation, b, Mathf.InverseLerp(1f, 0.7f, value));
 		}
 		else

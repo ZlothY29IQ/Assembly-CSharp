@@ -266,7 +266,7 @@ public abstract class GorillaGameManager : MonoBehaviourPunCallbacks, ITickSyste
 		}
 		if (!NetworkSystem.Instance.SessionIsPrivate || !RoomSystem.IsVStumpRoom)
 		{
-			return NetworkSystem.Instance.GameModeString.Contains(GameTypeName());
+			return GameModeString.DoesPropertyStringContainGameMode(NetworkSystem.Instance.GameModeString, GameTypeName());
 		}
 		return true;
 	}

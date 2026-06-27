@@ -138,7 +138,15 @@ public class PerSceneRenderData : MonoBehaviour
 		LightmapData lightmapData = new LightmapData();
 		lightmapData.lightmapColor = GetLightmap(fromTimeOfDay);
 		lightmapData.lightmapDir = GetLightmap(toTimeOfDay);
-		if (lightmapData.lightmapColor != null && lightmapData.lightmapDir != null && representativeRenderer.lightmapIndex < lightmaps.Length)
+		if (representativeRenderer == null)
+		{
+			RefreshRenderer();
+		}
+		if (representativeRenderer == null)
+		{
+			return;
+		}
+		if (lightmapData.lightmapColor != null && lightmapData.lightmapDir != null && representativeRenderer.lightmapIndex >= 0 && representativeRenderer.lightmapIndex < lightmaps.Length)
 		{
 			lightmaps[representativeRenderer.lightmapIndex] = lightmapData;
 		}

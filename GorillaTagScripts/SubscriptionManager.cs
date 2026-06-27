@@ -126,6 +126,8 @@ public class SubscriptionManager : MonoBehaviour
 
 	public const string FAN_CLUB_BASE_SKU = "fan_club";
 
+	public const string FAN_CLUB_STEAM_SKU = "40494";
+
 	public const string SUBSCRIBER_NAME_COLOR_HEX = "#ffc600";
 
 	public static Color SUBSCRIBER_NAME_COLOR = Color.gold;
@@ -148,6 +150,8 @@ public class SubscriptionManager : MonoBehaviour
 
 	private static SubscriptionDetails localSubscriptionDetails;
 
+	private static bool _localSubscriptionDataInitialized;
+
 	public const string SUB_PREFIX = "SMKEYPREFIX";
 
 	public static string[] SUBS_KEYS;
@@ -157,6 +161,8 @@ public class SubscriptionManager : MonoBehaviour
 	private int attempts;
 
 	private static Dictionary<string, int> subSettings = new Dictionary<string, int>();
+
+	public static bool LocalSubscriptionDataInitialized => _localSubscriptionDataInitialized;
 
 	public static bool SubsOnlyMatchmaking
 	{
@@ -269,7 +275,7 @@ public class SubscriptionManager : MonoBehaviour
 							int autoRenewMonths = Mathf.RoundToInt((float)(localDateTime2 - localDateTime).Days / 30f);
 							localSubscriptionDetails = new SubscriptionDetails
 							{
-								active = true,
+								active = mothershipSubscription.IsActive,
 								daysAccrued = daysAccrued,
 								tier = 1,
 								autoRenew = !mothershipSubscription.IsCancelling,
@@ -277,6 +283,7 @@ public class SubscriptionManager : MonoBehaviour
 								subscriptionActiveUntilDate = localDateTime2
 							};
 							Instance.subData[NetworkSystem.Instance.LocalPlayer] = localSubscriptionDetails;
+							_localSubscriptionDataInitialized = true;
 							OnLocalSubscriptionData?.Invoke();
 							return;
 						}
@@ -284,6 +291,7 @@ public class SubscriptionManager : MonoBehaviour
 				}
 				localSubscriptionDetails = default(SubscriptionDetails);
 				Instance.subData[NetworkSystem.Instance.LocalPlayer] = localSubscriptionDetails;
+				_localSubscriptionDataInitialized = true;
 				OnLocalSubscriptionData?.Invoke();
 				break;
 			}
@@ -297,21 +305,21 @@ public class SubscriptionManager : MonoBehaviour
 				{
 					if (responseCode < 600)
 					{
-						goto IL_046c;
+						goto IL_047e;
 					}
 				}
 				else if (responseCode == 408 || responseCode == 429)
 				{
-					goto IL_046c;
+					goto IL_047e;
 				}
 				flag2 = false;
-				goto IL_0474;
+				goto IL_0486;
 			}
-			goto IL_0478;
-			IL_046c:
+			goto IL_048a;
+			IL_047e:
 			flag2 = true;
-			goto IL_0474;
-			IL_0478:
+			goto IL_0486;
+			IL_048a:
 			if (flag)
 			{
 				if (retryCount < maxRetries)
@@ -325,9 +333,9 @@ public class SubscriptionManager : MonoBehaviour
 				break;
 			}
 			break;
-			IL_0474:
+			IL_0486:
 			flag = flag2;
-			goto IL_0478;
+			goto IL_048a;
 		}
 	}
 
@@ -499,7 +507,7 @@ public class SubscriptionManager : MonoBehaviour
 		}
 		else
 		{
-			if (msg.GetPurchaseList() == null)
+			if (msg.GetPurchaseList() == null || _localSubscriptionDataInitialized)
 			{
 				return;
 			}
@@ -511,7 +519,7 @@ public class SubscriptionManager : MonoBehaviour
 					flag = true;
 					localSubscriptionDetails = new SubscriptionDetails
 					{
-						active = true,
+						active = (DateTime.Now < purchase.ExpirationTime),
 						subscriptionActiveUntilDate = purchase.ExpirationTime
 					};
 				}

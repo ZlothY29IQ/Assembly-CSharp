@@ -16,7 +16,7 @@ public class GorillaEyeExpressions : MonoBehaviour, IGorillaSliceableSimple
 
 	private Vector2 BaseUV = Vector3.zero;
 
-	private GorillaSpeakerLoudness loudness;
+	private ISpeakerLoudness loudness;
 
 	private float overrideDuration;
 
@@ -30,7 +30,7 @@ public class GorillaEyeExpressions : MonoBehaviour, IGorillaSliceableSimple
 
 	private void Awake()
 	{
-		loudness = GetComponent<GorillaSpeakerLoudness>();
+		loudness = GetComponent<ISpeakerLoudness>();
 	}
 
 	public void OnEnable()
@@ -57,7 +57,7 @@ public class GorillaEyeExpressions : MonoBehaviour, IGorillaSliceableSimple
 	{
 		if (loudness == null)
 		{
-			loudness = GetComponent<GorillaSpeakerLoudness>();
+			loudness = GetComponent<ISpeakerLoudness>();
 		}
 		if (loudness.IsSpeaking && loudness.Loudness > screamVolume)
 		{

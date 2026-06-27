@@ -158,7 +158,7 @@ public struct GTSimpleNameID
 		for (int i = 0; i < num; i++)
 		{
 			int bitOffset = num2 + i * 6;
-			ulong num3 = _Read6Bits(in this, bitOffset);
+			ulong num3 = _Read6Bits(this, bitOffset);
 			array[i] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_-"[(int)num3];
 		}
 		return new string(array);

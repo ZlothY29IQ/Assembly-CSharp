@@ -1,11 +1,13 @@
+using System;
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
+using Unity.Mathematics;
 using UnityEngine;
 
 public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 {
-	public struct LightInput
+	private struct LightInput
 	{
 		public Color color;
 
@@ -14,13 +16,24 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 		public float intensityMult;
 	}
 
-	public struct LightData
+	private struct LightDataPacked
 	{
-		public Vector4 lightPos;
+		public uint posXY;
 
-		public Vector4 lightColor;
+		public uint posZW;
 
-		public Vector4 lightDirection;
+		public uint colorRG;
+
+		public uint colorBA;
+	}
+
+	private struct LightDataLegacy
+	{
+		public float4 position;
+
+		public float4 color;
+
+		public float4 direction;
 	}
 
 	[OnEnterPlay_SetNull]
@@ -31,10 +44,6 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 	public const int USE_MAX_VERTEX_LIGHTS = 20;
 
 	public const int MAX_UPDATE_LIGHTS_PER_FRAME = 10;
-
-	private const int MAX_LIGHT_POWER = 100;
-
-	private const int LIGHT_POWER_BIN_SIZE = 5;
 
 	public Transform testLightsCenter;
 
@@ -62,13 +71,17 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 
 	private int zoneDynamicLightingEnableCount;
 
-	private List<GameLight>[] lightDistanceBins = new List<GameLight>[20];
+	private float[] sortKeys;
 
-	private NativeArray<LightData> lightData;
+	private GameLight[] sortValues;
+
+	private NativeArray<LightDataPacked> lightData;
+
+	private NativeArray<LightDataLegacy> lightDataLegacy;
 
 	private GraphicsBuffer lightDataBuffer;
 
-	private Vector3 cameraPosForSort;
+	private GraphicsBuffer lightDataBufferLegacy;
 
 	private bool skipNextSlice;
 
@@ -78,7 +91,29 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 
 	private int nextLightCacheUpdate;
 
+	[SerializeField]
+	private Light _GR_NearsightedDimLight;
+
+	private static readonly int _shaderPropId_GameLight_UseMaxLights = Shader.PropertyToID("_GT_GameLight_UseMaxLights");
+
+	private static readonly int _shaderPropId_DesaturateAndTint_TintColor = Shader.PropertyToID("_GT_DesaturateAndTint_TintColor");
+
+	private static readonly int _shaderPropId_DesaturateAndTint_TintAmount = Shader.PropertyToID("_GT_DesaturateAndTint_TintAmount");
+
+	private static readonly int _shaderPropId_GameLight_Ambient_Color = Shader.PropertyToID("_GT_GameLight_Ambient_Color");
+
+	private static readonly int _shaderPropId_GameLight_Lights = Shader.PropertyToID("_GT_GameLight_Lights");
+
+	private static readonly int _shaderPropId_GameLight_LightsPacked = Shader.PropertyToID("_GT_GameLight_LightsPacked");
+
 	public bool IsDynamicLightingEnabled => customVertexLightingEnabled;
+
+	public Light GR_NearsightedDimLight => _GR_NearsightedDimLight;
+
+	private static uint PackHalf2(float a, float b)
+	{
+		return (uint)(Mathf.FloatToHalf(a) | (Mathf.FloatToHalf(b) << 16));
+	}
 
 	private void Awake()
 	{
@@ -89,12 +124,12 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 	{
 		instance = this;
 		gameLights = new List<GameLight>(512);
-		for (int i = 0; i < lightDistanceBins.Length; i++)
-		{
-			lightDistanceBins[i] = new List<GameLight>();
-		}
-		lightDataBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 50, UnsafeUtility.SizeOf<LightData>());
-		lightData = new NativeArray<LightData>(50, Allocator.Persistent);
+		sortKeys = new float[512];
+		sortValues = new GameLight[512];
+		lightDataBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 50, UnsafeUtility.SizeOf<LightDataPacked>());
+		lightData = new NativeArray<LightDataPacked>(50, Allocator.Persistent);
+		lightDataBufferLegacy = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 50, UnsafeUtility.SizeOf<LightDataLegacy>());
+		lightDataLegacy = new NativeArray<LightDataLegacy>(50, Allocator.Persistent);
 		nextLightUpdate = 0;
 		ClearGameLights();
 		SetDesaturateAndTintEnabled(enable: false, Color.black);
@@ -109,7 +144,16 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 		SetDesaturateAndTintEnabled(enable: false, Color.black);
 		SetAmbientLightDynamic(Color.black);
 		SetCustomDynamicLightingEnabled(enable: false);
-		lightData.Dispose();
+		lightDataBuffer?.Dispose();
+		if (lightData.IsCreated)
+		{
+			lightData.Dispose();
+		}
+		lightDataBufferLegacy?.Dispose();
+		if (lightDataLegacy.IsCreated)
+		{
+			lightDataLegacy.Dispose();
+		}
 	}
 
 	public new void OnEnable()
@@ -160,22 +204,27 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 		}
 	}
 
+	public void ToggleCustomDynamicLightingEnabled()
+	{
+		SetCustomDynamicLightingEnabled(!customVertexLightingEnabled);
+	}
+
 	public void SetAmbientLightDynamic(Color color)
 	{
-		Shader.SetGlobalColor("_GT_GameLight_Ambient_Color", color);
+		Shader.SetGlobalColor(_shaderPropId_GameLight_Ambient_Color, color);
 	}
 
 	public void SetMaxLights(int maxLights)
 	{
 		maxLights = Mathf.Min(maxLights, 50);
 		maxUseTestLights = maxLights;
-		Shader.SetGlobalInteger("_GT_GameLight_UseMaxLights", maxLights);
+		Shader.SetGlobalInteger(_shaderPropId_GameLight_UseMaxLights, maxLights);
 	}
 
 	public void SetDesaturateAndTintEnabled(bool enable, Color tint)
 	{
-		Shader.SetGlobalColor("_GT_DesaturateAndTint_TintColor", tint);
-		Shader.SetGlobalFloat("_GT_DesaturateAndTint_TintAmount", enable ? 1f : 0f);
+		Shader.SetGlobalColor(_shaderPropId_DesaturateAndTint_TintColor, tint);
+		Shader.SetGlobalFloat(_shaderPropId_DesaturateAndTint_TintAmount, enable ? 1f : 0f);
 		desaturateAndTintEnabled = enable;
 	}
 
@@ -192,36 +241,42 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 
 	public void SortLights()
 	{
-		if (gameLights.Count > maxUseTestLights)
+		int count = gameLights.Count;
+		if (count <= maxUseTestLights)
 		{
-			if (mainCameraTransform == null)
+			return;
+		}
+		if (mainCameraTransform == null)
+		{
+			mainCameraTransform = Camera.main.transform;
+		}
+		Vector3 position = mainCameraTransform.position;
+		if (sortKeys == null || sortKeys.Length < count)
+		{
+			int num = Mathf.Max(count, (sortKeys != null) ? (sortKeys.Length * 2) : 64);
+			sortKeys = new float[num];
+			sortValues = new GameLight[num];
+		}
+		for (int i = 0; i < count; i++)
+		{
+			GameLight gameLight = gameLights[i];
+			if (gameLight == null || gameLight.light == null)
 			{
-				mainCameraTransform = Camera.main.transform;
+				sortKeys[i] = float.MaxValue;
 			}
-			cameraPosForSort = mainCameraTransform.position;
-			gameLights.Sort(CompareDistFromCamera);
-		}
-	}
-
-	private int CompareDistFromCamera(GameLight a, GameLight b)
-	{
-		if (a == null || a.light == null)
-		{
-			if (b == null || b.light == null)
+			else
 			{
-				return 0;
+				float num2 = Mathf.Clamp(gameLight.cachedColorAndIntensity.x + gameLight.cachedColorAndIntensity.y + gameLight.cachedColorAndIntensity.z, 0.01f, 6f);
+				Vector3 vector = position - gameLight.cachedPosition;
+				sortKeys[i] = (vector.x * vector.x + vector.y * vector.y + vector.z * vector.z) / num2;
 			}
-			return -1;
+			sortValues[i] = gameLight;
 		}
-		if (b == null || b.light == null)
+		Array.Sort(sortKeys, sortValues, 0, count);
+		for (int j = 0; j < count; j++)
 		{
-			return 1;
+			gameLights[j] = sortValues[j];
 		}
-		float num = Mathf.Clamp(a.cachedColorAndIntensity.x + a.cachedColorAndIntensity.y + a.cachedColorAndIntensity.z, 0.01f, 6f);
-		float num2 = Mathf.Clamp(b.cachedColorAndIntensity.x + b.cachedColorAndIntensity.y + b.cachedColorAndIntensity.z, 0.01f, 6f);
-		float num3 = (cameraPosForSort - a.cachedPosition).sqrMagnitude / num;
-		float value = (cameraPosForSort - b.cachedPosition).sqrMagnitude / num2;
-		return num3.CompareTo(value);
 	}
 
 	public override void Tick()
@@ -231,26 +286,40 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 
 	private void RefreshLightData()
 	{
-		_ = lightData;
-		if (customVertexLightingEnabled)
+		if (lightDataBuffer == null || !customVertexLightingEnabled)
 		{
-			int numLightsToPull = 10;
-			if (immediateSort)
+			return;
+		}
+		int numLightsToPull = 10;
+		if (immediateSort)
+		{
+			immediateSort = false;
+			skipNextSlice = true;
+			CacheAllLightData();
+			SortLights();
+			numLightsToPull = maxUseTestLights;
+		}
+		else
+		{
+			int numLightsToUpdateCache = 5;
+			CacheLightDataForNonCloseLights(numLightsToUpdateCache);
+		}
+		PullLightData(numLightsToPull);
+		int num = Mathf.Min(gameLights.Count, maxUseTestLights);
+		if (num > 0)
+		{
+			bool num2 = CustomMapLoader.IsMapLoaded();
+			lightDataBuffer.SetData(lightData, 0, 0, num);
+			if (num2)
 			{
-				immediateSort = false;
-				skipNextSlice = true;
-				CacheAllLightData();
-				SortLights();
-				numLightsToPull = maxUseTestLights;
+				lightDataBufferLegacy.SetData(lightDataLegacy);
 			}
-			else
+			Shader.SetGlobalBuffer(_shaderPropId_GameLight_LightsPacked, lightDataBuffer);
+			if (num2)
 			{
-				int numLightsToUpdateCache = 5;
-				CacheLightDataForNonCloseLights(numLightsToUpdateCache);
+				Shader.SetGlobalBuffer(_shaderPropId_GameLight_Lights, lightDataBufferLegacy);
 			}
-			PullLightData(numLightsToPull);
-			lightDataBuffer.SetData(lightData);
-			Shader.SetGlobalBuffer("_GT_GameLight_Lights", lightDataBuffer);
+			Shader.SetGlobalInteger(_shaderPropId_GameLight_UseMaxLights, num);
 		}
 	}
 
@@ -318,7 +387,7 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 		{
 			return -1;
 		}
-		if (gameLights.Contains(light))
+		if (light.IsRegistered)
 		{
 			return -1;
 		}
@@ -337,10 +406,23 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 		{
 			light.light.enabled = true;
 		}
-		int num = gameLights.IndexOf(light);
-		if (num >= 0)
+		if (light != null)
 		{
-			gameLights.RemoveAt(num);
+			light.lightId = -1;
+		}
+		int num = gameLights.IndexOf(light);
+		if (num < 0)
+		{
+			return;
+		}
+		gameLights.RemoveAt(num);
+		if (CustomMapLoader.IsMapLoaded())
+		{
+			int count = gameLights.Count;
+			if (count < 50)
+			{
+				lightDataLegacy[count] = default(LightDataLegacy);
+			}
 		}
 	}
 
@@ -350,49 +432,57 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 		{
 			gameLights.Clear();
 		}
-		_ = lightData;
-		for (int i = 0; i < lightData.Length; i++)
+		if (lightDataBuffer != null)
 		{
-			ResetLight(i);
+			for (int i = 0; i < 50; i++)
+			{
+				ResetLight(i);
+			}
+			lightDataBuffer.SetData(lightData);
+			Shader.SetGlobalBuffer(_shaderPropId_GameLight_LightsPacked, lightDataBuffer);
+			if (CustomMapLoader.IsMapLoaded())
+			{
+				lightDataBufferLegacy.SetData(lightDataLegacy);
+				Shader.SetGlobalBuffer(_shaderPropId_GameLight_Lights, lightDataBufferLegacy);
+			}
 		}
-		lightDataBuffer.SetData(lightData);
-		Shader.SetGlobalBuffer("_GT_GameLight_Lights", lightDataBuffer);
 	}
 
 	public void GetFromLight(int lightIndex, int gameLightIndex)
 	{
-		_ = lightData;
-		GameLight gameLight = null;
-		if (gameLightIndex >= 0 && gameLightIndex < gameLights.Count)
+		if (lightDataBuffer != null)
 		{
-			gameLight = gameLights[gameLightIndex];
-		}
-		if (!(gameLight == null) && !(gameLight.light == null))
-		{
-			gameLight.cachedPosition = gameLight.transform.position;
-			gameLight.cachedColorAndIntensity = (float)gameLight.intensityMult * gameLight.light.intensity * (gameLight.negativeLight ? (-1f) : 1f) * gameLight.light.color;
-			Vector4 lightPos = gameLight.cachedPosition;
-			lightPos.w = 1f;
-			Vector4 cachedColorAndIntensity = gameLight.cachedColorAndIntensity;
-			Vector3 zero = Vector3.zero;
-			LightData value = new LightData
+			GameLight gameLight = null;
+			if (gameLightIndex >= 0 && gameLightIndex < gameLights.Count)
 			{
-				lightPos = lightPos,
-				lightColor = cachedColorAndIntensity,
-				lightDirection = zero
-			};
-			lightData[lightIndex] = value;
+				gameLight = gameLights[gameLightIndex];
+			}
+			if (!(gameLight == null) && !(gameLight.light == null))
+			{
+				gameLight.cachedPosition = gameLight.transform.position;
+				gameLight.cachedColorAndIntensity = (float)gameLight.intensityMult * gameLight.light.intensity * (gameLight.negativeLight ? (-1f) : 1f) * gameLight.light.color;
+				Vector3 cachedPosition = gameLight.cachedPosition;
+				Vector4 cachedColorAndIntensity = gameLight.cachedColorAndIntensity;
+				lightData[lightIndex] = new LightDataPacked
+				{
+					posXY = PackHalf2(cachedPosition.x, cachedPosition.y),
+					posZW = PackHalf2(cachedPosition.z, 1f),
+					colorRG = PackHalf2(cachedColorAndIntensity.x, cachedColorAndIntensity.y),
+					colorBA = PackHalf2(cachedColorAndIntensity.z, cachedColorAndIntensity.w)
+				};
+				lightDataLegacy[lightIndex] = new LightDataLegacy
+				{
+					position = new float4(cachedPosition.x, cachedPosition.y, cachedPosition.z, 1f),
+					color = new float4(cachedColorAndIntensity.x, cachedColorAndIntensity.y, cachedColorAndIntensity.z, cachedColorAndIntensity.w),
+					direction = float4.zero
+				};
+			}
 		}
 	}
 
 	private void ResetLight(int lightIndex)
 	{
-		LightData value = new LightData
-		{
-			lightPos = Vector4.zero,
-			lightColor = Color.black,
-			lightDirection = Vector4.zero
-		};
-		lightData[lightIndex] = value;
+		lightData[lightIndex] = default(LightDataPacked);
+		lightDataLegacy[lightIndex] = default(LightDataLegacy);
 	}
 }

@@ -1,8 +1,8 @@
 using System.Collections.Generic;
+using GT_CustomMapSupportRuntime;
 using GorillaExtensions;
 using GorillaGameModes;
 using GorillaTagScripts.VirtualStumpCustomMaps;
-using GT_CustomMapSupportRuntime;
 using UnityEngine;
 using UnityEngine.AI;
 

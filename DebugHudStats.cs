@@ -1,11 +1,15 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using GorillaLocomotion;
 using GorillaNetworking;
 using GorillaTag;
+using GorillaUtil;
 using TMPro;
 using Unity.Profiling;
 using UnityEngine;
+using UnityEngine.Profiling;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.XR;
@@ -20,7 +24,9 @@ public class DebugHudStats : MonoBehaviour
 		ShowError,
 		ShowStats,
 		ShowRBs,
-		timeAdjust
+		timeAdjust,
+		RecordingMode,
+		TitleDataMonitor
 	}
 
 	public static int FPS_THRESHOLD = 89;
@@ -31,7 +37,16 @@ public class DebugHudStats : MonoBehaviour
 	public TMP_Text text;
 
 	[SerializeField]
+	public TMP_Text logging;
+
+	[SerializeField]
+	public TMP_Text logPage;
+
+	[SerializeField]
 	private TMP_Text fpsWarning;
+
+	[SerializeField]
+	private TMP_Text dismiss;
 
 	[SerializeField]
 	private float delayUpdateRate = 0.25f;
@@ -64,9 +79,13 @@ public class DebugHudStats : MonoBehaviour
 
 	private List<string> logError = new List<string>();
 
+	private List<string> logTD = new List<string>();
+
 	private bool buttonDown;
 
-	private bool showLog;
+	private bool buttonDownBack;
+
+	private bool spoofIds;
 
 	private int lowFps;
 
@@ -88,17 +107,35 @@ public class DebugHudStats : MonoBehaviour
 
 	private bool button3Down;
 
+	private bool button5Down;
+
+	private bool button6Down;
+
+	private bool button7Down;
+
+	private bool button8Down;
+
+	[SerializeField]
+	private StringTable betaTitleDataOveride;
+
+	private Array fixedWeathers;
+
+	private int fixedWeatherIndex;
+
+	private float btnDownTime;
+
 	public static DebugHudStats Instance => _instance;
 
 	private void Awake()
 	{
 		if (_instance != null && _instance != this)
 		{
-			Object.Destroy(base.gameObject);
+			UnityEngine.Object.Destroy(base.gameObject);
 		}
 		else
 		{
 			_instance = this;
+			fixedWeathers = Enum.GetValues(typeof(BetterDayNightManager.WeatherType));
 		}
 		base.gameObject.SetActive(value: false);
 	}
@@ -121,81 +158,100 @@ public class DebugHudStats : MonoBehaviour
 
 	private void LateUpdate()
 	{
-		base.transform.LookAt(Camera.main.transform.position, Vector3.up);
-		if (currentState == State.timeAdjust)
+		if (GTPlayerTransform.Instance != null)
 		{
-			bool flag = ControllerInputPoller.PrimaryButtonPress(XRNode.RightHand);
-			bool flag2 = ControllerInputPoller.SecondaryButtonPress(XRNode.RightHand);
-			bool flag3 = ControllerInputPoller.TriggerFloat(XRNode.RightHand) > 0.5f;
-			bool flag4 = ControllerInputPoller.GripFloat(XRNode.RightHand) > 0.5f;
-			if (button1Down && !flag)
-			{
-				GorillaComputer.instance.AddSeverTime(flag4 ? (-60) : 60);
-			}
-			if (button2Down && !flag2)
-			{
-				GorillaComputer.instance.AddSeverTime(flag4 ? (-1) : 5);
-			}
-			if (button3Down && !flag3)
-			{
-				GorillaComputer.instance.AddSeverTime(flag4 ? (-1440) : 1440);
-			}
-			button1Down = flag;
-			button2Down = flag2;
-			button3Down = flag3;
+			base.transform.LookAt(Camera.main.transform.position, GTPlayerTransform.Instance.GravityUp);
 		}
-		bool flag5 = ControllerInputPoller.SecondaryButtonPress(XRNode.LeftHand);
-		if (buttonDown && !flag5)
+		else
 		{
-			Application.logMessageReceived -= LogMessageReceived;
-			PlayerGameEvents.OnPlayerMoved -= OnPlayerMoved;
-			PlayerGameEvents.OnPlayerSwam -= OnPlayerSwam;
-			switch (currentState)
-			{
-			case State.Inactive:
-				currentState = State.Active;
-				break;
-			case State.Active:
-				currentState = State.ShowLog;
-				break;
-			case State.ShowLog:
-				currentState = State.ShowError;
-				break;
-			case State.ShowError:
-				currentState = State.ShowStats;
-				break;
-			case State.ShowStats:
-				currentState = State.ShowRBs;
-				break;
-			case State.ShowRBs:
-				currentState = State.timeAdjust;
-				break;
-			case State.timeAdjust:
-				currentState = State.Inactive;
-				break;
-			}
-			Application.logMessageReceived -= LogMessageReceived;
-			PlayerGameEvents.OnPlayerMoved -= OnPlayerMoved;
-			PlayerGameEvents.OnPlayerSwam -= OnPlayerSwam;
-			switch (currentState)
-			{
-			case State.ShowLog:
-			case State.ShowError:
-				Application.logMessageReceived += LogMessageReceived;
-				break;
-			case State.ShowStats:
-				distanceMoved = (distanceSwam = 0f);
-				PlayerGameEvents.OnPlayerMoved += OnPlayerMoved;
-				PlayerGameEvents.OnPlayerSwam += OnPlayerSwam;
-				break;
-			}
-			text.gameObject.SetActive(currentState != State.Inactive);
-			if (RigidbodyHighlighter.Instance != null)
-			{
-				RigidbodyHighlighter.Instance.Active = currentState == State.ShowRBs;
-			}
+			base.transform.LookAt(Camera.main.transform.position, Vector3.up);
 		}
-		buttonDown = flag5;
+		if (!ControllerInputPoller.HandTrackingActive())
+		{
+			if (currentState == State.timeAdjust)
+			{
+				bool flag = ControllerInputPoller.PrimaryButtonPress(XRNode.RightHand);
+				bool flag2 = ControllerInputPoller.SecondaryButtonPress(XRNode.RightHand);
+				bool flag3 = ControllerInputPoller.TriggerFloat(XRNode.RightHand) > 0.5f;
+				bool flag4 = ControllerInputPoller.GripFloat(XRNode.RightHand) > 0.5f;
+				bool flag5 = ControllerInputPoller.Primary2DAxis(XRNode.LeftHand).x > 0.5f;
+				bool flag6 = ControllerInputPoller.Primary2DAxis(XRNode.LeftHand).x < -0.5f;
+				bool flag7 = ControllerInputPoller.Primary2DAxis(XRNode.LeftHand).y > 0.5f;
+				bool flag8 = ControllerInputPoller.Primary2DAxis(XRNode.LeftHand).y < -0.5f;
+				if (button1Down && !flag)
+				{
+					GorillaComputer.instance.AddSeverTime(flag4 ? (-60) : 60);
+				}
+				if (button2Down && !flag2)
+				{
+					GorillaComputer.instance.AddSeverTime(flag4 ? (-1) : 5);
+				}
+				if (button3Down && !flag3)
+				{
+					GorillaComputer.instance.AddSeverTime(flag4 ? (-1440) : 1440);
+				}
+				if (!button5Down && flag5)
+				{
+					ChangeTOD(1);
+				}
+				if (!button6Down && flag6)
+				{
+					ChangeTOD(-1);
+				}
+				if (!button7Down && flag7)
+				{
+					ChangeWeather(1);
+				}
+				if (!button8Down && flag8)
+				{
+					ChangeWeather(-1);
+				}
+				button1Down = flag;
+				button2Down = flag2;
+				button3Down = flag3;
+				button5Down = flag5;
+				button6Down = flag6;
+				button7Down = flag7;
+				button8Down = flag8;
+			}
+			if (currentState == State.TitleDataMonitor || currentState == State.ShowLog || currentState == State.ShowError)
+			{
+				bool flag9 = ControllerInputPoller.PrimaryButtonPress(XRNode.RightHand);
+				bool flag10 = ControllerInputPoller.SecondaryButtonPress(XRNode.RightHand);
+				if (button1Down && !flag9)
+				{
+					logging.pageToDisplay = ((logging.pageToDisplay >= logging.textInfo.pageCount) ? 1 : (logging.pageToDisplay + 1));
+					updateLogTitle();
+				}
+				if (button2Down && !flag10)
+				{
+					logging.pageToDisplay = ((logging.pageToDisplay > 1) ? (logging.pageToDisplay - 1) : logging.textInfo.pageCount);
+					updateLogTitle();
+				}
+				button1Down = flag9;
+				button2Down = flag10;
+			}
+			bool flag11 = ControllerInputPoller.SecondaryButtonPress(XRNode.LeftHand);
+			bool flag12 = ControllerInputPoller.PrimaryButtonPress(XRNode.LeftHand);
+			if ((buttonDown && !flag11) || (buttonDownBack && !flag12))
+			{
+				NextState(buttonDown);
+				if (currentState == State.ShowStats)
+				{
+					distanceMoved = (distanceSwam = 0f);
+					PlayerGameEvents.OnPlayerMoved += OnPlayerMoved;
+					PlayerGameEvents.OnPlayerSwam += OnPlayerSwam;
+				}
+				text.gameObject.SetActive(currentState != State.Inactive);
+				if (RigidbodyHighlighter.Instance != null)
+				{
+					RigidbodyHighlighter.Instance.Active = currentState == State.ShowRBs;
+				}
+				btnDownTime = 0f;
+			}
+			buttonDown = flag11;
+			buttonDownBack = flag12;
+		}
 		if (firstAwake == 0f)
 		{
 			firstAwake = Time.time;
@@ -218,14 +274,13 @@ public class DebugHudStats : MonoBehaviour
 		if (currentState != State.Inactive)
 		{
 			builder.Clear();
-			builder.Append("<color=\"" + colorFromState(currentState) + "\">");
 			builder.Append("gt: ");
 			builder.Append(GorillaComputer.instance.version);
 			builder.Append(":");
 			builder.Append(GorillaComputer.instance.buildCode);
-			builder.Append("</color>");
+			builder.AppendLine(spoofIds ? " <color=\"red\">*Spoofing IDs*</color>" : string.Empty);
 			num = Mathf.Min(num, 90);
-			builder.Append((num < FPS_THRESHOLD) ? " - <color=\"red\">" : " - <color=\"white\">");
+			builder.Append((num < FPS_THRESHOLD) ? "<color=\"red\">" : "<color=\"white\">");
 			builder.Append(num);
 			builder.Append($" fps / {FPS_THRESHOLD + 1} fps</color> ");
 			builder.AppendLine($"sfps: {GorillaTagger.Instance.SmoothedFramerate} (Health: {GorillaTagger.Instance.FramerateHealth})");
@@ -233,15 +288,21 @@ public class DebugHudStats : MonoBehaviour
 			float renderViewportScale = XRSettings.renderViewportScale;
 			float renderScale = (GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset).renderScale;
 			builder.AppendLine($"draw calls: {drawCallsRecorder.LastValue} tris: {trisRecorder.LastValue} " + $"rs: {eyeTextureResolutionScale}/{renderViewportScale}/{renderScale} ");
+			builder.AppendLine($"Memory: {Profiler.GetMonoUsedSizeLong() / 1048576}M");
 			if (GorillaComputer.instance != null)
 			{
-				builder.AppendLine(GorillaComputer.instance.GetServerTime().ToString());
+				DateTime serverTime = GorillaComputer.instance.GetServerTime();
+				builder.AppendLine(string.Format("<color={0}>{1}</color>", (serverTime.Year > 2020) ? "#00FFAA" : "#FF3333", serverTime));
 			}
 			else
 			{
-				builder.AppendLine("Server Time Unavailable");
+				builder.AppendLine("<color=#FF3333>Server Time Unavailable</color>");
 			}
-			zones = GorillaTagger.Instance.offlineVRRig.zoneEntity.currentNode?.gameObject.name.ToUpperInvariant();
+			ZoneDef currentNode = GorillaTagger.Instance.offlineVRRig.zoneEntity.currentNode;
+			if (currentNode != null)
+			{
+				zones = $"{currentNode.gameObject.name.ToUpperInvariant()}/{currentNode.zoneId}/{currentNode.subZoneId}";
+			}
 			if (NetworkSystem.Instance.IsMasterClient)
 			{
 				builder.Append("H");
@@ -290,9 +351,11 @@ public class DebugHudStats : MonoBehaviour
 					}
 				}
 			}
-			if (currentState == State.ShowStats)
+			switch (currentState)
 			{
-				builder.AppendLine();
+			case State.ShowStats:
+			{
+				builder.AppendLine("\nStats:\n");
 				Vector3 vector = GTPlayer.Instance.AveragedVelocity;
 				Vector3 headCenterPosition = GTPlayer.Instance.HeadCenterPosition;
 				float magnitude = vector.magnitude;
@@ -300,44 +363,139 @@ public class DebugHudStats : MonoBehaviour
 				groundVelocity.y = 0f;
 				builder.AppendLine($"v: {magnitude:F1} m/s\t\todo: {distanceMoved:F2}m\tswam: {distanceSwam:F2}m");
 				builder.AppendLine($"ground: {groundVelocity.magnitude:F1} m/s\thead: {headCenterPosition:F2}");
+				break;
 			}
-			else if (currentState == State.ShowLog)
-			{
-				builder.AppendLine();
-				for (int num2 = logMessage.Count - 1; num2 >= 0; num2--)
-				{
-					builder.AppendLine(logMessage[num2]);
-				}
-			}
-			else if (currentState == State.ShowError)
-			{
-				builder.AppendLine();
-				for (int num3 = logError.Count - 1; num3 >= 0; num3--)
-				{
-					builder.AppendLine(logError[num3]);
-				}
-			}
-			else if (currentState == State.timeAdjust)
-			{
-				builder.AppendLine();
-				builder.AppendLine("Press A to advance one hour [+ R Grip to go back one hour]");
-				builder.AppendLine("Press B to advance five minutes [+ R Grip to go back one minute]");
-				builder.AppendLine("Press R Trigger to advance one day [+ R Grip to go back one day]");
+			case State.timeAdjust:
+				builder.AppendLine("\nAdjust Time\n");
+				builder.AppendLine("Press [A] to advance one hour [+ R Grip to go back one hour]");
+				builder.AppendLine("Press [B] to advance five minutes [+ R Grip to go back one minute]");
+				builder.AppendLine("Press [R] Trigger to advance one day [+ R Grip to go back one day]");
+				builder.AppendLine($"\nAdjust Environment {BetterDayNightManager.instance.currentTimeIndex + 1}/{BetterDayNightManager.instance.timeOfDayRange.Length} : {BetterDayNightManager.instance.CurrentWeather()} \n");
+				builder.AppendLine("[L STICK L/R] to change Time Of Day. [L STICK U/D] to change Weather.");
+				break;
+			case State.RecordingMode:
+				builder.AppendLine("\nMo-Cap Recording:\n");
+				break;
+			case State.ShowRBs:
+				builder.AppendLine("\nRigid Body Locator\n");
+				break;
 			}
 			text.text = builder.ToString();
 		}
 		updateTimer = 0f;
+		if (buttonDown && currentState != State.RecordingMode)
+		{
+			btnDownTime += Time.deltaTime / delayUpdateRate;
+			if (btnDownTime >= 15f)
+			{
+				base.gameObject.SetActive(value: false);
+			}
+			dismiss.text = $"let go of that button in the next {15f - btnDownTime:0.0} seconds or the debug hud will vanish forever";
+		}
+		dismiss.gameObject.SetActive(buttonDown && currentState != State.RecordingMode && btnDownTime > 5f);
+	}
+
+	private void ChangeTOD(int v)
+	{
+		int num = (BetterDayNightManager.instance.currentTimeIndex + BetterDayNightManager.instance.timeOfDayRange.Length + v) % BetterDayNightManager.instance.timeOfDayRange.Length;
+		BetterDayNightManager.instance.SetTimeOfDay(num);
+		BetterDayNightManager.instance.SetOverrideIndex(num);
+		BetterDayNightManager.instance.SetFixedWeather((BetterDayNightManager.WeatherType)fixedWeathers.GetValue(fixedWeatherIndex));
+	}
+
+	private void ChangeWeather(int v)
+	{
+		fixedWeatherIndex = (fixedWeatherIndex + fixedWeathers.Length + v) % fixedWeathers.Length;
+		BetterDayNightManager.instance.SetFixedWeather((BetterDayNightManager.WeatherType)fixedWeathers.GetValue(fixedWeatherIndex));
+	}
+
+	private void NextState(bool fwd)
+	{
+		PlayerGameEvents.OnPlayerMoved -= OnPlayerMoved;
+		PlayerGameEvents.OnPlayerSwam -= OnPlayerSwam;
+		logging.gameObject.SetActive(value: false);
+		logging.pageToDisplay = 1;
+		if (currentState == State.timeAdjust)
+		{
+			BetterDayNightManager.instance.ClearFixedWeather();
+		}
+		switch (currentState)
+		{
+		case State.Inactive:
+			currentState = (fwd ? State.Active : State.timeAdjust);
+			break;
+		case State.Active:
+			currentState = (fwd ? State.ShowLog : State.Inactive);
+			break;
+		case State.ShowLog:
+			currentState = ((!fwd) ? State.Active : State.ShowError);
+			break;
+		case State.ShowError:
+			currentState = (fwd ? State.ShowStats : State.ShowLog);
+			break;
+		case State.ShowStats:
+			currentState = (fwd ? State.ShowRBs : State.ShowError);
+			break;
+		case State.ShowRBs:
+			currentState = (fwd ? State.TitleDataMonitor : State.ShowStats);
+			break;
+		case State.TitleDataMonitor:
+			currentState = (fwd ? State.timeAdjust : State.ShowRBs);
+			break;
+		case State.timeAdjust:
+			currentState = ((!fwd) ? State.TitleDataMonitor : State.Inactive);
+			break;
+		case State.RecordingMode:
+			currentState = ((!fwd) ? State.timeAdjust : State.Inactive);
+			break;
+		}
+		if (currentState == State.timeAdjust)
+		{
+			BetterDayNightManager.instance.SetFixedWeather((BetterDayNightManager.WeatherType)fixedWeathers.GetValue(fixedWeatherIndex));
+		}
+		UpdateLog();
+	}
+
+	private void DisplayLog(List<string> log)
+	{
+		logging.gameObject.SetActive(value: true);
+		logging.text = string.Empty;
+		for (int num = log.Count - 1; num >= 0; num--)
+		{
+			TMP_Text tMP_Text = logging;
+			tMP_Text.text = tMP_Text.text + log[num] + "\n";
+		}
+		updateLogTitle();
+	}
+
+	private async void updateLogTitle()
+	{
+		await Task.Yield();
+		logPage.text = $"{logTitleFromState(currentState)} <<[B] turn page [A]>> ({logging.pageToDisplay}/{logging.textInfo.pageCount})";
+	}
+
+	private string logTitleFromState(State s)
+	{
+		return s switch
+		{
+			State.ShowLog => "Debug Log", 
+			State.ShowError => "Error Log", 
+			State.TitleDataMonitor => "Title Data Log", 
+			_ => string.Empty, 
+		};
 	}
 
 	private string colorFromState(State s)
 	{
 		return s switch
 		{
-			State.ShowStats => "green", 
-			State.ShowLog => "yellow", 
-			State.ShowError => "orange", 
-			State.ShowRBs => "red", 
-			_ => "white", 
+			State.ShowStats => "\"green\"", 
+			State.ShowLog => "\"yellow\"", 
+			State.ShowError => "\"orange\"", 
+			State.ShowRBs => "\"red\"", 
+			State.RecordingMode => "\"purple\"", 
+			State.TitleDataMonitor => "#00ffff", 
+			_ => "#ffffff", 
 		};
 	}
 
@@ -357,14 +515,43 @@ public class DebugHudStats : MonoBehaviour
 		}
 	}
 
+	private void OnEnable()
+	{
+		Application.logMessageReceived += LogMessageReceived;
+		PlayFabTitleDataCache.OnValueRetieved = (Action<string, string>)Delegate.Combine(PlayFabTitleDataCache.OnValueRetieved, new Action<string, string>(TDValueRetrieved));
+		PlayFabTitleDataCache.OnCachedValueRetieved = (Action<string, string>)Delegate.Combine(PlayFabTitleDataCache.OnCachedValueRetieved, new Action<string, string>(TDCachedValueRetrieved));
+	}
+
+	private void TDValueRetrieved(string arg1, string arg2)
+	{
+		logTD.Add($" >{Time.realtimeSinceStartup:F2}> TitleData[ <color=#ffaaff>{arg1}</color> ] = {arg2}");
+		if (logTD.Count > 1000)
+		{
+			logTD.RemoveAt(0);
+		}
+		UpdateLog();
+	}
+
+	private void TDCachedValueRetrieved(string arg1, string arg2)
+	{
+		logTD.Add($" >{Time.realtimeSinceStartup:F2}> TitleData[ <color=#00ffff>{arg1}</color> ] = {arg2}");
+		if (logTD.Count > 1000)
+		{
+			logTD.RemoveAt(0);
+		}
+		UpdateLog();
+	}
+
 	private void OnDisable()
 	{
+		PlayFabTitleDataCache.OnValueRetieved = (Action<string, string>)Delegate.Remove(PlayFabTitleDataCache.OnValueRetieved, new Action<string, string>(TDValueRetrieved));
+		PlayFabTitleDataCache.OnCachedValueRetieved = (Action<string, string>)Delegate.Remove(PlayFabTitleDataCache.OnCachedValueRetieved, new Action<string, string>(TDCachedValueRetrieved));
 		Application.logMessageReceived -= LogMessageReceived;
 	}
 
 	private void LogMessageReceived(string condition, string stackTrace, LogType type)
 	{
-		string text = $"{Time.realtimeSinceStartup:F2}> {getColorStringFromLogType(type)}{condition}</color>";
+		string text = $" >{Time.realtimeSinceStartup:F2}> {getColorStringFromLogType(type)}{condition}</color>";
 		if (pLog != condition)
 		{
 			logMessage.Add(text);
@@ -374,17 +561,34 @@ public class DebugHudStats : MonoBehaviour
 			logMessage[logMessage.Count - 1] = text;
 		}
 		pLog = condition;
-		if (logMessage.Count > 10)
+		if (logMessage.Count > 100)
 		{
 			logMessage.RemoveAt(0);
 		}
 		if (type == LogType.Error || type == LogType.Assert || type == LogType.Exception)
 		{
 			logError.Add(text + "\n" + stackTrace);
-			if (logError.Count > 10)
+			if (logError.Count > 100)
 			{
 				logError.RemoveAt(0);
 			}
+		}
+		UpdateLog();
+	}
+
+	private void UpdateLog()
+	{
+		switch (currentState)
+		{
+		case State.ShowLog:
+			DisplayLog(logMessage);
+			break;
+		case State.ShowError:
+			DisplayLog(logError);
+			break;
+		case State.TitleDataMonitor:
+			DisplayLog(logTD);
+			break;
 		}
 	}
 

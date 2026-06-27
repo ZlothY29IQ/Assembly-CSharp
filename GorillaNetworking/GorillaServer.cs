@@ -30,6 +30,10 @@ public class GorillaServer : MonoBehaviour, ISerializationCallbackReceiver
 		TypeNameHandling = TypeNameHandling.Auto
 	};
 
+	private (bool valid, bool value) cachedVStumpGrabbablesFix;
+
+	private (bool valid, bool value) cachedSuppressZonesInVStump;
+
 	public bool FeatureFlagsReady => featureFlags.ready;
 
 	private PlayFab.CloudScriptModels.EntityKey playerEntity => new PlayFab.CloudScriptModels.EntityKey
@@ -224,6 +228,22 @@ public class GorillaServer : MonoBehaviour, ISerializationCallbackReceiver
 		}, successCallback, errorCallback);
 	}
 
+	public void ReturnVstumpMapStats(ReturnVstumpMapStatsRequest request, Action<ExecuteFunctionResult> successCallback, Action<PlayFabError> errorCallback)
+	{
+		successCallback = DebugWrapCb(successCallback, "ReturnVstumpMapStats result");
+		errorCallback = DebugWrapCb(errorCallback, "ReturnVstumpMapStats error");
+		PlayFabCloudScriptAPI.ExecuteFunction(new ExecuteFunctionRequest
+		{
+			Entity = playerEntity,
+			FunctionName = "ReturnVstumpMapStats",
+			FunctionParameter = new
+			{
+				MapIds = request.mapIds
+			},
+			GeneratePlayStreamEvent = false
+		}, successCallback, errorCallback);
+	}
+
 	private Action<T> DebugWrapCb<T>(Action<T> cb, string label)
 	{
 		return delegate(T arg)
@@ -280,12 +300,12 @@ public class GorillaServer : MonoBehaviour, ISerializationCallbackReceiver
 
 	public bool CheckIsInKIDOptInCohort()
 	{
-		return featureFlags.IsEnabledForUser("2025-04-KIDOptIn");
+		return featureFlags.IsEnabled("2025-04-KIDOptIn");
 	}
 
 	public bool CheckIsInKIDRequiredCohort()
 	{
-		return featureFlags.IsEnabledForUser("2025-04-KIDRequired");
+		return featureFlags.IsEnabled("2025-04-KIDRequired");
 	}
 
 	public bool CheckOptedInKID()
@@ -295,16 +315,56 @@ public class GorillaServer : MonoBehaviour, ISerializationCallbackReceiver
 
 	public bool CheckIsTZE_Enabled()
 	{
-		return featureFlags.IsEnabledForUser("2025-10-TelemetryZoneEventSampling");
+		return featureFlags.IsEnabled("2025-10-TelemetryZoneEventSampling");
 	}
 
 	public bool CheckIsMothershipTelemetryEnabled()
 	{
-		return featureFlags.IsEnabledForUser("2025-09-MothershipAnalyticsSampleRate");
+		return featureFlags.IsEnabled("2025-09-MothershipAnalyticsSampleRate");
 	}
 
-	public bool CheckIsPlayFabTelemetryEnabled()
+	public bool CheckIsVStumpGrabbablesFixEnabled()
 	{
-		return featureFlags.IsEnabledForUser("2025-09-PlayFabAnalyticsSampleRate");
+		if (cachedVStumpGrabbablesFix.valid)
+		{
+			return cachedVStumpGrabbablesFix.value;
+		}
+		bool flag = featureFlags.IsEnabled("2026-04-VStumpGrabbablesFix");
+		if (featureFlags.ready)
+		{
+			cachedVStumpGrabbablesFix.value = flag;
+			cachedVStumpGrabbablesFix.valid = true;
+		}
+		return flag;
+	}
+
+	public bool CheckIsSuppressZonesInVStumpEnabled()
+	{
+		if (cachedSuppressZonesInVStump.valid)
+		{
+			return cachedSuppressZonesInVStump.value;
+		}
+		bool flag = featureFlags.IsEnabled("2026-04-SuppressZonesInVStump");
+		if (featureFlags.ready)
+		{
+			cachedSuppressZonesInVStump.value = flag;
+			cachedSuppressZonesInVStump.valid = true;
+		}
+		return flag;
+	}
+
+	public bool CheckRoomControlsEnabled()
+	{
+		return featureFlags.IsEnabled("2026-05-RoomControlsEnabled");
+	}
+
+	public bool CheckRoomControlsEnabledForUser(string playFabId)
+	{
+		return featureFlags.IsEnabledForUser("2026-05-RoomControlsEnabled", playFabId);
+	}
+
+	public bool CheckRoomControlsEnabledForAnyone()
+	{
+		return featureFlags.IsEnabledForAnyone("2026-05-RoomControlsEnabled");
 	}
 }

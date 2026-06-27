@@ -1,7 +1,7 @@
 using System.Collections.Generic;
+using GT_CustomMapSupportRuntime;
 using GorillaLocomotion;
 using GorillaTagScripts.VirtualStumpCustomMaps;
-using GT_CustomMapSupportRuntime;
 using UnityEngine;
 
 namespace GorillaTagScripts.CustomMapSupport;
@@ -70,12 +70,12 @@ public class CMSLoadingZone : MonoBehaviour
 		{
 			if (useDynamicLighting)
 			{
-				GameLightingManager.instance.SetCustomDynamicLightingEnabled(enable: true);
+				CustomMapLoader.SetZoneDynamicLighting(enable: true);
 				GameLightingManager.instance.SetAmbientLightDynamic(dynamicLightingAmbientColor);
 			}
 			else
 			{
-				GameLightingManager.instance.SetCustomDynamicLightingEnabled(enable: false);
+				CustomMapLoader.SetZoneDynamicLighting(enable: false);
 				GameLightingManager.instance.SetAmbientLightDynamic(Color.black);
 			}
 			CustomMapManager.LoadZoneTriggered(scenesToLoad, scenesToUnload);

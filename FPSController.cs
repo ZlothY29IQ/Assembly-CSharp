@@ -27,6 +27,18 @@ public class FPSController : MonoBehaviour
 	private Vector3 rightControllerRotationOffset = new Vector3(263f, 318f, 485f);
 
 	[SerializeField]
+	private Vector3 noclipLeftControllerPosOffset = new Vector3(-0.3f, -0.1f, 0.65f);
+
+	[SerializeField]
+	private Vector3 noclipLeftControllerRotationOffset = new Vector3(180f, -90f, -90f);
+
+	[SerializeField]
+	private Vector3 noclipRightControllerPosOffset = new Vector3(0.3f, -0.1f, 0.65f);
+
+	[SerializeField]
+	private Vector3 noclipRightControllerRotationOffset = new Vector3(0f, -90f, -90f);
+
+	[SerializeField]
 	private bool toggleGrab;
 
 	[SerializeField]

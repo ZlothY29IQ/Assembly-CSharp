@@ -144,7 +144,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 		callLimiters[21] = new CallLimiter(50, 1f);
 		callLimiters[22] = new CallLimiter(20, 1f);
 		callLimiters[23] = new CallLimiter(20, 1f);
-		callLimiters[24] = new CallLimiter(3, 30f);
+		callLimiters[24] = new CallLimiter(1, 1f);
 		callLimiters[25] = new CallLimiter(10, 1f);
 		armShelfRequests = new List<Player>(10);
 	}
@@ -190,17 +190,18 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 			masterClientTableInit.Clear();
 			localClientTableInit.Reset();
 			BuilderTable table = GetTable();
+			bool flag = RoomSystem.WasRoomPrivate || table.IsInBuilderZone();
 			BuilderTable.TableState tableState = table.GetTableState();
-			bool flag = (tableState != BuilderTable.TableState.Ready && tableState != BuilderTable.TableState.WaitingForZoneAndRoom && tableState != BuilderTable.TableState.WaitForMasterResync && tableState != BuilderTable.TableState.ReceivingMasterResync) || table.pieces.Count <= 0;
-			if (!flag)
+			bool flag2 = (tableState != BuilderTable.TableState.Ready && tableState != BuilderTable.TableState.WaitingForZoneAndRoom && tableState != BuilderTable.TableState.WaitForMasterResync && tableState != BuilderTable.TableState.ReceivingMasterResync) || table.pieces.Count <= 0 || !flag;
+			if (!flag2)
 			{
-				flag |= table.pieces.Count <= 0;
+				flag2 |= table.pieces.Count <= 0;
 			}
-			if (flag)
+			if (flag2)
 			{
 				table.ClearTable();
 				table.ClearQueuedCommands();
-				table.SetTableState(BuilderTable.TableState.WaitForInitialBuildMaster);
+				table.SetTableState(flag ? BuilderTable.TableState.WaitForInitialBuildMaster : BuilderTable.TableState.WaitingForZoneAndRoom);
 				return;
 			}
 			for (int i = 0; i < table.pieces.Count; i++)
@@ -253,7 +254,6 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 
 	public override void OnPlayerLeftRoom(Player player)
 	{
-		Debug.LogFormat("Player {0} left room", player.ActorNumber);
 		BuilderTable table = GetTable();
 		if (table.GetTableState() != BuilderTable.TableState.WaitingForZoneAndRoom)
 		{
@@ -445,16 +445,15 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 	public void StartBuildTableRPC(int totalBytes, PhotonMessageInfo info)
 	{
 		MonkeAgent.IncrementRPCCall(info, "StartBuildTableRPC");
-		if (!info.Sender.IsMasterClient || PhotonNetwork.IsMasterClient || !ValidateCallLimits(RPC.TableDataStart, info))
+		if (!info.Sender.IsMasterClient || PhotonNetwork.IsMasterClient || !ValidateCallLimits(RPC.TableDataStart, info) || totalBytes <= 0 || totalBytes > 1048576)
 		{
-			return;
-		}
-		if (totalBytes <= 0 || totalBytes > 1048576)
-		{
-			Debug.LogError("Builder Table Bytes is too large: " + totalBytes);
 			return;
 		}
 		BuilderTable table = GetTable();
+		if (!table.IsInBuilderZone())
+		{
+			return;
+		}
 		GTDev.Log("StartBuildTableRPC with current state " + table.GetTableState());
 		if (table.GetTableState() == BuilderTable.TableState.WaitForMasterResync || table.GetTableState() == BuilderTable.TableState.WaitingForInitalBuild)
 		{
@@ -495,7 +494,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 	public void SendTableDataRPC(int numBytes, byte[] bytes, PhotonMessageInfo info)
 	{
 		MonkeAgent.IncrementRPCCall(info, "SendTableDataRPC");
-		if (!info.Sender.IsMasterClient)
+		if (!info.Sender.IsMasterClient || localClientTableInit.player == null)
 		{
 			return;
 		}
@@ -697,7 +696,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 			return;
 		}
 		BuilderTable table = GetTable();
-		if (!ValidateCallLimits(RPC.CreateShelfPieceMaster, info) || !table.isTableMutable)
+		if ((!table.IsInBuilderZone() && !info.Sender.IsLocal) || !ValidateCallLimits(RPC.CreateShelfPieceMaster, info) || !table.isTableMutable)
 		{
 			return;
 		}
@@ -740,7 +739,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 			return;
 		}
 		BuilderTable table = GetTable();
-		if (table.isTableMutable)
+		if ((table.IsInBuilderZone() || info.Sender.IsLocal) && table.isTableMutable)
 		{
 			Vector3 v = BitPackUtils.UnpackWorldPosFromNetwork(packedPosition);
 			Quaternion q = BitPackUtils.UnpackQuaternionFromNetwork(packedRotation);
@@ -784,7 +783,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 			return;
 		}
 		BuilderTable table = GetTable();
-		if (!table.isTableMutable)
+		if ((!RoomSystem.WasRoomPrivate && !table.IsInBuilderZone()) || !table.isTableMutable)
 		{
 			return;
 		}
@@ -819,7 +818,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 			return;
 		}
 		BuilderTable table = GetTable();
-		if (table.isTableMutable && placedByPlayer != null)
+		if ((table.IsInBuilderZone() || info.Sender.IsLocal) && table.isTableMutable && placedByPlayer != null)
 		{
 			if ((uint)(PhotonNetwork.ServerTimestamp - info.SentServerTimestamp) > PhotonNetwork.NetworkingClient.LoadBalancingPeer.DisconnectTimeout || (uint)(info.SentServerTimestamp - timeStamp) > PhotonNetwork.NetworkingClient.LoadBalancingPeer.DisconnectTimeout)
 			{
@@ -862,7 +861,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 			return;
 		}
 		BuilderTable table = GetTable();
-		if (!table.isTableMutable)
+		if ((!RoomSystem.WasRoomPrivate && !table.IsInBuilderZone()) || !table.isTableMutable)
 		{
 			return;
 		}
@@ -910,7 +909,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 		if (info.Sender.IsMasterClient && ValidateCallLimits(RPC.GrabPiece, info))
 		{
 			BuilderTable table = GetTable();
-			if (table.isTableMutable)
+			if ((table.IsInBuilderZone() || info.Sender.IsLocal) && table.isTableMutable)
 			{
 				BitPackUtils.UnpackHandPosRotFromNetwork(packedPosRot, out var localPos, out var handRot);
 				table.GrabPiece(localCommandId, pieceId, isLeftHand, localPos, handRot, NetPlayer.Get(grabbedByPlayer), force: false);
@@ -954,7 +953,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 			return;
 		}
 		BuilderTable table = GetTable();
-		if (table.isTableMutable && table.GetTableState() == BuilderTable.TableState.Ready)
+		if ((RoomSystem.WasRoomPrivate || table.IsInBuilderZone()) && table.isTableMutable && table.GetTableState() == BuilderTable.TableState.Ready)
 		{
 			bool isMasterClient = info.Sender.IsMasterClient;
 			bool flag = isMasterClient || table.ValidateDropPieceParams(pieceId, position, rotation, velocity, angVelocity, NetPlayer.Get(droppedByPlayer));
@@ -980,7 +979,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 		if (info.Sender.IsMasterClient && ValidateCallLimits(RPC.DropPiece, info) && position.IsValid(10000f) && rotation.IsValid() && velocity.IsValid(10000f) && angVelocity.IsValid(10000f))
 		{
 			BuilderTable table = GetTable();
-			if (table.isTableMutable)
+			if ((table.IsInBuilderZone() || info.Sender.IsLocal) && table.isTableMutable)
 			{
 				table.DropPiece(localCommandId, pieceId, position, rotation, velocity, angVelocity, NetPlayer.Get(droppedByPlayer), force: false);
 			}
@@ -1023,7 +1022,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 		if (q.IsValid())
 		{
 			BuilderTable table = GetTable();
-			if (table.isTableMutable)
+			if ((table.IsInBuilderZone() || info.Sender.IsLocal) && table.isTableMutable)
 			{
 				table.PieceEnteredDropZone(pieceId, v, q, dropZoneId);
 			}
@@ -1086,7 +1085,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 		if (info.Sender.IsMasterClient && ValidateCallLimits(RPC.ArmShelfCreated, info))
 		{
 			BuilderTable table = GetTable();
-			if (table.isTableMutable && pieceType == table.armShelfPieceType.name.GetStaticHash())
+			if ((table.IsInBuilderZone() || info.Sender.IsLocal) && table.isTableMutable && pieceType == table.armShelfPieceType.name.GetStaticHash())
 			{
 				table.CreateArmShelf(pieceIdLeft, pieceIdRight, pieceType, owningPlayer);
 			}
@@ -1124,7 +1123,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 		if (PhotonNetwork.IsMasterClient && ValidateCallLimits(RPC.ShelfSelection, info) && ValidateMasterClientIsReady(info.Sender))
 		{
 			BuilderTable table = GetTable();
-			if (table.isTableMutable && table.ValidateShelfSelectionParams(shelfId, setId, isConveyor, info.Sender))
+			if ((RoomSystem.WasRoomPrivate || table.IsInBuilderZone()) && table.isTableMutable && table.ValidateShelfSelectionParams(shelfId, setId, isConveyor, info.Sender))
 			{
 				base.photonView.RPC("ShelfSelectionChangedRPC", RpcTarget.All, shelfId, setId, isConveyor, info.Sender);
 			}
@@ -1138,7 +1137,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 		if (info.Sender.IsMasterClient && ValidateCallLimits(RPC.ShelfSelectionMaster, info))
 		{
 			BuilderTable table = GetTable();
-			if (table.isTableMutable && shelfId >= 0 && ((isConveyor && shelfId < table.conveyors.Count) || (!isConveyor && shelfId < table.dispenserShelves.Count)))
+			if ((table.IsInBuilderZone() || info.Sender.IsLocal) && table.isTableMutable && shelfId >= 0 && ((isConveyor && shelfId < table.conveyors.Count) || (!isConveyor && shelfId < table.dispenserShelves.Count)))
 			{
 				table.ChangeSetSelection(shelfId, setId, isConveyor);
 			}
@@ -1161,7 +1160,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 		if (PhotonNetwork.IsMasterClient && ValidateMasterClientIsReady(info.Sender) && ValidateCallLimits(RPC.SetFunctionalState, info))
 		{
 			BuilderTable table = GetTable();
-			if (table.GetTableState() == BuilderTable.TableState.Ready && table.ValidateFunctionalPieceState(pieceID, state, NetPlayer.Get(info.Sender)))
+			if ((RoomSystem.WasRoomPrivate || table.IsInBuilderZone()) && table.GetTableState() == BuilderTable.TableState.Ready && table.ValidateFunctionalPieceState(pieceID, state, NetPlayer.Get(info.Sender)))
 			{
 				table.OnFunctionalStateRequest(pieceID, state, NetPlayer.Get(info.Sender), info.SentServerTimestamp);
 			}
@@ -1191,7 +1190,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 				timeStamp = PhotonNetwork.ServerTimestamp;
 			}
 			BuilderTable table = GetTable();
-			if (table.ValidateFunctionalPieceState(pieceID, state, NetPlayer.Get(info.Sender)))
+			if ((table.IsInBuilderZone() || info.Sender.IsLocal) && table.ValidateFunctionalPieceState(pieceID, state, NetPlayer.Get(info.Sender)))
 			{
 				table.SetFunctionalPieceState(pieceID, state, NetPlayer.Get(caller), timeStamp);
 			}
@@ -1214,7 +1213,7 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 		if (NetworkSystem.Instance.IsMasterClient && ValidateCallLimits(RPC.RequestTerminalControl, info) && info.Sender != null)
 		{
 			BuilderTable table = GetTable();
-			if (!table.isTableMutable && !(table.linkedTerminal == null) && VRRigCache.Instance != null && VRRigCache.Instance.TryGetVrrig(info.Sender, out var playerRig) && !((table.linkedTerminal.transform.position - playerRig.Rig.bodyTransform.position).sqrMagnitude > 9f) && table.linkedTerminal.ValidateTerminalControlRequest(lockedStatus, info.Sender.ActorNumber))
+			if ((RoomSystem.WasRoomPrivate || table.IsInBuilderZone()) && !table.isTableMutable && !(table.linkedTerminal == null) && VRRigCache.Instance != null && VRRigCache.Instance.TryGetVrrig(info.Sender, out var playerRig) && !((table.linkedTerminal.transform.position - playerRig.Rig.bodyTransform.position).sqrMagnitude > 9f) && table.linkedTerminal.ValidateTerminalControlRequest(lockedStatus, info.Sender.ActorNumber))
 			{
 				int num = (lockedStatus ? info.Sender.ActorNumber : (-2));
 				base.photonView.RPC("SetBlocksTerminalDriverRPC", RpcTarget.All, num);
@@ -1317,8 +1316,10 @@ public class BuilderTableNetworking : MonoBehaviourPunCallbacks, ITickSystemTick
 			if (!ValidateCallLimits(RPC.SharedTableEvent, info))
 			{
 				GTDev.LogError("SharedTableEventRPC Failed call limits");
+				return;
 			}
-			else if (!GetTable().isTableMutable)
+			BuilderTable table = GetTable();
+			if ((table.IsInBuilderZone() || info.Sender.IsLocal) && !table.isTableMutable)
 			{
 				switch ((SharedTableEventTypes)eventType)
 				{

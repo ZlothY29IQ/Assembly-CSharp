@@ -19,11 +19,6 @@ public static class NetworkSystemRaiseEvent
 		TargetActors = new int[1]
 	};
 
-	public static readonly NetEventOptions newWeb = new NetEventOptions
-	{
-		Flags = new WebFlags(3)
-	};
-
 	public static void RaiseEvent(byte code, object data)
 	{
 		PhotonNetwork.RaiseEvent(code, data, RaiseEventOptions.Default, SendOptions.SendUnreliable);

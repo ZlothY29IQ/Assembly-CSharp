@@ -1,4 +1,5 @@
 using System;
+using GorillaNetworking;
 using TMPro;
 using UnityEngine;
 
@@ -38,17 +39,42 @@ public class VODTarget : ObservableBehavior, IBuildValidation
 	[SerializeField]
 	private VODPlayer.VODStream.VODStreamChannel[] channel;
 
+	[SerializeField]
+	private GameObject staticScreen;
+
 	public static Action<VODTarget> AlertEnabled;
 
 	public static Action<VODTarget> AlertDisabled;
+
+	private VODPlayer.VODNextStreamData upNextData;
 
 	public VODTargetAudioSettings AudioSettings => audioSettings;
 
 	public Renderer Renderer => targetRenderer;
 
-	public TMP_Text UpNextText => upNext;
-
 	public Material StandbyOverride => standbyOverride;
+
+	public VODPlayer.VODStream.VODStreamChannel[] Channel
+	{
+		get
+		{
+			if (channel.Length != 0)
+			{
+				return channel;
+			}
+			return new VODPlayer.VODStream.VODStreamChannel[1];
+		}
+	}
+
+	public void SetNext(VODPlayer.VODNextStreamData data)
+	{
+		upNextData = data;
+	}
+
+	public void ClearNext()
+	{
+		upNextData = default(VODPlayer.VODNextStreamData);
+	}
 
 	public bool VerifyChannel(VODPlayer.VODStream.VODStreamChannel ch)
 	{
@@ -68,7 +94,7 @@ public class VODTarget : ObservableBehavior, IBuildValidation
 
 	protected override void OnLostObservable()
 	{
-		if (AlertDisabled != null)
+		if (!staticScreen.activeInHierarchy && AlertDisabled != null)
 		{
 			AlertDisabled(this);
 		}
@@ -76,7 +102,7 @@ public class VODTarget : ObservableBehavior, IBuildValidation
 
 	protected override void OnBecameObservable()
 	{
-		if (AlertEnabled != null)
+		if (!staticScreen.activeInHierarchy && AlertEnabled != null)
 		{
 			AlertEnabled(this);
 		}
@@ -92,12 +118,17 @@ public class VODTarget : ObservableBehavior, IBuildValidation
 		return true;
 	}
 
+	private void Start()
+	{
+		targetRenderer.material = ((standbyOverride == null) ? VODPlayer.StandbyMaterial : standbyOverride);
+	}
+
 	protected override void UnityOnEnable()
 	{
 		VODPlayer.OnCrash = (Action)Delegate.Combine(VODPlayer.OnCrash, new Action(VODPlayer_OnCrash));
 		if (VODPlayer.state == VODPlayer.State.CRASHED)
 		{
-			base.gameObject.SetActive(value: false);
+			staticScreen.SetActive(value: true);
 		}
 	}
 
@@ -113,10 +144,38 @@ public class VODTarget : ObservableBehavior, IBuildValidation
 
 	private void VODPlayer_OnCrash()
 	{
-		base.gameObject.SetActive(value: false);
+		staticScreen.SetActive(value: true);
 	}
 
 	protected override void ObservableSliceUpdate()
 	{
+		if (upNextData.Title.IsNullOrEmpty())
+		{
+			if (upNext.text.Length > 0)
+			{
+				upNext.text = string.Empty;
+			}
+		}
+		else if (!(GorillaComputer.instance == null))
+		{
+			TimeSpan timeSpan = upNextData.StartTime - GorillaComputer.instance.GetServerTime();
+			upNext.text = $"next: {upNextData.Title} - {timeSpan.Minutes:00}:{timeSpan.Seconds:00}";
+		}
+	}
+
+	public void ShowStatic(bool on)
+	{
+		staticScreen.SetActive(on);
+		if (on)
+		{
+			if (observable && AlertDisabled != null)
+			{
+				AlertDisabled(this);
+			}
+		}
+		else if (observable && AlertEnabled != null)
+		{
+			AlertEnabled(this);
+		}
 	}
 }

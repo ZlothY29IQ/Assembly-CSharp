@@ -191,13 +191,13 @@ public class CosmeticsThrottler : MonoBehaviour, IGorillaSliceableSimple
 		return helper;
 	}
 
-	private async void ToggleRenderersOnRig(VRRig rig, bool toggle)
+	private void ToggleRenderersOnRig(VRRig rig, bool toggle)
 	{
-		CosmeticsController.CosmeticSet set = rig.cosmeticSet;
-		int numItems = set.items.Length;
-		for (int itemIndex = 0; itemIndex < numItems; itemIndex++)
+		CosmeticsController.CosmeticSet cosmeticSet = rig.cosmeticSet;
+		int num = cosmeticSet.items.Length;
+		for (int i = 0; i < num; i++)
 		{
-			CosmeticItemInstance cosmeticItemInstance = await rig.cosmeticsObjectRegistry.AwaitCosmetic(set.items[itemIndex].displayName);
+			CosmeticItemInstance cosmeticItemInstance = rig.cosmeticsObjectRegistry.Cosmetic(cosmeticSet.items[i].displayName);
 			if (cosmeticItemInstance != null)
 			{
 				cosmeticItemInstance.ToggleRenderers(toggle);
@@ -206,13 +206,13 @@ public class CosmeticsThrottler : MonoBehaviour, IGorillaSliceableSimple
 		}
 	}
 
-	private async void ToggleRenderersOnRigForSlots(VRRig rig, bool toggle, bool includesSlots = true)
+	private void ToggleRenderersOnRigForSlots(VRRig rig, bool toggle, bool includesSlots = true)
 	{
-		CosmeticsController.CosmeticSet set = rig.cosmeticSet;
-		int numItems = set.items.Length;
-		for (int itemIndex = 0; itemIndex < numItems; itemIndex++)
+		CosmeticsController.CosmeticSet cosmeticSet = rig.cosmeticSet;
+		int num = cosmeticSet.items.Length;
+		for (int i = 0; i < num; i++)
 		{
-			CosmeticItemInstance cosmeticItemInstance = await rig.cosmeticsObjectRegistry.AwaitCosmetic(set.items[itemIndex].displayName);
+			CosmeticItemInstance cosmeticItemInstance = rig.cosmeticsObjectRegistry.Cosmetic(cosmeticSet.items[i].displayName);
 			if (cosmeticItemInstance != null)
 			{
 				cosmeticItemInstance.ToggleParticles(toggle);

@@ -171,11 +171,11 @@ public class SnowballMaker : MonoBehaviourPostTick
 		return false;
 	}
 
-	private async void InitializeSnowballFromMatIndex(int matIndex)
+	private void InitializeSnowballFromMatIndex(int matIndex)
 	{
 		if (CosmeticsV2Spawner_Dirty.GetThrowableIDFromMaterialIndex(isLeftHand, matIndex, out var throwableId))
 		{
-			await VRRig.LocalRig.cosmeticsObjectRegistry.AwaitCosmetic(throwableId);
+			VRRig.LocalRig.cosmeticsObjectRegistry.Cosmetic(throwableId);
 		}
 	}
 }

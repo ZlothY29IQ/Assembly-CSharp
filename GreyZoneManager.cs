@@ -547,6 +547,7 @@ public class GreyZoneManager : MonoBehaviourPun, IPunObservable, IInRoomCallback
 			greyZoneActivationTime = ((double)stream.ReceiveNext()).GetFinite();
 			photonConnectedDuringActivation = (bool)stream.ReceiveNext();
 			gravityFactorOptionSelection = (int)stream.ReceiveNext();
+			gravityFactorOptionSelection = Mathf.Clamp(gravityFactorOptionSelection, 0, gravityFactorOptions.Length - 1);
 			summoningProgress = ((float)stream.ReceiveNext()).ClampSafe(0f, 1f);
 			UpdateSummonerVisuals();
 			if (greyZoneActive && !flag)

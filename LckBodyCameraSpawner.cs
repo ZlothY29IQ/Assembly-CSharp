@@ -63,7 +63,7 @@ public class LckBodyCameraSpawner : MonoBehaviourTick
 	private float _activateDistance = 0.25f;
 
 	[SerializeField]
-	private float _snapToNeckDistance = 15f;
+	private float _snapToNeckDistance = 6f;
 
 	[SerializeField]
 	private LineRenderer _cameraStrapRenderer;
@@ -97,7 +97,7 @@ public class LckBodyCameraSpawner : MonoBehaviourTick
 
 	private bool _shouldMoveCameraToNeck;
 
-	private CameraMode _previousMode;
+	private CameraMode? _returnToCameraMode;
 
 	private CameraState _cameraState;
 
@@ -231,10 +231,6 @@ public class LckBodyCameraSpawner : MonoBehaviourTick
 		InitCameraStrap();
 		cameraState = CameraState.CameraDisabled;
 		cameraPosition = CameraPosition.CameraDefault;
-		if (_tabletSpawnInstance.Controller != null)
-		{
-			_previousMode = _tabletSpawnInstance.Controller.CurrentCameraMode;
-		}
 		ZoneManagement.OnZoneChange += OnZoneChanged;
 		if (_swapTablet != null && _swapEmobi != null && _dummyTablet != null)
 		{
@@ -243,6 +239,11 @@ public class LckBodyCameraSpawner : MonoBehaviourTick
 			LckGameObjectSwapCosmetic swapEmobi = _swapEmobi;
 			swapEmobi.OnCosmeticSpawned = (Action<GameObject>)Delegate.Combine(swapEmobi.OnCosmeticSpawned, new Action<GameObject>(_dummyTablet.OnEmobiCosmeticSpawned));
 		}
+	}
+
+	private void Update()
+	{
+		_tabletSpawnInstance.Update();
 	}
 
 	private new void OnDisable()
@@ -278,6 +279,11 @@ public class LckBodyCameraSpawner : MonoBehaviourTick
 				if (ShouldSpawnCamera(gorillaGrabberTransform2))
 				{
 					SpawnCamera(grabber3, gorillaGrabberTransform2);
+					if (_returnToCameraMode.HasValue)
+					{
+						_tabletSpawnInstance?.Controller.SetCameraMode(_returnToCameraMode.Value);
+						_returnToCameraMode = null;
+					}
 				}
 			}
 			else
@@ -319,14 +325,14 @@ public class LckBodyCameraSpawner : MonoBehaviourTick
 					_tabletSpawnInstance.ResetLocalPose();
 					_cameraModelGrabbable.ForceGrab(grabber2);
 					_cameraModelGrabbable.onReleased += OnCameraModelReleased;
-					_previousMode = _tabletSpawnInstance.Controller.CurrentCameraMode;
-					if (_previousMode == CameraMode.Selfie)
+					if (_tabletSpawnInstance.Controller.CurrentCameraMode == CameraMode.Selfie)
 					{
+						_returnToCameraMode = CameraMode.Selfie;
 						_tabletSpawnInstance.Controller.SetCameraMode(CameraMode.FirstPerson);
 					}
 				}
 			}
-			else if (_shouldMoveCameraToNeck && GtTag.TryGetTransform(GtTagType.HMD, out transform2) && Vector3.SqrMagnitude(transform2.position - tabletSpawnInstance.position) >= _snapToNeckDistance * _snapToNeckDistance)
+			else if (_shouldMoveCameraToNeck && GtTag.TryGetTransform(GtTagType.HMD, out transform2) && Vector3.SqrMagnitude(base.transform.position - tabletSpawnInstance.position) >= _snapToNeckDistance * _snapToNeckDistance)
 			{
 				cameraState = CameraState.CameraOnNeck;
 				_tabletSpawnInstance.SetParent(_cameraModelTransform);
@@ -348,9 +354,9 @@ public class LckBodyCameraSpawner : MonoBehaviourTick
 
 	private void OnZoneChanged(ZoneData[] zones)
 	{
-		if (_tabletSpawnInstance.isSpawned && !_tabletSpawnInstance.directGrabbable.isGrabbed && Vector3.Distance(_tabletSpawnInstance.Controller.transform.position, base.transform.position) > 6f)
+		if (_tabletSpawnInstance.isSpawned && !_tabletSpawnInstance.directGrabbable.isGrabbed)
 		{
-			ManuallySetCameraOnNeck();
+			_shouldMoveCameraToNeck = true;
 		}
 	}
 
@@ -368,9 +374,9 @@ public class LckBodyCameraSpawner : MonoBehaviourTick
 			_tabletSpawnInstance.SetParent(_cameraModelTransform);
 			_tabletSpawnInstance.ResetLocalPose();
 			_shouldMoveCameraToNeck = false;
-			_previousMode = _tabletSpawnInstance.Controller.CurrentCameraMode;
-			if (_previousMode == CameraMode.Selfie)
+			if (_tabletSpawnInstance.Controller.CurrentCameraMode == CameraMode.Selfie)
 			{
+				_returnToCameraMode = CameraMode.Selfie;
 				_tabletSpawnInstance.Controller.SetCameraMode(CameraMode.FirstPerson);
 			}
 		}
@@ -387,11 +393,6 @@ public class LckBodyCameraSpawner : MonoBehaviourTick
 		if (!_tabletSpawnInstance.isSpawned)
 		{
 			_tabletSpawnInstance.SpawnCamera();
-		}
-		if (_previousMode == CameraMode.Selfie)
-		{
-			_tabletSpawnInstance.Controller.SetCameraMode(CameraMode.Selfie);
-			_previousMode = CameraMode.Selfie;
 		}
 		cameraState = CameraState.CameraSpawned;
 		_cameraModelGrabbable.ForceRelease();

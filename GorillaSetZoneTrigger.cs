@@ -7,6 +7,7 @@ public class GorillaSetZoneTrigger : GorillaTriggerBox
 
 	public override void OnBoxTriggered()
 	{
+		Debug.Log("Triggered set zone box on gameobject " + base.gameObject.name);
 		ZoneManagement.SetActiveZones(zones);
 	}
 }

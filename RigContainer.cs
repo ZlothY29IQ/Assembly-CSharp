@@ -13,6 +13,17 @@ using UnityEngine;
 [RequireComponent(typeof(VRRig), typeof(VRRigReliableState))]
 public class RigContainer : MonoBehaviour
 {
+	[Flags]
+	public enum MuteReason
+	{
+		None = 0,
+		Manual = 1,
+		Auto = 2,
+		Banned = 4,
+		OversizedStream = 8,
+		Room = 0x10
+	}
+
 	[SerializeField]
 	private VRRig vrrig;
 
@@ -37,9 +48,7 @@ public class RigContainer : MonoBehaviour
 
 	private int m_cachedNetViewID;
 
-	private bool enableVoice = true;
-
-	private bool forceMute;
+	private MuteReason muteReasons;
 
 	[SerializeField]
 	private SphereCollider headCollider;
@@ -51,8 +60,6 @@ public class RigContainer : MonoBehaviour
 	private VRRigEvents rigEvents;
 
 	public bool hasManualMute;
-
-	private bool bPlayerAutoMuted;
 
 	public int playerChatQuality = 2;
 
@@ -106,18 +113,7 @@ public class RigContainer : MonoBehaviour
 
 	public int CachedNetViewID => m_cachedNetViewID;
 
-	public bool Muted
-	{
-		get
-		{
-			return !enableVoice;
-		}
-		set
-		{
-			enableVoice = !value;
-			RefreshVoiceChat();
-		}
-	}
+	public bool IsMuted => muteReasons != MuteReason.None;
 
 	public NetPlayer Creator
 	{
@@ -134,28 +130,39 @@ public class RigContainer : MonoBehaviour
 		}
 	}
 
-	public bool ForceMute
-	{
-		get
-		{
-			return forceMute;
-		}
-		set
-		{
-			forceMute = value;
-			RefreshVoiceChat();
-		}
-	}
-
 	public SphereCollider HeadCollider => headCollider;
 
 	public CapsuleCollider BodyCollider => bodyCollider;
 
 	public VRRigEvents RigEvents => rigEvents;
 
+	public bool IsMutedFor(MuteReason reasons)
+	{
+		return (muteReasons & reasons) != 0;
+	}
+
+	private MuteReason WithReasons(MuteReason reasons, bool muted)
+	{
+		if (!muted)
+		{
+			return muteReasons & ~reasons;
+		}
+		return muteReasons | reasons;
+	}
+
+	public void SetMuted(MuteReason reasons, bool muted)
+	{
+		MuteReason muteReason = WithReasons(reasons, muted);
+		if (muteReason != muteReasons)
+		{
+			muteReasons = muteReason;
+			RefreshVoiceChat();
+		}
+	}
+
 	public bool GetIsPlayerAutoMuted()
 	{
-		return bPlayerAutoMuted;
+		return IsMutedFor(MuteReason.Auto);
 	}
 
 	public void UpdateAutomuteLevel(string autoMuteLevel)
@@ -223,13 +230,12 @@ public class RigContainer : MonoBehaviour
 	private void OnDisable()
 	{
 		Initialized = false;
-		enableVoice = true;
+		muteReasons = MuteReason.None;
 		voiceView = null;
 		base.gameObject.transform.localPosition = Vector3.zero;
 		base.gameObject.transform.localRotation = Quaternion.identity;
 		vrrig.syncPos = base.gameObject.transform.position;
 		vrrig.syncRotation = base.gameObject.transform.rotation;
-		forceMute = false;
 	}
 
 	internal void InitializeNetwork(NetworkView netView, PhotonVoiceView voiceView, VRRigSerializer vrRigSerializer)
@@ -388,7 +394,8 @@ public class RigContainer : MonoBehaviour
 	private void ProcessAutomute()
 	{
 		int num = PlayerPrefs.GetInt("autoMute", 1);
-		bPlayerAutoMuted = !hasManualMute && playerChatQuality < num;
+		bool muted = !hasManualMute && playerChatQuality < num;
+		muteReasons = WithReasons(MuteReason.Auto, muted);
 	}
 
 	public void RefreshVoiceChat()
@@ -396,8 +403,8 @@ public class RigContainer : MonoBehaviour
 		if (!(Voice == null))
 		{
 			ProcessAutomute();
-			Voice.SpeakerInUse.enabled = !forceMute && enableVoice && !bPlayerAutoMuted && GorillaComputer.instance.voiceChatOn == "TRUE";
-			replacementVoiceSource.mute = forceMute || !enableVoice || bPlayerAutoMuted || GorillaComputer.instance.voiceChatOn == "OFF";
+			Voice.SpeakerInUse.enabled = !IsMuted && GorillaComputer.instance.voiceChatOn == "TRUE";
+			replacementVoiceSource.mute = IsMuted || GorillaComputer.instance.voiceChatOn == "OFF";
 		}
 	}
 

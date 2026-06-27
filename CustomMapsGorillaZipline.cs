@@ -1,9 +1,9 @@
 using System;
 using CustomMapSupport;
+using GT_CustomMapSupportRuntime;
 using GorillaExtensions;
 using GorillaLocomotion.Climbing;
 using GorillaLocomotion.Gameplay;
-using GT_CustomMapSupportRuntime;
 using UnityEngine;
 
 public class CustomMapsGorillaZipline : GorillaZipline
@@ -53,6 +53,12 @@ public class CustomMapsGorillaZipline : GorillaZipline
 		return true;
 	}
 
+	protected override void OnBeforeClimb(GorillaHandClimber hand, GorillaClimbableRef climbRef)
+	{
+		slideHelper.gameObject.SetActive(value: true);
+		base.OnBeforeClimb(hand, climbRef);
+	}
+
 	private BezierControlPointMode[] ConvertControlPointModes(CustomMapSupport.BezierControlPointMode[] refModes)
 	{
 		BezierControlPointMode[] array = new BezierControlPointMode[refModes.Length];
@@ -77,7 +83,7 @@ public class CustomMapsGorillaZipline : GorillaZipline
 	protected override void Start()
 	{
 		GorillaClimbable gorillaClimbable = slideHelper;
-		gorillaClimbable.onBeforeClimb = (Action<GorillaHandClimber, GorillaClimbableRef>)Delegate.Combine(gorillaClimbable.onBeforeClimb, new Action<GorillaHandClimber, GorillaClimbableRef>(base.OnBeforeClimb));
+		gorillaClimbable.onBeforeClimb = (Action<GorillaHandClimber, GorillaClimbableRef>)Delegate.Combine(gorillaClimbable.onBeforeClimb, new Action<GorillaHandClimber, GorillaClimbableRef>(OnBeforeClimb));
 	}
 
 	public void Init(GTObjectPlaceholder ziplinePlaceholder)

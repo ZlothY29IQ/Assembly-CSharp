@@ -3,7 +3,7 @@ using GorillaTag;
 using GorillaTagScripts.VirtualStumpCustomMaps.UI;
 using UnityEngine;
 
-public abstract class CustomMapsScreenTouchPoint : MonoBehaviour
+public abstract class CustomMapsScreenTouchPoint : MonoBehaviour, IClickable
 {
 	public enum TouchPointDirections
 	{
@@ -111,4 +111,8 @@ public abstract class CustomMapsScreenTouchPoint : MonoBehaviour
 	}
 
 	protected abstract void OnButtonPressedEvent();
+
+	public void Click(bool leftHand = false)
+	{
+	}
 }

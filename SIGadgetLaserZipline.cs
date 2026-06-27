@@ -220,6 +220,12 @@ public class SIGadgetLaserZipline : SIGadget, ICallBack
 			}
 			if (!wasTriggerPressed)
 			{
+				if (IsBlocked(SIExclusionType.AffectsLocalMovement))
+				{
+					isLineBroken = true;
+					laserBeam.SetActive(value: false);
+					return;
+				}
 				if (Time.time < coolingDownUntilTimestamp)
 				{
 					isLineBroken = true;
@@ -249,21 +255,29 @@ public class SIGadgetLaserZipline : SIGadget, ICallBack
 				hasActiveCallback = true;
 				activatedAtPoint = zipline.transform.TransformPoint(ziplineAnchorOffset);
 				ziplineDirection = zipline.transform.forward;
-				if (ziplineDirection.y > 0f)
+				Vector3 up = VRRig.LocalRig.transform.up;
+				if (Vector3.Dot(ziplineDirection, up) > 0f)
 				{
 					ziplineDirection = -ziplineDirection;
 				}
-				if (ziplineDirection.y > -0.5f)
+				if (Vector3.Dot(ziplineDirection, up) > -0.5f)
 				{
-					ziplineDirection.y = 0f;
+					ziplineDirection = Vector3.ProjectOnPlane(ziplineDirection, up);
 					ziplineDirection.Normalize();
-					ziplineDirection.y = -0.5f;
+					ziplineDirection += up * -0.5f;
 					ziplineDirection.Normalize();
 				}
 				activatedAtRotation = Quaternion.LookRotation(ziplineDirection);
 				wasTriggerPressed = true;
 				wasSlidingUngrounded = !GTPlayer.Instance.IsGroundedButt && !GTPlayer.Instance.IsGroundedHand;
 				gameEntity.RequestState(gameEntity.id, GetStateLong());
+			}
+			if (IsBlocked(SIExclusionType.AffectsLocalMovement))
+			{
+				isLineBroken = true;
+				laserBeam.SetActive(value: false);
+				gameEntity.RequestState(gameEntity.id, GetStateLong());
+				return;
 			}
 			Vector3 rigidbodyVelocity = GTPlayer.Instance.RigidbodyVelocity;
 			GTPlayer.Instance.LaserZiplineActiveAtFrame = Time.frameCount + 1;
@@ -300,14 +314,15 @@ public class SIGadgetLaserZipline : SIGadget, ICallBack
 		else
 		{
 			isLineBroken = false;
-			Vector3 forward = zipline.parent.forward;
-			if (Mathf.Abs(forward.y) < 0.5f)
+			Vector3 vector2 = zipline.parent.forward;
+			Vector3 up2 = VRRig.LocalRig.transform.up;
+			if (Mathf.Abs(Vector3.Dot(vector2, up2)) < 0.5f)
 			{
-				forward.y = 0f;
-				forward.Normalize();
-				forward.y = -0.5f;
+				vector2 = Vector3.ProjectOnPlane(vector2, up2);
+				vector2.Normalize();
+				vector2 += up2 * -0.5f;
 			}
-			Quaternion b = zipline.parent.InverseTransformRotation(Quaternion.LookRotation(forward));
+			Quaternion b = zipline.parent.InverseTransformRotation(Quaternion.LookRotation(vector2));
 			zipline.transform.localRotation = Quaternion.Lerp(zipline.transform.localRotation, b, Time.deltaTime * 25f);
 		}
 	}

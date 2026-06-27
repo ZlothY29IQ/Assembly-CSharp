@@ -20,5 +20,7 @@ public enum SceneIndex
 	Ranked,
 	GhostReactorDrill,
 	City,
-	GTFC
+	GTFC,
+	Rewind_2024_02_Forest,
+	VIMDig_Cave
 }

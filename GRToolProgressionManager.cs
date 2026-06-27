@@ -122,16 +122,6 @@ public class GRToolProgressionManager : MonoBehaviourTick
 			}
 		}
 		toolProgressionTree.Init(reactor, this);
-		ProgressionManager.Instance.OnNodeUnlocked += delegate
-		{
-			NodeUnlocked();
-		};
-	}
-
-	private void NodeUnlocked()
-	{
-		toolProgressionTree.RefreshUserInventory();
-		toolProgressionTree.RefreshProgressionTree();
 	}
 
 	public override void Tick()

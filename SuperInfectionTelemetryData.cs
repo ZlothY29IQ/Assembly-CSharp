@@ -6,5 +6,5 @@ public struct SuperInfectionTelemetryData
 
 	public string[] CustomTags;
 
-	public Dictionary<string, string> BodyData;
+	public Dictionary<string, object> BodyData;
 }

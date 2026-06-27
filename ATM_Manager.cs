@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using GorillaNetworking;
 using GorillaNetworking.Store;
@@ -87,6 +88,8 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 
 	public List<ATM_UI> atmUIs = new List<ATM_UI>();
 
+	public Dictionary<ATM_UI, Tuple<string, string>> atmUIToMemberCode = new Dictionary<ATM_UI, Tuple<string, string>>();
+
 	[HideInInspector]
 	public List<CreatorCodeSmallDisplay> smallDisplays;
 
@@ -111,7 +114,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 	{
 		if ((bool)instance)
 		{
-			Object.Destroy(this);
+			UnityEngine.Object.Destroy(this);
 		}
 		else
 		{
@@ -124,7 +127,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 		}
 		foreach (ATM_UI atmUI in atmUIs)
 		{
-			atmUI.creatorCodeTitle.text = result;
+			atmUI.SetCreatorCodeTitle(result);
 		}
 		SwitchToStage(ATMStages.Unavailable);
 		smallDisplays = new List<CreatorCodeSmallDisplay>();
@@ -162,7 +165,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 		}
 		foreach (ATM_UI atmUI in atmUIs)
 		{
-			atmUI.creatorCodeField.text = CreatorCodes.getCurrentCreatorCode(ATM_TERMINAL_ID);
+			atmUI.SetCreatorCodeField(CreatorCodes.getCurrentCreatorCode(ATM_TERMINAL_ID));
 		}
 	}
 
@@ -178,7 +181,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 		}
 		foreach (ATM_UI atmUI in atmUIs)
 		{
-			atmUI.creatorCodeField.text = CreatorCodes.getCurrentCreatorCode(ATM_TERMINAL_ID);
+			atmUI.SetCreatorCodeField(CreatorCodes.getCurrentCreatorCode(ATM_TERMINAL_ID));
 		}
 		string text = "CREATOR CODE:";
 		switch (CreatorCodes.getCurrentCreatorCodeStatus(ATM_TERMINAL_ID))
@@ -192,7 +195,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 		}
 		foreach (ATM_UI atmUI2 in atmUIs)
 		{
-			atmUI2.creatorCodeTitle.text = text;
+			atmUI2.SetCreatorCodeTitle(text);
 		}
 	}
 
@@ -204,9 +207,9 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 		}
 		foreach (ATM_UI atmUI in atmUIs)
 		{
-			atmUI.creatorCodeTitle.text = "CREATOR CODE: INVALID";
+			atmUI.SetCreatorCodeTitle("CREATOR CODE: INVALID");
 			LocalisationManager.TryGetKeyForCurrentLocale("ATM_CREATOR_CODE_INVALID", out var result, atmUI.atmText.text);
-			atmUI.creatorCodeTitle.text = result;
+			atmUI.SetCreatorCodeTitle(result);
 		}
 		Debug.Log("ATM CODE FAILURE");
 	}
@@ -219,7 +222,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 		}
 		foreach (ATM_UI atmUI in atmUIs)
 		{
-			atmUI.creatorCodeTitle.text = "CREATOR CODE: INVALID";
+			atmUI.SetCreatorCodeTitle("CREATOR CODE: INVALID");
 		}
 	}
 
@@ -249,7 +252,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 		LocalisationManager.TryGetKeyForCurrentLocale("ATM_CREATOR_CODE", out var result, defaultResult);
 		foreach (ATM_UI atmUI in atmUIs)
 		{
-			atmUI.creatorCodeTitle.text = result;
+			atmUI.SetCreatorCodeTitle(result);
 		}
 		if (buttonPressed == GorillaATMKeyBindings.delete)
 		{
@@ -270,7 +273,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 		CreatorCodes.AppendKey(aTM_TERMINAL_ID, input);
 	}
 
-	public async void ProcessATMState(string currencyButton)
+	public async void ProcessATMState(ATM_UI atm_ui, string currencyButton)
 	{
 		switch (currentATMStage)
 		{
@@ -360,6 +363,17 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 				}
 				break;
 			}
+			if (atm_ui != null)
+			{
+				CosmeticsController.instance.PurchaseLocation = atm_ui.PurchaseLocation;
+			}
+			if (atm_ui != null && atmUIToMemberCode.ContainsKey(atm_ui))
+			{
+				SwitchToStage(ATMStages.Purchasing);
+				CosmeticsController.instance.SetValidatedCreatorCode(atmUIToMemberCode[atm_ui].Item1, atmUIToMemberCode[atm_ui].Item2, string.Empty);
+				CosmeticsController.instance.SteamPurchase();
+				break;
+			}
 			if (CreatorCodes.getCurrentCreatorCodeStatus(ATM_TERMINAL_ID) == CreatorCodes.CreatorCodeStatus.Empty)
 			{
 				CosmeticsController.instance.SteamPurchase();
@@ -389,10 +403,17 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 		}
 	}
 
-	public void AddATM(ATM_UI newATM)
+	public void AddATM(ATM_UI newATM, Tuple<string, string> creatorCode)
 	{
 		atmUIs.Add(newATM);
-		newATM.creatorCodeField.text = CreatorCodes.getCurrentCreatorCode(ATM_TERMINAL_ID);
+		if (creatorCode != null)
+		{
+			atmUIToMemberCode.Add(newATM, creatorCode);
+		}
+		else
+		{
+			newATM.SetCreatorCodeField(CreatorCodes.getCurrentCreatorCode(ATM_TERMINAL_ID));
+		}
 		SwitchToStage(currentATMStage);
 	}
 
@@ -405,7 +426,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 	{
 		foreach (ATM_UI atmUI in atmUIs)
 		{
-			atmUI.creatorCodeTitle.text = "CREATOR CODE: VALIDATING";
+			atmUI.SetCreatorCodeTitle("CREATOR CODE: VALIDATING");
 		}
 	}
 
@@ -413,7 +434,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 	{
 		foreach (ATM_UI atmUI in atmUIs)
 		{
-			atmUI.creatorCodeTitle.text = "CREATOR CODE: VALIDATING";
+			atmUI.SetCreatorCodeTitle("CREATOR CODE: VALIDATING");
 		}
 		if (currentATMStage == ATMStages.Confirm)
 		{
@@ -449,7 +470,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 				atmUI.ATM_RightColumnArrowText[2].enabled = false;
 				atmUI.ATM_RightColumnButtonText[3].text = "";
 				atmUI.ATM_RightColumnArrowText[3].enabled = false;
-				atmUI.creatorCodeObject.SetActive(value: false);
+				atmUI.HideCreatorCode();
 				break;
 			case ATMStages.Begin:
 				atmUI.atmText.text = "WELCOME! PRESS ANY BUTTON TO BEGIN.";
@@ -464,7 +485,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 				atmUI.ATM_RightColumnArrowText[2].enabled = false;
 				atmUI.ATM_RightColumnButtonText[3].text = result5;
 				atmUI.ATM_RightColumnArrowText[3].enabled = true;
-				atmUI.creatorCodeObject.SetActive(value: false);
+				atmUI.HideCreatorCode();
 				break;
 			case ATMStages.Menu:
 				if (PlayFabAuthenticator.instance.GetSafety())
@@ -481,7 +502,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 					atmUI.ATM_RightColumnArrowText[2].enabled = false;
 					atmUI.ATM_RightColumnButtonText[3].text = "";
 					atmUI.ATM_RightColumnArrowText[3].enabled = false;
-					atmUI.creatorCodeObject.SetActive(value: false);
+					atmUI.HideCreatorCode();
 				}
 				else
 				{
@@ -498,7 +519,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 					atmUI.ATM_RightColumnArrowText[2].enabled = false;
 					atmUI.ATM_RightColumnButtonText[3].text = "";
 					atmUI.ATM_RightColumnArrowText[3].enabled = false;
-					atmUI.creatorCodeObject.SetActive(value: false);
+					atmUI.HideCreatorCode();
 				}
 				break;
 			case ATMStages.Balance:
@@ -513,7 +534,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 				atmUI.ATM_RightColumnArrowText[2].enabled = false;
 				atmUI.ATM_RightColumnButtonText[3].text = "";
 				atmUI.ATM_RightColumnArrowText[3].enabled = false;
-				atmUI.creatorCodeObject.SetActive(value: false);
+				atmUI.HideCreatorCode();
 				break;
 			case ATMStages.Choose:
 			{
@@ -541,7 +562,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 				atmUI.ATM_RightColumnArrowText[2].enabled = true;
 				atmUI.ATM_RightColumnButtonText[3].text = result5;
 				atmUI.ATM_RightColumnArrowText[3].enabled = true;
-				atmUI.creatorCodeObject.SetActive(value: false);
+				atmUI.HideCreatorCode();
 				break;
 			}
 			case ATMStages.Confirm:
@@ -560,13 +581,13 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 				atmUI.ATM_RightColumnArrowText[2].enabled = false;
 				atmUI.ATM_RightColumnButtonText[3].text = "";
 				atmUI.ATM_RightColumnArrowText[3].enabled = false;
-				atmUI.creatorCodeObject.SetActive(value: true);
+				atmUI.ShowCreatorCode();
 				break;
 			case ATMStages.Purchasing:
 				atmUI.atmText.text = "PURCHASING IN STEAM...";
 				LocalisationManager.TryGetKeyForCurrentLocale("ATM_PURCHASING", out result, atmUI.atmText.text);
 				atmUI.atmText.text = result;
-				atmUI.creatorCodeObject.SetActive(value: false);
+				atmUI.HideCreatorCode();
 				break;
 			case ATMStages.Success:
 				atmUI.atmText.text = "SUCCESS! NEW SHINY ROCKS BALANCE: " + (CosmeticsController.instance.CurrencyBalance + numShinyRocksToBuy);
@@ -593,7 +614,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 				atmUI.ATM_RightColumnArrowText[2].enabled = false;
 				atmUI.ATM_RightColumnButtonText[3].text = "";
 				atmUI.ATM_RightColumnArrowText[3].enabled = false;
-				atmUI.creatorCodeObject.SetActive(value: false);
+				atmUI.HideCreatorCode();
 				break;
 			case ATMStages.Failure:
 				atmUI.atmText.text = "PURCHASE CANCELLED. NO FUNDS WERE SPENT.";
@@ -607,7 +628,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 				atmUI.ATM_RightColumnArrowText[2].enabled = false;
 				atmUI.ATM_RightColumnButtonText[3].text = "";
 				atmUI.ATM_RightColumnArrowText[3].enabled = false;
-				atmUI.creatorCodeObject.SetActive(value: false);
+				atmUI.HideCreatorCode();
 				break;
 			case ATMStages.SafeAccount:
 				atmUI.atmText.text = "Out Of Order.";
@@ -621,7 +642,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 				atmUI.ATM_RightColumnArrowText[2].enabled = false;
 				atmUI.ATM_RightColumnButtonText[3].text = "";
 				atmUI.ATM_RightColumnArrowText[3].enabled = false;
-				atmUI.creatorCodeObject.SetActive(value: false);
+				atmUI.HideCreatorCode();
 				break;
 			}
 		}
@@ -635,9 +656,9 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 		}
 	}
 
-	public void PressCurrencyPurchaseButton(string currencyPurchaseSize)
+	public void PressCurrencyPurchaseButton(ATM_UI atm_ui, string currencyPurchaseSize)
 	{
-		ProcessATMState(currencyPurchaseSize);
+		ProcessATMState(atm_ui, currencyPurchaseSize);
 	}
 
 	public void LeaveSystemMenu()

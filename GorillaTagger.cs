@@ -18,7 +18,6 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Serialization;
 using UnityEngine.XR;
-using Valve.VR;
 
 public class GorillaTagger : MonoBehaviour, IGuidedRefReceiverMono, IGuidedRefMonoBehaviour, IGuidedRefObject
 {
@@ -645,10 +644,6 @@ public class GorillaTagger : MonoBehaviour, IGuidedRefReceiverMono, IGuidedRefMo
 		{
 			float num2 = (_forcePerfRefreshRate ? _perfRefreshRate : _defaultRefreshRate);
 			float num3 = 1f / num2;
-			if (SteamVR.settings.lockPhysicsUpdateRateToRenderFrequency)
-			{
-				num3 = 1f / num2;
-			}
 			if (num2 > 0f)
 			{
 				DebugHudStats.FPS_THRESHOLD = (int)num2 - 1;
@@ -1523,11 +1518,6 @@ public class GorillaTagger : MonoBehaviour, IGuidedRefReceiverMono, IGuidedRefMo
 
 	void IGuidedRefReceiverMono.OnGuidedRefTargetDestroyed(int fieldId)
 	{
-	}
-
-	Transform IGuidedRefMonoBehaviour.get_transform()
-	{
-		return base.transform;
 	}
 
 	int IGuidedRefObject.GetInstanceID()

@@ -702,7 +702,7 @@ public class SIGadgetTentacleArm : SIGadget, ICallBack, IEnergyGadget
 			GTPlayer.Instance.UnsetGravityOverride(this);
 			hasGravityOverride = false;
 		}
-		if (IsEquippedLocal())
+		if (IsEquippedLocal() && !IsBlocked(SIExclusionType.AffectsLocalMovement))
 		{
 			Vector3 averagedVelocity = GTPlayer.Instance.AveragedVelocity;
 			float a = averagedVelocity.magnitude;

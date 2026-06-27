@@ -53,7 +53,7 @@ public class GTSignalListener : MonoBehaviour
 	private void RefreshActorID()
 	{
 		rig = GetComponentInParent<VRRig>(includeInactive: true);
-		rigActorID = ((rig == null) ? (-1) : (rig.OwningNetPlayer?.ActorNumber ?? (-1)));
+		rigActorID = ((rig == null) ? (-1) : (rig.Creator?.ActorNumber ?? (-1)));
 	}
 
 	public virtual bool IsReady()

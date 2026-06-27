@@ -473,6 +473,11 @@ public class BuilderPiece : MonoBehaviour
 		}
 	}
 
+	public void UpdateCollidersEnabled(bool _enabled)
+	{
+		SetCollidersEnabled(colliders, _enabled);
+	}
+
 	private void SetCollidersEnabled<T>(List<T> components, bool enabled) where T : Collider
 	{
 		if (components == null)

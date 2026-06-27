@@ -116,6 +116,8 @@ public class SIPlayer : MonoBehaviour, ITickSystemTick
 
 	public List<int> activePlayerGadgets = new List<int>();
 
+	private static float _debug_lastStaleSlotLogTime;
+
 	public static SIPlayer LocalPlayer => Get(NetworkSystem.Instance.LocalPlayer.ActorNumber);
 
 	public int TotalGadgetLimit
@@ -199,12 +201,11 @@ public class SIPlayer : MonoBehaviour, ITickSystemTick
 		{
 			return value;
 		}
-		GamePlayer gamePlayer = GamePlayer.GetGamePlayer(actorNumber);
-		if (gamePlayer == null)
+		if (!GamePlayer.TryGetGamePlayer(actorNumber, out var out_gamePlayer))
 		{
 			return null;
 		}
-		siPlayerByActorNr.Add(actorNumber, gamePlayer.GetComponent<SIPlayer>());
+		siPlayerByActorNr.Add(actorNumber, out_gamePlayer.GetComponent<SIPlayer>());
 		return siPlayerByActorNr[actorNumber];
 	}
 
@@ -255,7 +256,7 @@ public class SIPlayer : MonoBehaviour, ITickSystemTick
 		{
 			for (int i = 0; i < 6; i++)
 			{
-				reader.ReadInt16();
+				reader.ReadInt32();
 			}
 			for (int j = 0; j < 2; j++)
 			{
@@ -385,6 +386,24 @@ public class SIPlayer : MonoBehaviour, ITickSystemTick
 	public void SetProgressionLocal()
 	{
 		currentProgression = new ProgressionData(SIProgression.Instance);
+		int num = 0;
+		if (currentProgression.techTreeData != null)
+		{
+			for (int i = 0; i < currentProgression.techTreeData.Length; i++)
+			{
+				if (currentProgression.techTreeData[i] == null)
+				{
+					continue;
+				}
+				for (int j = 0; j < currentProgression.techTreeData[i].Length; j++)
+				{
+					if (currentProgression.techTreeData[i][j])
+					{
+						num++;
+					}
+				}
+			}
+		}
 		gamePlayer.SetInitializePlayer(initialized: true);
 		UpdateVisualsForAvailableQuestRedemption();
 	}
@@ -698,6 +717,10 @@ public class SIPlayer : MonoBehaviour, ITickSystemTick
 	{
 		if (!gamePlayer.TryGetSlotEntity(slotIndex, out var out_entity))
 		{
+			if (gamePlayer.TryGetSlotData(slotIndex, out var _) && Time.time - _debug_lastStaleSlotLogTime > 5f)
+			{
+				_debug_lastStaleSlotLogTime = Time.time;
+			}
 			return false;
 		}
 		IEnergyGadget component = out_entity.GetComponent<IEnergyGadget>();

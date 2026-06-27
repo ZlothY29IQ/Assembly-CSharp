@@ -68,7 +68,7 @@ public class SIProgression : MonoBehaviour, IGorillaSliceableSimple, GorillaQues
 
 	private Dictionary<SIUpgradeType, SINode> siNodes;
 
-	private bool _treeReady;
+	internal bool _treeReady;
 
 	private bool _inventoryReady;
 
@@ -295,6 +295,8 @@ public class SIProgression : MonoBehaviour, IGorillaSliceableSimple, GorillaQues
 			ProgressionManager.Instance.OnTreeUpdated += HandleTreeUpdated;
 			ProgressionManager.Instance.OnInventoryUpdated += HandleInventoryUpdated;
 			ProgressionManager.Instance.OnNodeUnlocked += HandleNodeUnlocked;
+			ProgressionManager.Instance.RefreshProgressionTree();
+			ProgressionManager.Instance.RefreshUserInventory();
 		}
 		GorillaSlicerSimpleManager.RegisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
 	}
@@ -646,12 +648,17 @@ public class SIProgression : MonoBehaviour, IGorillaSliceableSimple, GorillaQues
 	{
 		_ = SIPlayer.LocalPlayer;
 		techTreeSO.EnsureInitialized();
+		int num = 0;
 		foreach (KeyValuePair<SIUpgradeType, SINode> siNode in siNodes)
 		{
 			SIUpgradeType key = siNode.Key;
 			if (key >= SIUpgradeType.Thruster_Unlock)
 			{
 				unlockedTechTreeData[key.GetPageId()][key.GetNodeId()] = siNode.Value.unlocked;
+				if (siNode.Value.unlocked)
+				{
+					num++;
+				}
 			}
 		}
 		SIPlayer.SetAndBroadcastProgression();

@@ -1,4 +1,5 @@
 using System.Collections;
+using GorillaNetworking.Store;
 using UnityEngine;
 
 public class PurchaseCurrencyButton : GorillaPressableButton
@@ -10,7 +11,7 @@ public class PurchaseCurrencyButton : GorillaPressableButton
 	public override void ButtonActivation()
 	{
 		base.ButtonActivation();
-		ATM_Manager.instance.PressCurrencyPurchaseButton(purchaseCurrencySize);
+		ATM_Manager.instance.PressCurrencyPurchaseButton(GetComponentInParent<ATM_UI>(), purchaseCurrencySize);
 		StartCoroutine(ButtonColorUpdate());
 	}
 

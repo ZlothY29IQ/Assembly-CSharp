@@ -41,6 +41,10 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 		City,
 		GhostReactor,
 		MonkeBlocks,
+		VIMExperience1,
+		VIMExperience2,
+		VIMExperience3,
+		VIMExperience4,
 		None
 	}
 
@@ -563,8 +567,13 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 
 	private void ElevatorButtonPressedInternal(GRElevator.ButtonType type, ElevatorLocation location)
 	{
-		elevatorByLocation[location].PressButtonVisuals(type);
-		elevatorByLocation[location].PlayButtonPress();
+		if (!elevatorByLocation.TryGetValue(location, out var value) || value == null)
+		{
+			Debug.LogWarning($"[GRElevatorManager] No elevator registered for location '{location}'. Elevator may not be enabled yet or is missing from allElevators.", this);
+			return;
+		}
+		value.PressButtonVisuals(type);
+		value.PlayButtonPress();
 		if (base.IsMine)
 		{
 			ProcessElevatorButtonPress(type, location);
@@ -597,6 +606,30 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 			if (currentState != ElevatorSystemState.WaitingToTeleport)
 			{
 				UpdateElevatorState(ElevatorSystemState.DestinationPressed, ElevatorLocation.MonkeBlocks);
+			}
+			break;
+		case GRElevator.ButtonType.VIMExperience1:
+			if (currentState != ElevatorSystemState.WaitingToTeleport)
+			{
+				UpdateElevatorState(ElevatorSystemState.DestinationPressed, ElevatorLocation.VIMExperience1);
+			}
+			break;
+		case GRElevator.ButtonType.VIMExperience2:
+			if (currentState != ElevatorSystemState.WaitingToTeleport)
+			{
+				UpdateElevatorState(ElevatorSystemState.DestinationPressed, ElevatorLocation.VIMExperience2);
+			}
+			break;
+		case GRElevator.ButtonType.VIMExperience3:
+			if (currentState != ElevatorSystemState.WaitingToTeleport)
+			{
+				UpdateElevatorState(ElevatorSystemState.DestinationPressed, ElevatorLocation.VIMExperience3);
+			}
+			break;
+		case GRElevator.ButtonType.VIMExperience4:
+			if (currentState != ElevatorSystemState.WaitingToTeleport)
+			{
+				UpdateElevatorState(ElevatorSystemState.DestinationPressed, ElevatorLocation.VIMExperience4);
 			}
 			break;
 		case GRElevator.ButtonType.Summon:
@@ -672,13 +705,13 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 		}
 		_ = currentLocation;
 		int num = (int)stream.ReceiveNext();
-		if (num >= 0 && num <= 4)
+		if (num >= 0 && num <= 8)
 		{
 			currentLocation = (ElevatorLocation)num;
 		}
 		_ = destination;
 		num = (int)stream.ReceiveNext();
-		if (num >= 0 && num <= 4)
+		if (num >= 0 && num <= 8)
 		{
 			destination = (ElevatorLocation)num;
 		}
@@ -720,7 +753,7 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 	[PunRPC]
 	public void RemoteElevatorButtonPress(int elevatorButtonPressed, int elevatorLocation, PhotonMessageInfo info)
 	{
-		if (base.IsMine && !m_RpcSpamChecks.IsSpamming(RPC.RemoteElevatorButtonPress) && elevatorLocation >= 0 && elevatorLocation < 4 && elevatorButtonPressed >= 0 && elevatorButtonPressed < 8)
+		if (base.IsMine && !m_RpcSpamChecks.IsSpamming(RPC.RemoteElevatorButtonPress) && elevatorLocation >= 0 && elevatorLocation < 8 && elevatorButtonPressed >= 0 && elevatorButtonPressed < 12)
 		{
 			ElevatorButtonPressedInternal((GRElevator.ButtonType)elevatorButtonPressed, (ElevatorLocation)elevatorLocation);
 		}
@@ -729,7 +762,7 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 	[PunRPC]
 	public void RemoteActivateTeleport(int elevatorStartLocation, int elevatorDestinationLocation, int lowestActorNumber, PhotonMessageInfo info)
 	{
-		if (info.Sender.IsMasterClient && !m_RpcSpamChecks.IsSpamming(RPC.RemoteActivateTeleport) && elevatorStartLocation >= 0 && elevatorStartLocation < 4 && elevatorDestinationLocation >= 0 && elevatorDestinationLocation < 4 && !waitingForRemoteTeleport)
+		if (info.Sender.IsMasterClient && !m_RpcSpamChecks.IsSpamming(RPC.RemoteActivateTeleport) && elevatorStartLocation >= 0 && elevatorStartLocation < 8 && elevatorDestinationLocation >= 0 && elevatorDestinationLocation < 8 && !waitingForRemoteTeleport)
 		{
 			StartCoroutine(TeleportDelay((ElevatorLocation)elevatorStartLocation, (ElevatorLocation)elevatorDestinationLocation, lowestActorNumber, info.SentServerTime));
 		}

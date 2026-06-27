@@ -175,7 +175,7 @@ public class TryOnBundlesStand : MonoBehaviour, IBuildValidation
 		}
 	}
 
-	private async void TryOnBundle(string BundleID)
+	private void TryOnBundle(string BundleID)
 	{
 		CosmeticsController.CosmeticItem itemFromDict = CosmeticsController.instance.GetItemFromDict(BundleID);
 		if (itemFromDict.isNullItem)
@@ -196,28 +196,61 @@ public class TryOnBundlesStand : MonoBehaviour, IBuildValidation
 		{
 			if (!CosmeticsController.instance.tryOnSet.HasItem(itemID))
 			{
-				await CosmeticsController.instance.ApplyCosmeticItemToSet(CosmeticsController.instance.tryOnSet, CosmeticsController.instance.GetItemFromDict(itemID), isLeftHand: false, applyToPlayerPrefs: false);
+				CosmeticsController.instance.ApplyCosmeticItemToSet(CosmeticsController.instance.tryOnSet, CosmeticsController.instance.GetItemFromDict(itemID), isLeftHand: false, applyToPlayerPrefs: false);
 			}
 		}
 	}
 
-	public async void PressTryOnBundleButton(TryOnBundleButton pressedTryOnBundleButton, bool isLeftHand)
+	private async void LoadBundle(TryOnBundleButton pressedTryOnBundleButton, bool isLeftHand)
+	{
+		CosmeticsController.CosmeticItem BundleToTry = CosmeticsController.instance.GetItemFromDict(pressedTryOnBundleButton.playfabBundleID);
+		float timeEntered = Time.time;
+		float maxTime = 1f;
+		bool flag = true;
+		while (flag)
+		{
+			if (Time.time > timeEntered + maxTime)
+			{
+				return;
+			}
+			await Awaitable.EndOfFrameAsync();
+			flag = false;
+			for (int i = 0; i < BundleToTry.bundledItems.Length; i++)
+			{
+				if (VRRig.LocalRig.cosmeticsObjectRegistry.Cosmetic(BundleToTry.bundledItems[i]) == null)
+				{
+					flag = true;
+				}
+			}
+		}
+		PressTryOnBundleButton(pressedTryOnBundleButton, isLeftHand);
+	}
+
+	public void PressTryOnBundleButton(TryOnBundleButton pressedTryOnBundleButton, bool isLeftHand)
 	{
 		if (pressedTryOnBundleButton.playfabBundleID == "NULL")
 		{
 			Debug.LogError("TryOnBundlesStand - PressTryOnBundleButton - Invalid bundle ID");
 			return;
 		}
-		CosmeticsController.CosmeticItem BundleToTry = CosmeticsController.instance.GetItemFromDict(pressedTryOnBundleButton.playfabBundleID);
-		if (BundleToTry.isNullItem)
+		CosmeticsController.CosmeticItem itemFromDict = CosmeticsController.instance.GetItemFromDict(pressedTryOnBundleButton.playfabBundleID);
+		if (itemFromDict.isNullItem)
 		{
 			Debug.LogError("TryOnBundlesStand - PressTryOnBundleButton - Bundle is Null + " + pressedTryOnBundleButton.playfabBundleID);
 			return;
 		}
-		CosmeticItemRegistry registry = VRRig.LocalRig.cosmeticsObjectRegistry;
-		for (int i = 0; i < BundleToTry.bundledItems.Length; i++)
+		bool flag = false;
+		for (int i = 0; i < itemFromDict.bundledItems.Length; i++)
 		{
-			await registry.AwaitCosmetic(BundleToTry.bundledItems[i]);
+			if (VRRig.LocalRig.cosmeticsObjectRegistry.Cosmetic(itemFromDict.bundledItems[i]) == null)
+			{
+				flag = true;
+			}
+		}
+		if (flag)
+		{
+			LoadBundle(pressedTryOnBundleButton, isLeftHand);
+			return;
 		}
 		if (SelectedButtonIndex != pressedTryOnBundleButton.buttonIndex)
 		{

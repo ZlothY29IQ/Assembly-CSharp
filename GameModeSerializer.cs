@@ -2,7 +2,6 @@ using System;
 using Fusion;
 using GorillaExtensions;
 using GorillaGameModes;
-using GorillaTag;
 using Photon.Pun;
 using UnityEngine;
 using UnityEngine.Scripting;
@@ -243,8 +242,12 @@ internal class GameModeSerializer : GorillaSerializerMasterOnly, IStateAuthority
 		bool flag = false;
 		if (VRRigCache.Instance.TryGetVrrig(info.Sender, out var playerRig))
 		{
-			InfectionLavaController instance = InfectionLavaController.Instance;
-			flag = instance != null && instance.LavaCurrentlyActivated && (instance.SurfaceCenter - playerRig.Rig.syncPos).sqrMagnitude < 2500f && instance.LavaPlane.GetDistanceToPoint(playerRig.Rig.syncPos) < 5f;
+			InfectionLavaController infectionLavaController = null;
+			if (playerRig.Rig.zoneEntity != null)
+			{
+				infectionLavaController = InfectionLavaController.GetControllerForZone(playerRig.Rig.zoneEntity.currentZone);
+			}
+			flag = infectionLavaController != null && infectionLavaController.LavaCurrentlyActivated && (infectionLavaController.SurfaceCenter - playerRig.Rig.syncPos).sqrMagnitude < 2500f && infectionLavaController.LavaPlane.GetDistanceToPoint(playerRig.Rig.syncPos) < 5f;
 		}
 		if (num || flag)
 		{

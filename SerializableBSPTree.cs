@@ -80,6 +80,18 @@ public class SerializableBSPTree
 		return zoneDef;
 	}
 
+	public int FindZoneIdx(GTZone zoneId, GTSubZone subZoneId)
+	{
+		for (int i = 0; i < zones.Length; i++)
+		{
+			if (zones[i].zoneId == zoneId && zones[i].subZoneId == subZoneId)
+			{
+				return i;
+			}
+		}
+		return -1;
+	}
+
 	private float GetAxisValue(Vector3 point, SerializableBSPNode.Axis axis)
 	{
 		return axis switch

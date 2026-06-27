@@ -228,6 +228,7 @@ public class VirtualStumpTeleporter : MonoBehaviour, IBuildValidation, IGorillaS
 		if (!UGCPermissionManager.IsUGCDisabled && !accessDenied && !teleporting)
 		{
 			teleporting = true;
+			GorillaTelemetry.EnqueueTelemetryEvent("vstump_teleported_in", new Dictionary<string, object>());
 			CustomMapManager.TeleportToVirtualStump(this, FinishTeleport);
 		}
 	}

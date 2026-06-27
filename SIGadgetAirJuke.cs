@@ -201,7 +201,7 @@ public class SIGadgetAirJuke : SIGadget
 					_SetStateAuthority(SIGadgetAirJuke_EState.TriggerPressHold);
 				}
 			}
-			else if (instance.IsGroundedButt || instance.IsGroundedHand)
+			else if ((instance.IsGroundedButt && !instance.bodyGroundIsSlippery) || _IsHandGroundedSteerable(instance))
 			{
 				_groundedUseCounter.Reset();
 			}
@@ -295,6 +295,11 @@ public class SIGadgetAirJuke : SIGadget
 
 	private void _DoDash()
 	{
+		if (IsBlocked(SIExclusionType.AffectsLocalMovement))
+		{
+			_SetStateAuthority(SIGadgetAirJuke_EState.Idle);
+			return;
+		}
 		Vector3 handVelocity = GamePlayerLocal.instance.GetHandVelocity(_HandIndex);
 		if (handVelocity.magnitude < m_handMinSpeed || !_groundedUseCounter.TryUse())
 		{
@@ -337,6 +342,26 @@ public class SIGadgetAirJuke : SIGadget
 		{
 			GorillaTagger.Instance.StartVibration(isLeft, GorillaTagger.Instance.tapHapticStrength * strengthMultiplier, GorillaTagger.Instance.tapHapticDuration);
 		}
+	}
+
+	private static bool _IsHandGroundedSteerable(GTPlayer player)
+	{
+		ref readonly GTPlayer.HandState leftHandRef = ref player.LeftHandRef;
+		ref readonly GTPlayer.HandState rightHandRef = ref player.RightHandRef;
+		if ((!leftHandRef.isColliding || _IsRechargeBlocked(leftHandRef.surfaceOverride)) && (!rightHandRef.isColliding || _IsRechargeBlocked(rightHandRef.surfaceOverride)) && !player.isClimbing && !leftHandRef.isHolding)
+		{
+			return rightHandRef.isHolding;
+		}
+		return true;
+	}
+
+	private static bool _IsRechargeBlocked(GorillaSurfaceOverride surface)
+	{
+		if (surface != null && surface.extraVelMultiplier > 0.99f)
+		{
+			return surface.extraVelMultiplier < 1f;
+		}
+		return false;
 	}
 
 	public override void ApplyUpgradeNodes(SIUpgradeSet withUpgrades)

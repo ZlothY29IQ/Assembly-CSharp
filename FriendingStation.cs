@@ -1,4 +1,6 @@
+using Cysharp.Text;
 using GorillaLocomotion;
+using GorillaTagScripts;
 using Photon.Pun;
 using TMPro;
 using UnityEngine;
@@ -235,7 +237,15 @@ public class FriendingStation : MonoBehaviour
 
 	public void FriendButtonPressed()
 	{
-		if (displayedData.state != FriendingManager.FriendStationState.WaitingForPlayers && displayedData.state != FriendingManager.FriendStationState.Friends && !addFriendButton.isOn)
+		if (displayedData.state == FriendingManager.FriendStationState.WaitingForPlayers || displayedData.state == FriendingManager.FriendStationState.Friends)
+		{
+			return;
+		}
+		if (LocalPlayerIsAtCapacity(out var fullMessage))
+		{
+			statusText.text = fullMessage;
+		}
+		else if (!addFriendButton.isOn)
 		{
 			FriendingManager.Instance.photonView.RPC("FriendButtonPressedRPC", RpcTarget.MasterClient, zone);
 			int actorNumber = NetworkSystem.Instance.LocalPlayer.ActorNumber;
@@ -245,6 +255,46 @@ public class FriendingStation : MonoBehaviour
 				addFriendButton.UpdateColor();
 			}
 		}
+	}
+
+	private bool LocalPlayerIsAtCapacity(out string fullMessage)
+	{
+		fullMessage = null;
+		FriendBackendController instance = FriendBackendController.Instance;
+		if (instance == null || instance.FriendsList == null)
+		{
+			return false;
+		}
+		int configuredFreeExtraPageCount = FriendDisplay.ConfiguredFreeExtraPageCount;
+		int configuredVimPageCount = FriendDisplay.ConfiguredVimPageCount;
+		int num = 9 * configuredVimPageCount;
+		int num2 = 9 + 9 * configuredFreeExtraPageCount;
+		int num3 = num2 + num;
+		int count = instance.FriendsList.Count;
+		if (count < num2)
+		{
+			return false;
+		}
+		if (SubscriptionManager.IsLocalSubscribed() || configuredVimPageCount == 0)
+		{
+			if (count >= num3)
+			{
+				fullMessage = "CANNOT ADD FRIEND! ALL FRIEND SLOTS FILLED!";
+				return true;
+			}
+			return false;
+		}
+		int num4 = Mathf.Clamp(count - num2, 0, num);
+		if (num4 <= 0)
+		{
+			fullMessage = ZString.Format("FRIEND SLOTS ARE FULL! SUBSCRIBE FOR {0} ADDITIONAL SLOTS!", num);
+		}
+		else
+		{
+			int arg = num - num4;
+			fullMessage = ZString.Format("RENEW GTFC SUBSCRIPTION TO UNLOCK YOUR REMAINING {0} SLOTS.", arg);
+		}
+		return true;
 	}
 
 	public void FriendButtonReleased()

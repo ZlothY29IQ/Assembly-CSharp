@@ -83,6 +83,8 @@ public abstract class SIGadget : MonoBehaviour, IGameEntityComponent, IPrefabReq
 
 	private readonly List<SIExclusionZone> appliedExclusionZones = new List<SIExclusionZone>();
 
+	private SIExclusionType _activeExclusionFlags;
+
 	private List<IGameStateReceiver> _gameStateReceivers = new List<IGameStateReceiver>();
 
 	public SITechTreePageId PageId
@@ -393,14 +395,12 @@ public abstract class SIGadget : MonoBehaviour, IGameEntityComponent, IPrefabReq
 	{
 		if (!appliedExclusionZones.Contains(exclusionZone))
 		{
-			if (appliedExclusionZones.Count == 0)
+			SIExclusionType activeExclusionFlags = _activeExclusionFlags;
+			appliedExclusionZones.Add(exclusionZone);
+			_activeExclusionFlags |= exclusionZone.exclusionType;
+			if (activeExclusionFlags == (SIExclusionType)0)
 			{
-				appliedExclusionZones.Add(exclusionZone);
 				HandleBlockedActionChanged(isBlocked: true);
-			}
-			else
-			{
-				appliedExclusionZones.Add(exclusionZone);
 			}
 		}
 	}
@@ -410,7 +410,8 @@ public abstract class SIGadget : MonoBehaviour, IGameEntityComponent, IPrefabReq
 		if (appliedExclusionZones.Contains(exclusionZone))
 		{
 			appliedExclusionZones.Remove(exclusionZone);
-			if (appliedExclusionZones.Count == 0)
+			RecalcExclusionFlags();
+			if (_activeExclusionFlags == (SIExclusionType)0)
 			{
 				HandleBlockedActionChanged(isBlocked: false);
 			}
@@ -427,11 +428,27 @@ public abstract class SIGadget : MonoBehaviour, IGameEntityComponent, IPrefabReq
 			}
 		}
 		appliedExclusionZones.Clear();
+		_activeExclusionFlags = (SIExclusionType)0;
+	}
+
+	private void RecalcExclusionFlags()
+	{
+		SIExclusionType sIExclusionType = (SIExclusionType)0;
+		for (int i = 0; i < appliedExclusionZones.Count; i++)
+		{
+			sIExclusionType |= appliedExclusionZones[i].exclusionType;
+		}
+		_activeExclusionFlags = sIExclusionType;
 	}
 
 	protected bool IsBlocked()
 	{
-		return appliedExclusionZones.Count > 0;
+		return (_activeExclusionFlags & SIExclusionType.AffectsOthers) != 0;
+	}
+
+	protected bool IsBlocked(SIExclusionType flag)
+	{
+		return (_activeExclusionFlags & flag) != 0;
 	}
 
 	protected virtual void HandleBlockedActionChanged(bool isBlocked)

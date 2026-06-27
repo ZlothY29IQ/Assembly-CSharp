@@ -576,7 +576,7 @@ public class SIGadgetDashYoyo : SIGadget
 		Vector3 vector = _yankBeginPos - m_yoyoDefaultPosXform.position;
 		Vector3 normalized = (-handVelocity.normalized + vector.normalized).normalized;
 		Vector3 vector2 = m_yoyoTarget.position - m_yoyoDefaultPosXform.position;
-		if (!(vector.magnitude < m_yankMinDistance) && !(_maxEncounteredYankSpeed < m_yankMinSpeed) && !(Vector3.Angle(vector2, normalized) > m_yankMaxAngle))
+		if (!(vector.magnitude < m_yankMinDistance) && !(_maxEncounteredYankSpeed < m_yankMinSpeed) && !(Vector3.Angle(vector2, normalized) > m_yankMaxAngle) && !IsBlocked(SIExclusionType.AffectsLocalMovement))
 		{
 			_successfulYankTime = Time.unscaledTime;
 			float num = _CalculateDashSpeed(handVelocity.magnitude);

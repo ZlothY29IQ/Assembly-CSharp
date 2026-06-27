@@ -131,6 +131,14 @@ public class SIGadgetWristJet : SIGadget, I_SIDisruptable, IEnergyGadget
 
 	private float _currentBurnRate;
 
+	private float _baseFuelSpendRate;
+
+	private float _baseJetForce;
+
+	private float _baseMaxVerticalSpeed;
+
+	private float _baseMaxHorizontalSpeed;
+
 	private bool CanRecharge
 	{
 		get
@@ -155,6 +163,10 @@ public class SIGadgetWristJet : SIGadget, I_SIDisruptable, IEnergyGadget
 		_hasInactiveStateVisual = inactiveStateVisual != null;
 		_hasActiveStateVisual = activeStateVisual != null;
 		_gaugeMatPropBlock = new MaterialPropertyBlock();
+		_baseFuelSpendRate = fuelSpendRate;
+		_baseJetForce = jetForce;
+		_baseMaxVerticalSpeed = maxVerticalSpeed;
+		_baseMaxHorizontalSpeed = maxHorizontalSpeed;
 		if (m_gaugeMatSlots == null)
 		{
 			m_gaugeMatSlots = Array.Empty<GTRendererMatSlot>();
@@ -225,7 +237,7 @@ public class SIGadgetWristJet : SIGadget, I_SIDisruptable, IEnergyGadget
 
 	private void FixedUpdate()
 	{
-		if ((IsEquippedLocal() || activatedLocally) && state == State.Active && currentFuel > 0f && buttonActivatable.CheckInput())
+		if ((IsEquippedLocal() || activatedLocally) && state == State.Active && currentFuel > 0f && buttonActivatable.CheckInput() && !IsBlocked(SIExclusionType.AffectsLocalMovement))
 		{
 			gtPlayer.AddForce(-Physics.gravity * (gtPlayer.scale * gravityNegationPercent), ForceMode.Acceleration);
 			_ApplyClampedThrust();
@@ -261,7 +273,7 @@ public class SIGadgetWristJet : SIGadget, I_SIDisruptable, IEnergyGadget
 		switch (state)
 		{
 		case State.Unactive:
-			if (flag)
+			if (flag && !IsBlocked(SIExclusionType.AffectsLocalMovement))
 			{
 				SetStateAuthority(State.Active);
 			}
@@ -405,13 +417,13 @@ public class SIGadgetWristJet : SIGadget, I_SIDisruptable, IEnergyGadget
 		switch (jetType)
 		{
 		case WristJetType.Jet:
-			fuelSpendRate *= (withUpgrades.Contains(SIUpgradeType.Thruster_Jet_Duration) ? 0.8f : 1f);
-			jetForce *= (withUpgrades.Contains(SIUpgradeType.Thruster_Jet_Accel) ? 1.2f : 1f);
+			fuelSpendRate = _baseFuelSpendRate * (withUpgrades.Contains(SIUpgradeType.Thruster_Jet_Duration) ? 0.8f : 1f);
+			jetForce = _baseJetForce * (withUpgrades.Contains(SIUpgradeType.Thruster_Jet_Accel) ? 1.2f : 1f);
 			break;
 		case WristJetType.Propellor:
-			fuelSpendRate *= (withUpgrades.Contains(SIUpgradeType.Thruster_Prop_Duration) ? 0.8f : 1f);
-			maxVerticalSpeed *= (withUpgrades.Contains(SIUpgradeType.Thruster_Prop_Speed) ? 1.2f : 1f);
-			maxHorizontalSpeed *= (withUpgrades.Contains(SIUpgradeType.Thruster_Prop_Speed) ? 1.2f : 1f);
+			fuelSpendRate = _baseFuelSpendRate * (withUpgrades.Contains(SIUpgradeType.Thruster_Prop_Duration) ? 0.8f : 1f);
+			maxVerticalSpeed = _baseMaxVerticalSpeed * (withUpgrades.Contains(SIUpgradeType.Thruster_Prop_Speed) ? 1.2f : 1f);
+			maxHorizontalSpeed = _baseMaxHorizontalSpeed * (withUpgrades.Contains(SIUpgradeType.Thruster_Prop_Speed) ? 1.2f : 1f);
 			break;
 		}
 		if (_hasThrustLoopAudioSource && m_thrustLoopSoundByUpgrade.TryGetActiveValue(withUpgrades, out var out_value))

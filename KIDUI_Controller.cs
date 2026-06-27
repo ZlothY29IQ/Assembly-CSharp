@@ -98,7 +98,7 @@ public class KIDUI_Controller : MonoBehaviour
 			Debug.LogFormat("[KID::UI::CONTROLLER] Should NOT Show k-ID Screens");
 			return;
 		}
-		PrivateUIRoom.ForceStartOverlay();
+		PrivateUIRoom.ForceStartOverlay(PrivateUIRoom.OverlaySource.KID);
 		Debug.LogFormat("[KID::UI::CONTROLLER] Showing k-ID Screens");
 		while (HandRayController.Instance == null)
 		{

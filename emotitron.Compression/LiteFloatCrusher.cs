@@ -1,7 +1,7 @@
 using System;
+using UnityEngine;
 using emotitron.Compression.HalfFloat;
 using emotitron.Compression.Utilities;
-using UnityEngine;
 
 namespace emotitron.Compression;
 

@@ -72,7 +72,7 @@ public class PlayFabTitleDataTextDisplay : MonoBehaviour, IBuildValidation
 		{
 			return;
 		}
-		Debug.LogError("PlayFabTitleDataTextDisplay: PlayFab error retrieving title data for key " + playfabKey + " displayed " + fallbackText + ": " + error.GenerateErrorReport());
+		Debug.LogError("PlayFabTitleDataTextDisplay: PlayFab error retrieving title data for key '" + playfabKey + "' displayed '" + fallbackText + "': " + error.GenerateErrorReport());
 		if (_fallbackLocalizedText == null || _fallbackLocalizedText.IsEmpty)
 		{
 			textBox.text = fallbackText;

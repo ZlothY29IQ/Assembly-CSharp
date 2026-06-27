@@ -1,6 +1,6 @@
 using System;
-using GorillaExtensions;
 using GT_CustomMapSupportRuntime;
+using GorillaExtensions;
 using UnityEngine;
 
 public class CustomMapsSearchBehaviour : CustomMapsBehaviourBase

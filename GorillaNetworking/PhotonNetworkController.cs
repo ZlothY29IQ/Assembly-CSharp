@@ -7,6 +7,7 @@ using ExitGames.Client.Photon;
 using Fusion;
 using GorillaGameModes;
 using GorillaLocomotion;
+using GorillaNetworking.ScheduledEvents;
 using GorillaTagScripts;
 using Photon.Pun;
 using PlayFab;
@@ -117,6 +118,10 @@ public class PhotonNetworkController : MonoBehaviour
 	private NetworkObject testPlayerPrefab;
 
 	private string roomToJoin = "";
+
+	private int joinNextAttempt;
+
+	private int maxNextAttempts = 10;
 
 	private string LastRoomToJoin = "";
 
@@ -353,7 +358,9 @@ public class PhotonNetworkController : MonoBehaviour
 				hashtable.Add(additionalCustomProperty.Item1, additionalCustomProperty.Item2);
 			}
 		}
+		ScheduledEventMatchmaking.ApplyScheduledEventStateToHashes(hashtable, out var searchFilter);
 		roomConfig.CustomProps = hashtable;
+		roomConfig.SearchFilter = searchFilter;
 		roomConfig.MaxPlayers = currentJoinTrigger.GetRoomSize(flag);
 		Debug.Log($"AttemptToJoinPublicRoom: MaxPlayers: {roomConfig.MaxPlayers}   FanClub: {flag}");
 		await NetworkSystem.Instance.ConnectToRoom(null, roomConfig);
@@ -391,13 +398,15 @@ public class PhotonNetworkController : MonoBehaviour
 				playFabAuthenticator.SetDisplayName(NetworkSystem.Instance.GetMyNickName());
 			}
 			RoomConfig roomConfig = RoomConfig.AnyPublicConfig();
-			ExitGames.Client.Photon.Hashtable customProps = new ExitGames.Client.Photon.Hashtable
+			ExitGames.Client.Photon.Hashtable hashtable = new ExitGames.Client.Photon.Hashtable
 			{
 				{ "gameMode", fullDesiredGameModeString },
 				{ "mmrTier", mmrTier },
 				{ "platform", platform }
 			};
-			roomConfig.CustomProps = customProps;
+			ScheduledEventMatchmaking.ApplyScheduledEventStateToHashes(hashtable, out var searchFilter);
+			roomConfig.CustomProps = hashtable;
+			roomConfig.SearchFilter = searchFilter;
 			roomConfig.MaxPlayers = currentJoinTrigger.GetRoomSize(subscribed: false);
 			await NetworkSystem.Instance.ConnectToRoom(null, roomConfig);
 		}
@@ -560,10 +569,15 @@ public class PhotonNetworkController : MonoBehaviour
 					break;
 				}
 			}
-			if (flag && GorillaComputer.instance.friendJoinCollider != null && !GorillaComputer.instance.friendJoinCollider.playerIDsCurrentlyTouching.Contains(NetworkSystem.Instance.LocalPlayer.UserId) && !GorillaComputer.instance.GetJoinTriggerFromFullGameModeString(NetworkSystem.Instance.GameModeString).groupJoinRequiredZonesAB.HasAnyFlag(VRRig.LocalRig.zoneEntity.currentNode.groupZoneAB))
+			if (flag && GorillaComputer.instance.friendJoinCollider != null && !GorillaComputer.instance.friendJoinCollider.playerIDsCurrentlyTouching.Contains(NetworkSystem.Instance.LocalPlayer.UserId))
 			{
-				Debug.Log($"NOT ALLOWED IN ROOM: Joined {ParseZoneFromGameMode(NetworkSystem.Instance.GameModeString)} room but physically in {VRRig.LocalRig.zoneEntity.currentNode.groupZoneAB} zone");
-				flag = false;
+				GorillaNetworkJoinTrigger joinTriggerFromFullGameModeString = GorillaComputer.instance.GetJoinTriggerFromFullGameModeString(NetworkSystem.Instance.GameModeString);
+				if (!joinTriggerFromFullGameModeString.groupJoinRequiredZonesAB.HasAnyFlag(VRRig.LocalRig.zoneEntity.currentNode.groupZoneAB))
+				{
+					Debug.Log($"NOT ALLOWED IN ROOM: Joined {ParseZoneFromGameMode(NetworkSystem.Instance.GameModeString)} room but physically in {VRRig.LocalRig.zoneEntity.currentNode.groupZoneAB} zone");
+					PersistLog.Log($"NOT ALLOWED IN ROOM - FAILED JOIN: [PlayerZone:{VRRig.LocalRig.zoneEntity.currentNode.groupZoneAB} TriggerZone:{joinTriggerFromFullGameModeString.groupJoinRequiredZonesAB}  Trigger:{joinTriggerFromFullGameModeString.name}]");
+					flag = false;
+				}
 			}
 			if (!flag)
 			{

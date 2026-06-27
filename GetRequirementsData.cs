@@ -1,6 +1,4 @@
-using KID.Model;
-
 public class GetRequirementsData
 {
-	public GetAgeGateRequirementsResponse AgeGateRequirements;
+	public GetRequirementsResponse AgeGateRequirements;
 }

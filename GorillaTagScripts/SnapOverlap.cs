@@ -7,4 +7,6 @@ public class SnapOverlap
 	public SnapBounds bounds;
 
 	public SnapOverlap nextOverlap;
+
+	public bool inPool = true;
 }

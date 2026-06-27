@@ -240,7 +240,10 @@ public class BuilderPool : MonoBehaviour, IGorillaSimpleBackgroundWorker
 		snapOverlapPool.Capacity += count;
 		for (int i = 0; i < count; i++)
 		{
-			snapOverlapPool.Add(new SnapOverlap());
+			snapOverlapPool.Add(new SnapOverlap
+			{
+				inPool = true
+			});
 		}
 	}
 
@@ -255,14 +258,19 @@ public class BuilderPool : MonoBehaviour, IGorillaSimpleBackgroundWorker
 		snapOverlap.otherPlane = otherPlane;
 		snapOverlap.bounds = bounds;
 		snapOverlap.nextOverlap = null;
+		snapOverlap.inPool = false;
 		return snapOverlap;
 	}
 
 	public void DestroySnapOverlap(SnapOverlap snapOverlap)
 	{
-		snapOverlap.otherPlane = null;
-		snapOverlap.nextOverlap = null;
-		snapOverlapPool.Add(snapOverlap);
+		if (!snapOverlap.inPool)
+		{
+			snapOverlap.otherPlane = null;
+			snapOverlap.nextOverlap = null;
+			snapOverlap.inPool = true;
+			snapOverlapPool.Add(snapOverlap);
+		}
 	}
 
 	private void OnDestroy()

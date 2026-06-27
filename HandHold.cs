@@ -1,7 +1,7 @@
 using System.Collections.Generic;
+using GT_CustomMapSupportRuntime;
 using GorillaExtensions;
 using GorillaLocomotion.Gameplay;
-using GT_CustomMapSupportRuntime;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -161,10 +161,5 @@ public class HandHold : MonoBehaviour, IGorillaGrabable
 		handSnapMethod = (HandSnapMethod)handHoldSettings.handSnapMethod;
 		rotatePlayerWhenHeld = handHoldSettings.rotatePlayerWhenHeld;
 		forceMomentary = !handHoldSettings.allowPreGrab;
-	}
-
-	string IGorillaGrabable.get_name()
-	{
-		return base.name;
 	}
 }

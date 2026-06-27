@@ -34,7 +34,7 @@ public class WaterInteractionEvents : MonoBehaviour
 			if (overlappingWaterVolumes[i].GetSurfaceQueryForPoint(waterContactSphere.transform.position, out var result))
 			{
 				float num = Vector3.Dot(result.surfacePoint - waterContactSphere.transform.position, result.surfaceNormal);
-				float num2 = Vector3.Dot(result.surfacePoint - Vector3.up * result.maxDepth - base.transform.position, result.surfaceNormal);
+				float num2 = Vector3.Dot(result.surfacePoint - result.surfaceNormal * result.maxDepth - base.transform.position, result.surfaceNormal);
 				if (num > 0f - waterContactSphere.radius && num2 < waterContactSphere.radius)
 				{
 					flag = true;

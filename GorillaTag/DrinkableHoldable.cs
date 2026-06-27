@@ -1,8 +1,8 @@
 using System;
-using emotitron.Compression;
 using GorillaExtensions;
 using GorillaNetworking;
 using UnityEngine;
+using emotitron.Compression;
 
 namespace GorillaTag;
 

@@ -63,6 +63,9 @@ public class CustomMapsDetailsScreen : CustomMapsTerminalScreen
 	private TMP_Text outdatedText;
 
 	[SerializeField]
+	private TMP_Text playerCountText;
+
+	[SerializeField]
 	private CustomMapsScreenButton subscriptionToggleButton;
 
 	[SerializeField]
@@ -323,6 +326,10 @@ public class CustomMapsDetailsScreen : CustomMapsTerminalScreen
 			currentMapMod.OnModUpdated += OnModUpdated;
 			isFavorite = ModIOManager.IsModFavorited(mod.Id);
 			favoriteToggleButton.SetButtonActive(isFavorite);
+			PlayerCountHelper.GetPlayerCount(currentMapMod, delegate(string count)
+			{
+				playerCountText.text = count;
+			});
 			UpdateMapDetails();
 		}
 	}
@@ -564,6 +571,7 @@ public class CustomMapsDetailsScreen : CustomMapsTerminalScreen
 		hiddenRoomMapText.gameObject.SetActive(value: false);
 		outdatedText.gameObject.SetActive(value: false);
 		unloadPromptText.gameObject.SetActive(value: false);
+		playerCountText.gameObject.SetActive(value: false);
 		loadingText.gameObject.SetActive(value: true);
 		if (CustomMapLoader.IsMapLoaded() || CustomMapManager.IsLoading() || CustomMapManager.IsUnloading())
 		{
@@ -753,6 +761,14 @@ public class CustomMapsDetailsScreen : CustomMapsTerminalScreen
 		}
 		modStatusLabelText?.gameObject.SetActive(value: true);
 		modStatusText.gameObject.SetActive(value: true);
+		if (currentMapMod != null)
+		{
+			playerCountText.gameObject.SetActive(value: true);
+			PlayerCountHelper.GetPlayerCount(currentMapMod, delegate(string count)
+			{
+				playerCountText.text = count;
+			});
+		}
 	}
 
 	private bool CanChangeMapState(bool load, out string disallowedReason)

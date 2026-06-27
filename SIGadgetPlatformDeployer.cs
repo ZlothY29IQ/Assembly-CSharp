@@ -248,6 +248,15 @@ public class SIGadgetPlatformDeployer : SIGadget, I_SIDisruptable, IEnergyGadget
 		remainingRechargeTime += chargeRecoveryTime;
 	}
 
+	private static bool IsLeftHandOrSnapSlot(int handIndex)
+	{
+		if (handIndex != 0)
+		{
+			return handIndex == 2;
+		}
+		return true;
+	}
+
 	private void TryDeployInstantPlatform()
 	{
 		if (IsBlocked())
@@ -279,7 +288,7 @@ public class SIGadgetPlatformDeployer : SIGadget, I_SIDisruptable, IEnergyGadget
 				}
 				else
 				{
-					Transform obj = (GamePlayer.IsLeftHand(num) ? player.leftHand : player.rightHand);
+					Transform obj = (IsLeftHandOrSnapSlot(num) ? player.leftHand : player.rightHand);
 					vector = obj.position;
 					Vector3 up = obj.up;
 					Vector3 right = obj.right;

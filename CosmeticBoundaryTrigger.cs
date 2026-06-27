@@ -42,6 +42,7 @@ public class CosmeticBoundaryTrigger : GorillaTriggerBox
 				CosmeticsController.instance.ClearCheckout(sendEvent: false);
 				CosmeticsController.instance.UpdateShoppingCart();
 				CosmeticsController.instance.UpdateWornCosmetics(sync: true);
+				CosmeticsController.ClearTryOnCollectable();
 			}
 			rigRef.LocalUpdateCosmeticsWithTryon(rigRef.cosmeticSet, rigRef.tryOnSet, playfx: false);
 			rigRef.myBodyDockPositions.RefreshTransferrableItems();

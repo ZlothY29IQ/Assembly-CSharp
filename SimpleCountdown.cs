@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using GorillaNetworking;
+using GorillaNetworking.ScheduledEvents;
 using PlayFab;
 using TMPro;
 using UnityEngine;
@@ -8,19 +9,29 @@ using UnityEngine;
 [RequireComponent(typeof(TextMeshPro))]
 public class SimpleCountdown : ObservableBehavior
 {
+	private enum Mode
+	{
+		None,
+		TitleData,
+		FixedDate,
+		TimeSync,
+		ScheduledEvent
+	}
+
 	private enum DisplayFormat
 	{
 		DD_HH_MM_SS,
 		HH_MM_SS,
 		DD_HH_MM,
-		HH_MM
+		HH_MM,
+		MM_SS
 	}
 
 	[SerializeField]
 	private DisplayFormat displayFormat;
 
 	[SerializeField]
-	private bool useTitleData = true;
+	private Mode mode = Mode.TitleData;
 
 	[SerializeField]
 	private string titleDataKey;
@@ -29,26 +40,41 @@ public class SimpleCountdown : ObservableBehavior
 	private string date;
 
 	[SerializeField]
+	private ServerTimeSyncRule timeSyncRule;
+
+	[SerializeField]
 	private Vector2 hourRange = new Vector2(float.MinValue, float.MaxValue);
 
 	private DateTime dt;
 
 	private TextMeshPro tmp;
 
+	private DateTime overrideDt = DateTime.MinValue;
+
+	public Action ManualCountdownComplete;
+
 	private async void Start()
 	{
 		tmp = GetComponent<TextMeshPro>();
-		if (useTitleData)
+		switch (mode)
 		{
+		case Mode.TitleData:
 			while (PlayFabTitleDataCache.Instance == null)
 			{
 				await Task.Yield();
 			}
 			PlayFabTitleDataCache.Instance.GetTitleData(titleDataKey, onTD, onTDError);
-		}
-		else
-		{
+			break;
+		case Mode.FixedDate:
 			ParseDateTime();
+			break;
+		case Mode.TimeSync:
+			if (GorillaComputer.instance != null)
+			{
+				DateTime serverTime = GorillaComputer.instance.GetServerTime();
+				dt = timeSyncRule.GetPrevious(serverTime);
+			}
+			break;
 		}
 	}
 
@@ -75,29 +101,56 @@ public class SimpleCountdown : ObservableBehavior
 
 	protected override void ObservableSliceUpdate()
 	{
-		if (!(GorillaComputer.instance == null))
+		if (GorillaComputer.instance == null)
 		{
-			_ = dt;
-			TimeSpan timeSpan = dt - GorillaComputer.instance.GetServerTime();
-			if (timeSpan.TotalHours <= (double)hourRange.x || timeSpan.TotalHours >= (double)hourRange.y)
+			return;
+		}
+		_ = dt;
+		DateTime serverTime = GorillaComputer.instance.GetServerTime();
+		TimeSpan timeSpan;
+		if (overrideDt < serverTime)
+		{
+			if (overrideDt > DateTime.MinValue)
 			{
-				timeSpan = timeSpan.Multiply(0.0);
+				ManualCountdownComplete?.Invoke();
+				overrideDt = DateTime.MinValue;
 			}
-			switch (displayFormat)
+			if (mode == Mode.TimeSync)
 			{
-			case DisplayFormat.DD_HH_MM_SS:
-				tmp.text = $"{timeSpan.Days:00}:{timeSpan.Hours:00}:{timeSpan.Minutes:00}:{timeSpan.Seconds:00}";
-				break;
-			case DisplayFormat.HH_MM_SS:
-				tmp.text = $"{Math.Floor(timeSpan.TotalHours):00}:{timeSpan.Minutes:00}:{timeSpan.Seconds:00}";
-				break;
-			case DisplayFormat.DD_HH_MM:
-				tmp.text = $"{timeSpan.Days:00}:{timeSpan.Hours:00}:{timeSpan.Minutes:00}";
-				break;
-			case DisplayFormat.HH_MM:
-				tmp.text = $"{Math.Floor(timeSpan.TotalHours):00}:{timeSpan.Minutes:00}";
-				break;
+				dt = timeSyncRule.GetNext(serverTime);
 			}
+			else if (mode == Mode.ScheduledEvent)
+			{
+				double value = ((ScheduledEventManager.Instance != null) ? ScheduledEventManager.Instance.SecondsUntilEventStart : 0.0);
+				dt = serverTime.AddSeconds(value);
+			}
+			timeSpan = dt - serverTime;
+		}
+		else
+		{
+			timeSpan = overrideDt - serverTime;
+		}
+		if (timeSpan.TotalHours <= (double)hourRange.x || timeSpan.TotalHours >= (double)hourRange.y)
+		{
+			timeSpan = timeSpan.Multiply(0.0);
+		}
+		switch (displayFormat)
+		{
+		case DisplayFormat.DD_HH_MM_SS:
+			tmp.text = $"{timeSpan.Days:00}:{timeSpan.Hours:00}:{timeSpan.Minutes:00}:{timeSpan.Seconds:00}";
+			break;
+		case DisplayFormat.HH_MM_SS:
+			tmp.text = $"{Math.Floor(timeSpan.TotalHours):00}:{timeSpan.Minutes:00}:{timeSpan.Seconds:00}";
+			break;
+		case DisplayFormat.DD_HH_MM:
+			tmp.text = $"{timeSpan.Days:00}:{timeSpan.Hours:00}:{timeSpan.Minutes:00}";
+			break;
+		case DisplayFormat.HH_MM:
+			tmp.text = $"{Math.Floor(timeSpan.TotalHours):00}:{timeSpan.Minutes:00}";
+			break;
+		case DisplayFormat.MM_SS:
+			tmp.text = $"{Math.Floor(timeSpan.TotalMinutes):00}:{timeSpan.Seconds:00}";
+			break;
 		}
 	}
 
@@ -107,5 +160,10 @@ public class SimpleCountdown : ObservableBehavior
 
 	protected override void OnLostObservable()
 	{
+	}
+
+	public void StartCountdown(int seconds)
+	{
+		overrideDt = GorillaComputer.instance.GetServerTime().AddSeconds(seconds);
 	}
 }

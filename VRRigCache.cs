@@ -383,6 +383,27 @@ public class VRRigCache : MonoBehaviour
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	internal static void ApplyToAllRigs(Action<VRRig> action)
+	{
+		foreach (RigContainer value in rigsInUse.Values)
+		{
+			action(value.Rig);
+		}
+		foreach (RigContainer freeRig in freeRigs)
+		{
+			action(freeRig.Rig);
+		}
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	internal static void ApplyToAllActiveRigs(Action<VRRig> action)
+	{
+		foreach (RigContainer value in rigsInUse.Values)
+		{
+			action(value.Rig);
+		}
+	}
+
 	internal int GetAllRigsHash()
 	{
 		int num = 0;

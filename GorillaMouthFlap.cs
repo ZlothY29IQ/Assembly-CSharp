@@ -18,7 +18,7 @@ public class GorillaMouthFlap : MonoBehaviour, IGorillaSliceableSimple
 
 	private float activeFlipbookPlayTime;
 
-	private GorillaSpeakerLoudness speaker;
+	private ISpeakerLoudness speaker;
 
 	private float lastTimeUpdated;
 
@@ -42,7 +42,7 @@ public class GorillaMouthFlap : MonoBehaviour, IGorillaSliceableSimple
 
 	private void Start()
 	{
-		speaker = GetComponent<GorillaSpeakerLoudness>();
+		speaker = GetComponent<ISpeakerLoudness>();
 		targetFaceRenderer = targetFace.GetComponent<Renderer>();
 		facePropBlock = new MaterialPropertyBlock();
 		hasDefaultMouthAtlas = false;
@@ -75,7 +75,7 @@ public class GorillaMouthFlap : MonoBehaviour, IGorillaSliceableSimple
 		lastTimeUpdated = Time.time;
 		if (speaker == null)
 		{
-			speaker = GetComponent<GorillaSpeakerLoudness>();
+			speaker = GetComponent<ISpeakerLoudness>();
 			return;
 		}
 		float currentLoudness = 0f;

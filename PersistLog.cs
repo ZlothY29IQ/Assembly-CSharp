@@ -13,33 +13,65 @@ public class PersistLog : MonoBehaviour
 
 	private bool dup;
 
-	private List<Tuple<string, string>> earlyQ;
+	private List<(double time, string msg, string strace)> earlyQ;
 
 	private async void OnEnable()
 	{
-		earlyQ = new List<Tuple<string, string>>();
+		earlyQ = new List<(double, string, string)>();
 		Application.logMessageReceived += LogMessageEnqueue;
 		while (GorillaComputer.instance == null)
 		{
 			await Task.Yield();
 		}
-		string text = Application.persistentDataPath + Path.DirectorySeparatorChar + "gt.log";
-		string text2 = Application.persistentDataPath + Path.DirectorySeparatorChar + "gt-old.log";
-		string destFileName = Application.persistentDataPath + Path.DirectorySeparatorChar + "gt-older.log";
-		if (File.Exists(text2))
+		string text = Application.persistentDataPath + Path.DirectorySeparatorChar;
+		string text2 = text + "gt.log";
+		string text3 = text + "gt-old.log";
+		string destFileName = text + "gt-older.log";
+		try
 		{
-			File.Copy(text2, destFileName, overwrite: true);
+			if (File.Exists(text3))
+			{
+				File.Copy(text3, destFileName, overwrite: true);
+			}
 		}
-		if (File.Exists(text))
+		catch (IOException)
 		{
-			File.Copy(text, text2, overwrite: true);
 		}
-		sr = File.CreateText(text);
+		try
+		{
+			if (File.Exists(text2))
+			{
+				File.Copy(text2, text3, overwrite: true);
+			}
+		}
+		catch (IOException)
+		{
+		}
+		string path = text2;
+		for (int i = 1; i <= 10; i++)
+		{
+			try
+			{
+				sr = File.CreateText(path);
+			}
+			catch (IOException) when (i < 10)
+			{
+				path = text + "gt_" + (i + 1) + ".log";
+				continue;
+			}
+			break;
+		}
+		if (sr == null)
+		{
+			Debug.LogError("[PersistLog] Failed to create log file after 10 attempts.");
+			Application.logMessageReceived -= LogMessageEnqueue;
+			return;
+		}
 		sr.Write($"{DateTime.Now:U}\r\n\r\n                           MONKE WUZ HERE!\r\n               _______    /\r\n              /       \\\r\n             /  _____  \\\r\n            / / _   _ \\ \\\r\n           [ | (O) (O) | ]\r\n            | \\  . .  / |\r\n     _______|  | _._ |  |_______\r\n    /        \\  \\___/  /        \\\r\n\r\nApp Id:        {Application.identifier}\r\nApp Ver:       {Application.version}\r\nPlatform:      {Application.platform}\r\nSys Lang:      {Application.systemLanguage}\r\nGC Version:    {GorillaComputer.instance.version}\r\nGC Build Code: {GorillaComputer.instance.buildCode}\r\nGC Build Date: {GorillaComputer.instance.buildDate}\r\n\r\n");
 		Application.logMessageReceived -= LogMessageEnqueue;
-		for (int i = 0; i < earlyQ.Count; i++)
+		foreach (var (num, arg, arg2) in earlyQ)
 		{
-			sr.Write($"T+{Time.time} >> {earlyQ[i].Item1}\n==========================\n{earlyQ[i].Item2}\n\n");
+			sr.Write($"T+{num} >> {arg}\n==========================\n{arg2}\n\n");
 		}
 		sr.Flush();
 		Application.logMessageReceived += LogMessageReceived;
@@ -65,7 +97,7 @@ public class PersistLog : MonoBehaviour
 	{
 		if (type == LogType.Error || type == LogType.Assert || type == LogType.Exception)
 		{
-			earlyQ.Add(Tuple.Create(msg, strace));
+			earlyQ.Add((Time.realtimeSinceStartupAsDouble, msg, strace));
 		}
 	}
 
@@ -77,24 +109,30 @@ public class PersistLog : MonoBehaviour
 			{
 				if (!dup)
 				{
-					sr.Write($"T+{Time.time} >> Duplicate log entry... Supressing further\n\n");
+					sr.Write($"T+{Time.realtimeSinceStartupAsDouble} >> Duplicate log entry... Supressing further\n\n");
+					sr.Flush();
 					dup = true;
 				}
 			}
 			else
 			{
-				sr.Write($"T+{Time.time} >> {msg}\n==========================\n{strace}\n\n");
+				sr.Write($"T+{Time.realtimeSinceStartupAsDouble} >> {msg}\n==========================\n{strace}\n\n");
+				sr.Flush();
 				dup = false;
 			}
-			sr.Flush();
 		}
 		plog = msg + strace;
 	}
 
 	public static void Log(string msg)
 	{
-		msg = $"T+{Time.time} >[DEV MSG]> {msg}\n\n";
-		Debug.Log(msg);
+		Log(LogType.Log, msg);
+	}
+
+	public static void Log(LogType type, string msg)
+	{
+		msg = $"T+{Time.realtimeSinceStartupAsDouble} >[DEV MSG]> {msg}\n\n";
+		Debug.unityLogger.Log(type, msg);
 		if (sr != null)
 		{
 			sr.Write(msg);

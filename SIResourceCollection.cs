@@ -492,9 +492,4 @@ public class SIResourceCollection : MonoBehaviour, ITouchScreenStation
 	public void AddButton(SITouchscreenButton button, bool isPopupButton = false)
 	{
 	}
-
-	GameObject ITouchScreenStation.get_gameObject()
-	{
-		return base.gameObject;
-	}
 }

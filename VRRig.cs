@@ -8,8 +8,8 @@ using GorillaLocomotion;
 using GorillaLocomotion.Climbing;
 using GorillaLocomotion.Gameplay;
 using GorillaNetworking;
-using GorillaTag.Cosmetics;
 using GorillaTag.CosmeticSystem;
+using GorillaTag.Cosmetics;
 using GorillaTagScripts;
 using KID.Model;
 using Newtonsoft.Json;
@@ -20,8 +20,8 @@ using Photon.Voice.PUN;
 using Photon.Voice.Unity;
 using PlayFab;
 using PlayFab.ClientModels;
-using TagEffects;
 using TMPro;
+using TagEffects;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -269,8 +269,6 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	public CosmeticsController.CosmeticSet prevSet;
 
-	internal int _cosmeticsActivationVersion;
-
 	[NonSerialized]
 	public readonly List<GameObject> activeCosmetics = new List<GameObject>(16);
 
@@ -418,6 +416,13 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	public bool inTempCosmSpace;
 
+	[NonSerialized]
+	public Dictionary<string, CosmeticsController.CollectionState> remoteCycleStates = new Dictionary<string, CosmeticsController.CollectionState>();
+
+	private readonly List<CosmeticCollectionDisplay> scratchDisplayList = new List<CosmeticCollectionDisplay>();
+
+	private int[] cycleStatesArray = Array.Empty<int>();
+
 	public bool muted;
 
 	private float lastScaleFactor = 1f;
@@ -431,8 +436,6 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 	public float doNotLerpConstant = 1f;
 
 	public string tempString;
-
-	private Player tempPlayer;
 
 	internal NetPlayer creator;
 
@@ -1017,12 +1020,12 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	private void CosmeticsV2_Awake()
 	{
-		CosmeticsV2Spawner_Dirty.OnPreFinalizing = (Action)Delegate.Combine(CosmeticsV2Spawner_Dirty.OnPreFinalizing, new Action(Handle_CosmeticsV2_OnPreFinalizing));
+		CosmeticsV2Spawner_Dirty.OnPostInstantiateAllPrefabs = (Action)Delegate.Combine(CosmeticsV2Spawner_Dirty.OnPostInstantiateAllPrefabs, new Action(Handle_CosmeticsV2_OnPostInstantiateAllPrefabs_DoEnableAllCosmetics));
 	}
 
-	internal void Handle_CosmeticsV2_OnPreFinalizing()
+	internal void Handle_CosmeticsV2_OnPostInstantiateAllPrefabs_DoEnableAllCosmetics()
 	{
-		CosmeticsV2Spawner_Dirty.OnPreFinalizing = (Action)Delegate.Remove(CosmeticsV2Spawner_Dirty.OnPreFinalizing, new Action(Handle_CosmeticsV2_OnPreFinalizing));
+		CosmeticsV2Spawner_Dirty.OnPostInstantiateAllPrefabs = (Action)Delegate.Remove(CosmeticsV2Spawner_Dirty.OnPostInstantiateAllPrefabs, new Action(Handle_CosmeticsV2_OnPostInstantiateAllPrefabs_DoEnableAllCosmetics));
 		CheckForEarlyAccess();
 		SetCosmeticsActive(playfx: false);
 	}
@@ -1566,9 +1569,8 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 			{
 				ScaleUpdate();
 			}
-			base.transform.eulerAngles = new Vector3(0f, mainCamera.transform.rotation.eulerAngles.y, 0f);
 			syncPos = mainCamera.transform.position + headConstraint.rotation * head.trackingPositionOffset * lastScaleFactor + base.transform.rotation * headBodyOffset * lastScaleFactor;
-			base.transform.position = syncPos;
+			base.transform.SetPositionAndRotation(syncPos, GTPlayerTransform.BodyRotation);
 			head.MapMine(lastScaleFactor, playerOffsetTransform);
 			rightHand.MapMine(lastScaleFactor, playerOffsetTransform);
 			leftHand.MapMine(lastScaleFactor, playerOffsetTransform);
@@ -1867,6 +1869,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		InputStruct result = new InputStruct
 		{
 			headRotation = BitPackUtils.PackQuaternionForNetwork(head.rigTarget.localRotation),
+			rotation = BitPackUtils.PackQuaternionForNetwork(base.transform.rotation),
 			usingNewIK = ShouldUseNewIKMethod(myIk.usingUpdatedIK)
 		};
 		if (result.usingNewIK)
@@ -1946,8 +1949,15 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		syncPos = BitPackUtils.UnpackWorldPosFromNetwork(data.position);
 		handSync = data.handPosition;
 		int packedFields = data.packedFields;
-		int num = packedFields & 0x1FF;
-		syncRotation.eulerAngles = SanitizeVector3(new Vector3(0f, num, 0f));
+		if (GTPlayerTransform.UseNetRotation)
+		{
+			syncRotation.SetValueSafe(BitPackUtils.UnpackQuaternionFromNetwork(data.rotation));
+		}
+		else
+		{
+			int num = packedFields & 0x1FF;
+			syncRotation.eulerAngles = SanitizeVector3(new Vector3(0f, num, 0f));
+		}
 		remoteUseReplacementVoice = (packedFields & 0x200) != 0;
 		if ((packedFields & 0x400000) != 0 && SubscriptionManager.GetSubscriptionDetails(this).active)
 		{
@@ -2014,9 +2024,8 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		{
 			localGrabOverrideBlend = -1f;
 		}
-		Vector3 position = base.transform.position;
-		leftHandLink.Read(leftHand.syncPos, syncRotation, position, data.isGroundedHand, data.isGroundedButt, (packedFields & 0x40000) != 0, (packedFields & 0x100000) != 0, data.leftHandGrabbedActorNumber, data.leftGrabbedHandIsLeft);
-		rightHandLink.Read(rightHand.syncPos, syncRotation, position, data.isGroundedHand, data.isGroundedButt, (packedFields & 0x80000) != 0, (packedFields & 0x200000) != 0, data.rightHandGrabbedActorNumber, data.rightGrabbedHandIsLeft);
+		leftHandLink.Read(leftHand.syncPos, syncRotation, syncPos, data.isGroundedHand, data.isGroundedButt, (packedFields & 0x40000) != 0, (packedFields & 0x100000) != 0, data.leftHandGrabbedActorNumber, data.leftGrabbedHandIsLeft);
+		rightHandLink.Read(rightHand.syncPos, syncRotation, syncPos, data.isGroundedHand, data.isGroundedButt, (packedFields & 0x80000) != 0, (packedFields & 0x200000) != 0, data.rightHandGrabbedActorNumber, data.rightGrabbedHandIsLeft);
 		LastTouchedGroundAtNetworkTime = data.lastTouchedGroundAtTime;
 		LastHandTouchedGroundAtNetworkTime = data.lastHandTouchedGroundAtTime;
 		UpdateRopeData();
@@ -2043,6 +2052,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 	{
 		InputStruct inputStruct = SerializeWriteShared();
 		stream.SendNext(inputStruct.headRotation);
+		stream.SendNext(inputStruct.rotation);
 		stream.SendNext(inputStruct.usingNewIK);
 		if (inputStruct.usingNewIK)
 		{
@@ -2100,6 +2110,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		InputStruct data = new InputStruct
 		{
 			headRotation = (int)stream.ReceiveNext(),
+			rotation = (int)stream.ReceiveNext(),
 			usingNewIK = (bool)stream.ReceiveNext()
 		};
 		if (data.usingNewIK)
@@ -2581,7 +2592,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 			{
 				if (text.Length > 12)
 				{
-					text = text.Substring(0, 11);
+					text = text.Substring(0, 12);
 				}
 				text = text.ToUpper();
 			}
@@ -2616,16 +2627,36 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 	public void RequestCosmetics(PhotonMessageInfoWrapped info)
 	{
 		NetPlayer player = NetworkSystem.Instance.GetPlayer(info.senderID);
-		if (netView.IsMine && CosmeticsController.hasInstance)
+		if (!netView.IsMine || !CosmeticsController.hasInstance)
 		{
-			if (CosmeticsController.instance.isHidingCosmeticsFromRemotePlayers)
+			return;
+		}
+		if (CosmeticsController.instance.isHidingCosmeticsFromRemotePlayers)
+		{
+			netView.SendRPC("RPC_HideAllCosmetics", info.Sender);
+			return;
+		}
+		int[] array = CosmeticsController.instance.currentWornSet.ToPackedIDArray();
+		int[] array2 = CosmeticsController.instance.tryOnSet.ToPackedIDArray();
+		netView.SendRPC("RPC_UpdateCosmeticsWithTryonPacked", player, array, array2, false);
+		CosmeticCollectionDisplay.GetDisplaysForRig(GorillaTagger.Instance.offlineVRRig, scratchDisplayList);
+		if (scratchDisplayList.Count > 0)
+		{
+			int num = scratchDisplayList.Count * 3;
+			if (cycleStatesArray.Length != num)
 			{
-				netView.SendRPC("RPC_HideAllCosmetics", info.Sender);
-				return;
+				cycleStatesArray = new int[num];
 			}
-			int[] array = CosmeticsController.instance.currentWornSet.ToPackedIDArray();
-			int[] array2 = CosmeticsController.instance.tryOnSet.ToPackedIDArray();
-			netView.SendRPC("RPC_UpdateCosmeticsWithTryonPacked", player, array, array2, false);
+			for (int i = 0; i < scratchDisplayList.Count; i++)
+			{
+				CosmeticCollectionDisplay cosmeticCollectionDisplay = scratchDisplayList[i];
+				string parentPlayFabID = cosmeticCollectionDisplay.ParentPlayFabID;
+				cycleStatesArray[i * 3] = parentPlayFabID[0] - 65 + 26 * (parentPlayFabID[1] - 65 + 26 * (parentPlayFabID[2] - 65 + 26 * (parentPlayFabID[3] - 65 + 26 * (parentPlayFabID[4] - 65))));
+				CosmeticsController.CosmeticItem? activeCollectable = cosmeticCollectionDisplay.ActiveCollectable;
+				cycleStatesArray[i * 3 + 1] = ((activeCollectable.HasValue && CosmeticsController.hasInstance) ? CosmeticsController.instance.GetCanonicalCollectableIndex(parentPlayFabID, activeCollectable.Value.itemName) : cosmeticCollectionDisplay.ActiveIndex);
+				cycleStatesArray[i * 3 + 2] = cosmeticCollectionDisplay.VisibleMask;
+			}
+			netView.SendRPC("RPC_UpdateCosmeticsWithCollectablesPacked", player, cycleStatesArray);
 		}
 	}
 
@@ -3022,6 +3053,107 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		}
 	}
 
+	public void UpdateCosmeticsWithCollectables(int[] cycleStatesPacked, PhotonMessageInfoWrapped info)
+	{
+		IncrementRPC(info, "RPC_UpdateCosmeticsWithCollectablesPacked");
+		if (info.Sender != netView.Owner || cycleStatesPacked == null || cycleStatesPacked.Length % 3 != 0 || cycleStatesPacked.Length > 96)
+		{
+			return;
+		}
+		int num = cycleStatesPacked.Length / 3;
+		remoteCycleStates.Clear();
+		char[] array = new char[6] { '\0', '\0', '\0', '\0', '\0', '.' };
+		for (int i = 0; i < num; i++)
+		{
+			int num2 = cycleStatesPacked[i * 3];
+			int num3 = cycleStatesPacked[i * 3 + 1];
+			int visibleMask = cycleStatesPacked[i * 3 + 2];
+			if (num3 >= 0)
+			{
+				array[0] = (char)(65 + num2 % 26);
+				array[1] = (char)(65 + num2 / 26 % 26);
+				array[2] = (char)(65 + num2 / 676 % 26);
+				array[3] = (char)(65 + num2 / 17576 % 26);
+				array[4] = (char)(65 + num2 / 456976 % 26);
+				string text = new string(array);
+				CosmeticsController.CollectionState value = new CosmeticsController.CollectionState
+				{
+					activeIndex = num3,
+					visibleMask = visibleMask
+				};
+				remoteCycleStates[text] = value;
+				CosmeticCollectionDisplay cosmeticCollectionDisplay = CosmeticCollectionDisplay.FindForRig(this, text);
+				if (cosmeticCollectionDisplay != null)
+				{
+					cosmeticCollectionDisplay.SetVisibleMask(visibleMask);
+					cosmeticCollectionDisplay.SetActiveIndex(num3);
+				}
+			}
+		}
+	}
+
+	public void BroadcastSubCosmeticSignal(int packedParentID, int signal, PhotonMessageInfoWrapped info)
+	{
+		IncrementRPC(info, "RPC_BroadcastSubCosmeticSignal");
+		if (info.Sender != netView.Owner)
+		{
+			return;
+		}
+		char[] array = new char[6];
+		array[5] = '.';
+		array[0] = (char)(65 + packedParentID % 26);
+		array[1] = (char)(65 + packedParentID / 26 % 26);
+		array[2] = (char)(65 + packedParentID / 676 % 26);
+		array[3] = (char)(65 + packedParentID / 17576 % 26);
+		array[4] = (char)(65 + packedParentID / 456976 % 26);
+		string parentID = new string(array);
+		CosmeticCollectionDisplay cosmeticCollectionDisplay = CosmeticCollectionDisplay.FindForRig(this, parentID);
+		if (cosmeticCollectionDisplay != null)
+		{
+			SubCosmeticCycleController subCosmeticCycleController = cosmeticCollectionDisplay.GetComponent<SubCosmeticCycleController>();
+			if (subCosmeticCycleController == null)
+			{
+				subCosmeticCycleController = cosmeticCollectionDisplay.GetComponentInChildren<SubCosmeticCycleController>(includeInactive: true);
+			}
+			if (subCosmeticCycleController != null)
+			{
+				subCosmeticCycleController.ReceiveNetworkSignal(signal);
+			}
+		}
+	}
+
+	public void SetCollectionCycleIndex(int packedParentID, int activeIndex, int visibleMask, PhotonMessageInfoWrapped info)
+	{
+		IncrementRPC(info, "RPC_SetCollectionCycleIndex");
+		if (info.Sender != netView.Owner)
+		{
+			return;
+		}
+		char[] array = new char[6];
+		array[5] = '.';
+		array[0] = (char)(65 + packedParentID % 26);
+		array[1] = (char)(65 + packedParentID / 26 % 26);
+		array[2] = (char)(65 + packedParentID / 676 % 26);
+		array[3] = (char)(65 + packedParentID / 17576 % 26);
+		array[4] = (char)(65 + packedParentID / 456976 % 26);
+		string text = new string(array);
+		if (remoteCycleStates.Count < 64 || remoteCycleStates.ContainsKey(text))
+		{
+			CosmeticsController.CollectionState value = new CosmeticsController.CollectionState
+			{
+				activeIndex = activeIndex,
+				visibleMask = visibleMask
+			};
+			remoteCycleStates[text] = value;
+			CosmeticCollectionDisplay cosmeticCollectionDisplay = CosmeticCollectionDisplay.FindForRig(this, text);
+			if (cosmeticCollectionDisplay != null)
+			{
+				cosmeticCollectionDisplay.SetVisibleMask(visibleMask);
+				cosmeticCollectionDisplay.SetActiveIndex(activeIndex);
+			}
+		}
+	}
+
 	public void LocalUpdateCosmeticsWithTryon(CosmeticsController.CosmeticSet newSet, CosmeticsController.CosmeticSet newTryOnSet, bool playfx)
 	{
 		cosmeticSet = newSet;
@@ -3047,18 +3179,17 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		InitializedCosmetics = true;
 	}
 
-	public async void SetCosmeticsActive(bool playfx)
+	public void SetCosmeticsActive(bool playfx)
 	{
 		if (CosmeticsController.instance == null)
 		{
 			return;
 		}
-		int version = ++_cosmeticsActivationVersion;
 		prevSet.CopyItems(mergedSet);
 		mergedSet.MergeSets(inTryOnRoom ? tryOnSet : null, cosmeticSet);
 		BodyDockPositions component = GetComponent<BodyDockPositions>();
-		await mergedSet.ActivateCosmetics(prevSet, this, component, cosmeticsObjectRegistry, version);
-		if (_cosmeticsActivationVersion == version && playfx)
+		mergedSet.ActivateCosmetics(prevSet, this, component, cosmeticsObjectRegistry);
+		if (playfx)
 		{
 			if (cosmeticsActivationPS != null)
 			{
@@ -3071,10 +3202,9 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		}
 	}
 
-	public async void RefreshCosmetics()
+	public void RefreshCosmetics()
 	{
-		int activationVersion = ++_cosmeticsActivationVersion;
-		await mergedSet.ActivateCosmetics(mergedSet, this, myBodyDockPositions, cosmeticsObjectRegistry, activationVersion);
+		mergedSet.ActivateCosmetics(mergedSet, this, myBodyDockPositions, cosmeticsObjectRegistry);
 	}
 
 	public void GetCosmeticsPlayFabCatalogData()
@@ -3083,19 +3213,18 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		{
 			PlayFabClientAPI.GetUserInventory(new GetUserInventoryRequest(), delegate(GetUserInventoryResult result)
 			{
-				Dictionary<string, string> dictionary = new Dictionary<string, string>();
 				foreach (ItemInstance item in result.Inventory)
 				{
-					if (!dictionary.ContainsKey(item.ItemId))
+					if (item.CatalogVersion == CosmeticsController.instance.catalog)
 					{
-						dictionary[item.ItemId] = item.ItemId;
-						if (item.CatalogVersion == CosmeticsController.instance.catalog)
+						if (item.PurchaseDate.HasValue)
+						{
+							int daysOwned = (int)(DateTime.UtcNow - item.PurchaseDate.Value).TotalDays;
+							AddCosmetic(item.ItemId, daysOwned);
+						}
+						else
 						{
 							AddCosmetic(item.ItemId);
-							if (item.PurchaseDate.HasValue)
-							{
-								_playerOwnedCosmeticsAge[item.ItemId] = (int)(DateTime.UtcNow - item.PurchaseDate.Value).TotalDays;
-							}
 						}
 					}
 				}
@@ -3476,7 +3605,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		}
 	}
 
-	async void IPreDisable.PreDisable()
+	void IPreDisable.PreDisable()
 	{
 		try
 		{
@@ -3493,7 +3622,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 			_playerOwnedCosmeticsAge.Clear();
 			if (cosmeticSet != null)
 			{
-				await mergedSet.DeactivateAllCosmetcs(myBodyDockPositions, CosmeticsController.instance.nullItem, cosmeticsObjectRegistry);
+				mergedSet.DeactivateAllCosmetcs(myBodyDockPositions, CosmeticsController.instance.nullItem, cosmeticsObjectRegistry);
 				mergedSet.ClearSet(CosmeticsController.instance.nullItem);
 				prevSet.ClearSet(CosmeticsController.instance.nullItem);
 				tryOnSet.ClearSet(CosmeticsController.instance.nullItem);
@@ -3547,6 +3676,10 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 			_rankedInfoUpdated = false;
 			TemporaryCosmeticEffects.Clear();
 			m_sentRankedScore = false;
+			if (inDuplicationZone)
+			{
+				ClearDuplicationZone(duplicationZone);
+			}
 			try
 			{
 				CallLimitType<CallLimiter>[] callSettings = fxSettings.callSettings;
@@ -4085,9 +4218,22 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		CheckForEarlyAccess();
 	}
 
-	internal void AddCosmetic(string cosmeticId)
+	internal void AddCosmetic(string cosmeticId, int daysOwned = 0)
 	{
-		_playerOwnedCosmetics.Add(cosmeticId);
+		bool flag = _playerOwnedCosmetics.Add(cosmeticId);
+		if (daysOwned >= 1)
+		{
+			int num = daysOwned;
+			if (!flag && _playerOwnedCosmeticsAge.TryGetValue(cosmeticId, out var value))
+			{
+				num = Mathf.Max(value, num);
+				_playerOwnedCosmeticsAge[cosmeticId] = num;
+			}
+			else
+			{
+				_playerOwnedCosmeticsAge[cosmeticId] = num;
+			}
+		}
 	}
 
 	internal bool HasCosmetic(string cosmeticId)

@@ -16,6 +16,9 @@ public class RandomProjectileThrowable : MonoBehaviour
 	[Range(0f, 1f)]
 	public float spawnChance = 1f;
 
+	[Tooltip("(Optional) name broadcast by PlayerGameEvents when the local player eats this projectile")]
+	public string interactEventName;
+
 	[Tooltip("Requires a collider")]
 	public bool destroyOnTrigger = true;
 
@@ -79,6 +82,10 @@ public class RandomProjectileThrowable : MonoBehaviour
 			if ((bool)audioSource && (bool)triggerClip)
 			{
 				audioSource.GTPlayOneShot(triggerClip);
+			}
+			if (GorillaTagger.hasInstance && other == GorillaTagger.Instance.headCollider)
+			{
+				PlayerGameEvents.EatObject(interactEventName);
 			}
 			OnDestroyed?.Invoke();
 			DestroyProjectile();

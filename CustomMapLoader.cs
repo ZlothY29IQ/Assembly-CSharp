@@ -5,6 +5,7 @@ using System.IO;
 using System.Text;
 using CosmeticRoom;
 using CustomMapSupport;
+using GT_CustomMapSupportRuntime;
 using GorillaExtensions;
 using GorillaGameModes;
 using GorillaLocomotion.Swimming;
@@ -14,7 +15,6 @@ using GorillaTag.Rendering;
 using GorillaTagScripts;
 using GorillaTagScripts.CustomMapSupport;
 using GorillaTagScripts.VirtualStumpCustomMaps;
-using GT_CustomMapSupportRuntime;
 using Modio;
 using Modio.Mods;
 using Newtonsoft.Json;
@@ -368,6 +368,20 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 	public static long LoadedMapModFileId => loadedMapModFileId;
 
 	public static bool CanLoadEntities { get; private set; }
+
+	internal static void SetZoneDynamicLighting(bool enable)
+	{
+		if (enable && !usingDynamicLighting)
+		{
+			GameLightingManager.instance.ZoneEnableCustomDynamicLighting(enable: true);
+			usingDynamicLighting = true;
+		}
+		else if (!enable && usingDynamicLighting)
+		{
+			GameLightingManager.instance.ZoneEnableCustomDynamicLighting(enable: false);
+			usingDynamicLighting = false;
+		}
+	}
 
 	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
 	private static void InitOnLoad()
@@ -759,9 +773,8 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 			Color ambientLightDynamic = new Color(loadedMapPackageInfo.uberShaderAmbientDynamicLight_R, loadedMapPackageInfo.uberShaderAmbientDynamicLight_G, loadedMapPackageInfo.uberShaderAmbientDynamicLight_B, loadedMapPackageInfo.uberShaderAmbientDynamicLight_A);
 			if (loadedMapPackageInfo.useUberShaderDynamicLighting)
 			{
-				GameLightingManager.instance.SetCustomDynamicLightingEnabled(enable: true);
+				SetZoneDynamicLighting(enable: true);
 				GameLightingManager.instance.SetAmbientLightDynamic(ambientLightDynamic);
-				usingDynamicLighting = true;
 			}
 			VirtualStumpReturnWatch.SetWatchProperties(loadedMapPackageInfo.GetReturnToVStumpWatchProps());
 		}
@@ -1012,7 +1025,8 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		{
 			if (component == null)
 			{
-				UnityEngine.Object.DestroyImmediate(gameObject, allowDestroyingAssets: true);
+				Debug.Log("CustomMapLoader::SanitizeObject null component has caused " + gameObject.name + " to be DELETED");
+				UnityEngine.Object.Destroy(gameObject);
 				return false;
 			}
 			bool flag = true;
@@ -1046,7 +1060,8 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 			}
 			if (flag)
 			{
-				UnityEngine.Object.DestroyImmediate(gameObject, allowDestroyingAssets: true);
+				Debug.Log($"CustomMapLoader::SanitizeObject component type {component.GetType()} has caused {gameObject.name} to be DELETED");
+				UnityEngine.Object.Destroy(gameObject);
 				return false;
 			}
 		}
@@ -1068,7 +1083,7 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		Collider[] array = Physics.OverlapSphere(gameObject.transform.position, radius);
 		if (array == null || array.Length == 0)
 		{
-			UnityEngine.Object.DestroyImmediate(gameObject);
+			UnityEngine.Object.Destroy(gameObject);
 			return;
 		}
 		MeshCollider meshCollider = gameObject.AddComponent<MeshCollider>();
@@ -1078,11 +1093,11 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		{
 			if (!(collider == null) && !(collider.gameObject == gameObject) && !(collider.gameObject.scene.name != sceneName) && Physics.ComputePenetration(meshCollider, gameObject.transform.position, gameObject.transform.rotation, collider, collider.transform.position, collider.transform.rotation, out var _, out var _) && !collider.isTrigger)
 			{
-				GTDev.Log("[CustomMapLoader::ResolveVirtualStumpColliderOverlaps] Gameobject " + collider.name + " has a collider overlapping with the virtual stump. Collider will be removed");
-				UnityEngine.Object.DestroyImmediate(collider);
+				Debug.Log("[CustomMapLoader::ResolveVirtualStumpColliderOverlaps] Gameobject " + collider.name + " has a collider overlapping with the virtual stump. Collider will be removed");
+				UnityEngine.Object.Destroy(collider);
 			}
 		}
-		UnityEngine.Object.DestroyImmediate(gameObject);
+		UnityEngine.Object.Destroy(gameObject);
 	}
 
 	private static IEnumerator FinalizeSceneLoad(MapDescriptor sceneDescriptor, bool useProgressCallback = false, int startingProgress = 50, int endingProgress = 90)
@@ -1120,6 +1135,7 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		{
 			mapLoadProgressCallback?.Invoke(MapLoadStatus.Loading, endingProgress, "PROCESSING COMPLETE");
 		}
+		GorillaTelemetry.EnqueueTelemetryEvent("vstump_map_loaded", new Dictionary<string, object>());
 		if (loadedMapPackageInfo == null || loadedMapPackageInfo.customMapSupportVersion >= 3 || !sceneDescriptor.IsInitialScene)
 		{
 			yield break;
@@ -1131,9 +1147,8 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		disableHoldingHandsCustomMode = sceneDescriptor.DisableHoldingHandsCustomOnly;
 		if (sceneDescriptor.UseUberShaderDynamicLighting)
 		{
-			GameLightingManager.instance.SetCustomDynamicLightingEnabled(enable: true);
+			SetZoneDynamicLighting(enable: true);
 			GameLightingManager.instance.SetAmbientLightDynamic(sceneDescriptor.UberShaderAmbientDynamicLight);
-			usingDynamicLighting = true;
 		}
 		List<int> list = new List<int>();
 		foreach (GameModeType availableModesForOldMap in instance.availableModesForOldMaps)
@@ -1734,15 +1749,15 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 					audioSource.enabled = true;
 				}
 				audioSource.outputAudioMixerGroup = instance.masterAudioMixer;
-				for (int num2 = list.Count - 1; num2 >= 0; num2--)
+				for (int num3 = list.Count - 1; num3 >= 0; num3--)
 				{
-					if (num2 == 0)
+					if (num3 == 0)
 					{
-						list[num2].isTrigger = true;
+						list[num3].isTrigger = true;
 					}
 					else
 					{
-						UnityEngine.Object.Destroy(list[num2]);
+						UnityEngine.Object.Destroy(list[num3]);
 					}
 				}
 				placeholderGameObject.layer = UnityLayer.GorillaBoundary.ToLayerIndex();
@@ -1787,7 +1802,7 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 			{
 				componentInChildren.SetCustomMapScene(placeholderGameObject.scene);
 				customMapATM = gameObject5;
-				ATM_Manager.instance.AddATM(componentInChildren);
+				ATM_Manager.instance.AddATM(componentInChildren, null);
 				if (!component.defaultCreatorCode.IsNullOrEmpty())
 				{
 					ATM_Manager.instance.SetTemporaryCreatorCode(component.defaultCreatorCode);
@@ -1812,15 +1827,15 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 				}
 				break;
 			}
-			for (int num = list.Count - 1; num >= 0; num--)
+			for (int num2 = list.Count - 1; num2 >= 0; num2--)
 			{
-				if (num == 0)
+				if (num2 == 0)
 				{
-					list[num].isTrigger = true;
+					list[num2].isTrigger = true;
 				}
 				else
 				{
-					UnityEngine.Object.Destroy(list[num]);
+					UnityEngine.Object.Destroy(list[num2]);
 				}
 			}
 			break;
@@ -1851,7 +1866,7 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 			CustomMapsGorillaRopeSwing component5 = gameObject7.GetComponent<CustomMapsGorillaRopeSwing>();
 			if (component5.IsNull())
 			{
-				UnityEngine.Object.DestroyImmediate(gameObject7);
+				UnityEngine.Object.Destroy(gameObject7);
 				break;
 			}
 			component.ropeLength = System.Math.Clamp(component.ropeLength, 3, 31);
@@ -1877,14 +1892,14 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 			CustomMapsGorillaZipline component6 = gameObject8.GetComponent<CustomMapsGorillaZipline>();
 			if (component6.IsNull())
 			{
-				UnityEngine.Object.DestroyImmediate(gameObject8);
+				UnityEngine.Object.Destroy(gameObject8);
 				break;
 			}
 			if (component.useDefaultPlaceholder)
 			{
 				if (!component6.GenerateZipline(component.spline))
 				{
-					UnityEngine.Object.DestroyImmediate(gameObject8);
+					UnityEngine.Object.Destroy(gameObject8);
 					break;
 				}
 			}
@@ -1924,7 +1939,7 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 				DynamicCosmeticStand component4 = gameObject6.GetComponent<DynamicCosmeticStand>();
 				if (component4.IsNull())
 				{
-					UnityEngine.Object.DestroyImmediate(gameObject6);
+					UnityEngine.Object.Destroy(gameObject6);
 					break;
 				}
 				component4.InitializeForCustomMapCosmeticItem(component.CosmeticItem, placeholderGameObject.scene);
@@ -1962,7 +1977,7 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 				ItemCheckout componentInChildren2 = gameObject10.GetComponentInChildren<ItemCheckout>();
 				if (componentInChildren2.IsNull())
 				{
-					UnityEngine.Object.DestroyImmediate(gameObject10);
+					UnityEngine.Object.Destroy(gameObject10);
 					break;
 				}
 				componentInChildren2.InitializeForCustomMap(instance.compositeTryOnArea, placeholderGameObject.scene, component.useCustomMesh);
@@ -1988,7 +2003,7 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 				FittingRoom componentInChildren3 = gameObject11.GetComponentInChildren<FittingRoom>();
 				if (componentInChildren3.IsNull())
 				{
-					UnityEngine.Object.DestroyImmediate(gameObject11);
+					UnityEngine.Object.Destroy(gameObject11);
 					break;
 				}
 				componentInChildren3.InitializeForCustomMap(component.useCustomMesh);
@@ -2013,7 +2028,7 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 			CMSTryOnArea component2 = gameObject.GetComponent<CMSTryOnArea>();
 			if (component2.IsNull() || component2.tryOnAreaCollider.IsNull())
 			{
-				UnityEngine.Object.DestroyImmediate(gameObject);
+				UnityEngine.Object.Destroy(gameObject);
 				break;
 			}
 			BoxCollider tryOnAreaCollider = component2.tryOnAreaCollider;
@@ -2021,14 +2036,18 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 			zero.x = tryOnAreaCollider.size.x * tryOnAreaCollider.transform.lossyScale.x;
 			zero.y = tryOnAreaCollider.size.y * tryOnAreaCollider.transform.lossyScale.y;
 			zero.z = tryOnAreaCollider.size.z * tryOnAreaCollider.transform.lossyScale.z;
-			if (System.Math.Abs(zero.x * zero.y * zero.z) > GT_CustomMapSupportRuntime.Constants.storeTryOnAreaVolumeLimit)
+			float num = System.Math.Abs(zero.x * zero.y * zero.z);
+			if (num > GT_CustomMapSupportRuntime.Constants.storeTryOnAreaVolumeLimit)
 			{
-				UnityEngine.Object.DestroyImmediate(gameObject);
-				break;
+				Debug.Log("[CustomMapLoader::ReplacePlaceholders] TryOnArea collider too large." + $" Volume:{num} | Limit: {GT_CustomMapSupportRuntime.Constants.storeTryOnAreaVolumeLimit}");
+				UnityEngine.Object.Destroy(gameObject);
 			}
-			component2.InitializeForCustomMap(instance.compositeTryOnArea, placeholderGameObject.scene);
-			storeTryOnAreas.Add(gameObject);
-			placeholderReplacements.Add(gameObject);
+			else
+			{
+				component2.InitializeForCustomMap(instance.compositeTryOnArea, placeholderGameObject.scene);
+				storeTryOnAreas.Add(gameObject);
+				placeholderReplacements.Add(gameObject);
+			}
 			break;
 		}
 		}
@@ -2154,15 +2173,13 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 			}
 			if (flag)
 			{
-				GameLightingManager.instance.SetCustomDynamicLightingEnabled(enable: true);
+				SetZoneDynamicLighting(enable: true);
 				GameLightingManager.instance.SetAmbientLightDynamic(array[num].UberShaderAmbientDynamicLight);
-				usingDynamicLighting = true;
 			}
 			else
 			{
-				GameLightingManager.instance.SetCustomDynamicLightingEnabled(enable: false);
+				SetZoneDynamicLighting(enable: false);
 				GameLightingManager.instance.SetAmbientLightDynamic(Color.black);
-				usingDynamicLighting = false;
 			}
 		}
 		else if (loadedMapPackageInfo.customMapSupportVersion > 2)
@@ -2170,15 +2187,13 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 			if (loadedMapPackageInfo.useUberShaderDynamicLighting)
 			{
 				Color ambientLightDynamic = new Color(loadedMapPackageInfo.uberShaderAmbientDynamicLight_R, loadedMapPackageInfo.uberShaderAmbientDynamicLight_G, loadedMapPackageInfo.uberShaderAmbientDynamicLight_B, loadedMapPackageInfo.uberShaderAmbientDynamicLight_A);
-				GameLightingManager.instance.SetCustomDynamicLightingEnabled(enable: true);
+				SetZoneDynamicLighting(enable: true);
 				GameLightingManager.instance.SetAmbientLightDynamic(ambientLightDynamic);
-				usingDynamicLighting = true;
 			}
 			else
 			{
-				GameLightingManager.instance.SetCustomDynamicLightingEnabled(enable: false);
+				SetZoneDynamicLighting(enable: false);
 				GameLightingManager.instance.SetAmbientLightDynamic(Color.black);
-				usingDynamicLighting = false;
 			}
 		}
 		if (!list.IsNullOrEmpty() || !list2.IsNullOrEmpty())
@@ -2348,8 +2363,7 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		LightmapSettings.lightmaps = lightmaps;
 		UnloadLightmaps();
 		yield return ResetLightmaps();
-		usingDynamicLighting = false;
-		GameLightingManager.instance.SetCustomDynamicLightingEnabled(enable: false);
+		SetZoneDynamicLighting(enable: false);
 		GameLightingManager.instance.SetAmbientLightDynamic(Color.black);
 		if (mapBundle != null)
 		{

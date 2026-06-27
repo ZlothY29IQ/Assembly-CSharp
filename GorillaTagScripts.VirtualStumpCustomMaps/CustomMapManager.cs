@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using GT_CustomMapSupportRuntime;
 using GorillaExtensions;
 using GorillaGameModes;
 using GorillaLocomotion;
@@ -11,7 +12,6 @@ using GorillaNetworking;
 using GorillaTag.Rendering;
 using GorillaTagScripts.CustomMapSupport;
 using GorillaTagScripts.UI.ModIO;
-using GT_CustomMapSupportRuntime;
 using Modio;
 using Modio.Mods;
 using UnityEngine;
@@ -310,7 +310,7 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 			GorillaComputer.instance.SetGameModeWithoutButton(lastUsedTeleporter.GetAutoLoadGamemode().ToString());
 		}
 		GTDev.Log("[CustomMapManager::TeleportToVirtualStump] Teleporting to Virtual Stump...");
-		PrivateUIRoom.ForceStartOverlay();
+		PrivateUIRoom.ForceStartOverlay(PrivateUIRoom.OverlaySource.CustomMap);
 		GorillaTagger.Instance.overrideNotInFocus = true;
 		GreyZoneManager greyZoneManager = GreyZoneManager.Instance;
 		if (greyZoneManager != null)
@@ -449,7 +449,7 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 			delayedTryAutoLoadCoroutine = null;
 		}
 		instance.dayNightManager.RequestRepopulateLightmaps();
-		PrivateUIRoom.ForceStartOverlay();
+		PrivateUIRoom.ForceStartOverlay(PrivateUIRoom.OverlaySource.CustomMap);
 		GorillaTagger.Instance.overrideNotInFocus = true;
 		instance.EnableTeleportHUD(enteringVirtualStump: false);
 		currentTeleportCallback = callback;
@@ -532,6 +532,10 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 				GorillaComputer.instance.allowedMapsToJoin = lastUsedTeleporter.GetExitVStumpJoinTrigger().myCollider.myAllowedMapsToJoin;
 				Debug.Log($"[CustomMapManager::FinalizeExit] allowedMaps: {GorillaComputer.instance.allowedMapsToJoin}");
 				PhotonNetworkController.Instance.AttemptToJoinPublicRoom(lastUsedTeleporter.GetExitVStumpJoinTrigger());
+			}
+			else
+			{
+				NetworkSystem.Instance.ReturnToSinglePlayer();
 			}
 		}
 		else if (lastUsedTeleporter.GetExitVStumpJoinTrigger() != null)
@@ -631,6 +635,12 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 		{
 			return;
 		}
+		if (GorillaComputer.hasInstance)
+		{
+			GorillaComputer.instance.IsPlayerInVirtualStump();
+		}
+		else
+			_ = 0;
 		ClearRoomMap();
 		if (waitingForLoginDisconnect)
 		{
@@ -700,7 +710,7 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 		}
 		DisableTeleportHUD();
 		GorillaTagger.Instance.overrideNotInFocus = false;
-		PrivateUIRoom.StopForcedOverlay();
+		PrivateUIRoom.StopForcedOverlay(PrivateUIRoom.OverlaySource.CustomMap);
 		currentTeleportCallback?.Invoke(teleportSuccessful);
 		currentTeleportCallback = null;
 		if (hasInstance && !GorillaComputer.instance.IsPlayerInVirtualStump())

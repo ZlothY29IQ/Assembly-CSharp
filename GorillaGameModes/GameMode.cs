@@ -149,12 +149,12 @@ public class GameMode : MonoBehaviour
 
 	internal static bool LoadGameModeFromProperty(string prop)
 	{
-		return LoadGameMode(FindGameModeInString(prop));
+		return LoadGameMode(FindGameModeInPropertyString(prop));
 	}
 
 	internal static bool ChangeGameFromProperty(string prop)
 	{
-		return ChangeGameMode(FindGameModeInString(prop));
+		return ChangeGameMode(FindGameModeInPropertyString(prop));
 	}
 
 	public static int GetGameModeKeyFromRoomProp()
@@ -174,7 +174,7 @@ public class GameMode : MonoBehaviour
 		{
 			return null;
 		}
-		return FindGameModeInString(NetworkSystem.Instance.GameModeString);
+		return FindGameModeInPropertyString(NetworkSystem.Instance.GameModeString);
 	}
 
 	public static bool IsValidGameMode(string gameMode)
@@ -186,29 +186,9 @@ public class GameMode : MonoBehaviour
 		return false;
 	}
 
-	private static string FindGameModeInString(string gmString)
+	private static string FindGameModeInPropertyString(string gmString)
 	{
-		for (int i = 0; i < gameModes.Count; i++)
-		{
-			string text = gameModes[i].GameTypeName();
-			if (gmString.Length <= text.Length)
-			{
-				continue;
-			}
-			if (gmString.Contains('|'))
-			{
-				int num = text.Length + 1;
-				if (gmString[gmString.Length - num] != '|')
-				{
-					continue;
-				}
-			}
-			if (gmString.EndsWith(text))
-			{
-				return text;
-			}
-		}
-		return null;
+		return new string(GameModeString.GameTypeFromPropertyString(gmString));
 	}
 
 	public static bool LoadGameMode(string gameMode)

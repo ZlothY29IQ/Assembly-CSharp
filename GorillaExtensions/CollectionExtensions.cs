@@ -29,4 +29,16 @@ public static class CollectionExtensions
 			}
 		}
 	}
+
+	public static bool ContainsAll<T>(this ICollection<T> collection, IEnumerable<T> ts)
+	{
+		foreach (T t in ts)
+		{
+			if (!collection.Contains(t))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
 }

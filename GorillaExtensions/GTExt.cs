@@ -537,6 +537,12 @@ public static class GTExt
 		return -1;
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static Vector3 MultiplyBy(this in Vector3 vec, in Vector3 mulitplier)
+	{
+		return new Vector3(vec.x * mulitplier.x, vec.y * mulitplier.y, vec.z * mulitplier.z);
+	}
+
 	public static void ForEachBackwards<T>(this List<T> list, Action<T> action)
 	{
 		for (int num = list.Count - 1; num >= 0; num--)
@@ -1928,6 +1934,19 @@ public static class GTExt
 	public static bool IsNotNull(this UnityEngine.Object mono)
 	{
 		return !mono.IsNull();
+	}
+
+	public static Vector3 Clamp(this Vector3 value, Vector3 min, Vector3 max)
+	{
+		value.ClampThis(min, max);
+		return value;
+	}
+
+	public static void ClampThis(this ref Vector3 value, Vector3 min, Vector3 max)
+	{
+		value.x = Mathf.Clamp(value.x, min.x, max.x);
+		value.y = Mathf.Clamp(value.y, min.y, max.y);
+		value.z = Mathf.Clamp(value.z, min.z, max.z);
 	}
 
 	public static string GetPath(this Transform transform)

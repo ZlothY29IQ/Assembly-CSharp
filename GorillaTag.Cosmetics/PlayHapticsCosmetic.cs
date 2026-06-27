@@ -23,9 +23,12 @@ public class PlayHapticsCosmetic : MonoBehaviour
 
 	private TransferrableObject parentTransferable;
 
+	private IHeldItem myHeldItem;
+
 	private void Awake()
 	{
 		parentTransferable = GetComponentInParent<TransferrableObject>();
+		myHeldItem = GetComponentInParent<IHeldItem>();
 	}
 
 	public void PlayHaptics()
@@ -35,9 +38,28 @@ public class PlayHapticsCosmetic : MonoBehaviour
 
 	public void PlayHapticsTransferableObject()
 	{
-		if (parentTransferable != null && parentTransferable.IsMyItem())
+		PlayHapticsHeldItem();
+	}
+
+	public void PlayHapticsHeldItem()
+	{
+		bool num;
+		if (!(parentTransferable != null))
 		{
-			bool forLeftController = parentTransferable.InLeftHand();
+			IHeldItem heldItem = myHeldItem;
+			if (heldItem == null)
+			{
+				return;
+			}
+			num = heldItem.IsMyItem();
+		}
+		else
+		{
+			num = parentTransferable.IsMyItem();
+		}
+		if (num)
+		{
+			bool forLeftController = ((parentTransferable != null) ? parentTransferable.InLeftHand() : (myHeldItem?.InLeftHand() ?? false));
 			GorillaTagger.Instance.StartVibration(forLeftController, hapticStrength, hapticDuration);
 		}
 	}

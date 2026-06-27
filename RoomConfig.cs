@@ -10,6 +10,8 @@ public class RoomConfig
 
 	public const string Room_PlatformPropKey = "platform";
 
+	public const string Room_ScheduledEventStatePropKey = "scheduledEventState";
+
 	public bool isPublic;
 
 	public bool isJoinable;
@@ -18,9 +20,13 @@ public class RoomConfig
 
 	public ExitGames.Client.Photon.Hashtable CustomProps = new ExitGames.Client.Photon.Hashtable();
 
+	public ExitGames.Client.Photon.Hashtable SearchFilter;
+
 	public bool createIfMissing;
 
 	public string[] joinFriendIDs;
+
+	public ExitGames.Client.Photon.Hashtable EffectiveSearchFilter => SearchFilter ?? CustomProps;
 
 	public bool IsJoiningWithFriends
 	{

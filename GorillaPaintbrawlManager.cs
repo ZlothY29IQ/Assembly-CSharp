@@ -34,13 +34,6 @@ public sealed class GorillaPaintbrawlManager : GorillaGameManager
 		GameRunning
 	}
 
-	private enum DefaultSlingshotState
-	{
-		Inactive,
-		Activating,
-		Active
-	}
-
 	private float playerMin = 2f;
 
 	public float tagCoolDown = 5f;
@@ -89,15 +82,15 @@ public sealed class GorillaPaintbrawlManager : GorillaGameManager
 
 	private NetworkView tempView;
 
-	private KeyValuePair<int, int>[] keyValuePairs;
-
-	private KeyValuePair<int, PaintbrawlStatus>[] keyValuePairsStatus;
+	private int[] reusableKeyBuffer = new int[20];
 
 	private PaintbrawlStatus tempStatus;
 
 	private PaintbrawlState currentState;
 
-	private DefaultSlingshotState _defaultSlingshotState;
+	private bool _isDefaultSlingshotSynced;
+
+	private readonly HashSet<VRRig> _slingshotPreloadedRigs = new HashSet<VRRig>(20);
 
 	private void ActivatePaintbrawlBalloons(bool enable)
 	{
@@ -136,22 +129,47 @@ public sealed class GorillaPaintbrawlManager : GorillaGameManager
 		return result;
 	}
 
-	private async void ActivateDefaultSlingShot()
+	private void ActivateDefaultSlingShot()
 	{
-		if (_defaultSlingshotState != DefaultSlingshotState.Activating)
+		if (_isDefaultSlingshotSynced && !Slingshot.IsSlingShotEnabled())
 		{
-			if (_defaultSlingshotState == DefaultSlingshotState.Active && !Slingshot.IsSlingShotEnabled())
+			_isDefaultSlingshotSynced = false;
+		}
+		if (!_isDefaultSlingshotSynced)
+		{
+			VRRig offlineVRRig = GorillaTagger.Instance.offlineVRRig;
+			bool flag = Slingshot.IsSlingShotEnabled();
+			if (offlineVRRig != null && !flag)
 			{
-				_defaultSlingshotState = DefaultSlingshotState.Inactive;
+				CosmeticsController cosmeticsController = CosmeticsController.instance;
+				CosmeticsController.CosmeticItem itemFromDict = cosmeticsController.GetItemFromDict("Slingshot");
+				cosmeticsController.currentWornSet.HasItemOfCategory(CosmeticsController.CosmeticCategory.Chest);
+				cosmeticsController.currentWornSet.HasItem("Slingshot");
+				cosmeticsController.ApplyCosmeticItemToSet(cosmeticsController.currentWornSet, itemFromDict, isLeftHand: true, applyToPlayerPrefs: false);
+				cosmeticsController.UpdateWornCosmetics(sync: true);
+				bool isDefaultSlingshotSynced = cosmeticsController.currentWornSet.HasItemOfCategory(CosmeticsController.CosmeticCategory.Chest);
+				cosmeticsController.currentWornSet.HasItem("Slingshot");
+				_isDefaultSlingshotSynced = isDefaultSlingshotSynced;
 			}
-			if (_defaultSlingshotState == DefaultSlingshotState.Inactive && GorillaTagger.Instance.offlineVRRig != null && !Slingshot.IsSlingShotEnabled())
+		}
+	}
+
+	private void PreloadSlingshotForActiveRigs(string caller)
+	{
+		int count = CosmeticsV2Spawner_Dirty._gVRRigDatas.Count;
+		int num = 0;
+		for (int i = 0; i < count; i++)
+		{
+			CosmeticsV2Spawner_Dirty.VRRigData vRRigData = CosmeticsV2Spawner_Dirty._gVRRigDatas[i];
+			if (!(vRRigData.vrRig == null) && !_slingshotPreloadedRigs.Contains(vRRigData.vrRig))
 			{
-				_defaultSlingshotState = DefaultSlingshotState.Activating;
-				CosmeticsController controller = CosmeticsController.instance;
-				CosmeticsController.CosmeticItem itemFromDict = controller.GetItemFromDict("Slingshot");
-				await controller.ApplyCosmeticItemToSet(controller.currentWornSet, itemFromDict, isLeftHand: true, applyToPlayerPrefs: false);
-				controller.UpdateWornCosmetics(sync: true);
-				_defaultSlingshotState = (Slingshot.IsSlingShotEnabled() ? DefaultSlingshotState.Active : DefaultSlingshotState.Inactive);
+				CosmeticItemRegistry cosmeticsObjectRegistry = vRRigData.vrRig.cosmeticsObjectRegistry;
+				if (cosmeticsObjectRegistry != null)
+				{
+					CosmeticsV2Spawner_Dirty.ProcessLoadOpInfos(vRRigData.vrRig, "Slingshot", cosmeticsObjectRegistry);
+					_slingshotPreloadedRigs.Add(vRRigData.vrRig);
+					num++;
+				}
 			}
 		}
 	}
@@ -166,7 +184,9 @@ public sealed class GorillaPaintbrawlManager : GorillaGameManager
 	public override void StartPlaying()
 	{
 		base.StartPlaying();
-		_defaultSlingshotState = DefaultSlingshotState.Inactive;
+		_isDefaultSlingshotSynced = false;
+		_slingshotPreloadedRigs.Clear();
+		PreloadSlingshotForActiveRigs("StartPlaying");
 		ActivatePaintbrawlBalloons(enable: true);
 		VerifyPlayersInDict(playerLives);
 		VerifyPlayersInDict(playerStatusDict);
@@ -179,16 +199,20 @@ public sealed class GorillaPaintbrawlManager : GorillaGameManager
 	public override void StopPlaying()
 	{
 		base.StopPlaying();
-		if (_defaultSlingshotState == DefaultSlingshotState.Active)
+		_isDefaultSlingshotSynced = false;
+		PlayerPrefs.GetString("slot_Chest", "NOTHING");
+		if (Slingshot.IsSlingShotEnabled())
 		{
 			CosmeticsController cosmeticsController = CosmeticsController.instance;
+			CosmeticsController.CosmeticItem itemFromDict = cosmeticsController.GetItemFromDict("Slingshot");
 			if (cosmeticsController.currentWornSet.HasItem("Slingshot"))
 			{
-				cosmeticsController.RemoveCosmeticItemFromSet(cosmeticsController.currentWornSet, "Slingshot", applyToPlayerPrefs: false);
+				cosmeticsController.ApplyCosmeticItemToSet(cosmeticsController.currentWornSet, itemFromDict, isLeftHand: true, applyToPlayerPrefs: false);
+				cosmeticsController.UpdateWornCosmetics(sync: true);
+				cosmeticsController.currentWornSet.HasItemOfCategory(CosmeticsController.CosmeticCategory.Chest);
+				PlayerPrefs.GetString("slot_Chest", "NOTHING");
 			}
-			cosmeticsController.UpdateWornCosmetics(sync: true);
 		}
-		_defaultSlingshotState = DefaultSlingshotState.Inactive;
 		ActivatePaintbrawlBalloons(enable: false);
 		StopAllCoroutines();
 		coroutineRunning = false;
@@ -210,18 +234,32 @@ public sealed class GorillaPaintbrawlManager : GorillaGameManager
 		currentState = PaintbrawlState.NotEnoughPlayers;
 	}
 
+	private int CopyDictKeysToBuffer<T>(Dictionary<int, T> dict)
+	{
+		int num = 0;
+		foreach (KeyValuePair<int, T> item in dict)
+		{
+			if (num >= reusableKeyBuffer.Length)
+			{
+				break;
+			}
+			reusableKeyBuffer[num++] = item.Key;
+		}
+		return num;
+	}
+
 	private void VerifyPlayersInDict<T>(Dictionary<int, T> dict)
 	{
 		if (dict.Count < 1)
 		{
 			return;
 		}
-		int[] array = dict.Keys.ToArray();
-		for (int i = 0; i < array.Length; i++)
+		int num = CopyDictKeysToBuffer(dict);
+		for (int i = 0; i < num; i++)
 		{
-			if (!Utils.PlayerInRoom(array[i]))
+			if (!Utils.PlayerInRoom(reusableKeyBuffer[i]))
 			{
-				dict.Remove(array[i]);
+				dict.Remove(reusableKeyBuffer[i]);
 			}
 		}
 	}
@@ -658,6 +696,7 @@ public sealed class GorillaPaintbrawlManager : GorillaGameManager
 		{
 			UpdateBattleState();
 		}
+		PreloadSlingshotForActiveRigs(null);
 		ActivateDefaultSlingShot();
 	}
 
@@ -815,12 +854,17 @@ public sealed class GorillaPaintbrawlManager : GorillaGameManager
 			playerLivesArray[i] = 0;
 			playerActorNumberArray[i] = -1;
 		}
-		keyValuePairs = playerLives.ToArray();
-		for (int j = 0; j < playerLivesArray.Length && j < keyValuePairs.Length; j++)
+		int num = 0;
+		foreach (KeyValuePair<int, int> playerLife in playerLives)
 		{
-			playerActorNumberArray[j] = keyValuePairs[j].Key;
-			playerLivesArray[j] = keyValuePairs[j].Value;
-			playerStatusArray[j] = GetPlayerStatus(NetworkSystem.Instance.GetPlayer(keyValuePairs[j].Key));
+			if (num >= playerLivesArray.Length)
+			{
+				break;
+			}
+			playerActorNumberArray[num] = playerLife.Key;
+			playerLivesArray[num] = playerLife.Value;
+			playerStatusArray[num] = GetPlayerStatus(NetworkSystem.Instance.GetPlayer(playerLife.Key));
+			num++;
 		}
 	}
 
@@ -911,48 +955,46 @@ public sealed class GorillaPaintbrawlManager : GorillaGameManager
 
 	private void InitializePlayerStatus()
 	{
-		keyValuePairsStatus = playerStatusDict.ToArray();
-		KeyValuePair<int, PaintbrawlStatus>[] array = keyValuePairsStatus;
-		foreach (KeyValuePair<int, PaintbrawlStatus> keyValuePair in array)
+		int num = CopyDictKeysToBuffer(playerStatusDict);
+		for (int i = 0; i < num; i++)
 		{
-			playerStatusDict[keyValuePair.Key] = PaintbrawlStatus.Normal;
+			playerStatusDict[reusableKeyBuffer[i]] = PaintbrawlStatus.Normal;
 		}
 	}
 
 	private void UpdatePlayerStatus()
 	{
-		keyValuePairsStatus = playerStatusDict.ToArray();
-		KeyValuePair<int, PaintbrawlStatus>[] array = keyValuePairsStatus;
-		for (int i = 0; i < array.Length; i++)
+		int num = CopyDictKeysToBuffer(playerStatusDict);
+		for (int i = 0; i < num; i++)
 		{
-			KeyValuePair<int, PaintbrawlStatus> keyValuePair = array[i];
-			PaintbrawlStatus playerTeam = GetPlayerTeam(keyValuePair.Value);
-			if (playerLives.TryGetValue(keyValuePair.Key, out outLives) && outLives == 0)
+			int key = reusableKeyBuffer[i];
+			PaintbrawlStatus playerTeam = GetPlayerTeam(playerStatusDict[key]);
+			if (playerLives.TryGetValue(key, out outLives) && outLives == 0)
 			{
-				playerStatusDict[keyValuePair.Key] = playerTeam | PaintbrawlStatus.Eliminated;
+				playerStatusDict[key] = playerTeam | PaintbrawlStatus.Eliminated;
 			}
-			else if (playerHitTimes.TryGetValue(keyValuePair.Key, out outHitTime) && outHitTime + hitCooldown > Time.time)
+			else if (playerHitTimes.TryGetValue(key, out outHitTime) && outHitTime + hitCooldown > Time.time)
 			{
-				playerStatusDict[keyValuePair.Key] = playerTeam | PaintbrawlStatus.Hit;
+				playerStatusDict[key] = playerTeam | PaintbrawlStatus.Hit;
 			}
-			else if (playerStunTimes.TryGetValue(keyValuePair.Key, out outHitTime))
+			else if (playerStunTimes.TryGetValue(key, out outHitTime))
 			{
 				if (outHitTime + hitCooldown > Time.time)
 				{
-					playerStatusDict[keyValuePair.Key] = playerTeam | PaintbrawlStatus.Stunned;
+					playerStatusDict[key] = playerTeam | PaintbrawlStatus.Stunned;
 				}
 				else if (outHitTime + hitCooldown + stunGracePeriod > Time.time)
 				{
-					playerStatusDict[keyValuePair.Key] = playerTeam | PaintbrawlStatus.Grace;
+					playerStatusDict[key] = playerTeam | PaintbrawlStatus.Grace;
 				}
 				else
 				{
-					playerStatusDict[keyValuePair.Key] = playerTeam | PaintbrawlStatus.Normal;
+					playerStatusDict[key] = playerTeam | PaintbrawlStatus.Normal;
 				}
 			}
 			else
 			{
-				playerStatusDict[keyValuePair.Key] = playerTeam | PaintbrawlStatus.Normal;
+				playerStatusDict[key] = playerTeam | PaintbrawlStatus.Normal;
 			}
 		}
 	}

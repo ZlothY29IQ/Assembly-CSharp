@@ -483,6 +483,28 @@ public class ProgressionManager : MonoBehaviour
 
 	private int maxRetriesOnFail = 4;
 
+	private const double k_minRefreshIntervalSeconds = 2.0;
+
+	private double _lastTreeRefreshTime = double.NegativeInfinity;
+
+	private double _lastInventoryRefreshTime = double.NegativeInfinity;
+
+	private bool _treeRefreshInFlight;
+
+	private bool _inventoryRefreshInFlight;
+
+	public static int debug_refreshTreeCount;
+
+	public static int debug_refreshInventoryCount;
+
+	public static int debug_refreshTreeDroppedByThrottle;
+
+	public static int debug_refreshInventoryDroppedByThrottle;
+
+	public static double debug_lastRefreshTreeAttemptTime;
+
+	public static double debug_lastRefreshInventoryAttemptTime;
+
 	public static ProgressionManager Instance { get; private set; }
 
 	public event Action OnTreeUpdated;
@@ -525,14 +547,59 @@ public class ProgressionManager : MonoBehaviour
 
 	public async void RefreshProgressionTree()
 	{
+		double num = (debug_lastRefreshTreeAttemptTime = Time.unscaledTimeAsDouble);
+		if (_treeRefreshInFlight)
+		{
+			debug_refreshTreeDroppedByThrottle++;
+			return;
+		}
+		if (num - _lastTreeRefreshTime < 2.0)
+		{
+			debug_refreshTreeDroppedByThrottle++;
+			return;
+		}
+		_lastTreeRefreshTime = num;
+		_treeRefreshInFlight = true;
+		debug_refreshTreeCount++;
 		await ProgressionUtil.WaitForMothershipSessionToken();
-		MothershipClientApiUnity.GetPlayerProgressionTreesData(OnGetTrees, GetMothershipFailure);
+		MothershipClientApiUnity.GetPlayerProgressionTreesData(delegate(GetProgressionTreesForPlayerResponse response)
+		{
+			_treeRefreshInFlight = false;
+			OnGetTrees(response);
+		}, delegate(MothershipError err, int code)
+		{
+			_treeRefreshInFlight = false;
+			GetMothershipFailure(err, code);
+		});
 	}
 
 	public async void RefreshUserInventory()
 	{
+		double num = (debug_lastRefreshInventoryAttemptTime = Time.unscaledTimeAsDouble);
+		if (_inventoryRefreshInFlight)
+		{
+			debug_refreshInventoryDroppedByThrottle++;
+			return;
+		}
+		if (num - _lastInventoryRefreshTime < 2.0)
+		{
+			debug_refreshInventoryDroppedByThrottle++;
+			return;
+		}
+		_lastInventoryRefreshTime = num;
+		_inventoryRefreshInFlight = true;
+		debug_refreshInventoryCount++;
 		await ProgressionUtil.WaitForMothershipSessionToken();
-		MothershipClientApiUnity.GetUserInventory(OnGetInventory, GetMothershipFailure);
+		MothershipClientApiUnity.GetUserInventory(delegate(MothershipGetInventoryResponse response)
+		{
+			_inventoryRefreshInFlight = false;
+			OnGetInventory(response);
+		}, delegate(MothershipError err, int code)
+		{
+			_inventoryRefreshInFlight = false;
+			GetMothershipFailure(err, code);
+		});
+		await ProgressionUtil.WaitForPlayFabSessionTicket();
 		RefreshShinyRocksTotal();
 	}
 

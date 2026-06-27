@@ -8,6 +8,8 @@ public class PlayerConfig
 
 	public const string Player_HasFlaggedWrongStump = "spawnInWrongStump";
 
+	public const string Player_LastSawScheduledEventTime = "lastSawScheduledEventTime";
+
 	public const string Done = "done";
 
 	public const string Nope = "nope";

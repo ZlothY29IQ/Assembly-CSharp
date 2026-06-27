@@ -3,6 +3,7 @@ using GorillaExtensions;
 using GorillaGameModes;
 using GorillaLocomotion;
 using GorillaLocomotion.Swimming;
+using GorillaTag.Gravity;
 using GorillaTag.Reactions;
 using UnityEngine;
 using UnityEngine.Events;
@@ -133,6 +134,8 @@ public class SlingshotProjectile : MonoBehaviour
 
 	private float distanceTraveled;
 
+	private MonkeGravityController gravityController;
+
 	public Vector3 launchPosition { get; private set; }
 
 	public event ProjectileImpactEvent OnImpact;
@@ -155,26 +158,25 @@ public class SlingshotProjectile : MonoBehaviour
 		{
 			component.objectRadiusForWaterCollision = 0.02f * scale;
 		}
+		gravityController.GravityMultiplier = gravityMultiplier * ((scale < 1f) ? scale : 1f);
 		projectileRigidbody.isKinematic = false;
 		projectileRigidbody.useGravity = false;
-		forceComponent.enabled = true;
-		forceComponent.force = Physics.gravity * projectileRigidbody.mass * gravityMultiplier * ((scale < 1f) ? scale : 1f);
 		projectileRigidbody.linearVelocity = velocity;
 		projectileOwner = player;
 		myProjectileCount = projectileCount;
 		projectileRigidbody.position = position;
 		ApplyTeamModelAndColor(blueTeam, orangeTeam, shouldOverrideColor, overrideColor);
 		remainingLifeTime = lifeTime;
-		if ((bool)forceComponent)
+		if (useForwardForce && (bool)forceComponent)
 		{
 			forceComponent.enabled = true;
-			forceComponent.force = Physics.gravity * projectileRigidbody.mass * gravityMultiplier * ((scale < 1f) ? scale : 1f);
-			if (useForwardForce)
-			{
-				forceComponent.force += projectileRigidbody.linearVelocity.normalized * forwardForceMultiplier;
-			}
+			forceComponent.force = projectileRigidbody.linearVelocity.normalized * forwardForceMultiplier;
 		}
 		isSettled = false;
+		if (VRRigCache.Instance.TryGetVrrig(player, out var playerRig))
+		{
+			gravityController.SetPersonalGravityDirection(playerRig.Rig.transform.up);
+		}
 		OnLaunch?.Invoke(projectileOwner);
 	}
 
@@ -190,6 +192,11 @@ public class SlingshotProjectile : MonoBehaviour
 		matPropBlock = new MaterialPropertyBlock();
 		spawnWorldEffects = GetComponent<SpawnWorldEffects>();
 		remainingLifeTime = lifeTime;
+		gravityController = GetComponent<MonkeGravityController>();
+		if (gravityController == null)
+		{
+			gravityController = base.gameObject.AddComponent<MonkeGravityController>();
+		}
 	}
 
 	public void Deactivate()

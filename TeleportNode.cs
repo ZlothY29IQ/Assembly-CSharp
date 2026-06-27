@@ -15,6 +15,9 @@ public class TeleportNode : GorillaTriggerBox
 	private bool seamless = true;
 
 	[SerializeField]
+	private bool keepVelocity = true;
+
+	[SerializeField]
 	private bool subsOnly;
 
 	private float teleportTime;
@@ -57,6 +60,6 @@ public class TeleportNode : GorillaTriggerBox
 	private IEnumerator DelayedTeleport(GTPlayer p, Vector3 position, Quaternion rotation)
 	{
 		yield return null;
-		p.TeleportTo(position, rotation, keepVelocity: true);
+		p.TeleportTo(position, rotation, keepVelocity, !seamless);
 	}
 }

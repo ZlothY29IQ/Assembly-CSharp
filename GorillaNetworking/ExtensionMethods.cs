@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 
 namespace GorillaNetworking;
@@ -18,15 +19,9 @@ public static class ExtensionMethods
 		}
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static void AddOrUpdate<TKey, TValue>(this Dictionary<TKey, TValue> dict, TKey key, TValue value)
 	{
-		if (dict.ContainsKey(key))
-		{
-			dict[key] = value;
-		}
-		else
-		{
-			dict.Add(key, value);
-		}
+		dict[key] = value;
 	}
 }

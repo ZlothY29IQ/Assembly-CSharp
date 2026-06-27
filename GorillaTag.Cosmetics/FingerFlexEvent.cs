@@ -63,10 +63,13 @@ public class FingerFlexEvent : MonoBehaviourTick
 
 	private TransferrableObject parentTransferable;
 
+	private IHeldItem myHeldItem;
+
 	private void Awake()
 	{
 		_rig = GetComponentInParent<VRRig>();
 		parentTransferable = GetComponentInParent<TransferrableObject>();
+		myHeldItem = GetComponentInParent<IHeldItem>();
 	}
 
 	private bool IsMyItem()
@@ -93,7 +96,9 @@ public class FingerFlexEvent : MonoBehaviourTick
 		{
 			return;
 		}
-		if (!ignoreTransferable && listener.fireOnlyWhileHeld && (bool)parentTransferable && !parentTransferable.InHand() && listener.eventType == EventType.OnFingerReleased)
+		bool flag = parentTransferable != null || myHeldItem != null;
+		bool flag2 = ((parentTransferable != null) ? parentTransferable.InHand() : (myHeldItem?.InHand() ?? true));
+		if (!ignoreTransferable && listener.fireOnlyWhileHeld && flag && !flag2 && listener.eventType == EventType.OnFingerReleased)
 		{
 			if (listener.fingerRightLastValue > listener.fingerReleaseValue)
 			{
@@ -106,7 +111,7 @@ public class FingerFlexEvent : MonoBehaviourTick
 				listener.fingerLeftLastValue = 0f;
 			}
 		}
-		if (ignoreTransferable || !parentTransferable || !listener.fireOnlyWhileHeld || parentTransferable.InHand())
+		if (!(!ignoreTransferable && flag) || !listener.fireOnlyWhileHeld || flag2)
 		{
 			switch (fingerType)
 			{
@@ -144,12 +149,13 @@ public class FingerFlexEvent : MonoBehaviourTick
 
 	private void FireEvents(Listener listener, float leftFinger, float rightFinger)
 	{
-		if ((ignoreTransferable && listener.checkLeftHand) || ((bool)parentTransferable && FingerFlexValidation(isLeftHand: true)))
+		bool flag = parentTransferable != null || myHeldItem != null;
+		if ((ignoreTransferable && listener.checkLeftHand) || (!ignoreTransferable && flag && FingerFlexValidation(isLeftHand: true)))
 		{
 			CheckFingerValue(listener, leftFinger, isLeft: true, ref listener.fingerLeftLastValue);
 			return;
 		}
-		if ((ignoreTransferable && !listener.checkLeftHand) || ((bool)parentTransferable && FingerFlexValidation(isLeftHand: false)))
+		if ((ignoreTransferable && !listener.checkLeftHand) || (!ignoreTransferable && flag && FingerFlexValidation(isLeftHand: false)))
 		{
 			CheckFingerValue(listener, rightFinger, isLeft: false, ref listener.fingerRightLastValue);
 			return;
@@ -192,11 +198,12 @@ public class FingerFlexEvent : MonoBehaviourTick
 
 	private bool FingerFlexValidation(bool isLeftHand)
 	{
-		if (parentTransferable.InLeftHand() && !isLeftHand)
+		bool flag = ((parentTransferable != null) ? parentTransferable.InLeftHand() : (myHeldItem?.InLeftHand() ?? false));
+		if (flag && !isLeftHand)
 		{
 			return false;
 		}
-		if (!parentTransferable.InLeftHand() && isLeftHand)
+		if (!flag && isLeftHand)
 		{
 			return false;
 		}

@@ -522,7 +522,7 @@ public class KIDManager : MonoBehaviour
 		{
 			return true;
 		}
-		PrivateUIRoom.ForceStartOverlay();
+		PrivateUIRoom.ForceStartOverlay(PrivateUIRoom.OverlaySource.KID);
 		switch (await WarningScreens.StartWarningScreen(_requestCancellationSource.Token))
 		{
 		case WarningButtonResult.None:
@@ -557,7 +557,7 @@ public class KIDManager : MonoBehaviour
 	{
 		if (PlayerPrefs.GetInt(KIDSetupPlayerPref, 0) == 0)
 		{
-			PrivateUIRoom.ForceStartOverlay();
+			PrivateUIRoom.ForceStartOverlay(PrivateUIRoom.OverlaySource.KID);
 		}
 	}
 
@@ -609,7 +609,7 @@ public class KIDManager : MonoBehaviour
 							}
 							if (newSessionData.status == SessionStatus.PROHIBITED || newSessionData.status == SessionStatus.PENDING_AGE_APPEAL)
 							{
-								PrivateUIRoom.ForceStartOverlay();
+								PrivateUIRoom.ForceStartOverlay(PrivateUIRoom.OverlaySource.KID);
 								KIDUI_AgeAppealController.Instance.StartAgeAppealScreens(newSessionData.status);
 							}
 							else
@@ -627,13 +627,13 @@ public class KIDManager : MonoBehaviour
 								}
 								if (num3 != 0)
 								{
-									PrivateUIRoom.ForceStartOverlay();
+									PrivateUIRoom.ForceStartOverlay(PrivateUIRoom.OverlaySource.KID);
 									(AgeStatusType, TMPSession) obj2 = await AgeGateFlow(newSessionData);
 									_ = obj2.Item1;
 									TMPSession item = obj2.Item2;
 									if (_requestCancellationSource.IsCancellationRequested)
 									{
-										goto IL_06b1;
+										goto IL_06bd;
 									}
 									newSession = item;
 								}
@@ -642,7 +642,7 @@ public class KIDManager : MonoBehaviour
 									await LegalAgreements.instance.StartLegalAgreements();
 									if (_requestCancellationSource.IsCancellationRequested)
 									{
-										goto IL_06b1;
+										goto IL_06bd;
 									}
 								}
 								if (UpdatePermissions(newSession) && CurrentSession != null)
@@ -688,8 +688,8 @@ public class KIDManager : MonoBehaviour
 					}
 				}
 			}
-			goto IL_06b1;
-			IL_06b1:
+			goto IL_06bd;
+			IL_06bd:
 			num = 1;
 			end_IL_00b2:;
 		}
@@ -700,7 +700,7 @@ public class KIDManager : MonoBehaviour
 		InitialisationComplete = true;
 		if (!InitialisationSuccessful)
 		{
-			if (cachedTapHapticsStrength.HasValue)
+			if (cachedTapHapticsStrength.HasValue && GorillaTagger.Instance != null)
 			{
 				GorillaTagger.Instance.tapHapticStrength = cachedTapHapticsStrength.Value;
 			}
@@ -712,7 +712,7 @@ public class KIDManager : MonoBehaviour
 			{
 				await LegalAgreements.instance.StartLegalAgreements();
 			}
-			PrivateUIRoom.StopForcedOverlay();
+			PrivateUIRoom.StopForcedOverlay(PrivateUIRoom.OverlaySource.KID);
 		}
 		object obj4 = obj;
 		if (obj4 != null)
@@ -726,7 +726,7 @@ public class KIDManager : MonoBehaviour
 			{
 				PlayFabAuthenticator.instance.GetSafety();
 			}
-			if (cachedTapHapticsStrength.HasValue)
+			if (cachedTapHapticsStrength.HasValue && GorillaTagger.Instance != null)
 			{
 				GorillaTagger.Instance.tapHapticStrength = cachedTapHapticsStrength.Value;
 			}
@@ -734,7 +734,7 @@ public class KIDManager : MonoBehaviour
 			{
 				GorillaSnapTurn.LoadSettingsFromCache();
 			}
-			PrivateUIRoom.StopForcedOverlay();
+			PrivateUIRoom.StopForcedOverlay(PrivateUIRoom.OverlaySource.KID);
 		}
 	}
 
@@ -1016,7 +1016,7 @@ public class KIDManager : MonoBehaviour
 	{
 		TMPSession session = newPlayerData.session;
 		AgeStatusType? ageStatusType = newPlayerData.session?.AgeStatus;
-		if (!newPlayerData.AgeStatus.HasValue)
+		if (!ageStatusType.HasValue)
 		{
 			VerifyAgeData verifyAgeData = await ProcessAgeGate();
 			if (verifyAgeData == null)
@@ -1123,7 +1123,7 @@ public class KIDManager : MonoBehaviour
 	{
 		(long, VerifyAgeResponse, string) obj = await KIDServerWebRequest<VerifyAgeResponse, VerifyAgeRequest>("VerifyAge", "POST", request);
 		long item = obj.Item1;
-		VerifyAgeData result = new VerifyAgeData(obj.Item2, request.Age);
+		VerifyAgeData result = new VerifyAgeData(obj.Item2);
 		if (item < 200 || item >= 300)
 		{
 			failureCallback?.Invoke();
@@ -1259,9 +1259,9 @@ public class KIDManager : MonoBehaviour
 
 	private static async Task<GetRequirementsData> Server_GetRequirements()
 	{
-		(long, GetAgeGateRequirementsResponse, string) obj = await KIDServerWebRequest<GetAgeGateRequirementsResponse, KIDRequestData>("GetRequirements", "GET", null, null, 3);
+		(long, GetRequirementsResponse, string) obj = await KIDServerWebRequest<GetRequirementsResponse, KIDRequestData>("GetRequirements", "GET", null, null, 3);
 		long item = obj.Item1;
-		GetAgeGateRequirementsResponse item2 = obj.Item2;
+		GetRequirementsResponse item2 = obj.Item2;
 		GetRequirementsData result = new GetRequirementsData
 		{
 			AgeGateRequirements = item2

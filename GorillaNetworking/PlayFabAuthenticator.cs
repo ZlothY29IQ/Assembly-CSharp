@@ -272,6 +272,31 @@ public class PlayFabAuthenticator : MonoBehaviour
 		}
 	}
 
+	private void GetNonceForPlayFab()
+	{
+	}
+
+	private void OnPlayFabAuthResponse(PlayfabAuthResponseData response)
+	{
+		Debug.Log("[PLAYFAB] Response Received. Response is: [" + (response?.PlayFabId ?? "NULL") + "]");
+		if (response != null)
+		{
+			PlayFabSettings.staticPlayer = new PlayFabAuthenticationContext(response.SessionTicket, response.EntityToken, response.PlayFabId, response.EntityId, response.EntityType);
+			_playFabPlayerIdCache = response.PlayFabId;
+			_sessionTicket = response.SessionTicket;
+			if (DateTime.TryParse(response.AccountCreationIsoTimestamp, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var result))
+			{
+				StartCoroutine(VerifyKidAuthenticated(result));
+			}
+			AdvanceLogin();
+		}
+		else
+		{
+			Debug.LogError("Error: Could not authenticate with PlayFab");
+			SetLoginFailed();
+		}
+	}
+
 	public void AuthenticateWithPlayFab()
 	{
 		Debug.Log("authenticating with playFab!");

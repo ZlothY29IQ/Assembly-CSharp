@@ -175,18 +175,32 @@ public class GameModeZoneMapping : ScriptableObject
 			}
 			return GameModeType.Casual;
 		}
+		bool flag = PlayerPrefFlags.Check(PlayerPrefFlags.Flag.GAME_MODE_SELECTOR_IS_SUPER);
+		if (!flag)
+		{
+			switch (mode)
+			{
+			case GameModeType.SuperCasual:
+				mode = GameModeType.Casual;
+				break;
+			case GameModeType.SuperInfect:
+				mode = GameModeType.Infection;
+				break;
+			}
+		}
 		HashSet<GameModeType> hashSet = ((isPrivate && privateZoneGameModesLookup.ContainsKey(zone)) ? privateZoneGameModesLookup[zone] : ((!publicZoneGameModesLookup.ContainsKey(zone)) ? new HashSet<GameModeType>(defaultGameModes) : publicZoneGameModesLookup[zone]));
 		if (hashSet.Contains(mode))
 		{
 			return mode;
 		}
-		using (HashSet<GameModeType>.Enumerator enumerator = hashSet.GetEnumerator())
+		GameModeType result = GameModeType.Casual;
+		foreach (GameModeType item in hashSet)
 		{
-			if (enumerator.MoveNext())
+			if (flag || (item != GameModeType.SuperCasual && item != GameModeType.SuperInfect))
 			{
-				return enumerator.Current;
+				return item;
 			}
 		}
-		return GameModeType.Casual;
+		return result;
 	}
 }

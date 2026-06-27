@@ -229,7 +229,7 @@ public class PhotonPrefabPool : MonoBehaviour, IPunPrefabPoolVerify, IPunPrefabP
 			}
 			if (netPlayer != null && (voiceLink.Info.Bitrate > 20000 || voiceLink.Info.SamplingRate > 16000) && VRRigCache.Instance.TryGetVrrig(netPlayer, out var playerRig))
 			{
-				playerRig.ForceMute = true;
+				playerRig.SetMuted(RigContainer.MuteReason.OversizedStream, muted: true);
 			}
 		}
 		catch (Exception ex)

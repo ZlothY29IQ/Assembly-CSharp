@@ -300,6 +300,11 @@ public class SIGadgetStilt : SIGadget
 
 	protected override void OnUpdateAuthority(float dt)
 	{
+		if (IsBlocked(SIExclusionType.AffectsLocalMovement))
+		{
+			DisableCurrentStilt();
+			return;
+		}
 		bool isSpinning = IsSpinning;
 		bool flag = false;
 		if (currentStiltID != StiltID.None)

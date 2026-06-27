@@ -1,5 +1,5 @@
-using GorillaExtensions;
 using GT_CustomMapSupportRuntime;
+using GorillaExtensions;
 using UnityEngine;
 
 namespace GorillaTag.Rendering;

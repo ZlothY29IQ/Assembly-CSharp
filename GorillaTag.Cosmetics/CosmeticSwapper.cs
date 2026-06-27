@@ -11,7 +11,8 @@ public class CosmeticSwapper : MonoBehaviour, ITickSystemTick
 	private enum SwapMode
 	{
 		AllAtOnce,
-		StepByStep
+		StepByStep,
+		Random
 	}
 
 	private struct CosmeticState
@@ -30,6 +31,10 @@ public class CosmeticSwapper : MonoBehaviour, ITickSystemTick
 
 	[SerializeField]
 	private SwapMode swapMode = SwapMode.StepByStep;
+
+	[Tooltip("Optional. When assigned, TriggerSwap sources the cosmetic ID from the cycle controller's active sub-item instead of the cosmeticIDs list. Use SwapMode.Random to call CycleRandom() automatically on each hit before reading the active sub-item.")]
+	[SerializeField]
+	private SubCosmeticCycleController cycleController;
 
 	[SerializeField]
 	private float stepTimeout = 10f;
@@ -99,57 +104,100 @@ public class CosmeticSwapper : MonoBehaviour, ITickSystemTick
 
 	public int GetNumberOfSteps()
 	{
+		if (cycleController != null)
+		{
+			return cycleController.Count;
+		}
 		return cosmeticIDs.Count;
 	}
 
-	private async void TriggerSwap(VRRig rig)
+	private void TriggerSwap(VRRig rig)
 	{
-		if ((GorillaGameManager.instance != null && gameModeExclusion.Contains(GorillaGameManager.instance.GameType())) || rig == null || controller == null || cosmeticIDs.Count == 0 || rig != GorillaTagger.Instance.offlineVRRig)
+		if ((GorillaGameManager.instance != null && gameModeExclusion.Contains(GorillaGameManager.instance.GameType())) || rig == null || controller == null || rig != GorillaTagger.Instance.offlineVRRig)
 		{
 			return;
 		}
-		if (swapMode == SwapMode.AllAtOnce)
+		if (cycleController != null)
 		{
-			foreach (string cosmeticID in cosmeticIDs)
+			if (swapMode == SwapMode.Random)
 			{
-				CosmeticState? cosmeticState = await SwapInCosmeticWithReturn(cosmeticID, rig);
+				cycleController.CycleRandom();
+			}
+			string appliedCosmeticID = cycleController.GetAppliedCosmeticID();
+			if (!string.IsNullOrEmpty(appliedCosmeticID))
+			{
+				CosmeticState? cosmeticState = SwapInCosmeticWithReturn(appliedCosmeticID, rig);
 				if (cosmeticState.HasValue)
 				{
 					AddNewSwappedCosmetic(cosmeticState.Value);
 				}
 			}
-			return;
-		}
-		int index = CosmeticStepIndex;
-		if (index < 0 || index >= cosmeticIDs.Count)
-		{
-			return;
-		}
-		string nameOrId = cosmeticIDs[index];
-		CosmeticState? cosmeticState2 = await SwapInCosmeticWithReturn(nameOrId, rig);
-		if (!cosmeticState2.HasValue)
-		{
-			return;
-		}
-		AddNewSwappedCosmetic(cosmeticState2.Value);
-		if (index == cosmeticIDs.Count - 1)
-		{
-			if (holdFinalStep)
-			{
-				MarkFinalCosmeticStep();
-			}
-			if (OnSwappingSequenceCompleted != null)
-			{
-				OnSwappingSequenceCompleted.Invoke(rig);
-			}
 		}
 		else
 		{
-			UnmarkFinalCosmeticStep();
+			if (cosmeticIDs.Count == 0)
+			{
+				return;
+			}
+			if (swapMode == SwapMode.Random)
+			{
+				string nameOrId = cosmeticIDs[Random.Range(0, cosmeticIDs.Count)];
+				CosmeticState? cosmeticState2 = SwapInCosmeticWithReturn(nameOrId, rig);
+				if (cosmeticState2.HasValue)
+				{
+					AddNewSwappedCosmetic(cosmeticState2.Value);
+				}
+				return;
+			}
+			if (swapMode == SwapMode.AllAtOnce)
+			{
+				if (newSwappedCosmetics.Count > 0)
+				{
+					return;
+				}
+				{
+					foreach (string cosmeticID in cosmeticIDs)
+					{
+						CosmeticState? cosmeticState3 = SwapInCosmeticWithReturn(cosmeticID, rig);
+						if (cosmeticState3.HasValue)
+						{
+							AddNewSwappedCosmetic(cosmeticState3.Value);
+						}
+					}
+					return;
+				}
+			}
+			int cosmeticStepIndex = CosmeticStepIndex;
+			if (cosmeticStepIndex < 0 || cosmeticStepIndex >= cosmeticIDs.Count)
+			{
+				return;
+			}
+			string nameOrId2 = cosmeticIDs[cosmeticStepIndex];
+			CosmeticState? cosmeticState4 = SwapInCosmeticWithReturn(nameOrId2, rig);
+			if (!cosmeticState4.HasValue)
+			{
+				return;
+			}
+			AddNewSwappedCosmetic(cosmeticState4.Value);
+			if (cosmeticStepIndex == cosmeticIDs.Count - 1)
+			{
+				if (holdFinalStep)
+				{
+					MarkFinalCosmeticStep();
+				}
+				if (OnSwappingSequenceCompleted != null)
+				{
+					OnSwappingSequenceCompleted.Invoke(rig);
+				}
+			}
+			else
+			{
+				UnmarkFinalCosmeticStep();
+			}
 		}
 	}
 
-	private async Awaitable<CosmeticState?> SwapInCosmeticWithReturn(string nameOrId, VRRig rig)
+	private CosmeticState? SwapInCosmeticWithReturn(string nameOrId, VRRig rig)
 	{
 		if (controller == null)
 		{
@@ -162,29 +210,29 @@ public class CosmeticSwapper : MonoBehaviour, ITickSystemTick
 			return null;
 		}
 		bool isLeftHand;
-		CosmeticsController.CosmeticSlots slot = GetCosmeticSlot(cosmeticItem, out isLeftHand);
-		if (slot == CosmeticsController.CosmeticSlots.Count)
+		CosmeticsController.CosmeticSlots cosmeticSlot = GetCosmeticSlot(cosmeticItem, out isLeftHand);
+		if (cosmeticSlot == CosmeticsController.CosmeticSlots.Count)
 		{
 			Debug.LogWarning("Could not determine slot for: " + cosmeticItem.displayName);
 			return null;
 		}
-		CosmeticsController.CosmeticItem currentItem = controller.currentWornSet.items[(int)slot];
-		if (!currentItem.isNullItem && currentItem.itemName == cosmeticItem.itemName)
+		CosmeticsController.CosmeticItem replacedItem = controller.currentWornSet.items[(int)cosmeticSlot];
+		if (!replacedItem.isNullItem && replacedItem.itemName == cosmeticItem.itemName)
 		{
 			return null;
 		}
-		await controller.ApplyCosmeticItemToSet(controller.tempUnlockedSet, cosmeticItem, isLeftHand, applyToPlayerPrefs: false);
+		controller.ApplyCosmeticItemToSet(controller.tempUnlockedSet, cosmeticItem, isLeftHand, applyToPlayerPrefs: false);
 		controller.UpdateWornCosmetics(sync: true);
 		return new CosmeticState
 		{
 			cosmeticId = nameOrId,
-			replacedItem = currentItem,
-			slot = slot,
+			replacedItem = replacedItem,
+			slot = cosmeticSlot,
 			isLeftHand = isLeftHand
 		};
 	}
 
-	private async Awaitable RestorePreviousCosmetic(CosmeticState state)
+	private void RestorePreviousCosmetic(CosmeticState state)
 	{
 		if (controller == null)
 		{
@@ -196,7 +244,7 @@ public class CosmeticSwapper : MonoBehaviour, ITickSystemTick
 			controller.RemoveCosmeticItemFromSet(controller.tempUnlockedSet, cosmeticItem.displayName, applyToPlayerPrefs: false);
 			if (!state.replacedItem.isNullItem)
 			{
-				await controller.ApplyCosmeticItemToSet(controller.tempUnlockedSet, state.replacedItem, state.isLeftHand, applyToPlayerPrefs: false);
+				controller.ApplyCosmeticItemToSet(controller.tempUnlockedSet, state.replacedItem, state.isLeftHand, applyToPlayerPrefs: false);
 			}
 			controller.UpdateWornCosmetics(sync: true);
 		}
@@ -236,7 +284,7 @@ public class CosmeticSwapper : MonoBehaviour, ITickSystemTick
 		return CosmeticsController.CategoryToNonTransferrableSlot(item.itemCategory);
 	}
 
-	public async void Tick()
+	public void Tick()
 	{
 		if (newSwappedCosmetics.Count <= 0)
 		{
@@ -257,7 +305,7 @@ public class CosmeticSwapper : MonoBehaviour, ITickSystemTick
 				while (newSwappedCosmetics.Count > 0)
 				{
 					CosmeticState state = newSwappedCosmetics.Pop();
-					await RestorePreviousCosmetic(state);
+					RestorePreviousCosmetic(state);
 				}
 				isAtFinalCosmeticStep = false;
 				lastCosmeticSwapTime = float.PositiveInfinity;
@@ -268,7 +316,7 @@ public class CosmeticSwapper : MonoBehaviour, ITickSystemTick
 			while (newSwappedCosmetics.Count > 0)
 			{
 				CosmeticState state2 = newSwappedCosmetics.Pop();
-				await RestorePreviousCosmetic(state2);
+				RestorePreviousCosmetic(state2);
 			}
 			lastCosmeticSwapTime = float.PositiveInfinity;
 			isAtFinalCosmeticStep = false;

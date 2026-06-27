@@ -5,7 +5,9 @@ public class GorillaPressableDelayButton : GorillaPressableButton, IGorillaSlice
 {
 	private Collider touching;
 
-	private float timer;
+	private float pressStartTime;
+
+	private float progress;
 
 	[SerializeField]
 	[Range(0.01f, 5f)]
@@ -36,7 +38,8 @@ public class GorillaPressableDelayButton : GorillaPressableButton, IGorillaSlice
 		if (base.enabled && touchTime + debounceTime < Time.time && !touching && !(collider.GetComponentInParent<GorillaTriggerColliderHandIndicator>() == null))
 		{
 			touching = collider;
-			timer = 0f;
+			pressStartTime = Time.unscaledTime;
+			progress = 0f;
 			UpdateFillBar();
 			this.onPressBegin?.Invoke();
 		}
@@ -47,7 +50,7 @@ public class GorillaPressableDelayButton : GorillaPressableButton, IGorillaSlice
 		if (!(other != touching))
 		{
 			touching = null;
-			timer = 0f;
+			progress = 0f;
 			UpdateFillBar();
 			this.onPressAbort?.Invoke();
 		}
@@ -67,12 +70,13 @@ public class GorillaPressableDelayButton : GorillaPressableButton, IGorillaSlice
 	{
 		if (!(touching == null))
 		{
-			timer += Time.deltaTime;
-			if (timer > delayTime)
+			float num = Time.unscaledTime - pressStartTime;
+			progress = ((delayTime > 0f) ? Mathf.Clamp01(num / delayTime) : ((num > 0f) ? 1f : 0f));
+			if (num > delayTime)
 			{
 				base.OnTriggerEnter(touching);
 				touching = null;
-				timer = 0f;
+				progress = 0f;
 			}
 			UpdateFillBar();
 		}
@@ -92,8 +96,7 @@ public class GorillaPressableDelayButton : GorillaPressableButton, IGorillaSlice
 	{
 		if (!(fillBar == null))
 		{
-			float num = ((delayTime > 0f) ? Mathf.Clamp01(timer / delayTime) : ((float)((timer > 0f) ? 1 : 0)));
-			fillBarScale.x = fillbarStartingScale.x * num;
+			fillBarScale.x = fillbarStartingScale.x * progress;
 			fillBar.localScale = fillBarScale;
 		}
 	}

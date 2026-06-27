@@ -130,7 +130,7 @@ public class AnnouncementManager : MonoBehaviour
 			_completedSetup = true;
 			return;
 		}
-		PrivateUIRoom.ForceStartOverlay();
+		PrivateUIRoom.ForceStartOverlay(PrivateUIRoom.OverlaySource.KID);
 		HandRayController.Instance.EnableHandRays();
 		_announcementMessageBox.Header = _announcementData.AnnouncementTitle;
 		_announcementMessageBox.Body = _announcementData.Message;

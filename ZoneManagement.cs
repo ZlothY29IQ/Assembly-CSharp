@@ -45,6 +45,8 @@ public class ZoneManagement : MonoBehaviour
 
 	public bool hasInstance { get; private set; }
 
+	public bool Initialized { get; private set; }
+
 	public static event ZoneChangeEvent OnZoneChange;
 
 	private void Awake()
@@ -88,6 +90,20 @@ public class ZoneManagement : MonoBehaviour
 			FindInstance();
 		}
 		return instance.GetZoneData(zone)?.active ?? false;
+	}
+
+	public static bool IsZoneLoaded(GTZone zone)
+	{
+		if (!instance)
+		{
+			FindInstance();
+		}
+		ZoneData zoneData = instance.GetZoneData(zone);
+		if (zoneData != null && zoneData.active)
+		{
+			return SceneManager.GetSceneByName(zoneData.sceneName).isLoaded;
+		}
+		return false;
 	}
 
 	public GameObject GetPrimaryGameObject(GTZone zone)
@@ -180,6 +196,7 @@ public class ZoneManagement : MonoBehaviour
 		allObjects = hashSet.ToArray();
 		objectActivationState = new bool[allObjects.Length];
 		AddSceneToForceStayLoaded("City");
+		Initialized = true;
 	}
 
 	private void SetZones(GTZone[] newActiveZones)
@@ -308,6 +325,11 @@ public class ZoneManagement : MonoBehaviour
 		OnSceneLoadsCompleted?.Invoke();
 	}
 
+	public bool AnyActiveLoadOps()
+	{
+		return _scenes_to_loadOps.Values.Any((AsyncOperation op) => !op.isDone);
+	}
+
 	private ZoneData GetZoneData(GTZone zone)
 	{
 		for (int i = 0; i < zones.Length; i++)
@@ -318,6 +340,11 @@ public class ZoneManagement : MonoBehaviour
 			}
 		}
 		return null;
+	}
+
+	public string GetSceneNameForZone(GTZone zone)
+	{
+		return GetZoneData(zone)?.sceneName;
 	}
 
 	public static bool IsValidZoneInt(int zoneInt)

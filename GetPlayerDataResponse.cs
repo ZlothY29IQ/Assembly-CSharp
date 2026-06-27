@@ -8,13 +8,9 @@ public class GetPlayerDataResponse
 
 	public Session Session;
 
-	public int? Age;
-
-	public AgeStatusType? AgeStatus;
-
 	public KIDDefaultSession DefaultSession;
 
-	public string[]? Permissions;
+	public string[] Permissions;
 
 	public bool HasConfirmedSetup;
 }

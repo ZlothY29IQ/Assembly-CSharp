@@ -33,6 +33,10 @@ public class TabletSpawnInstance : IDisposable
 		set
 		{
 			_cameraActive = value;
+			if (!_cameraActive && Controller != null)
+			{
+				Controller.StopRecording();
+			}
 			if (_lckSocialCameraManager != null)
 			{
 				_lckSocialCameraManager.cameraActive = _cameraActive;
@@ -121,6 +125,20 @@ public class TabletSpawnInstance : IDisposable
 	{
 		_cameraSpawnPrefab = cameraSpawnPrefab;
 		_cameraSpawnParentTransform = cameraSpawnParentTransform;
+	}
+
+	public void Update()
+	{
+		if (!(Controller == null))
+		{
+			Camera activeCamera = Controller.GetActiveCamera();
+			Camera main = Camera.main;
+			if (main != null)
+			{
+				activeCamera.nearClipPlane = main.nearClipPlane;
+				activeCamera.farClipPlane = main.farClipPlane;
+			}
+		}
 	}
 
 	public void SpawnCamera()

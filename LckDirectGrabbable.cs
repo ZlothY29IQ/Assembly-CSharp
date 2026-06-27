@@ -122,9 +122,4 @@ public class LckDirectGrabbable : MonoBehaviour, IGorillaGrabable
 	{
 		return true;
 	}
-
-	string IGorillaGrabable.get_name()
-	{
-		return base.name;
-	}
 }
