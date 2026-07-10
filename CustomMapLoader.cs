@@ -11,6 +11,7 @@ using GorillaGameModes;
 using GorillaLocomotion.Swimming;
 using GorillaNetworking;
 using GorillaNetworking.Store;
+using GorillaTag.Gravity;
 using GorillaTag.Rendering;
 using GorillaTagScripts;
 using GorillaTagScripts.CustomMapSupport;
@@ -332,6 +333,11 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		typeof(SurfaceMoverSettings),
 		typeof(MovingSurfaceSettings),
 		typeof(CustomMapReviveStation),
+		typeof(BasicGravityZoneSettings),
+		typeof(ConsensusGravityZoneSettings),
+		typeof(TorusZoneSettings),
+		typeof(PlanetZoneSettings),
+		typeof(CubicPlanetZoneSettings),
 		typeof(ProBuilderMesh),
 		typeof(TMP_Text),
 		typeof(TextMeshPro),
@@ -1596,6 +1602,44 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		{
 			gameObject.AddComponent<SurfaceMover>().CopySettings(component5);
 			UnityEngine.Object.Destroy(component5);
+		}
+		ReplaceGravityDataOnlyScripts(gameObject);
+	}
+
+	private static void ReplaceGravityDataOnlyScripts(GameObject gameObject)
+	{
+		BasicGravityZoneSettings component = gameObject.GetComponent<BasicGravityZoneSettings>();
+		if ((object)component == null)
+		{
+			return;
+		}
+		if (component is ConsensusGravityZoneSettings consensusGravityZoneSettings)
+		{
+			gameObject.AddComponent<ConsensusGravityZone>().CopyProperties(consensusGravityZoneSettings);
+			UnityEngine.Object.Destroy(consensusGravityZoneSettings);
+		}
+		else if (component is TorusZoneSettings torusZoneSettings)
+		{
+			gameObject.AddComponent<TorusZone>().CopyProperties(torusZoneSettings);
+			UnityEngine.Object.Destroy(torusZoneSettings);
+		}
+		else if (component is PlanetZoneSettings planetZoneSettings)
+		{
+			if (planetZoneSettings is CubicPlanetZoneSettings cubicPlanetZoneSettings)
+			{
+				gameObject.AddComponent<CubicPlanetZone>().CopyProperties(cubicPlanetZoneSettings);
+				UnityEngine.Object.Destroy(cubicPlanetZoneSettings);
+			}
+			else
+			{
+				gameObject.AddComponent<PlanetZone>().CopyProperties(planetZoneSettings);
+				UnityEngine.Object.Destroy(planetZoneSettings);
+			}
+		}
+		else
+		{
+			gameObject.AddComponent<BasicGravityZone>().CopyProperties(component);
+			UnityEngine.Object.Destroy(component);
 		}
 	}
 

@@ -40,5 +40,6 @@ public enum GTZone
 	VIMExperience3,
 	VIMExperience4,
 	drill,
-	eventZone
+	eventZone,
+	spaceMap
 }

@@ -1445,22 +1445,25 @@ public class CrittersManager : NetworkComponent, IRequestableOwnershipGuardCallb
 		bool flag = localInZone;
 		localInZone = ZoneManagement.IsInZone(GTZone.critters);
 		CheckOwnership();
-		if (!LocalAuthority() && localInZone && NetworkSystem.Instance.InRoom && guard.actualOwner != null && (!hasNewlyInitialized || !flag) && Time.time > lastRequest + initRequestCooldown)
+		if (localInZone)
 		{
-			lastRequest = Time.time;
-			hasNewlyInitialized = true;
-			SendRPC("RequestDataInitialization", guard.actualOwner);
+			if (NetworkSystem.Instance.InRoom && guard.actualOwner != null && (!hasNewlyInitialized || !flag) && Time.time > lastRequest + initRequestCooldown && !LocalAuthority())
+			{
+				lastRequest = Time.time;
+				hasNewlyInitialized = true;
+				SendRPC("RequestDataInitialization", guard.actualOwner);
+			}
+			if (!flag)
+			{
+				poolParent.gameObject.SetActive(value: true);
+				crittersPool.poolParent.gameObject.SetActive(value: true);
+			}
 		}
-		if (flag && !localInZone)
+		else if (flag)
 		{
 			ResetRoom();
 			poolParent.gameObject.SetActive(value: false);
 			crittersPool.poolParent.gameObject.SetActive(value: false);
-		}
-		if (!flag && localInZone)
-		{
-			poolParent.gameObject.SetActive(value: true);
-			crittersPool.poolParent.gameObject.SetActive(value: true);
 		}
 	}
 
@@ -1472,36 +1475,34 @@ public class CrittersManager : NetworkComponent, IRequestableOwnershipGuardCallb
 			{
 				guard.SetOwnership(NetworkSystem.Instance.LocalPlayer);
 			}
+			return;
 		}
-		else
+		if (allRigs == null)
 		{
-			if (allRigs == null && !VRRigCache.isInitialized)
+			if (!VRRigCache.isInitialized)
 			{
 				return;
 			}
-			if (allRigs == null)
+			allRigs = new List<VRRig>(VRRigCache.Instance.GetAllRigs());
+		}
+		if (!LocalAuthority() || localInZone)
+		{
+			return;
+		}
+		int num = int.MaxValue;
+		NetPlayer netPlayer = null;
+		for (int i = 0; i < allRigs.Count; i++)
+		{
+			NetPlayer creator = allRigs[i].creator;
+			if (creator != null && allRigs[i].zoneEntity.currentZone == GTZone.critters && creator.ActorNumber < num)
 			{
-				allRigs = new List<VRRig>(VRRigCache.Instance.GetAllRigs());
+				netPlayer = creator;
+				num = creator.ActorNumber;
 			}
-			if (!LocalAuthority() || localInZone)
-			{
-				return;
-			}
-			int num = int.MaxValue;
-			NetPlayer netPlayer = null;
-			for (int i = 0; i < allRigs.Count; i++)
-			{
-				NetPlayer creator = allRigs[i].creator;
-				if (creator != null && allRigs[i].zoneEntity.currentZone == GTZone.critters && creator.ActorNumber < num)
-				{
-					netPlayer = creator;
-					num = creator.ActorNumber;
-				}
-			}
-			if (netPlayer != null)
-			{
-				guard.TransferOwnership(netPlayer);
-			}
+		}
+		if (netPlayer != null)
+		{
+			guard.TransferOwnership(netPlayer);
 		}
 	}
 

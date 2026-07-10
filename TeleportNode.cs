@@ -2,6 +2,7 @@ using System.Collections;
 using GorillaLocomotion;
 using GorillaTagScripts;
 using UnityEngine;
+using UnityEngine.Events;
 
 public class TeleportNode : GorillaTriggerBox
 {
@@ -12,6 +13,9 @@ public class TeleportNode : GorillaTriggerBox
 	private XSceneRef teleportToRef;
 
 	[SerializeField]
+	private GTZone teleportToZone = GTZone.none;
+
+	[SerializeField]
 	private bool seamless = true;
 
 	[SerializeField]
@@ -19,6 +23,9 @@ public class TeleportNode : GorillaTriggerBox
 
 	[SerializeField]
 	private bool subsOnly;
+
+	[SerializeField]
+	private UnityEvent onTeleport;
 
 	private float teleportTime;
 
@@ -61,5 +68,10 @@ public class TeleportNode : GorillaTriggerBox
 	{
 		yield return null;
 		p.TeleportTo(position, rotation, keepVelocity, !seamless);
+		if (teleportToZone != GTZone.none)
+		{
+			ZoneManagement.SetActiveZone(teleportToZone);
+		}
+		onTeleport.Invoke();
 	}
 }

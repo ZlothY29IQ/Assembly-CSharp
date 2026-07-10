@@ -62,6 +62,7 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 		AlreadyUsed,
 		TooEarly,
 		TooLate,
+		AlreadyGranted,
 		Success
 	}
 
@@ -437,6 +438,8 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 	private const string REDEMPTION_CODE_TOO_EARLY_KEY = "REDEMPTION_CODE_TOO_EARLY";
 
 	private const string REDEMPTION_CODE_TOO_LATE_KEY = "REDEMPTION_CODE_TOO_LATE";
+
+	private const string REDEMPTION_CODE_ALREADY_GRANTED_KEY = "REDEMPTION_CODE_ALREADY_GRANTED";
 
 	private const string REDEMPTION_CODE_SUCCESS_KEY = "REDEMPTION_CODE_SUCCESS";
 
@@ -3141,6 +3144,11 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 			defaultResult = "CODE EXPIRED";
 			LocalisationManager.TryGetKeyForCurrentLocale("REDEMPTION_CODE_TOO_LATE", out result, defaultResult);
 			screenText.Append(RedemptionRestrictionTime.HasValue ? ("\n\n" + result + "\n" + RedemptionRestrictionTime.Value.ToLocalTime().ToString("f").ToUpper()) : ("\n\n" + result + "\n[MISSING]"));
+			break;
+		case RedemptionResult.AlreadyGranted:
+			defaultResult = "ITEM ALREADY GRANTED";
+			LocalisationManager.TryGetKeyForCurrentLocale("REDEMPTION_CODE_ALREADY_GRANTED", out result, defaultResult);
+			screenText.Append("\n\n" + result);
 			break;
 		case RedemptionResult.Success:
 			defaultResult = "\n\nSUCCESSFULLY CLAIMED!";

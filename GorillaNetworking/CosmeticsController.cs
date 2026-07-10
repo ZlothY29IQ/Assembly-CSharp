@@ -369,55 +369,79 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 			{
 				return;
 			}
-			if (itemNameFromDisplayName == itemNameFromDisplayName2)
+			CosmeticItemInstance cosmeticItemInstance = null;
+			CosmeticItemInstance cosmeticItemInstance2 = null;
+			try
 			{
+				if (itemNameFromDisplayName == itemNameFromDisplayName2)
+				{
+					if (parentItem.isNullItem)
+					{
+						return;
+					}
+					cosmeticItemInstance = cosmeticsObjectRegistry.Cosmetic(parentItem.displayName);
+					if (cosmeticItemInstance == null)
+					{
+						return;
+					}
+					if (!rig.IsItemAllowed(itemNameFromDisplayName2))
+					{
+						cosmeticItemInstance.DisableItem((CosmeticSlots)slotIndex);
+						return;
+					}
+					if (parentItem.isHoldable)
+					{
+						bDock.TransferrableItemEnableAtPosition(parentItem.displayName, dropPositions);
+					}
+					cosmeticItemInstance.EnableItem((CosmeticSlots)slotIndex, rig);
+					PopulateCollectionDisplay(cosmeticItemInstance, parentItem, rig);
+					return;
+				}
+				if (!cosmeticItem.isNullItem)
+				{
+					if (cosmeticItem.isHoldable)
+					{
+						bDock.TransferrableItemDisableAtPosition(dropPositions);
+					}
+					cosmeticItemInstance2 = cosmeticsObjectRegistry.Cosmetic(cosmeticItem.displayName);
+					cosmeticItemInstance2?.DisableItem((CosmeticSlots)slotIndex);
+				}
 				if (parentItem.isNullItem)
 				{
-					return;
-				}
-				CosmeticItemInstance cosmeticItemInstance = cosmeticsObjectRegistry.Cosmetic(parentItem.displayName);
-				if (cosmeticItemInstance == null)
-				{
-					return;
-				}
-				if (!rig.IsItemAllowed(itemNameFromDisplayName2))
-				{
-					cosmeticItemInstance.DisableItem((CosmeticSlots)slotIndex);
 					return;
 				}
 				if (parentItem.isHoldable)
 				{
 					bDock.TransferrableItemEnableAtPosition(parentItem.displayName, dropPositions);
 				}
-				cosmeticItemInstance.EnableItem((CosmeticSlots)slotIndex, rig);
-				PopulateCollectionDisplay(cosmeticItemInstance, parentItem, rig);
-				return;
-			}
-			if (!cosmeticItem.isNullItem)
-			{
-				if (cosmeticItem.isHoldable)
+				cosmeticItemInstance = cosmeticsObjectRegistry.Cosmetic(parentItem.displayName);
+				if (rig.IsItemAllowed(itemNameFromDisplayName2) && cosmeticItemInstance != null)
 				{
-					bDock.TransferrableItemDisableAtPosition(dropPositions);
+					cosmeticItemInstance.EnableItem((CosmeticSlots)slotIndex, rig);
+					if (rig.isLocal && (slotIndex == 0 || slotIndex == 2))
+					{
+						PlayerPrefFlags.TouchIf(PlayerPrefFlags.Flag.SHOW_1P_COSMETICS, value: false);
+					}
+					PopulateCollectionDisplay(cosmeticItemInstance, parentItem, rig);
 				}
-				cosmeticsObjectRegistry.Cosmetic(cosmeticItem.displayName)?.DisableItem((CosmeticSlots)slotIndex);
 			}
-			if (parentItem.isNullItem)
+			catch (Exception exception)
 			{
-				return;
-			}
-			if (parentItem.isHoldable)
-			{
-				bDock.TransferrableItemEnableAtPosition(parentItem.displayName, dropPositions);
-			}
-			CosmeticItemInstance cosmeticItemInstance2 = cosmeticsObjectRegistry.Cosmetic(parentItem.displayName);
-			if (rig.IsItemAllowed(itemNameFromDisplayName2) && cosmeticItemInstance2 != null)
-			{
-				cosmeticItemInstance2.EnableItem((CosmeticSlots)slotIndex, rig);
-				if (rig.isLocal && (slotIndex == 0 || slotIndex == 2))
+				Debug.LogException(exception);
+				try
 				{
-					PlayerPrefFlags.TouchIf(PlayerPrefFlags.Flag.SHOW_1P_COSMETICS, value: false);
+					if (cosmeticItemInstance2 != null && !cosmeticItem.isHoldable)
+					{
+						cosmeticItemInstance2.DisableItem((CosmeticSlots)slotIndex);
+					}
+					if (cosmeticItemInstance != null && !parentItem.isHoldable)
+					{
+						cosmeticItemInstance.DisableItem((CosmeticSlots)slotIndex);
+					}
 				}
-				PopulateCollectionDisplay(cosmeticItemInstance2, parentItem, rig);
+				catch
+				{
+				}
 			}
 		}
 
@@ -991,7 +1015,11 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 
 	public List<CatalogItem> catalogItems;
 
-	public bool tryTwice;
+	public bool tryGetCatalogTwice;
+
+	private bool catalogRequestInFlight;
+
+	private bool catalogRequestRerunQueued;
 
 	public CustomMapCosmeticsData customMapCosmeticsData;
 
@@ -1195,8 +1223,6 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 	public CosmeticInfoV2[] v2_allCosmetics { get; private set; }
 
 	public bool v2_allCosmeticsInfoAssetRef_isLoaded { get; private set; }
-
-	public bool v2_isGetCosmeticsPlayCatalogDataWaitingForCallback { get; private set; }
 
 	public bool v2_isCosmeticPlayFabCatalogDataLoaded { get; private set; }
 
@@ -2979,15 +3005,24 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 
 	public void Initialize()
 	{
-		if (base.gameObject.activeSelf && !v2_isCosmeticPlayFabCatalogDataLoaded && !v2_isGetCosmeticsPlayCatalogDataWaitingForCallback)
+		if (!base.gameObject.activeSelf)
 		{
-			if (v2_allCosmeticsInfoAssetRef_isLoaded)
+			return;
+		}
+		if (v2_allCosmeticsInfoAssetRef_isLoaded)
+		{
+			if (SubscriptionManager.LocalSubscriptionDataResolved)
 			{
 				GetCosmeticsPlayFabCatalogData();
 				return;
 			}
-			v2_isGetCosmeticsPlayCatalogDataWaitingForCallback = true;
-			V2_allCosmeticsInfoAssetRef_OnPostLoad = (Action)Delegate.Combine(V2_allCosmeticsInfoAssetRef_OnPostLoad, new Action(GetCosmeticsPlayFabCatalogData));
+			SubscriptionManager.OnLocalSubscriptionDataResolved = (Action)Delegate.Remove(SubscriptionManager.OnLocalSubscriptionDataResolved, new Action(Initialize));
+			SubscriptionManager.OnLocalSubscriptionDataResolved = (Action)Delegate.Combine(SubscriptionManager.OnLocalSubscriptionDataResolved, new Action(Initialize));
+		}
+		else
+		{
+			V2_allCosmeticsInfoAssetRef_OnPostLoad = (Action)Delegate.Remove(V2_allCosmeticsInfoAssetRef_OnPostLoad, new Action(Initialize));
+			V2_allCosmeticsInfoAssetRef_OnPostLoad = (Action)Delegate.Combine(V2_allCosmeticsInfoAssetRef_OnPostLoad, new Action(Initialize));
 		}
 	}
 
@@ -3108,11 +3143,26 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 
 	public void GetCosmeticsPlayFabCatalogData()
 	{
-		v2_isGetCosmeticsPlayCatalogDataWaitingForCallback = false;
 		if (!v2_allCosmeticsInfoAssetRef_isLoaded)
 		{
 			throw new Exception("Method `GetCosmeticsPlayFabCatalogData` was called before `v2_allCosmeticsInfoAssetRef` was loaded. Listen to callback `V2_allCosmeticsInfoAssetRef_OnPostLoad` or check `v2_allCosmeticsInfoAssetRef_isLoaded` before trying to get PlayFab catalog data.");
 		}
+		if (!SubscriptionManager.LocalSubscriptionDataResolved)
+		{
+			throw new Exception("Method `GetCosmeticsPlayFabCatalogData` was called before local subscription data was resolved. Listen to callback `OnLocalSubscriptionDataResolved` or check `LocalSubscriptionDataResolved` before trying to get PlayFab catalog data.");
+		}
+		if (catalogRequestInFlight)
+		{
+			catalogRequestRerunQueued = true;
+			return;
+		}
+		catalogRequestInFlight = true;
+		tryGetCatalogTwice = false;
+		GetCosmeticsPlayFabCatalogDataInternal();
+	}
+
+	private void GetCosmeticsPlayFabCatalogDataInternal()
+	{
 		PlayFabClientAPI.GetUserInventory(new GetUserInventoryRequest(), delegate(GetUserInventoryResult result)
 		{
 			PlayFabClientAPI.GetCatalogItems(new GetCatalogItemsRequest
@@ -3120,238 +3170,245 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 				CatalogVersion = catalog
 			}, delegate(GetCatalogItemsResult getCatalogItemsResult)
 			{
-				unlockedCosmetics.Clear();
-				unlockedHats.Clear();
-				unlockedBadges.Clear();
-				unlockedFaces.Clear();
-				unlockedPaws.Clear();
-				unlockedFurs.Clear();
-				unlockedShirts.Clear();
-				unlockedPants.Clear();
-				unlockedArms.Clear();
-				unlockedBacks.Clear();
-				unlockedChests.Clear();
-				unlockedTagFX.Clear();
-				unlockedThrowables.Clear();
-				catalogItems = getCatalogItemsResult.Catalog;
-				foreach (CatalogItem catalogItem in catalogItems)
+				try
 				{
-					if (!BuilderSetManager.IsItemIDBuilderItem(catalogItem.ItemId))
+					unlockedCosmetics.Clear();
+					unlockedHats.Clear();
+					unlockedBadges.Clear();
+					unlockedFaces.Clear();
+					unlockedPaws.Clear();
+					unlockedFurs.Clear();
+					unlockedShirts.Clear();
+					unlockedPants.Clear();
+					unlockedArms.Clear();
+					unlockedBacks.Clear();
+					unlockedChests.Clear();
+					unlockedTagFX.Clear();
+					unlockedThrowables.Clear();
+					catalogItems = getCatalogItemsResult.Catalog;
+					foreach (CatalogItem catalogItem in catalogItems)
 					{
-						searchIndex = allCosmetics.FindIndex((CosmeticItem x) => catalogItem.ItemId == x.itemName);
-						if (searchIndex > -1)
+						if (!BuilderSetManager.IsItemIDBuilderItem(catalogItem.ItemId))
 						{
-							tempStringArray = null;
-							hasPrice = false;
-							if (catalogItem.Bundle != null)
+							searchIndex = allCosmetics.FindIndex((CosmeticItem x) => catalogItem.ItemId == x.itemName);
+							if (searchIndex > -1)
 							{
-								tempStringArray = catalogItem.Bundle.BundledItems.ToArray();
-							}
-							if (catalogItem.VirtualCurrencyPrices.TryGetValue(currencyName, out var value))
-							{
-								hasPrice = true;
-							}
-							CosmeticItem cosmetic = allCosmetics[searchIndex];
-							cosmetic.itemName = catalogItem.ItemId;
-							cosmetic.displayName = catalogItem.DisplayName;
-							cosmetic.cost = (int)value;
-							cosmetic.bundledItems = tempStringArray;
-							cosmetic.canTryOn = hasPrice;
-							if (cosmetic.itemCategory == CosmeticCategory.Paw)
-							{
-								CosmeticInfoV2 cosmeticInfoV = v2_allCosmetics[searchIndex];
-								cosmetic.isThrowable = cosmeticInfoV.isThrowable && !cosmeticInfoV.hasWardrobeParts;
-							}
-							if (cosmetic.displayName == null)
-							{
-								string text = "null";
-								if ((bool)allCosmetics[searchIndex].itemPicture)
+								tempStringArray = null;
+								hasPrice = false;
+								if (catalogItem.Bundle != null)
 								{
-									text = allCosmetics[searchIndex].itemPicture.name;
+									tempStringArray = catalogItem.Bundle.BundledItems.ToArray();
 								}
-								string debugCosmeticSOName = v2_allCosmetics[searchIndex].debugCosmeticSOName;
-								Debug.LogError($"Cosmetic encountered with a null displayName at index {searchIndex}! " + "Setting displayName to id: \"" + allCosmetics[searchIndex].itemName + "\". iconName=\"" + text + "\".cosmeticSOName=\"" + debugCosmeticSOName + "\". ");
-								cosmetic.displayName = cosmetic.itemName;
-							}
-							V2_ConformCosmeticItemV1DisplayName(ref cosmetic);
-							_allCosmetics[searchIndex] = cosmetic;
-							_allCosmeticsDict[cosmetic.itemName] = cosmetic;
-							_allCosmeticsItemIDsfromDisplayNamesDict[cosmetic.displayName] = cosmetic.itemName;
-							_allCosmeticsItemIDsfromDisplayNamesDict[cosmetic.overrideDisplayName] = cosmetic.itemName;
-						}
-					}
-				}
-				for (int num = _allCosmetics.Count - 1; num > -1; num--)
-				{
-					tempItem = _allCosmetics[num];
-					if (tempItem.itemCategory == CosmeticCategory.Set && tempItem.canTryOn)
-					{
-						string[] bundledItems = tempItem.bundledItems;
-						foreach (string setItemName in bundledItems)
-						{
-							searchIndex = _allCosmetics.FindIndex((CosmeticItem x) => setItemName == x.itemName);
-							if (searchIndex > -1)
-							{
-								tempItem = _allCosmetics[searchIndex];
-								tempItem.canTryOn = true;
-								_allCosmetics[searchIndex] = tempItem;
-								_allCosmeticsDict[_allCosmetics[searchIndex].itemName] = tempItem;
-								_allCosmeticsItemIDsfromDisplayNamesDict[_allCosmetics[searchIndex].displayName] = tempItem.itemName;
-							}
-						}
-					}
-				}
-				foreach (KeyValuePair<string, StoreBundle> item2 in BundleManager.instance.storeBundlesById)
-				{
-					item2.Deconstruct(out var key, out var value2);
-					string key2 = key;
-					StoreBundle bundleData = value2;
-					int num3 = _allCosmetics.FindIndex((CosmeticItem x) => bundleData.playfabBundleID == x.itemName);
-					if (num3 > 0 && _allCosmetics[num3].bundledItems != null)
-					{
-						string[] bundledItems = _allCosmetics[num3].bundledItems;
-						foreach (string setItemName2 in bundledItems)
-						{
-							searchIndex = _allCosmetics.FindIndex((CosmeticItem x) => setItemName2 == x.itemName);
-							if (searchIndex > -1)
-							{
-								tempItem = _allCosmetics[searchIndex];
-								tempItem.canTryOn = true;
-								_allCosmetics[searchIndex] = tempItem;
-								_allCosmeticsDict[_allCosmetics[searchIndex].itemName] = tempItem;
-								_allCosmeticsItemIDsfromDisplayNamesDict[_allCosmetics[searchIndex].displayName] = tempItem.itemName;
-							}
-						}
-					}
-					if (!bundleData.HasPrice)
-					{
-						num3 = catalogItems.FindIndex((CatalogItem ci) => ci.Bundle != null && ci.ItemId == bundleData.playfabBundleID);
-						if (num3 > 0)
-						{
-							if (catalogItems[num3].VirtualCurrencyPrices.TryGetValue("RM", out var value3))
-							{
-								BundleManager.instance.storeBundlesById[key2].TryUpdatePrice(value3);
-							}
-							else
-							{
-								BundleManager.instance.storeBundlesById[key2].TryUpdatePrice();
-							}
-						}
-					}
-				}
-				searchIndex = _allCosmetics.FindIndex((CosmeticItem x) => "Slingshot" == x.itemName);
-				if (searchIndex < 0)
-				{
-					throw new MissingReferenceException("CosmeticsController: Cannot find default slingshot! it is required for players that do not have another slingshot equipped and are playing Paintbrawl.");
-				}
-				_allCosmeticsDict["Slingshot"] = _allCosmetics[searchIndex];
-				_allCosmeticsItemIDsfromDisplayNamesDict[_allCosmetics[searchIndex].displayName] = _allCosmetics[searchIndex].itemName;
-				allCosmeticsDict_isInitialized = true;
-				allCosmeticsItemIDsfromDisplayNamesDict_isInitialized = true;
-				Dictionary<string, string> dictionary = new Dictionary<string, string>();
-				foreach (ItemInstance item in result.Inventory)
-				{
-					if (!BuilderSetManager.IsItemIDBuilderItem(item.ItemId))
-					{
-						if (item.ItemId == m_earlyAccessSupporterPackCosmeticSO.info.playFabID)
-						{
-							CosmeticSO[] setCosmetics = m_earlyAccessSupporterPackCosmeticSO.info.setCosmetics;
-							foreach (CosmeticSO cosmeticSO in setCosmetics)
-							{
-								if (allCosmeticsDict.TryGetValue(cosmeticSO.info.playFabID, out var value4))
+								if (catalogItem.VirtualCurrencyPrices.TryGetValue(currencyName, out var value))
 								{
-									unlockedCosmetics.Add(value4);
+									hasPrice = true;
+								}
+								CosmeticItem cosmetic = allCosmetics[searchIndex];
+								cosmetic.itemName = catalogItem.ItemId;
+								cosmetic.displayName = catalogItem.DisplayName;
+								cosmetic.cost = (int)value;
+								cosmetic.bundledItems = tempStringArray;
+								cosmetic.canTryOn = hasPrice;
+								if (cosmetic.itemCategory == CosmeticCategory.Paw)
+								{
+									CosmeticInfoV2 cosmeticInfoV = v2_allCosmetics[searchIndex];
+									cosmetic.isThrowable = cosmeticInfoV.isThrowable && !cosmeticInfoV.hasWardrobeParts;
+								}
+								if (cosmetic.displayName == null)
+								{
+									string text = "null";
+									if ((bool)allCosmetics[searchIndex].itemPicture)
+									{
+										text = allCosmetics[searchIndex].itemPicture.name;
+									}
+									string debugCosmeticSOName = v2_allCosmetics[searchIndex].debugCosmeticSOName;
+									Debug.LogError($"Cosmetic encountered with a null displayName at index {searchIndex}! " + "Setting displayName to id: \"" + allCosmetics[searchIndex].itemName + "\". iconName=\"" + text + "\".cosmeticSOName=\"" + debugCosmeticSOName + "\". ");
+									cosmetic.displayName = cosmetic.itemName;
+								}
+								V2_ConformCosmeticItemV1DisplayName(ref cosmetic);
+								_allCosmetics[searchIndex] = cosmetic;
+								_allCosmeticsDict[cosmetic.itemName] = cosmetic;
+								_allCosmeticsItemIDsfromDisplayNamesDict[cosmetic.displayName] = cosmetic.itemName;
+								_allCosmeticsItemIDsfromDisplayNamesDict[cosmetic.overrideDisplayName] = cosmetic.itemName;
+							}
+						}
+					}
+					for (int num = _allCosmetics.Count - 1; num > -1; num--)
+					{
+						tempItem = _allCosmetics[num];
+						if (tempItem.itemCategory == CosmeticCategory.Set && tempItem.canTryOn)
+						{
+							string[] bundledItems = tempItem.bundledItems;
+							foreach (string setItemName in bundledItems)
+							{
+								searchIndex = _allCosmetics.FindIndex((CosmeticItem x) => setItemName == x.itemName);
+								if (searchIndex > -1)
+								{
+									tempItem = _allCosmetics[searchIndex];
+									tempItem.canTryOn = true;
+									_allCosmetics[searchIndex] = tempItem;
+									_allCosmeticsDict[_allCosmetics[searchIndex].itemName] = tempItem;
+									_allCosmeticsItemIDsfromDisplayNamesDict[_allCosmetics[searchIndex].displayName] = tempItem.itemName;
 								}
 							}
 						}
-						BundleManager.instance.MarkBundleOwnedByPlayFabID(item.ItemId);
-						if (!dictionary.ContainsKey(item.ItemId))
+					}
+					foreach (KeyValuePair<string, StoreBundle> item2 in BundleManager.instance.storeBundlesById)
+					{
+						item2.Deconstruct(out var key, out var value2);
+						string key2 = key;
+						StoreBundle bundleData = value2;
+						int num3 = _allCosmetics.FindIndex((CosmeticItem x) => bundleData.playfabBundleID == x.itemName);
+						if (num3 > 0 && _allCosmetics[num3].bundledItems != null)
 						{
-							searchIndex = allCosmetics.FindIndex((CosmeticItem x) => item.ItemId == x.itemName);
-							if (searchIndex > -1)
+							string[] bundledItems = _allCosmetics[num3].bundledItems;
+							foreach (string setItemName2 in bundledItems)
 							{
-								dictionary[item.ItemId] = item.ItemId;
-								unlockedCosmetics.Add(allCosmetics[searchIndex]);
+								searchIndex = _allCosmetics.FindIndex((CosmeticItem x) => setItemName2 == x.itemName);
+								if (searchIndex > -1)
+								{
+									tempItem = _allCosmetics[searchIndex];
+									tempItem.canTryOn = true;
+									_allCosmetics[searchIndex] = tempItem;
+									_allCosmeticsDict[_allCosmetics[searchIndex].itemName] = tempItem;
+									_allCosmeticsItemIDsfromDisplayNamesDict[_allCosmetics[searchIndex].displayName] = tempItem.itemName;
+								}
+							}
+						}
+						if (!bundleData.HasPrice)
+						{
+							num3 = catalogItems.FindIndex((CatalogItem ci) => ci.Bundle != null && ci.ItemId == bundleData.playfabBundleID);
+							if (num3 > 0)
+							{
+								if (catalogItems[num3].VirtualCurrencyPrices.TryGetValue("RM", out var value3))
+								{
+									BundleManager.instance.storeBundlesById[key2].TryUpdatePrice(value3);
+								}
+								else
+								{
+									BundleManager.instance.storeBundlesById[key2].TryUpdatePrice();
+								}
 							}
 						}
 					}
-				}
-				foreach (CosmeticItem unlockedCosmetic in unlockedCosmetics)
-				{
-					if (unlockedCosmetic.itemCategory == CosmeticCategory.Hat && !unlockedHats.Contains(unlockedCosmetic))
+					searchIndex = _allCosmetics.FindIndex((CosmeticItem x) => "Slingshot" == x.itemName);
+					if (searchIndex < 0)
 					{
-						unlockedHats.Add(unlockedCosmetic);
+						throw new MissingReferenceException("CosmeticsController: Cannot find default slingshot! it is required for players that do not have another slingshot equipped and are playing Paintbrawl.");
 					}
-					else if (unlockedCosmetic.itemCategory == CosmeticCategory.Face && !unlockedFaces.Contains(unlockedCosmetic))
+					_allCosmeticsDict["Slingshot"] = _allCosmetics[searchIndex];
+					_allCosmeticsItemIDsfromDisplayNamesDict[_allCosmetics[searchIndex].displayName] = _allCosmetics[searchIndex].itemName;
+					allCosmeticsDict_isInitialized = true;
+					allCosmeticsItemIDsfromDisplayNamesDict_isInitialized = true;
+					Dictionary<string, string> dictionary = new Dictionary<string, string>();
+					foreach (ItemInstance item in result.Inventory)
 					{
-						unlockedFaces.Add(unlockedCosmetic);
-					}
-					else if (unlockedCosmetic.itemCategory == CosmeticCategory.Badge && !unlockedBadges.Contains(unlockedCosmetic))
-					{
-						unlockedBadges.Add(unlockedCosmetic);
-					}
-					else if (unlockedCosmetic.itemCategory == CosmeticCategory.Paw)
-					{
-						if (!unlockedCosmetic.isThrowable && !unlockedPaws.Contains(unlockedCosmetic))
+						if (!BuilderSetManager.IsItemIDBuilderItem(item.ItemId))
 						{
-							unlockedPaws.Add(unlockedCosmetic);
+							if (item.ItemId == m_earlyAccessSupporterPackCosmeticSO.info.playFabID)
+							{
+								CosmeticSO[] setCosmetics = m_earlyAccessSupporterPackCosmeticSO.info.setCosmetics;
+								foreach (CosmeticSO cosmeticSO in setCosmetics)
+								{
+									if (allCosmeticsDict.TryGetValue(cosmeticSO.info.playFabID, out var value4))
+									{
+										unlockedCosmetics.Add(value4);
+									}
+								}
+							}
+							BundleManager.instance.MarkBundleOwnedByPlayFabID(item.ItemId);
+							if (!dictionary.ContainsKey(item.ItemId))
+							{
+								searchIndex = allCosmetics.FindIndex((CosmeticItem x) => item.ItemId == x.itemName);
+								if (searchIndex > -1)
+								{
+									dictionary[item.ItemId] = item.ItemId;
+									unlockedCosmetics.Add(allCosmetics[searchIndex]);
+								}
+							}
 						}
-						else if (unlockedCosmetic.isThrowable && !unlockedThrowables.Contains(unlockedCosmetic))
+					}
+					foreach (CosmeticItem unlockedCosmetic in unlockedCosmetics)
+					{
+						if (unlockedCosmetic.itemCategory == CosmeticCategory.Hat && !unlockedHats.Contains(unlockedCosmetic))
 						{
-							unlockedThrowables.Add(unlockedCosmetic);
+							unlockedHats.Add(unlockedCosmetic);
 						}
+						else if (unlockedCosmetic.itemCategory == CosmeticCategory.Face && !unlockedFaces.Contains(unlockedCosmetic))
+						{
+							unlockedFaces.Add(unlockedCosmetic);
+						}
+						else if (unlockedCosmetic.itemCategory == CosmeticCategory.Badge && !unlockedBadges.Contains(unlockedCosmetic))
+						{
+							unlockedBadges.Add(unlockedCosmetic);
+						}
+						else if (unlockedCosmetic.itemCategory == CosmeticCategory.Paw)
+						{
+							if (!unlockedCosmetic.isThrowable && !unlockedPaws.Contains(unlockedCosmetic))
+							{
+								unlockedPaws.Add(unlockedCosmetic);
+							}
+							else if (unlockedCosmetic.isThrowable && !unlockedThrowables.Contains(unlockedCosmetic))
+							{
+								unlockedThrowables.Add(unlockedCosmetic);
+							}
+						}
+						else if (unlockedCosmetic.itemCategory == CosmeticCategory.Fur && !unlockedFurs.Contains(unlockedCosmetic))
+						{
+							unlockedFurs.Add(unlockedCosmetic);
+						}
+						else if (unlockedCosmetic.itemCategory == CosmeticCategory.Shirt && !unlockedShirts.Contains(unlockedCosmetic))
+						{
+							unlockedShirts.Add(unlockedCosmetic);
+						}
+						else if (unlockedCosmetic.itemCategory == CosmeticCategory.Arms && !unlockedArms.Contains(unlockedCosmetic))
+						{
+							unlockedArms.Add(unlockedCosmetic);
+						}
+						else if (unlockedCosmetic.itemCategory == CosmeticCategory.Back && !unlockedBacks.Contains(unlockedCosmetic))
+						{
+							unlockedBacks.Add(unlockedCosmetic);
+						}
+						else if (unlockedCosmetic.itemCategory == CosmeticCategory.Chest && !unlockedChests.Contains(unlockedCosmetic))
+						{
+							unlockedChests.Add(unlockedCosmetic);
+						}
+						else if (unlockedCosmetic.itemCategory == CosmeticCategory.Pants && !unlockedPants.Contains(unlockedCosmetic))
+						{
+							unlockedPants.Add(unlockedCosmetic);
+						}
+						else if (unlockedCosmetic.itemCategory == CosmeticCategory.TagEffect && !unlockedTagFX.Contains(unlockedCosmetic))
+						{
+							unlockedTagFX.Add(unlockedCosmetic);
+						}
+						concatStringCosmeticsAllowed += unlockedCosmetic.itemName;
 					}
-					else if (unlockedCosmetic.itemCategory == CosmeticCategory.Fur && !unlockedFurs.Contains(unlockedCosmetic))
+					BuilderSetManager.instance.OnGotInventoryItems(result, getCatalogItemsResult);
+					currencyBalance = result.VirtualCurrency[currencyName];
+					playedInBeta = result.VirtualCurrency.TryGetValue("TC", out var value5) && value5 > 0;
+					OnGetCurrency?.Invoke();
+					BundleManager.instance.CheckIfBundlesOwned();
+					StoreUpdater.instance.Initialize();
+					currentWornSet.LoadFromPlayerPreferences(this);
+					LoadSavedOutfits();
+					if (!ATM_Manager.instance.alreadyBegan)
 					{
-						unlockedFurs.Add(unlockedCosmetic);
+						ATM_Manager.instance.SwitchToStage(ATM_Manager.ATMStages.Begin);
+						ATM_Manager.instance.alreadyBegan = true;
 					}
-					else if (unlockedCosmetic.itemCategory == CosmeticCategory.Shirt && !unlockedShirts.Contains(unlockedCosmetic))
-					{
-						unlockedShirts.Add(unlockedCosmetic);
-					}
-					else if (unlockedCosmetic.itemCategory == CosmeticCategory.Arms && !unlockedArms.Contains(unlockedCosmetic))
-					{
-						unlockedArms.Add(unlockedCosmetic);
-					}
-					else if (unlockedCosmetic.itemCategory == CosmeticCategory.Back && !unlockedBacks.Contains(unlockedCosmetic))
-					{
-						unlockedBacks.Add(unlockedCosmetic);
-					}
-					else if (unlockedCosmetic.itemCategory == CosmeticCategory.Chest && !unlockedChests.Contains(unlockedCosmetic))
-					{
-						unlockedChests.Add(unlockedCosmetic);
-					}
-					else if (unlockedCosmetic.itemCategory == CosmeticCategory.Pants && !unlockedPants.Contains(unlockedCosmetic))
-					{
-						unlockedPants.Add(unlockedCosmetic);
-					}
-					else if (unlockedCosmetic.itemCategory == CosmeticCategory.TagEffect && !unlockedTagFX.Contains(unlockedCosmetic))
-					{
-						unlockedTagFX.Add(unlockedCosmetic);
-					}
-					concatStringCosmeticsAllowed += unlockedCosmetic.itemName;
+					ProcessPurchaseItemState(null, isLeftHand: false);
+					UpdateShoppingCart();
+					UpdateCurrencyBoards();
+					ConfirmIndividualCosmeticsSharedGroup(result);
+					OnCosmeticsUpdated?.Invoke();
+					v2_isCosmeticPlayFabCatalogDataLoaded = true;
+					V2_OnGetCosmeticsPlayFabCatalogData_PostSuccess?.Invoke();
+					CosmeticsV2Spawner_Dirty.PrepareLoadOpInfos();
 				}
-				BuilderSetManager.instance.OnGotInventoryItems(result, getCatalogItemsResult);
-				currencyBalance = result.VirtualCurrency[currencyName];
-				playedInBeta = result.VirtualCurrency.TryGetValue("TC", out var value5) && value5 > 0;
-				OnGetCurrency?.Invoke();
-				BundleManager.instance.CheckIfBundlesOwned();
-				StoreUpdater.instance.Initialize();
-				currentWornSet.LoadFromPlayerPreferences(this);
-				LoadSavedOutfits();
-				if (!ATM_Manager.instance.alreadyBegan)
+				finally
 				{
-					ATM_Manager.instance.SwitchToStage(ATM_Manager.ATMStages.Begin);
-					ATM_Manager.instance.alreadyBegan = true;
+					CompleteGetCosmeticsPlayFabCatalogData();
 				}
-				ProcessPurchaseItemState(null, isLeftHand: false);
-				UpdateShoppingCart();
-				UpdateCurrencyBoards();
-				ConfirmIndividualCosmeticsSharedGroup(result);
-				OnCosmeticsUpdated?.Invoke();
-				v2_isCosmeticPlayFabCatalogDataLoaded = true;
-				V2_OnGetCosmeticsPlayFabCatalogData_PostSuccess?.Invoke();
-				CosmeticsV2Spawner_Dirty.PrepareLoadOpInfos();
 			}, delegate(PlayFabError error)
 			{
 				if (error.Error == PlayFabErrorCode.NotAuthenticated)
@@ -3370,10 +3427,14 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 						UnityEngine.Object.Destroy(array[i]);
 					}
 				}
-				if (!tryTwice)
+				if (!tryGetCatalogTwice)
 				{
-					tryTwice = true;
-					GetCosmeticsPlayFabCatalogData();
+					tryGetCatalogTwice = true;
+					GetCosmeticsPlayFabCatalogDataInternal();
+				}
+				else
+				{
+					CompleteGetCosmeticsPlayFabCatalogData();
 				}
 			});
 		}, delegate(PlayFabError error)
@@ -3394,12 +3455,26 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 					UnityEngine.Object.Destroy(array[i]);
 				}
 			}
-			if (!tryTwice)
+			if (!tryGetCatalogTwice)
 			{
-				tryTwice = true;
-				GetCosmeticsPlayFabCatalogData();
+				tryGetCatalogTwice = true;
+				GetCosmeticsPlayFabCatalogDataInternal();
+			}
+			else
+			{
+				CompleteGetCosmeticsPlayFabCatalogData();
 			}
 		});
+	}
+
+	private void CompleteGetCosmeticsPlayFabCatalogData()
+	{
+		catalogRequestInFlight = false;
+		if (catalogRequestRerunQueued)
+		{
+			catalogRequestRerunQueued = false;
+			GetCosmeticsPlayFabCatalogData();
+		}
 	}
 
 	public void SteamPurchase()
@@ -4074,7 +4149,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 	{
 		try
 		{
-			while (!SubscriptionManager.LocalSubscriptionDataInitialized)
+			while (!SubscriptionManager.LocalSubscriptionDataResolved)
 			{
 				await Task.Yield();
 			}

@@ -199,16 +199,19 @@ public class DynamicCosmeticStand : MonoBehaviour, iFlagForBaking
 
 	public void InitializeCosmetic()
 	{
-		thisCosmeticItem = CosmeticsController.instance.allCosmetics.Find((CosmeticsController.CosmeticItem x) => thisCosmeticName == x.displayName || thisCosmeticName == x.overrideDisplayName || thisCosmeticName == x.itemName);
-		if (slotPriceText != null)
+		if (!(CosmeticsController.instance == null) && CosmeticsController.instance.allCosmetics != null)
 		{
-			slotPriceText.text = thisCosmeticItem.itemCategory.ToString().ToUpper() + " " + thisCosmeticItem.cost;
+			thisCosmeticItem = CosmeticsController.instance.allCosmetics.Find((CosmeticsController.CosmeticItem x) => thisCosmeticName == x.displayName || thisCosmeticName == x.overrideDisplayName || thisCosmeticName == x.itemName);
+			if (slotPriceText != null)
+			{
+				slotPriceText.text = thisCosmeticItem.itemCategory.ToString().ToUpper() + " " + thisCosmeticItem.cost;
+			}
+			if (slotPriceTextTMP != null)
+			{
+				slotPriceTextTMP.text = thisCosmeticItem.itemCategory.ToString().ToUpper() + " " + thisCosmeticItem.cost;
+			}
+			RefreshPurchaseGate();
 		}
-		if (slotPriceTextTMP != null)
-		{
-			slotPriceTextTMP.text = thisCosmeticItem.itemCategory.ToString().ToUpper() + " " + thisCosmeticItem.cost;
-		}
-		RefreshPurchaseGate();
 	}
 
 	public void RefreshPurchaseGate()

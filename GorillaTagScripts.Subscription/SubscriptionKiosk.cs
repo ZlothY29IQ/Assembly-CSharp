@@ -46,6 +46,7 @@ public class SubscriptionKiosk : MonoBehaviour, ITouchScreenStation, IGorillaSli
 
 	private const string subSKU = "fan_club";
 
+	[Space]
 	[SerializeField]
 	private VideoPlayer subsVideoPlayer;
 
@@ -57,6 +58,9 @@ public class SubscriptionKiosk : MonoBehaviour, ITouchScreenStation, IGorillaSli
 
 	[SerializeField]
 	private VideoClip steamSubsVideoClip;
+
+	[SerializeField]
+	private float videoViewableDist = 15f;
 
 	[SerializeField]
 	private ObservableBehaviorRule defaultObservableRule;
@@ -634,5 +638,30 @@ public class SubscriptionKiosk : MonoBehaviour, ITouchScreenStation, IGorillaSli
 		{
 			HandScanned();
 		}
+		if (VRRig.LocalRig == null)
+		{
+			return;
+		}
+		Vector3 vector = VRRig.LocalRig.transform.position - base.transform.position;
+		float sqrMagnitude = vector.sqrMagnitude;
+		float num = Vector3.Dot(base.transform.forward, vector.normalized);
+		if (subsVideoPlayer.enabled)
+		{
+			if (num < 0f && sqrMagnitude >= videoViewableDist * videoViewableDist)
+			{
+				subsVideoPlayer.enabled = false;
+			}
+		}
+		else if (num > 0f && sqrMagnitude < videoViewableDist * videoViewableDist)
+		{
+			subsVideoPlayer.enabled = true;
+			subsVideoPlayer.Play();
+		}
+	}
+
+	private void OnDrawGizmosSelected()
+	{
+		Gizmos.color = Color.magenta;
+		Gizmos.DrawWireSphere(base.transform.position, videoViewableDist);
 	}
 }

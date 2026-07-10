@@ -144,6 +144,8 @@ public class SubscriptionManager : MonoBehaviour
 
 	public static Action OnLocalSubscriptionData;
 
+	public static Action OnLocalSubscriptionDataResolved;
+
 	private Dictionary<NetPlayer, SubscriptionDetails> subData = new Dictionary<NetPlayer, SubscriptionDetails>();
 
 	private Dictionary<VRRig, NetPlayer> rigs = new Dictionary<VRRig, NetPlayer>();
@@ -151,6 +153,8 @@ public class SubscriptionManager : MonoBehaviour
 	private static SubscriptionDetails localSubscriptionDetails;
 
 	private static bool _localSubscriptionDataInitialized;
+
+	private static bool _localSubscriptionDataResolved;
 
 	public const string SUB_PREFIX = "SMKEYPREFIX";
 
@@ -163,6 +167,8 @@ public class SubscriptionManager : MonoBehaviour
 	private static Dictionary<string, int> subSettings = new Dictionary<string, int>();
 
 	public static bool LocalSubscriptionDataInitialized => _localSubscriptionDataInitialized;
+
+	public static bool LocalSubscriptionDataResolved => _localSubscriptionDataResolved;
 
 	public static bool SubsOnlyMatchmaking
 	{
@@ -260,6 +266,7 @@ public class SubscriptionManager : MonoBehaviour
 				catch (Exception)
 				{
 					Debug.LogError("[SubscriptionResults] Error deserializing subscription data: " + request.downloadHandler.text);
+					MarkResolved();
 					break;
 				}
 				if (getMySubscriptionsAndTheirBenefitsResponse != null && getMySubscriptionsAndTheirBenefitsResponse.Subscriptions != null)
@@ -283,16 +290,14 @@ public class SubscriptionManager : MonoBehaviour
 								subscriptionActiveUntilDate = localDateTime2
 							};
 							Instance.subData[NetworkSystem.Instance.LocalPlayer] = localSubscriptionDetails;
-							_localSubscriptionDataInitialized = true;
-							OnLocalSubscriptionData?.Invoke();
+							MarkInitialized();
 							return;
 						}
 					}
 				}
 				localSubscriptionDetails = default(SubscriptionDetails);
 				Instance.subData[NetworkSystem.Instance.LocalPlayer] = localSubscriptionDetails;
-				_localSubscriptionDataInitialized = true;
-				OnLocalSubscriptionData?.Invoke();
+				MarkInitialized();
 				break;
 			}
 			Debug.LogError($"[SubscriptionResults] Error fetching subscription data: {request.downloadHandler.text} (Status: {request.responseCode})");
@@ -305,37 +310,51 @@ public class SubscriptionManager : MonoBehaviour
 				{
 					if (responseCode < 600)
 					{
-						goto IL_047e;
+						goto IL_0461;
 					}
 				}
 				else if (responseCode == 408 || responseCode == 429)
 				{
-					goto IL_047e;
+					goto IL_0461;
 				}
 				flag2 = false;
-				goto IL_0486;
+				goto IL_0469;
 			}
-			goto IL_048a;
-			IL_047e:
+			goto IL_046d;
+			IL_0461:
 			flag2 = true;
-			goto IL_0486;
-			IL_048a:
-			if (flag)
-			{
-				if (retryCount < maxRetries)
-				{
-					int num = retryCount + 1;
-					retryCount = num;
-					await Awaitable.WaitForSecondsAsync(UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, num)));
-					continue;
-				}
-				Debug.LogError("[SubscriptionResults] Maximum retries attempted");
-				break;
-			}
+			goto IL_0469;
+			IL_0521:
+			MarkResolved();
 			break;
-			IL_0486:
+			IL_0469:
 			flag = flag2;
-			goto IL_048a;
+			goto IL_046d;
+			IL_046d:
+			if (!flag)
+			{
+				goto IL_0521;
+			}
+			if (retryCount < maxRetries)
+			{
+				int num = retryCount + 1;
+				retryCount = num;
+				await Awaitable.WaitForSecondsAsync(UnityEngine.Random.Range(0.5f, Mathf.Pow(2f, num)));
+				continue;
+			}
+			Debug.LogError("[SubscriptionResults] Maximum retries attempted");
+			goto IL_0521;
+		}
+		static void MarkInitialized()
+		{
+			_localSubscriptionDataInitialized = true;
+			OnLocalSubscriptionData?.Invoke();
+			MarkResolved();
+		}
+		static void MarkResolved()
+		{
+			_localSubscriptionDataResolved = true;
+			OnLocalSubscriptionDataResolved?.Invoke();
 		}
 	}
 

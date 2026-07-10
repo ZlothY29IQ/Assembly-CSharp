@@ -46,6 +46,9 @@ public class RaycastLineRenderer : MonoBehaviour, ITickSystemPost
 	[SerializeField]
 	private GameObject impactFx;
 
+	[SerializeField]
+	private LayerMask impactLayers = 134218241;
+
 	[Tooltip("Align the impact FX up (y+) axis to the surface normal at the hit point.")]
 	[SerializeField]
 	private bool orientImpactToSurface = true;
@@ -55,6 +58,8 @@ public class RaycastLineRenderer : MonoBehaviour, ITickSystemPost
 	private SpawnWorldEffects surfaceEffectSpawner;
 
 	private RaycastHit hit;
+
+	private RaycastHit impactHit;
 
 	public bool PostTickRunning { get; set; }
 
@@ -110,12 +115,13 @@ public class RaycastLineRenderer : MonoBehaviour, ITickSystemPost
 		}
 		Vector3 position = origin.position;
 		Vector3 rayDirection = GetRayDirection();
-		bool flag = Physics.Raycast(position, rayDirection, out hit, maxDistance, hitLayers, QueryTriggerInteraction.Ignore);
-		Vector3 position2 = (flag ? hit.point : (position + rayDirection * maxDistance));
+		bool num = Physics.Raycast(position, rayDirection, out hit, maxDistance, hitLayers, QueryTriggerInteraction.Ignore);
+		bool flag = Physics.Raycast(position, rayDirection, out impactHit, maxDistance, impactLayers, QueryTriggerInteraction.Ignore);
+		Vector3 position2 = (num ? hit.point : (position + rayDirection * maxDistance));
 		lineRenderer.positionCount = 2;
 		lineRenderer.SetPosition(0, position);
 		lineRenderer.SetPosition(1, position2);
-		if (flag && surfaceEffectSpawner != null)
+		if (num && surfaceEffectSpawner != null)
 		{
 			surfaceEffectSpawner.RequestSpawn(hit.point, hit.normal);
 		}
@@ -125,10 +131,10 @@ public class RaycastLineRenderer : MonoBehaviour, ITickSystemPost
 		}
 		if (flag)
 		{
-			impactFx.transform.position = hit.point;
+			impactFx.transform.position = impactHit.point;
 			if (orientImpactToSurface)
 			{
-				impactFx.transform.up = hit.normal;
+				impactFx.transform.up = impactHit.normal;
 			}
 			if (!impactFx.activeSelf)
 			{

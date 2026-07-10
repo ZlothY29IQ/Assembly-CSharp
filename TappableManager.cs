@@ -168,7 +168,7 @@ public class TappableManager : NetworkSceneObject
 		for (int i = 0; i < tappables.Count; i++)
 		{
 			Tappable tappable = tappables[i];
-			if (tappable.tappableId == key)
+			if (tappable.tappableId == key && !tappable.IsLocalOnly)
 			{
 				tappable.OnTapLocal(tapStrength, Time.time, info);
 			}
@@ -232,7 +232,7 @@ public class TappableManager : NetworkSceneObject
 		for (int i = 0; i < tappables.Count; i++)
 		{
 			Tappable tappable = tappables[i];
-			if (tappable.tappableId == key)
+			if (tappable.tappableId == key && !tappable.IsLocalOnly)
 			{
 				tappable.OnGrabLocal(Time.time, info);
 			}

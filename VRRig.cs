@@ -722,6 +722,8 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	private SubscriptionManager.SubscriptionDetails subDataCache;
 
+	private List<Renderer> deactivatedRenderers = new List<Renderer>();
+
 	private const bool SHOW_SCREENS = false;
 
 	[OnEnterPlay_SetNull]
@@ -1883,12 +1885,11 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		result.position = BitPackUtils.PackWorldPosForNetwork(base.transform.position);
 		result.handPosition = ReturnHandPosition();
 		result.taggedById = (short)taggedById;
-		int num = Mathf.Clamp(Mathf.RoundToInt(base.transform.rotation.eulerAngles.y + 360f) % 360, 0, 360);
-		int num2 = Mathf.RoundToInt(Mathf.Clamp01(SpeakingLoudness) * 255f);
+		int num = Mathf.RoundToInt(Mathf.Clamp01(SpeakingLoudness) * 255f);
 		bool flag = leftHandLink.IsLinkActive() || rightHandLink.IsLinkActive();
 		GorillaGameManager activeGameMode = GorillaGameModes.GameMode.ActiveGameMode;
 		bool flag2 = (object)activeGameMode != null && activeGameMode.GameType() == GameModeType.PropHunt;
-		int packedFields = num + (remoteUseReplacementVoice ? 512 : 0) + ((grabbedRopeIndex != -1) ? 1024 : 0) + (grabbedRopeIsPhotonView ? 2048 : 0) + (flag ? 4096 : 0) + (hoverboardVisual.IsHeld ? 8192 : 0) + (hoverboardVisual.IsLeftHanded ? 16384 : 0) + ((mountedMovingSurfaceId != -1) ? 32768 : 0) + (flag2 ? 65536 : 0) + (propHuntHandFollower.IsLeftHand ? 131072 : 0) + (leftHandLink.CanBeGrabbed() ? 262144 : 0) + (rightHandLink.CanBeGrabbed() ? 524288 : 0) + (leftHandLink.IsTentacleGrab ? 1048576 : 0) + (rightHandLink.IsTentacleGrab ? 2097152 : 0) + (ShowGoldNameTag ? 4194304 : 0) + (num2 << 24);
+		int packedFields = 0 + (remoteUseReplacementVoice ? 512 : 0) + ((grabbedRopeIndex != -1) ? 1024 : 0) + (grabbedRopeIsPhotonView ? 2048 : 0) + (flag ? 4096 : 0) + (hoverboardVisual.IsHeld ? 8192 : 0) + (hoverboardVisual.IsLeftHanded ? 16384 : 0) + ((mountedMovingSurfaceId != -1) ? 32768 : 0) + (flag2 ? 65536 : 0) + (propHuntHandFollower.IsLeftHand ? 131072 : 0) + (leftHandLink.CanBeGrabbed() ? 262144 : 0) + (rightHandLink.CanBeGrabbed() ? 524288 : 0) + (leftHandLink.IsTentacleGrab ? 1048576 : 0) + (rightHandLink.IsTentacleGrab ? 2097152 : 0) + (ShowGoldNameTag ? 4194304 : 0) + (num << 24);
 		result.packedFields = packedFields;
 		result.packedCompetitiveData = PackCompetitiveData();
 		if (grabbedRopeIndex != -1)
@@ -1948,16 +1949,8 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		leftHand.syncRotation.SetValueSafe(in tempQuat);
 		syncPos = BitPackUtils.UnpackWorldPosFromNetwork(data.position);
 		handSync = data.handPosition;
+		syncRotation.SetValueSafe(BitPackUtils.UnpackQuaternionFromNetwork(data.rotation));
 		int packedFields = data.packedFields;
-		if (GTPlayerTransform.UseNetRotation)
-		{
-			syncRotation.SetValueSafe(BitPackUtils.UnpackQuaternionFromNetwork(data.rotation));
-		}
-		else
-		{
-			int num = packedFields & 0x1FF;
-			syncRotation.eulerAngles = SanitizeVector3(new Vector3(0f, num, 0f));
-		}
 		remoteUseReplacementVoice = (packedFields & 0x200) != 0;
 		if ((packedFields & 0x400000) != 0 && SubscriptionManager.GetSubscriptionDetails(this).active)
 		{
@@ -1967,14 +1960,14 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		{
 			playerText1.color = Color.white;
 		}
-		int num2 = (packedFields >> 24) & 0xFF;
-		SpeakingLoudness = (float)num2 / 255f;
+		int num = (packedFields >> 24) & 0xFF;
+		SpeakingLoudness = (float)num / 255f;
 		UpdateReplacementVoice();
 		UnpackCompetitiveData(data.packedCompetitiveData);
 		taggedById = data.taggedById;
-		bool num3 = (packedFields & 0x400) != 0;
+		bool num2 = (packedFields & 0x400) != 0;
 		grabbedRopeIsPhotonView = (packedFields & 0x800) != 0;
-		if (num3)
+		if (num2)
 		{
 			grabbedRopeIndex = data.grabbedRopeIndex;
 			grabbedRopeBoneIndex = data.ropeBoneIndex;
@@ -1987,7 +1980,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 			grabbedRopeIndex = -1;
 		}
 		bool flag = (packedFields & 0x8000) != 0;
-		if (!num3 && flag)
+		if (!num2 && flag)
 		{
 			mountedMovingSurfaceId = data.grabbedRopeIndex;
 			mountedMovingSurfaceIsLeft = data.ropeGrabIsLeft;
@@ -1999,9 +1992,9 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		{
 			mountedMovingSurfaceId = -1;
 		}
-		bool num4 = (packedFields & 0x2000) != 0;
+		bool num3 = (packedFields & 0x2000) != 0;
 		bool isHeldLeftHanded = (packedFields & 0x4000) != 0;
-		if (num4)
+		if (num3)
 		{
 			BitPackUtils.UnpackHandPosRotFromNetwork(data.hoverboardPosRot, out var localPos, out var handRot);
 			Color boardColor = BitPackUtils.UnpackColorFromNetwork(data.hoverboardColor);
@@ -3573,6 +3566,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		}
 		bodyRenderer.SetDefaults();
 		SetInvisibleToLocalPlayer(invisible: false);
+		ReactivateAllRenderers();
 		if (isOfflineVRRig)
 		{
 			HandHold.HandPositionRequestOverride += HandHold_HandPositionRequestOverride;
@@ -4239,6 +4233,28 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 	internal bool HasCosmetic(string cosmeticId)
 	{
 		return _playerOwnedCosmetics.Contains(cosmeticId);
+	}
+
+	public void DeactivateAllRenderers()
+	{
+		Renderer[] componentsInChildren = GetComponentsInChildren<Renderer>();
+		for (int i = 0; i < componentsInChildren.Length; i++)
+		{
+			if (componentsInChildren[i].enabled && !componentsInChildren[i].forceRenderingOff)
+			{
+				componentsInChildren[i].forceRenderingOff = true;
+				deactivatedRenderers.Add(componentsInChildren[i]);
+			}
+		}
+	}
+
+	public void ReactivateAllRenderers()
+	{
+		for (int i = 0; i < deactivatedRenderers.Count; i++)
+		{
+			deactivatedRenderers[i].forceRenderingOff = false;
+		}
+		deactivatedRenderers.Clear();
 	}
 
 	private short PackCompetitiveData()

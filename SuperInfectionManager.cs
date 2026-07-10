@@ -87,6 +87,8 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 
 	private int tryOnDispenserCount;
 
+	private bool hasInitialized;
+
 	private const int roomFXTypeCount = 5;
 
 	public bool HasSIZonePlatform => zoneSuperInfectionRef.TargetID != 0;
@@ -123,6 +125,17 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 		{
 			gameEntityManager.ResolveTableData();
 		}
+		if (!hasInitialized)
+		{
+			List<GameEntity> list = new List<GameEntity>();
+			SIResourceRegion[] resourceRegions = zoneSuperInfection.resourceRegions;
+			foreach (SIResourceRegion sIResourceRegion in resourceRegions)
+			{
+				list.Add(sIResourceRegion.resourcePrefab.GetComponent<GameEntity>());
+			}
+			gameEntityManager.AddToFactory(list);
+		}
+		hasInitialized = true;
 	}
 
 	private void OnEnable()

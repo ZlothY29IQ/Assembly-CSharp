@@ -27,6 +27,10 @@ public class SpawnWorldEffects : MonoBehaviour
 	[SerializeField]
 	private bool _useNormalOrientation;
 
+	[Tooltip("When enabled, the spawn only happens if the surface raycast hits a collider on Normal Raycast Layers. If the raycast misses (surface not on an allowed layer, or out of range), the effect is not spawned. Independent of Use Normal Orientation.")]
+	[SerializeField]
+	private bool _requireSurfaceLayer;
+
 	[SerializeField]
 	private float _normalRaycastDistance = 0.3f;
 
@@ -106,9 +110,18 @@ public class SpawnWorldEffects : MonoBehaviour
 		if (_hasPrefabToSpawn && _isPrefabInPool && _pool.GetInactiveCount() > 0)
 		{
 			Vector3 vector = normal;
-			if (_useNormalOrientation)
+			if (_requireSurfaceLayer || _useNormalOrientation)
 			{
-				vector = GetSurfaceNormal(worldPosition, normal);
+				Vector3 surfaceNormal;
+				bool flag = TryGetSurfaceNormal(worldPosition, normal, out surfaceNormal);
+				if (_requireSurfaceLayer && !flag)
+				{
+					return;
+				}
+				if (_useNormalOrientation)
+				{
+					vector = surfaceNormal;
+				}
 			}
 			Quaternion? rotationOverride = null;
 			if (_forwardOrientationSource != null)
@@ -139,7 +152,7 @@ public class SpawnWorldEffects : MonoBehaviour
 		};
 	}
 
-	private Vector3 GetSurfaceNormal(Vector3 worldPosition, Vector3 hitNormal)
+	private bool TryGetSurfaceNormal(Vector3 worldPosition, Vector3 hitNormal, out Vector3 surfaceNormal)
 	{
 		Vector3 vector2;
 		if (_raycastDirectionSource != null)
@@ -159,8 +172,10 @@ public class SpawnWorldEffects : MonoBehaviour
 		Vector3 direction = vector2;
 		if (Physics.Raycast(origin, direction, out var hitInfo, _normalRaycastDistance + 0.05f, _normalRaycastLayers, QueryTriggerInteraction.Ignore))
 		{
-			return hitInfo.normal;
+			surfaceNormal = hitInfo.normal;
+			return true;
 		}
-		return hitNormal;
+		surfaceNormal = hitNormal;
+		return false;
 	}
 }

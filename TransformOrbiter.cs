@@ -15,10 +15,24 @@ public class TransformOrbiter : MonoBehaviour
 	private Vector3 translation;
 
 	[SerializeField]
-	[Range(0.01f, 5f)]
+	[Range(0.01f, 10f)]
 	private double speed = 1.0;
 
-	private DateTime anchor = new DateTime(2026, 4, 1);
+	private double orbitTime;
+
+	[SerializeField]
+	private bool faceBarycenter;
+
+	[SerializeField]
+	private bool absoluteOrbitX;
+
+	[SerializeField]
+	private bool absoluteOrbitY;
+
+	[SerializeField]
+	private bool absoluteOrbitZ;
+
+	private DateTime anchor;
 
 	private async void Start()
 	{
@@ -29,6 +43,13 @@ public class TransformOrbiter : MonoBehaviour
 			{
 				await Task.Yield();
 			}
+			anchor = DateTime.Parse(GorillaComputer.instance.buildDate);
+			while ((GorillaComputer.instance.GetServerTime() - anchor).TotalDays > 14.0)
+			{
+				anchor = anchor.AddDays(14.0);
+				await Task.Yield();
+			}
+			Debug.Log($"TransformOrbiter :: anchor = {anchor}");
 			if ((bool)base.gameObject)
 			{
 				base.gameObject.SetActive(value: true);
@@ -38,11 +59,39 @@ public class TransformOrbiter : MonoBehaviour
 
 	private void LateUpdate()
 	{
-		double totalSeconds = (GorillaComputer.instance.GetServerTime() - anchor).TotalSeconds;
-		double num = (double)orbit.x * Math.Sin(totalSeconds * speed);
-		double num2 = (double)orbit.y * Math.Cos(totalSeconds * speed);
-		double num3 = (double)orbit.z * Math.Cos(totalSeconds * speed);
-		base.transform.position = barycenter.position + translation + new Vector3((float)num, (float)num2, (float)num3);
+		UpdatePosRot((GorillaComputer.instance.GetServerTime() - anchor).TotalSeconds);
+	}
+
+	private void UpdatePosRot(double t)
+	{
+		base.transform.position = GetPositionAtTime(t);
+		if (faceBarycenter)
+		{
+			base.transform.rotation = Quaternion.LookRotation(barycenter.position - base.transform.position);
+		}
+	}
+
+	private Vector3 GetPositionAtTime(double t)
+	{
+		double num = Math.Sin(t * speed);
+		double num2 = Math.Cos(t * speed);
+		double num3 = Math.Cos(t * speed);
+		if (absoluteOrbitX)
+		{
+			num = Math.Abs(num);
+		}
+		if (absoluteOrbitY)
+		{
+			num2 = Math.Abs(num2);
+		}
+		if (absoluteOrbitZ)
+		{
+			num3 = Math.Abs(num3);
+		}
+		double num4 = (double)orbit.x * num;
+		double num5 = (double)orbit.y * num2;
+		double num6 = (double)orbit.z * num3;
+		return barycenter.position + translation + new Vector3((float)num4, (float)num5, (float)num6);
 	}
 
 	private bool validateBarycenter()

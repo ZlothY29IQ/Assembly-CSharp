@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using GT_CustomMapSupportRuntime;
 using GorillaExtensions;
 using UnityEngine;
 
@@ -34,8 +35,13 @@ public class CubicPlanetZone : PlanetZone
 	protected override void Awake()
 	{
 		base.Awake();
-		inverseRotation = Quaternion.Inverse(base.transform.rotation);
+		CalculateDependentVars();
 		UpdateConstraint();
+	}
+
+	private void CalculateDependentVars()
+	{
+		inverseRotation = Quaternion.Inverse(base.transform.rotation);
 	}
 
 	protected override Vector3 GetGravityVectorAtPoint(in Vector3 worldPosition, in MonkeGravityController controller)
@@ -69,5 +75,13 @@ public class CubicPlanetZone : PlanetZone
 			return position + transform.rotation * vec.Clamp(minConstraints * num5, maxConstraints * num5);
 		}
 		return position + transform.rotation * vec.Clamp(minConstraints, maxConstraints);
+	}
+
+	public void CopyProperties(CubicPlanetZoneSettings settings)
+	{
+		CopyProperties((PlanetZoneSettings)settings);
+		constraints = settings.constraints;
+		CalculateDependentVars();
+		UpdateConstraint();
 	}
 }

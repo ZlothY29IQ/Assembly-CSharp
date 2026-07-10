@@ -585,7 +585,7 @@ public class GamePlayer : MonoBehaviour
 			out_gamePlayer = null;
 			return false;
 		}
-		out_gamePlayer = rig.GetComponent<GamePlayer>();
+		out_gamePlayer = rig.GamePlayerRef;
 		return out_gamePlayer != null;
 	}
 

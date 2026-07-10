@@ -77,6 +77,8 @@ public static class RoomControls
 		Receivers = ReceiverGroup.MasterClient
 	};
 
+	public static bool RoomControlsEnabled => roomControlsEnabled;
+
 	public static IReadOnlyDictionary<string, long> BlockedPlayers => blockedPlayers;
 
 	public static IReadOnlyDictionary<string, long> MutedPlayers => mutedPlayers;

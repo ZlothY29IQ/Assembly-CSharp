@@ -16,5 +16,7 @@ public enum GroupJoinZoneB
 	VIMExperience1 = 0x400,
 	VIMExperience2 = 0x800,
 	VIMExperience3 = 0x1000,
-	VIMExperience4 = 0x2000
+	VIMExperience4 = 0x2000,
+	SpaceMap = 0x4000,
+	SpaceMapTunnel = 0x8000
 }

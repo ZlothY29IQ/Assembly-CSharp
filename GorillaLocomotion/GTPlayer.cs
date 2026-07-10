@@ -380,7 +380,7 @@ public class GTPlayer : MonoBehaviour
 		[Tooltip("0: no buoyancy. 1: Fully compensates gravity. 2: net force is upwards equal to gravity")]
 		public float buoyancy;
 
-		[Range(0f, 3f)]
+		[Range(0f, 100f)]
 		[Tooltip("Damping Half-life Multiplier")]
 		public float dampingFactor;
 
@@ -669,7 +669,7 @@ public class GTPlayer : MonoBehaviour
 	private bool primaryButtonPressed = true;
 
 	[Header("Swimming")]
-	public PlayerSwimmingParameters swimmingParams;
+	public List<PlayerSwimmingParameters> swimmingParamsList = new List<PlayerSwimmingParameters>(16);
 
 	public WaterParameters waterParams;
 
@@ -1277,6 +1277,16 @@ public class GTPlayer : MonoBehaviour
 		}
 	}
 
+	public PlayerSwimmingParameters GetSwimmingParams(LiquidType liquidType)
+	{
+		return swimmingParamsList[(int)liquidType];
+	}
+
+	public PlayerSwimmingParameters GetSwimmingParams(WaterVolume volume)
+	{
+		return GetSwimmingParams((volume != null) ? volume.LiquidType : LiquidType.Water);
+	}
+
 	public void EnableStilt(StiltID stiltID, bool isLeftHand, Vector3 currentTipWorldPos, float maxArmLength, bool canTag, bool canStun, float customBoostFactor = 0f, GorillaVelocityTracker velocityTracker = null)
 	{
 		HandState[] array = stiltStates;
@@ -1433,10 +1443,13 @@ public class GTPlayer : MonoBehaviour
 		ClearHandHolds();
 		if (playerRigidBody != null)
 		{
+			Quaternion quaternion = rotation * Quaternion.Inverse(playerRigidBody.rotation);
+			Vector3 linearVelocity = playerRigidBody.linearVelocity;
 			playerRigidBody.isKinematic = true;
 			playerRigidBody.position = position;
 			playerRigidBody.rotation = rotation;
 			playerRigidBody.isKinematic = false;
+			playerRigidBody.linearVelocity = quaternion * linearVelocity;
 		}
 		playerRigidBody.position = position;
 		playerRigidBody.rotation = rotation;
@@ -1530,7 +1543,10 @@ public class GTPlayer : MonoBehaviour
 	{
 		foreach (KeyValuePair<UnityEngine.Object, Action<GTPlayer>> gravityOverride in gravityOverrides)
 		{
-			gravityOverride.Value(this);
+			if (gravityOverride.Value != null)
+			{
+				gravityOverride.Value(this);
+			}
 		}
 	}
 
@@ -1629,6 +1645,7 @@ public class GTPlayer : MonoBehaviour
 		float fixedDeltaTime = Time.fixedDeltaTime;
 		bodyInWater = false;
 		Vector3 lhs = swimmingVelocity;
+		PlayerSwimmingParameters swimmingParams = GetSwimmingParams(LiquidType.Water);
 		swimmingVelocity = Vector3.MoveTowards(swimmingVelocity, Vector3.zero, swimmingParams.swimmingVelocityOutOfWaterDrainRate * fixedDeltaTime);
 		leftHandNonDiveHapticsAmount = 0f;
 		rightHandNonDiveHapticsAmount = 0f;
@@ -1690,19 +1707,20 @@ public class GTPlayer : MonoBehaviour
 				if (bodyInWater)
 				{
 					LiquidProperties liquidProperties = liquidPropertiesList[(int)((waterVolume != null) ? waterVolume.LiquidType : LiquidType.Water)];
+					PlayerSwimmingParameters swimmingParams2 = GetSwimmingParams(waterVolume);
 					float num10;
-					if (swimmingParams.extendBouyancyFromSpeed)
+					if (swimmingParams2.extendBouyancyFromSpeed)
 					{
-						float time = Mathf.Clamp(Vector3.Dot(linearVelocity / scale, waterSurfaceForHead.surfaceNormal), swimmingParams.speedToBouyancyExtensionMinMax.x, swimmingParams.speedToBouyancyExtensionMinMax.y);
-						float b = swimmingParams.speedToBouyancyExtension.Evaluate(time);
+						float time = Mathf.Clamp(Vector3.Dot(linearVelocity / scale, waterSurfaceForHead.surfaceNormal), swimmingParams2.speedToBouyancyExtensionMinMax.x, swimmingParams2.speedToBouyancyExtensionMinMax.y);
+						float b = swimmingParams2.speedToBouyancyExtension.Evaluate(time);
 						buoyancyExtension = Mathf.Max(buoyancyExtension, b);
-						float num9 = Mathf.InverseLerp(0f, swimmingParams.buoyancyFadeDist + buoyancyExtension, num3 / scale + buoyancyExtension);
-						buoyancyExtension = Spring.DamperDecayExact(buoyancyExtension, swimmingParams.buoyancyExtensionDecayHalflife, fixedDeltaTime);
+						float num9 = Mathf.InverseLerp(0f, swimmingParams2.buoyancyFadeDist + buoyancyExtension, num3 / scale + buoyancyExtension);
+						buoyancyExtension = Spring.DamperDecayExact(buoyancyExtension, swimmingParams2.buoyancyExtensionDecayHalflife, fixedDeltaTime);
 						num10 = num9;
 					}
 					else
 					{
-						num10 = Mathf.InverseLerp(0f, swimmingParams.buoyancyFadeDist, num3 / scale);
+						num10 = Mathf.InverseLerp(0f, swimmingParams2.buoyancyFadeDist, num3 / scale);
 					}
 					Vector3 force = -(GTPlayerTransform.PhysicsDown * Physics.gravity.magnitude * scale) * (liquidProperties.buoyancy * num10);
 					if (IsFrozen && GorillaGameManager.instance is GorillaFreezeTagManager)
@@ -1732,47 +1750,47 @@ public class GTPlayer : MonoBehaviour
 						float num12 = 0f;
 						float num13 = 0f;
 						float num14 = 0f;
-						if (swimmingParams.applyDiveSteering && !disableMovement && isDefaultScale)
+						if (swimmingParams2.applyDiveSteering && !disableMovement && isDefaultScale)
 						{
 							float value = Vector3.Dot(linearVelocity - zero2, vector3);
-							float time2 = Mathf.Clamp(value, swimmingParams.swimSpeedToRedirectAmountMinMax.x, swimmingParams.swimSpeedToRedirectAmountMinMax.y);
-							float b2 = swimmingParams.swimSpeedToRedirectAmount.Evaluate(time2);
-							time2 = Mathf.Clamp(value, swimmingParams.swimSpeedToMaxRedirectAngleMinMax.x, swimmingParams.swimSpeedToMaxRedirectAngleMinMax.y);
-							float num15 = swimmingParams.swimSpeedToMaxRedirectAngle.Evaluate(time2);
+							float time2 = Mathf.Clamp(value, swimmingParams2.swimSpeedToRedirectAmountMinMax.x, swimmingParams2.swimSpeedToRedirectAmountMinMax.y);
+							float b2 = swimmingParams2.swimSpeedToRedirectAmount.Evaluate(time2);
+							time2 = Mathf.Clamp(value, swimmingParams2.swimSpeedToMaxRedirectAngleMinMax.x, swimmingParams2.swimSpeedToMaxRedirectAngleMinMax.y);
+							float num15 = swimmingParams2.swimSpeedToMaxRedirectAngle.Evaluate(time2);
 							float value2 = Mathf.Acos(Vector3.Dot(vector3, forward)) / MathF.PI * -2f + 1f;
 							float value3 = Mathf.Acos(Vector3.Dot(vector3, forward2)) / MathF.PI * -2f + 1f;
-							float num16 = Mathf.Clamp(value2, swimmingParams.palmFacingToRedirectAmountMinMax.x, swimmingParams.palmFacingToRedirectAmountMinMax.y);
-							float num17 = Mathf.Clamp(value3, swimmingParams.palmFacingToRedirectAmountMinMax.x, swimmingParams.palmFacingToRedirectAmountMinMax.y);
-							float a = ((!float.IsNaN(num16)) ? swimmingParams.palmFacingToRedirectAmount.Evaluate(num16) : 0f);
-							float a2 = ((!float.IsNaN(num17)) ? swimmingParams.palmFacingToRedirectAmount.Evaluate(num17) : 0f);
+							float num16 = Mathf.Clamp(value2, swimmingParams2.palmFacingToRedirectAmountMinMax.x, swimmingParams2.palmFacingToRedirectAmountMinMax.y);
+							float num17 = Mathf.Clamp(value3, swimmingParams2.palmFacingToRedirectAmountMinMax.x, swimmingParams2.palmFacingToRedirectAmountMinMax.y);
+							float a = ((!float.IsNaN(num16)) ? swimmingParams2.palmFacingToRedirectAmount.Evaluate(num16) : 0f);
+							float a2 = ((!float.IsNaN(num17)) ? swimmingParams2.palmFacingToRedirectAmount.Evaluate(num17) : 0f);
 							Vector3 vector5 = Vector3.ProjectOnPlane(vector3, right);
 							Vector3 vector6 = Vector3.ProjectOnPlane(vector3, right);
 							float num18 = Mathf.Min(vector5.magnitude, 1f);
 							float num19 = Mathf.Min(vector6.magnitude, 1f);
-							float magnitude2 = leftHand.velocityTracker.GetAverageVelocity(worldSpace: false, swimmingParams.diveVelocityAveragingWindow).magnitude;
-							float magnitude3 = rightHand.velocityTracker.GetAverageVelocity(worldSpace: false, swimmingParams.diveVelocityAveragingWindow).magnitude;
-							float time3 = Mathf.Clamp(magnitude2, swimmingParams.handSpeedToRedirectAmountMinMax.x, swimmingParams.handSpeedToRedirectAmountMinMax.y);
-							float time4 = Mathf.Clamp(magnitude3, swimmingParams.handSpeedToRedirectAmountMinMax.x, swimmingParams.handSpeedToRedirectAmountMinMax.y);
-							float a3 = swimmingParams.handSpeedToRedirectAmount.Evaluate(time3);
-							float a4 = swimmingParams.handSpeedToRedirectAmount.Evaluate(time4);
-							float averageSpeedChangeMagnitudeInDirection = leftHand.velocityTracker.GetAverageSpeedChangeMagnitudeInDirection(right, worldSpace: false, swimmingParams.diveVelocityAveragingWindow);
-							float averageSpeedChangeMagnitudeInDirection2 = rightHand.velocityTracker.GetAverageSpeedChangeMagnitudeInDirection(dir, worldSpace: false, swimmingParams.diveVelocityAveragingWindow);
-							float time5 = Mathf.Clamp(averageSpeedChangeMagnitudeInDirection, swimmingParams.handAccelToRedirectAmountMinMax.x, swimmingParams.handAccelToRedirectAmountMinMax.y);
-							float time6 = Mathf.Clamp(averageSpeedChangeMagnitudeInDirection2, swimmingParams.handAccelToRedirectAmountMinMax.x, swimmingParams.handAccelToRedirectAmountMinMax.y);
-							float b3 = swimmingParams.handAccelToRedirectAmount.Evaluate(time5);
-							float b4 = swimmingParams.handAccelToRedirectAmount.Evaluate(time6);
+							float magnitude2 = leftHand.velocityTracker.GetAverageVelocity(worldSpace: false, swimmingParams2.diveVelocityAveragingWindow).magnitude;
+							float magnitude3 = rightHand.velocityTracker.GetAverageVelocity(worldSpace: false, swimmingParams2.diveVelocityAveragingWindow).magnitude;
+							float time3 = Mathf.Clamp(magnitude2, swimmingParams2.handSpeedToRedirectAmountMinMax.x, swimmingParams2.handSpeedToRedirectAmountMinMax.y);
+							float time4 = Mathf.Clamp(magnitude3, swimmingParams2.handSpeedToRedirectAmountMinMax.x, swimmingParams2.handSpeedToRedirectAmountMinMax.y);
+							float a3 = swimmingParams2.handSpeedToRedirectAmount.Evaluate(time3);
+							float a4 = swimmingParams2.handSpeedToRedirectAmount.Evaluate(time4);
+							float averageSpeedChangeMagnitudeInDirection = leftHand.velocityTracker.GetAverageSpeedChangeMagnitudeInDirection(right, worldSpace: false, swimmingParams2.diveVelocityAveragingWindow);
+							float averageSpeedChangeMagnitudeInDirection2 = rightHand.velocityTracker.GetAverageSpeedChangeMagnitudeInDirection(dir, worldSpace: false, swimmingParams2.diveVelocityAveragingWindow);
+							float time5 = Mathf.Clamp(averageSpeedChangeMagnitudeInDirection, swimmingParams2.handAccelToRedirectAmountMinMax.x, swimmingParams2.handAccelToRedirectAmountMinMax.y);
+							float time6 = Mathf.Clamp(averageSpeedChangeMagnitudeInDirection2, swimmingParams2.handAccelToRedirectAmountMinMax.x, swimmingParams2.handAccelToRedirectAmountMinMax.y);
+							float b3 = swimmingParams2.handAccelToRedirectAmount.Evaluate(time5);
+							float b4 = swimmingParams2.handAccelToRedirectAmount.Evaluate(time6);
 							num12 = Mathf.Min(a, Mathf.Min(a3, b3));
 							float num20 = ((Vector3.Dot(vector3, forward) > 0f) ? (Mathf.Min(num12, b2) * num18) : 0f);
 							num13 = Mathf.Min(a2, Mathf.Min(a4, b4));
 							float num21 = ((Vector3.Dot(vector3, forward2) > 0f) ? (Mathf.Min(num13, b2) * num19) : 0f);
-							if (swimmingParams.reduceDiveSteeringBelowVelocityPlane)
+							if (swimmingParams2.reduceDiveSteeringBelowVelocityPlane)
 							{
 								Vector3 rhs = ((!(Vector3.Dot(headCollider.transform.up, vector3) > 0.95f)) ? Vector3.Cross(Vector3.Cross(vector3, headCollider.transform.up), vector3).normalized : (-headCollider.transform.forward));
 								Vector3 position = headCollider.transform.position;
 								Vector3 lhs2 = position - leftHand.handFollower.position;
 								Vector3 lhs3 = position - rightHand.handFollower.position;
-								float reduceDiveSteeringBelowPlaneFadeStartDist = swimmingParams.reduceDiveSteeringBelowPlaneFadeStartDist;
-								float reduceDiveSteeringBelowPlaneFadeEndDist = swimmingParams.reduceDiveSteeringBelowPlaneFadeEndDist;
+								float reduceDiveSteeringBelowPlaneFadeStartDist = swimmingParams2.reduceDiveSteeringBelowPlaneFadeStartDist;
+								float reduceDiveSteeringBelowPlaneFadeEndDist = swimmingParams2.reduceDiveSteeringBelowPlaneFadeEndDist;
 								float f = Vector3.Dot(lhs2, GTPlayerTransform.PhysicsUp);
 								float f2 = Vector3.Dot(lhs3, GTPlayerTransform.PhysicsUp);
 								float f3 = Vector3.Dot(lhs2, rhs);
@@ -1784,7 +1802,7 @@ public class GTPlayer : MonoBehaviour
 							}
 							float num24 = num21 + num20;
 							Vector3 zero3 = Vector3.zero;
-							if (swimmingParams.applyDiveSteering && num24 > num11)
+							if (swimmingParams2.applyDiveSteering && num24 > num11)
 							{
 								zero3 = ((num20 * vector5 + num21 * vector6) / num24).normalized;
 								zero3 = Vector3.Lerp(vector3, zero3, num24);
@@ -1798,25 +1816,25 @@ public class GTPlayer : MonoBehaviour
 						}
 						float num25 = Mathf.Clamp(Vector3.Dot(lhs, vector3), 0f, magnitude);
 						float num26 = magnitude - num25;
-						if (swimmingParams.applyDiveSwimVelocityConversion && !disableMovement && num14 > num11 && num25 < swimmingParams.diveMaxSwimVelocityConversion)
+						if (swimmingParams2.applyDiveSwimVelocityConversion && !disableMovement && num14 > num11 && num25 < swimmingParams2.diveMaxSwimVelocityConversion)
 						{
-							float num27 = Mathf.Min(swimmingParams.diveSwimVelocityConversionRate * fixedDeltaTime, num26) * num14;
+							float num27 = Mathf.Min(swimmingParams2.diveSwimVelocityConversionRate * fixedDeltaTime, num26) * num14;
 							num25 += num27;
 							num26 -= num27;
 						}
-						float halflife = swimmingParams.swimUnderWaterDampingHalfLife * liquidProperties.dampingFactor;
-						float halflife2 = swimmingParams.baseUnderWaterDampingHalfLife * liquidProperties.dampingFactor;
+						float halflife = swimmingParams2.swimUnderWaterDampingHalfLife * liquidProperties.dampingFactor;
+						float halflife2 = swimmingParams2.baseUnderWaterDampingHalfLife * liquidProperties.dampingFactor;
 						float num28 = Spring.DamperDecayExact(num25 / scale, halflife, fixedDeltaTime) * scale;
 						float num29 = Spring.DamperDecayExact(num26 / scale, halflife2, fixedDeltaTime) * scale;
-						if (swimmingParams.applyDiveDampingMultiplier && !disableMovement)
+						if (swimmingParams2.applyDiveDampingMultiplier && !disableMovement)
 						{
-							float t = Mathf.Lerp(1f, swimmingParams.diveDampingMultiplier, num14);
+							float t = Mathf.Lerp(1f, swimmingParams2.diveDampingMultiplier, num14);
 							num28 = Mathf.Lerp(num25, num28, t);
 							num29 = Mathf.Lerp(num26, num29, t);
-							float time7 = Mathf.Clamp((1f - num12) * (num25 + num26), swimmingParams.nonDiveDampingHapticsAmountMinMax.x + num11, swimmingParams.nonDiveDampingHapticsAmountMinMax.y - num11);
-							float time8 = Mathf.Clamp((1f - num13) * (num25 + num26), swimmingParams.nonDiveDampingHapticsAmountMinMax.x + num11, swimmingParams.nonDiveDampingHapticsAmountMinMax.y - num11);
-							leftHandNonDiveHapticsAmount = swimmingParams.nonDiveDampingHapticsAmount.Evaluate(time7);
-							rightHandNonDiveHapticsAmount = swimmingParams.nonDiveDampingHapticsAmount.Evaluate(time8);
+							float time7 = Mathf.Clamp((1f - num12) * (num25 + num26), swimmingParams2.nonDiveDampingHapticsAmountMinMax.x + num11, swimmingParams2.nonDiveDampingHapticsAmountMinMax.y - num11);
+							float time8 = Mathf.Clamp((1f - num13) * (num25 + num26), swimmingParams2.nonDiveDampingHapticsAmountMinMax.x + num11, swimmingParams2.nonDiveDampingHapticsAmountMinMax.y - num11);
+							leftHandNonDiveHapticsAmount = swimmingParams2.nonDiveDampingHapticsAmount.Evaluate(time7);
+							rightHandNonDiveHapticsAmount = swimmingParams2.nonDiveDampingHapticsAmount.Evaluate(time8);
 						}
 						swimmingVelocity = num28 * vector4 + zero * scale;
 						playerRigidBody.linearVelocity = swimmingVelocity + num29 * vector4;
@@ -2418,7 +2436,7 @@ public class GTPlayer : MonoBehaviour
 				playerRigidBody.linearVelocity = vector4;
 				if (InWater)
 				{
-					swimmingVelocity += vector4 * swimmingParams.underwaterJumpsAsSwimVelocityFactor;
+					swimmingVelocity += vector4 * GetSwimmingParams(CurrentWaterVolume).underwaterJumpsAsSwimVelocityFactor;
 				}
 				if (num5 > velocityLimit * scale * exitMovingSurfaceThreshold)
 				{
@@ -2458,16 +2476,17 @@ public class GTPlayer : MonoBehaviour
 		{
 			if (GetSwimmingVelocityForHand(leftHand.lastPosition, leftHand.finalPositionThisFrame, leftHand.controllerTransform.right, calcDeltaTime, ref leftHandWaterVolume, ref leftHandWaterSurface, out var swimmingVelocityChange) && !turnedThisFrame)
 			{
-				a = Mathf.InverseLerp(0f, 0.2f, swimmingVelocityChange.magnitude) * swimmingParams.swimmingHapticsStrength;
+				a = Mathf.InverseLerp(0f, 0.2f, swimmingVelocityChange.magnitude) * GetSwimmingParams(leftHandWaterVolume).swimmingHapticsStrength;
 				zero += swimmingVelocityChange;
 			}
 			if (GetSwimmingVelocityForHand(rightHand.lastPosition, rightHand.finalPositionThisFrame, -rightHand.controllerTransform.right, calcDeltaTime, ref rightHandWaterVolume, ref rightHandWaterSurface, out var swimmingVelocityChange2) && !turnedThisFrame)
 			{
-				a2 = Mathf.InverseLerp(0f, 0.15f, swimmingVelocityChange2.magnitude) * swimmingParams.swimmingHapticsStrength;
+				a2 = Mathf.InverseLerp(0f, 0.15f, swimmingVelocityChange2.magnitude) * GetSwimmingParams(rightHandWaterVolume).swimmingHapticsStrength;
 				zero += swimmingVelocityChange2;
 			}
 		}
 		Vector3 zero2 = Vector3.zero;
+		PlayerSwimmingParameters swimmingParams = GetSwimmingParams(leftHandWaterVolume);
 		if (swimmingParams.allowWaterSurfaceJumps && time - lastWaterSurfaceJumpTimeLeft > waterSurfaceJumpCooldown && CheckWaterSurfaceJump(leftHand.lastPosition, leftHand.finalPositionThisFrame, leftHand.controllerTransform.right, leftHand.velocityTracker.GetAverageVelocity(worldSpace: false, 0.1f) * scale, swimmingParams, leftHandWaterVolume, leftHandWaterSurface, out var jumpVelocity))
 		{
 			if (time - lastWaterSurfaceJumpTimeRight > waterSurfaceJumpCooldown)
@@ -2477,7 +2496,8 @@ public class GTPlayer : MonoBehaviour
 			lastWaterSurfaceJumpTimeLeft = Time.time;
 			GorillaTagger.Instance.StartVibration(forLeftController: true, GorillaTagger.Instance.tapHapticStrength, GorillaTagger.Instance.tapHapticDuration);
 		}
-		if (swimmingParams.allowWaterSurfaceJumps && time - lastWaterSurfaceJumpTimeRight > waterSurfaceJumpCooldown && CheckWaterSurfaceJump(rightHand.lastPosition, rightHand.finalPositionThisFrame, -rightHand.controllerTransform.right, rightHand.velocityTracker.GetAverageVelocity(worldSpace: false, 0.1f) * scale, swimmingParams, rightHandWaterVolume, rightHandWaterSurface, out var jumpVelocity2))
+		PlayerSwimmingParameters swimmingParams2 = GetSwimmingParams(rightHandWaterVolume);
+		if (swimmingParams2.allowWaterSurfaceJumps && time - lastWaterSurfaceJumpTimeRight > waterSurfaceJumpCooldown && CheckWaterSurfaceJump(rightHand.lastPosition, rightHand.finalPositionThisFrame, -rightHand.controllerTransform.right, rightHand.velocityTracker.GetAverageVelocity(worldSpace: false, 0.1f) * scale, swimmingParams2, rightHandWaterVolume, rightHandWaterSurface, out var jumpVelocity2))
 		{
 			if (time - lastWaterSurfaceJumpTimeLeft > waterSurfaceJumpCooldown)
 			{
@@ -2486,7 +2506,7 @@ public class GTPlayer : MonoBehaviour
 			lastWaterSurfaceJumpTimeRight = Time.time;
 			GorillaTagger.Instance.StartVibration(forLeftController: false, GorillaTagger.Instance.tapHapticStrength, GorillaTagger.Instance.tapHapticDuration);
 		}
-		zero2 = Vector3.ClampMagnitude(zero2, swimmingParams.waterSurfaceJumpMaxSpeed * scale);
+		zero2 = Vector3.ClampMagnitude(zero2, Mathf.Max(swimmingParams.waterSurfaceJumpMaxSpeed, swimmingParams2.waterSurfaceJumpMaxSpeed) * scale);
 		float num6 = Mathf.Max(a, leftHandNonDiveHapticsAmount);
 		if (num6 > 0.001f && time - lastWaterSurfaceJumpTimeLeft > GorillaTagger.Instance.tapHapticDuration)
 		{

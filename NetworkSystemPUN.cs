@@ -769,15 +769,17 @@ public class NetworkSystemPUN : NetworkSystem
 			localRecorder.VoiceDetectionThreshold = VoiceSettings.Threshold;
 			localRecorder.VoiceDetectionDelayMs = VoiceSettings.Delay;
 			localRecorder.DebugEchoMode = VoiceSettings.DebugEcho;
-			if (!SubscriptionManager.IsLocalSubscribed())
-			{
-				localRecorder.SamplingRate = VoiceSettings.SamplingRate;
-				localRecorder.Bitrate = VoiceSettings.Bitrate;
-			}
-			else
+			bool num2 = SubscriptionManager.IsLocalSubscribed();
+			bool flag = NetworkSystem.Instance.SessionIsSubscription || PhotonNetwork.CurrentRoom.Name.EndsWith(":GTFC");
+			if (num2 || flag)
 			{
 				localRecorder.SamplingRate = VoiceSettings.SubsSamplingRate;
 				localRecorder.Bitrate = VoiceSettings.SubsBitrate;
+			}
+			else
+			{
+				localRecorder.SamplingRate = VoiceSettings.SamplingRate;
+				localRecorder.Bitrate = VoiceSettings.Bitrate;
 			}
 			VoiceNetworkObject.AddComponent<VoiceToLoudness>();
 			punVoice.PrimaryRecorder = localRecorder;

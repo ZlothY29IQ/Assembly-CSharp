@@ -22,5 +22,6 @@ public enum SceneIndex
 	City,
 	GTFC,
 	Rewind_2024_02_Forest,
-	VIMDig_Cave
+	VIMDig_Cave,
+	SpaceMap
 }

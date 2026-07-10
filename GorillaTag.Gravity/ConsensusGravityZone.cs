@@ -1,4 +1,5 @@
 using System;
+using GT_CustomMapSupportRuntime;
 using UnityEngine;
 
 namespace GorillaTag.Gravity;
@@ -77,5 +78,15 @@ public class ConsensusGravityZone : BasicGravityZone
 	protected override bool GetRotationIntent(in Vector3 offsetFromGravity)
 	{
 		return true;
+	}
+
+	public void CopyProperties(ConsensusGravityZoneSettings settings)
+	{
+		CopyProperties((BasicGravityZoneSettings)settings);
+		weightForce = settings.weightForce;
+		centeringForce = settings.centeringForce;
+		drag = settings.drag;
+		rotMin = settings.rotMin;
+		rotMax = settings.rotMax;
 	}
 }

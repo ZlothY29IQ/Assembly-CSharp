@@ -119,7 +119,12 @@ public class UnderwaterCameraEffect : MonoBehaviour
 		Vector3 position = targetCamera.transform.position;
 		for (int i = 0; i < player.HeadOverlappingWaterVolumes.Count; i++)
 		{
-			if (player.HeadOverlappingWaterVolumes[i].GetSurfaceQueryForPoint(position, out var result))
+			if (!player.HeadOverlappingWaterVolumes[i].GetSurfaceQueryForPoint(position, out var result))
+			{
+				continue;
+			}
+			WaterParameters parameters = player.HeadOverlappingWaterVolumes[i].Parameters;
+			if ((object)parameters == null || parameters.allowBubblesInVolume)
 			{
 				float num2 = Vector3.Dot(result.surfacePoint - position, result.surfaceNormal);
 				if (num2 > num)

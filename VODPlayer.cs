@@ -225,6 +225,8 @@ public class VODPlayer : MonoBehaviour, IGorillaSliceableSimple
 
 	private Permission voiceChatPerm;
 
+	private bool playerPrefMuted;
+
 	public static Material StandbyMaterial => _standbyMaterial;
 
 	private void Awake()
@@ -238,6 +240,8 @@ public class VODPlayer : MonoBehaviour, IGorillaSliceableSimple
 		GorillaSlicerSimpleManager.RegisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
 		VODTarget.AlertEnabled = (Action<VODTarget>)Delegate.Combine(VODTarget.AlertEnabled, new Action<VODTarget>(VODTarget_AlertEnabled));
 		VODTarget.AlertDisabled = (Action<VODTarget>)Delegate.Combine(VODTarget.AlertDisabled, new Action<VODTarget>(VODTarget_AlertDisabled));
+		PlayerPrefFlags.OnFlagChange = (Action<PlayerPrefFlags.Flag, bool>)Delegate.Combine(PlayerPrefFlags.OnFlagChange, new Action<PlayerPrefFlags.Flag, bool>(PlayerPreFlagChange));
+		playerPrefMuted = PlayerPrefFlags.Check(PlayerPrefFlags.Flag.GTV_MUTED);
 		if (voiceChatPermRequiredList == null)
 		{
 			voiceChatPermRequiredList = new List<VODStream.VODStreamChannel>(voiceChatPermRequired);
@@ -257,6 +261,14 @@ public class VODPlayer : MonoBehaviour, IGorillaSliceableSimple
 				PlayFabTitleDataCache.Instance.GetTitleData(titleDataKey[i], onTD, onTDError);
 			}
 			waitOnServerTimeAndSchedule();
+		}
+	}
+
+	private void PlayerPreFlagChange(PlayerPrefFlags.Flag flag, bool v)
+	{
+		if (flag == PlayerPrefFlags.Flag.GTV_MUTED)
+		{
+			playerPrefMuted = v;
 		}
 	}
 
@@ -356,12 +368,14 @@ public class VODPlayer : MonoBehaviour, IGorillaSliceableSimple
 		player.loopPointReached -= Player_loopPointReached;
 		VODTarget.AlertEnabled = (Action<VODTarget>)Delegate.Remove(VODTarget.AlertEnabled, new Action<VODTarget>(VODTarget_AlertEnabled));
 		VODTarget.AlertDisabled = (Action<VODTarget>)Delegate.Remove(VODTarget.AlertDisabled, new Action<VODTarget>(VODTarget_AlertDisabled));
+		PlayerPrefFlags.OnFlagChange = (Action<PlayerPrefFlags.Flag, bool>)Delegate.Remove(PlayerPrefFlags.OnFlagChange, new Action<PlayerPrefFlags.Flag, bool>(PlayerPreFlagChange));
 	}
 
 	private void OnDestroy()
 	{
 		VODTarget.AlertEnabled = (Action<VODTarget>)Delegate.Remove(VODTarget.AlertEnabled, new Action<VODTarget>(VODTarget_AlertEnabled));
 		VODTarget.AlertDisabled = (Action<VODTarget>)Delegate.Remove(VODTarget.AlertDisabled, new Action<VODTarget>(VODTarget_AlertDisabled));
+		PlayerPrefFlags.OnFlagChange = (Action<PlayerPrefFlags.Flag, bool>)Delegate.Remove(PlayerPrefFlags.OnFlagChange, new Action<PlayerPrefFlags.Flag, bool>(PlayerPreFlagChange));
 	}
 
 	void IGorillaSliceableSimple.SliceUpdate()
@@ -527,7 +541,7 @@ public class VODPlayer : MonoBehaviour, IGorillaSliceableSimple
 		VODTarget vODTarget = null;
 		for (int i = 0; i < targets.Count; i++)
 		{
-			if (targets[i].AudioSettings.volume > 0f && targets[i].VerifyChannel(playerChannel))
+			if ((!playerPrefMuted || targets[i].Unmutable) && targets[i].AudioSettings.volume > 0f && targets[i].VerifyChannel(playerChannel))
 			{
 				float sqrMagnitude = (VRRig.LocalRig.transform.position - targets[i].transform.position).sqrMagnitude;
 				if (sqrMagnitude < num)

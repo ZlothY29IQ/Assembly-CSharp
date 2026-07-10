@@ -1,3 +1,4 @@
+using GT_CustomMapSupportRuntime;
 using UnityEngine;
 
 namespace GorillaTag.Gravity;
@@ -21,6 +22,11 @@ public class TorusZone : BasicGravityZone
 	protected override void Awake()
 	{
 		base.Awake();
+		CalculateDependentVars();
+	}
+
+	private void CalculateDependentVars()
+	{
 		sqrDistance = rotationDistance * rotationDistance;
 	}
 
@@ -58,5 +64,14 @@ public class TorusZone : BasicGravityZone
 			return false;
 		}
 		return true;
+	}
+
+	public void CopyProperties(TorusZoneSettings settings)
+	{
+		CopyProperties((BasicGravityZoneSettings)settings);
+		majorRadius = settings.majorRadius;
+		rotationDistance = settings.rotationDistance;
+		alwaysRotate = settings.alwaysRotate;
+		CalculateDependentVars();
 	}
 }

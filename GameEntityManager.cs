@@ -17,7 +17,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
 
 [NetworkBehaviourWeaved(0)]
-public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCallbacks, ITickSystemTick, IGorillaSliceableSimple
+public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCallbacks, ITickSystemTick
 {
 	public delegate void ZoneStartEvent(GTZone zoneId);
 
@@ -213,6 +213,8 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 	private ZoneStateData zoneStateData;
 
 	private int nextNetId = 1;
+
+	private string cachedZoneSceneName = string.Empty;
 
 	public CallLimitersList<CallLimiter, RPC> m_RpcSpamChecks = new CallLimitersList<CallLimiter, RPC>();
 
@@ -502,7 +504,6 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		RoomSystem.LeftRoomEvent += new Action(OnNetworkLeftRoom);
 		RoomSystem.PlayerLeftEvent += new Action<NetPlayer>(OnNetworkPlayerLeft);
 		RefreshRigList();
-		GorillaSlicerSimpleManager.RegisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
 	}
 
 	internal override void OnDisable()
@@ -515,7 +516,6 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		RoomSystem.JoinedRoomEvent -= new Action(OnNetworkJoinedRoom);
 		RoomSystem.LeftRoomEvent -= new Action(OnNetworkLeftRoom);
 		RoomSystem.PlayerLeftEvent -= new Action<NetPlayer>(OnNetworkPlayerLeft);
-		GorillaSlicerSimpleManager.UnregisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
 	}
 
 	private void OnDestroy()
@@ -539,10 +539,6 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 			}
 		}
 		return null;
-	}
-
-	public void SliceUpdate()
-	{
 	}
 
 	public void Tick()
@@ -1066,6 +1062,19 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 					utf16ValueStringBuilder.Append(value);
 					utf16ValueStringBuilder.Append(" ... CONTINUED FROM PREVIOUS ...\n");
 				}
+			}
+		}
+	}
+
+	public void AddToFactory(IEnumerable<GameEntity> items)
+	{
+		foreach (GameEntity item in items)
+		{
+			GameObject gameObject = item.gameObject;
+			int staticHash = gameObject.name.GetStaticHash();
+			if (!itemPrefabFactory.ContainsKey(staticHash))
+			{
+				itemPrefabFactory.Add(staticHash, gameObject);
 			}
 		}
 	}
@@ -2903,10 +2912,10 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		}
 		foreach (VRRig activeRig in VRRigCache.ActiveRigs)
 		{
-			GamePlayer component = activeRig.GetComponent<GamePlayer>();
-			if (!component.IsLocal())
+			GamePlayer gamePlayerRef2 = activeRig.GamePlayerRef;
+			if (!gamePlayerRef2.IsLocal())
 			{
-				component.ClearZone(this);
+				gamePlayerRef2.ClearZone(this);
 			}
 		}
 		gameEntityData.Clear();
@@ -3380,7 +3389,8 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		{
 			return;
 		}
-		if (!IsInZone())
+		bool flag = IsInZone();
+		if (!flag)
 		{
 			if (zoneStateData.state != ZoneState.WaitingToEnterZone)
 			{
@@ -3401,7 +3411,6 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 			_ = 3;
 			return;
 		}
-		bool flag = IsInZone();
 		bool inRoom = PhotonNetwork.InRoom;
 		bool flag2 = HasAnyScenePlacedInScene(GetZoneSceneName());
 		bool flag3 = scenePlacedEntitiesRegistered;
@@ -3474,12 +3483,18 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 			}
 			return false;
 		}
-		bool flag = VRRig.LocalRig.zoneEntity.currentZone == zone;
+		if (VRRig.LocalRig.zoneEntity.currentZone != zone)
+		{
+			return false;
+		}
 		for (int i = 0; i < zoneComponents.Count; i++)
 		{
-			flag &= zoneComponents[i].IsZoneReady();
+			if (!zoneComponents[i].IsZoneReady())
+			{
+				return false;
+			}
 		}
-		return flag;
+		return true;
 	}
 
 	private bool ShouldClearZone()
@@ -3678,29 +3693,24 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 
 	public void OnRigDeactivated(RigContainer container)
 	{
-		GamePlayer component = container.GetComponent<GamePlayer>();
-		int? num = component?.rig?.OwningNetPlayer?.ActorNumber;
-		if (num.HasValue)
-		{
-			num.GetValueOrDefault();
-		}
+		GamePlayer gamePlayerRef = container.Rig.GamePlayerRef;
 		if (this != activeManager)
 		{
-			int num2 = 0;
+			int num = 0;
 			{
 				foreach (GameEntity entity in entities)
 				{
-					if (entity != null && entity.IsAttachedToPlayer(component?.rig?.OwningNetPlayer))
+					if (entity != null && entity.IsAttachedToPlayer(container.Rig.Creator))
 					{
-						num2++;
+						num++;
 					}
 				}
 				return;
 			}
 		}
-		if (component != null)
+		if (gamePlayerRef != null)
 		{
-			List<GameEntityId> list = component.HeldAndSnappedItems(this);
+			List<GameEntityId> list = gamePlayerRef.HeldAndSnappedItems(this);
 			_leavingItemScratch.Clear();
 			for (int i = 0; i < list.Count; i++)
 			{
@@ -3724,7 +3734,7 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 			}
 			_leavingItemScratch.Clear();
 		}
-		component.ResetData();
+		gamePlayerRef.ResetData();
 	}
 
 	public void OnOwnershipTransferred(NetPlayer toPlayer, NetPlayer fromPlayer)
@@ -3813,12 +3823,15 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 
 	private string GetZoneSceneName()
 	{
-		string text = ((ZoneManagement.instance != null) ? ZoneManagement.instance.GetSceneNameForZone(zone) : null);
-		if (!string.IsNullOrEmpty(text))
+		if (string.IsNullOrEmpty(cachedZoneSceneName))
 		{
-			return text;
+			cachedZoneSceneName = ((ZoneManagement.instance != null) ? ZoneManagement.instance.GetSceneNameForZone(zone) : null);
+			if (string.IsNullOrEmpty(cachedZoneSceneName))
+			{
+				cachedZoneSceneName = base.gameObject.scene.name;
+			}
 		}
-		return base.gameObject.scene.name;
+		return cachedZoneSceneName;
 	}
 
 	internal static bool HasAnyScenePlacedInScene(string sceneName)

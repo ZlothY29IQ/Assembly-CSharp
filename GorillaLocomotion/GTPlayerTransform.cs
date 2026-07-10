@@ -20,11 +20,22 @@ public class GTPlayerTransform : MonkeGravityController
 
 	private static int k_rotationOverrideFrameTime;
 
+	private static bool k_useFastRotation;
+
 	[SerializeField]
 	private Transform m_gtPlayerBodyTransform;
 
 	[SerializeField]
 	private GTPlayer m_gtPlayerInstance;
+
+	[Header("Slow rotation for small angles")]
+	[Tooltip("If rotating less than this distance (degrees), use the slow speed.")]
+	[SerializeField]
+	private float m_smallRotationAngleThreshold = 45f;
+
+	[Tooltip("Rotation speed (rad/s) used for rotations less than the small-angle threshold.")]
+	[SerializeField]
+	private float m_smallRotationSpeed = 5f;
 
 	public static float GravityStrength { get; private set; }
 
@@ -43,8 +54,6 @@ public class GTPlayerTransform : MonkeGravityController
 	public static Vector3 Right { get; private set; } = Vector3.right;
 
 	public static Quaternion BodyRotation => k_bodyTransform.rotation;
-
-	public static bool UseNetRotation => true;
 
 	public static bool IgnoreGravityRotation { get; set; } = false;
 
@@ -115,6 +124,7 @@ public class GTPlayerTransform : MonkeGravityController
 			if (flag || Vector3.Dot(lhs, leftHandRef.lastHitInfo.normal) <= 0f)
 			{
 				vector = rotatedDifference;
+				vector -= leftHandRef.lastHitInfo.normal * 0.0001f;
 			}
 		}
 		if (rightHandRef.wasColliding || rightHandRef.wasSliding || flag2)
@@ -124,6 +134,7 @@ public class GTPlayerTransform : MonkeGravityController
 			if (flag2 || Vector3.Dot(lhs2, rightHandRef.lastHitInfo.normal) <= 0f)
 			{
 				vector = rotatedDifference2;
+				vector -= rightHandRef.lastHitInfo.normal * 0.0001f;
 			}
 		}
 		k_rotationPosOffsetChange -= vector;
@@ -150,14 +161,6 @@ public class GTPlayerTransform : MonkeGravityController
 	public static void ResetRotationPositionOffset()
 	{
 		k_rotationPosOffsetChange = Vector3.zero;
-	}
-
-	public static void EnableNetworkRotations()
-	{
-	}
-
-	public static void DisableNetworkRotations()
-	{
 	}
 
 	protected override void Awake()
@@ -193,10 +196,17 @@ public class GTPlayerTransform : MonkeGravityController
 			return;
 		}
 		float num = Vector3.Angle(Up, upDir);
+		float num2 = num * (MathF.PI / 180f);
+		if (num > m_smallRotationAngleThreshold)
+		{
+			k_useFastRotation = true;
+		}
+		float num3 = (k_useFastRotation ? speed : (m_smallRotationSpeed * Time.fixedDeltaTime));
 		Vector3 targetUp;
-		if (num * (MathF.PI / 180f) <= speed)
+		if (num2 <= num3)
 		{
 			targetUp = upDir;
+			k_useFastRotation = false;
 		}
 		else
 		{
@@ -219,7 +229,7 @@ public class GTPlayerTransform : MonkeGravityController
 					break;
 				}
 			}
-			targetUp = Vector3.RotateTowards(Up, target, speed, 0f);
+			targetUp = Vector3.RotateTowards(Up, target, num3, 0f);
 		}
 		RotateToUp(in targetUp);
 	}

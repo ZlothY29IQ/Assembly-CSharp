@@ -27,6 +27,7 @@ public static class XSceneRefGlobalHub
 		new Dictionary<int, XSceneRefTarget> { { 0, null } },
 		new Dictionary<int, XSceneRefTarget> { { 0, null } },
 		new Dictionary<int, XSceneRefTarget> { { 0, null } },
+		new Dictionary<int, XSceneRefTarget> { { 0, null } },
 		new Dictionary<int, XSceneRefTarget> { { 0, null } }
 	};
 

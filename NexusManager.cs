@@ -34,9 +34,9 @@ public class NexusManager : MonoBehaviour
 
 	private const string ENV_SANDBOX = "sandbox";
 
-	private const string ENV_PRODUCTION_API_KEY = "nexus_pk_4c18dcb1531846c7abad4cb00c5242bb";
+	private const string ENV_PRODUCTION_PUBLIC_API_KEY = "nexus_pk_4c18dcb1531846c7abad4cb00c5242bb";
 
-	private const string ENV_SANDBOX_API_KEY = "nexus_pk_ba155a8c229740489d214f024e25f25c";
+	private const string ENV_SANDBOX_PUBLIC_API_KEY = "nexus_pk_ba155a8c229740489d214f024e25f25c";
 
 	private Environment environment = Environment.SANDBOX;
 

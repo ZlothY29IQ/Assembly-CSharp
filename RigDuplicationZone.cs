@@ -9,6 +9,10 @@ public class RigDuplicationZone : MonoBehaviour
 	[SerializeField]
 	private string id;
 
+	[Tooltip("Leave blank for a regular duplication zone. For a portal effect, set this to the zone from which players looking at this zone should see its contents swapped")]
+	[SerializeField]
+	private RigDuplicationZone seeSwapFromZone;
+
 	private bool playerInZone;
 
 	private Vector3 offsetToOtherZone;
@@ -46,6 +50,10 @@ public class RigDuplicationZone : MonoBehaviour
 	{
 		otherZone = z;
 		offsetToOtherZone = z.transform.position - base.transform.position;
+		if (seeSwapFromZone == null)
+		{
+			seeSwapFromZone = otherZone;
+		}
 	}
 
 	private void OnTriggerEnter(Collider other)
@@ -82,12 +90,12 @@ public class RigDuplicationZone : MonoBehaviour
 
 	public Vector3 GetVisualOffsetForRigs(Vector3 cachedOffset)
 	{
-		if (otherZone == null)
+		if (seeSwapFromZone == null)
 		{
 			Debug.LogError("RigDuplicationZone doesn't have an other zone!", base.gameObject);
 			return cachedOffset;
 		}
-		if (!otherZone.playerInZone)
+		if (!seeSwapFromZone.playerInZone)
 		{
 			return cachedOffset;
 		}

@@ -37,6 +37,14 @@ public struct PhotonMessageInfoWrapped
 		punInfo = default(PhotonMessageInfo);
 	}
 
+	private PhotonMessageInfoWrapped(NetPlayer sender)
+	{
+		Sender = sender;
+		senderID = sender.ActorNumber;
+		sentTick = PhotonNetwork.ServerTimestamp;
+		punInfo = default(PhotonMessageInfo);
+	}
+
 	public static implicit operator PhotonMessageInfoWrapped(PhotonMessageInfo info)
 	{
 		return new PhotonMessageInfoWrapped(info);
@@ -45,5 +53,10 @@ public struct PhotonMessageInfoWrapped
 	public static implicit operator PhotonMessageInfoWrapped(RpcInfo info)
 	{
 		return new PhotonMessageInfoWrapped(info);
+	}
+
+	public static PhotonMessageInfoWrapped GetLocalDefault()
+	{
+		return new PhotonMessageInfoWrapped(NetworkSystem.Instance.LocalPlayer);
 	}
 }

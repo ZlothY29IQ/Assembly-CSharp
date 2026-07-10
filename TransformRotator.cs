@@ -6,23 +6,33 @@ using UnityEngine;
 public class TransformRotator : MonoBehaviour
 {
 	[SerializeField]
-	private Vector3 localRotation;
+	private Vector3 axis = Vector3.forward;
 
 	[SerializeField]
-	private Vector4 wobble;
+	private float degreesPerSecond = 90f;
 
 	[SerializeField]
-	private Vector3 spin;
+	private float sinAmp;
 
-	private DateTime anchor = new DateTime(2026, 4, 1);
+	private Quaternion baseRotation;
+
+	private DateTime anchor;
 
 	private async void Start()
 	{
+		baseRotation = base.transform.localRotation;
 		base.gameObject.SetActive(value: false);
 		while (((bool)base.gameObject && GorillaComputer.instance == null) || GorillaComputer.instance.GetServerTime().Year < 2000)
 		{
 			await Task.Yield();
 		}
+		anchor = DateTime.Parse(GorillaComputer.instance.buildDate);
+		while ((GorillaComputer.instance.GetServerTime() - anchor).TotalDays > 14.0)
+		{
+			anchor = anchor.AddDays(14.0);
+			await Task.Yield();
+		}
+		Debug.Log($"TransformRotator :: anchor = {anchor}");
 		if ((bool)base.gameObject)
 		{
 			base.gameObject.SetActive(value: true);
@@ -36,10 +46,12 @@ public class TransformRotator : MonoBehaviour
 
 	private void UpdateRotation(double t)
 	{
-		double num = t % 360.0;
-		double num2 = (double)localRotation.x + (double)spin.x * num + (double)wobble.x * Math.Sin(t * (double)wobble.w);
-		double num3 = (double)localRotation.y + (double)spin.y * num + (double)wobble.y * Math.Cos(t * (double)wobble.w);
-		double num4 = (double)localRotation.z + (double)spin.z * num + (double)wobble.z * Math.Cos(t * (double)wobble.w);
-		base.transform.localRotation = Quaternion.Euler((float)num2, (float)num3, (float)num4);
+		float num = degreesPerSecond * (float)t;
+		if (sinAmp != 0f)
+		{
+			num = sinAmp * Mathf.Sin(num / sinAmp);
+		}
+		Quaternion quaternion = Quaternion.AngleAxis(num, axis);
+		base.transform.localRotation = baseRotation * quaternion;
 	}
 }

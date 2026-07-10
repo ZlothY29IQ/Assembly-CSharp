@@ -42,6 +42,9 @@ public class VODTarget : ObservableBehavior, IBuildValidation
 	[SerializeField]
 	private GameObject staticScreen;
 
+	[SerializeField]
+	private bool unmutable;
+
 	public static Action<VODTarget> AlertEnabled;
 
 	public static Action<VODTarget> AlertDisabled;
@@ -65,6 +68,8 @@ public class VODTarget : ObservableBehavior, IBuildValidation
 			return new VODPlayer.VODStream.VODStreamChannel[1];
 		}
 	}
+
+	public bool Unmutable => unmutable;
 
 	public void SetNext(VODPlayer.VODNextStreamData data)
 	{
