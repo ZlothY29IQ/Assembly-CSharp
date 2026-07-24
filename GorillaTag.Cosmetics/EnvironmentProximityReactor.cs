@@ -48,7 +48,10 @@ public class EnvironmentProximityReactor : MonoBehaviour
 		public bool wasBelow;
 
 		[NonSerialized]
-		public bool wasSharedBelow;
+		public readonly HashSet<int> activeSharedActors = new HashSet<int>();
+
+		[NonSerialized]
+		public int localActorInSet = int.MinValue;
 
 		[NonSerialized]
 		public float lastTriggerTime = -9999f;
@@ -134,6 +137,7 @@ public class EnvironmentProximityReactor : MonoBehaviour
 		{
 			return;
 		}
+		int num = NetworkSystem.Instance?.LocalPlayer?.ActorNumber ?? (-1);
 		IReadOnlyList<CosmeticsProximityReactor> cosmetics = CosmeticsProximityReactorManager.Instance.Cosmetics;
 		float time = Time.time;
 		for (int i = 0; i < blocks.Count; i++)
@@ -160,33 +164,34 @@ public class EnvironmentProximityReactor : MonoBehaviour
 				if (!interactionBlock.wasBelow && interactionBlock.CanPlay(time))
 				{
 					interactionBlock.wasBelow = true;
-					interactionBlock.wasSharedBelow = true;
 					interactionBlock.lastTriggerTime = time;
 					interactionBlock.onBelowLocal?.Invoke(arg);
-					interactionBlock.onBelowShared?.Invoke(arg);
+					if (interactionBlock.activeSharedActors.Count == 0)
+					{
+						interactionBlock.onBelowShared?.Invoke(arg);
+					}
+					interactionBlock.localActorInSet = num;
+					interactionBlock.activeSharedActors.Add(num);
 					EnvironmentProximityReactorManager.Instance?.BroadcastProximityState(reactorId, i, isBelow: true);
 				}
 				else if (interactionBlock.wasBelow)
 				{
 					interactionBlock.whileBelowLocal?.Invoke(arg);
 					interactionBlock.whileBelowShared?.Invoke(arg);
-					if (!interactionBlock.wasSharedBelow)
-					{
-						interactionBlock.wasSharedBelow = true;
-						interactionBlock.onBelowShared?.Invoke(arg);
-						EnvironmentProximityReactorManager.Instance?.BroadcastProximityState(reactorId, i, isBelow: true);
-					}
 				}
 			}
 			else if (interactionBlock.wasBelow)
 			{
 				interactionBlock.wasBelow = false;
-				interactionBlock.wasSharedBelow = false;
 				interactionBlock.onAboveLocal?.Invoke();
-				interactionBlock.onAboveShared?.Invoke();
+				interactionBlock.activeSharedActors.Remove(interactionBlock.localActorInSet);
+				if (interactionBlock.activeSharedActors.Count == 0)
+				{
+					interactionBlock.onAboveShared?.Invoke();
+				}
 				EnvironmentProximityReactorManager.Instance?.BroadcastProximityState(reactorId, i, isBelow: false);
 			}
-			if (interactionBlock.wasSharedBelow && !interactionBlock.wasBelow)
+			if (interactionBlock.activeSharedActors.Count > 0 && !interactionBlock.wasBelow)
 			{
 				interactionBlock.whileBelowShared?.Invoke(base.transform.position);
 			}
@@ -204,21 +209,55 @@ public class EnvironmentProximityReactor : MonoBehaviour
 		}
 	}
 
-	public void ApplySharedProximity(int blockIndex, bool isBelow)
+	public void ClearRemoteActors()
 	{
-		if (blockIndex >= 0 && blockIndex < blocks.Count)
+		foreach (InteractionBlock block in blocks)
 		{
-			InteractionBlock interactionBlock = blocks[blockIndex];
-			if (isBelow)
+			bool num = block.wasBelow && block.activeSharedActors.Contains(block.localActorInSet);
+			bool flag = block.activeSharedActors.Count > 0;
+			block.activeSharedActors.Clear();
+			if (num)
 			{
-				interactionBlock.wasSharedBelow = true;
-				interactionBlock.onBelowShared?.Invoke(base.transform.position);
+				block.activeSharedActors.Add(block.localActorInSet);
 			}
-			else
+			else if (flag)
 			{
-				interactionBlock.wasSharedBelow = false;
+				block.onAboveShared?.Invoke();
+			}
+		}
+	}
+
+	public void RemoveSharedActor(int actorNumber)
+	{
+		for (int i = 0; i < blocks.Count; i++)
+		{
+			InteractionBlock interactionBlock = blocks[i];
+			if (interactionBlock.activeSharedActors.Remove(actorNumber) && interactionBlock.activeSharedActors.Count == 0)
+			{
 				interactionBlock.onAboveShared?.Invoke();
 			}
+		}
+	}
+
+	public void ApplySharedProximity(int blockIndex, bool isBelow, int senderActorNumber)
+	{
+		if (blockIndex < 0 || blockIndex >= blocks.Count)
+		{
+			return;
+		}
+		InteractionBlock interactionBlock = blocks[blockIndex];
+		if (isBelow)
+		{
+			bool num = interactionBlock.activeSharedActors.Count == 0;
+			interactionBlock.activeSharedActors.Add(senderActorNumber);
+			if (num)
+			{
+				interactionBlock.onBelowShared?.Invoke(base.transform.position);
+			}
+		}
+		else if (interactionBlock.activeSharedActors.Remove(senderActorNumber) && interactionBlock.activeSharedActors.Count == 0)
+		{
+			interactionBlock.onAboveShared?.Invoke();
 		}
 	}
 
@@ -258,7 +297,8 @@ public class EnvironmentProximityReactor : MonoBehaviour
 		foreach (InteractionBlock block in blocks)
 		{
 			block.wasBelow = false;
-			block.wasSharedBelow = false;
+			block.activeSharedActors.Clear();
+			block.localActorInSet = int.MinValue;
 			block.lastTriggerTime = -9999f;
 		}
 	}

@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using GorillaLocomotion;
+using GorillaNetworking;
+using GorillaTagScripts;
 using UnityEngine;
 
 public class TeleportStationManager : MonoBehaviour
@@ -14,6 +16,12 @@ public class TeleportStationManager : MonoBehaviour
 
 		private GTZone teleportToZone;
 
+		private GorillaFriendCollider sourceFriendCollider;
+
+		private GorillaFriendCollider destinationFriendCollider;
+
+		private GorillaNetworkJoinTrigger destinationJoinTrigger;
+
 		private float effectTime;
 
 		private float effectTimeRemains;
@@ -26,12 +34,15 @@ public class TeleportStationManager : MonoBehaviour
 
 		public bool Done => phase > 3;
 
-		public FPTPort(Vector3 targetPos, float targetRot, Vector3 targetSlop, GTZone teleportToZone, int effectTime, GameObject firstPersonEffect)
+		public FPTPort(Vector3 targetPos, float targetRot, Vector3 targetSlop, GTZone teleportToZone, GorillaFriendCollider sourceFriendCollider, GorillaFriendCollider destinationFriendCollider, GorillaNetworkJoinTrigger destinationJoinTrigger, int effectTime, GameObject firstPersonEffect)
 		{
 			this.targetPos = targetPos;
 			this.targetRot = targetRot;
 			this.targetSlop = targetSlop;
 			this.teleportToZone = teleportToZone;
+			this.sourceFriendCollider = sourceFriendCollider;
+			this.destinationFriendCollider = destinationFriendCollider;
+			this.destinationJoinTrigger = destinationJoinTrigger;
 			this.effectTime = effectTime;
 			effectTimeRemains = effectTime;
 			this.firstPersonEffect = firstPersonEffect;
@@ -70,6 +81,23 @@ public class TeleportStationManager : MonoBehaviour
 				{
 					ZoneManagement.SetActiveZone(teleportToZone);
 				}
+				if (NetworkSystem.Instance.InRoom)
+				{
+					if (!NetworkSystem.Instance.SessionIsPrivate)
+					{
+						if (FriendshipGroupDetection.Instance.IsInParty)
+						{
+							FriendshipGroupDetection.Instance.LeaveParty();
+						}
+						SetupFriendGroup(sourceFriendCollider, destinationFriendCollider);
+						PhotonNetworkController.Instance.AttemptToJoinPublicRoom(destinationJoinTrigger, JoinType.JoinWithNearby);
+					}
+				}
+				else
+				{
+					SetupFriendGroup(sourceFriendCollider, destinationFriendCollider);
+					PhotonNetworkController.Instance.AttemptToJoinPublicRoom(destinationJoinTrigger, JoinType.JoinWithNearby);
+				}
 				phase++;
 				break;
 			case 3:
@@ -86,13 +114,33 @@ public class TeleportStationManager : MonoBehaviour
 			}
 			effectTimeRemains -= deltaTime;
 		}
+
+		private int LowestActorNumberInFriendCollider()
+		{
+			sourceFriendCollider.RefreshPlayersWithinBounds();
+			destinationFriendCollider.RefreshPlayersWithinBounds();
+			int num = int.MaxValue;
+			NetPlayer[] allNetPlayers = NetworkSystem.Instance.AllNetPlayers;
+			for (int i = 0; i < allNetPlayers.Length; i++)
+			{
+				if (num > allNetPlayers[i].ActorNumber && (sourceFriendCollider.playerIDsCurrentlyTouching.Contains(allNetPlayers[i].UserId) || destinationFriendCollider.playerIDsCurrentlyTouching.Contains(allNetPlayers[i].UserId)))
+				{
+					num = allNetPlayers[i].ActorNumber;
+				}
+			}
+			return num;
+		}
+
+		private void SetupFriendGroup(GorillaFriendCollider source, GorillaFriendCollider destination)
+		{
+			PhotonNetworkController.Instance.shuffler = Random.Range(0, 99).ToString().PadLeft(2, '0') + Random.Range(0, 99999999).ToString().PadLeft(8, '0');
+			PhotonNetworkController.Instance.keyStr = Random.Range(0, 99999999).ToString().PadLeft(8, '0');
+		}
 	}
 
 	public class TPTPort
 	{
 		private VRRig rig;
-
-		private float effectTime;
 
 		private float effectTimeRemains;
 
@@ -109,7 +157,6 @@ public class TeleportStationManager : MonoBehaviour
 		public TPTPort(VRRig rig, int effectTime, GameObject startEffect, GameObject endEffect)
 		{
 			this.rig = rig;
-			this.effectTime = effectTime;
 			effectTimeRemains = effectTime;
 			this.startEffect = startEffect;
 			this.endEffect = endEffect;
@@ -210,11 +257,11 @@ public class TeleportStationManager : MonoBehaviour
 		effectsIndex = (effectsIndex + 1) % 20;
 	}
 
-	public void FirstPersonTeleport(Vector3 targetPos, float targetRot, Vector3 targetSlop, GTZone teleportToZone, int effectTime)
+	public void FirstPersonTeleport(Vector3 targetPos, float targetRot, Vector3 targetSlop, GTZone teleportToZone, GorillaFriendCollider sourceFriendCollider, GorillaFriendCollider destinationFriendCollider, GorillaNetworkJoinTrigger destinationJoinTrigger, int effectTime)
 	{
 		if (firstPersonTPort == null)
 		{
-			firstPersonTPort = new FPTPort(targetPos, targetRot, targetSlop, teleportToZone, effectTime, firstPersonEffect);
+			firstPersonTPort = new FPTPort(targetPos, targetRot, targetSlop, teleportToZone, sourceFriendCollider, destinationFriendCollider, destinationJoinTrigger, effectTime, firstPersonEffect);
 		}
 	}
 }

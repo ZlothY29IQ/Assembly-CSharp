@@ -79,6 +79,8 @@ public class GorillaIK : MonoBehaviour
 
 	public float biasDistance = 0.2f;
 
+	private VRRigAnchorOverrides anchorOverrides;
+
 	private bool hasLeftOverride;
 
 	private Vector3 leftOverrideWorldPos;
@@ -103,6 +105,7 @@ public class GorillaIK : MonoBehaviour
 	{
 		bodyInitialRot = bodyBone.localRotation;
 		myRig = GetComponent<VRRig>();
+		anchorOverrides = GetComponentInChildren<VRRigAnchorOverrides>(includeInactive: true);
 		ResetIKData();
 	}
 
@@ -185,6 +188,10 @@ public class GorillaIK : MonoBehaviour
 		{
 			skeleton.gameObject.SetActive(subscriptionSettingBool);
 			usingUpdatedIK = subscriptionSettingBool;
+			if (anchorOverrides != null)
+			{
+				anchorOverrides.EnableChestBodyTracking(subscriptionSettingBool);
+			}
 			if (!subscriptionSettingBool)
 			{
 				ResetIKData();

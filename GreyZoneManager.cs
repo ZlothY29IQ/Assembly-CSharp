@@ -77,6 +77,8 @@ public class GreyZoneManager : MonoBehaviourPun, IPunObservable, IInRoomCallback
 
 	private HashSet<int> invalidSummoners = new HashSet<int>();
 
+	private List<GreyZoneAreaEnable> m_areas = new List<GreyZoneAreaEnable>();
+
 	private Coroutine audioFadeCoroutine;
 
 	private Player[] roomPlayerList;
@@ -167,6 +169,19 @@ public class GreyZoneManager : MonoBehaviourPun, IPunObservable, IInRoomCallback
 		{
 			moonController = null;
 		}
+	}
+
+	public void RegisterArea(GreyZoneAreaEnable area)
+	{
+		if (!m_areas.Contains(area))
+		{
+			m_areas.Add(area);
+		}
+	}
+
+	public void UnRegisterArea(GreyZoneAreaEnable area)
+	{
+		m_areas.Remove(area);
 	}
 
 	public void ActivateGreyZoneAuthority()
@@ -540,8 +555,12 @@ public class GreyZoneManager : MonoBehaviourPun, IPunObservable, IInRoomCallback
 			stream.SendNext(gravityFactorOptionSelection);
 			stream.SendNext(summoningProgress);
 		}
-		else if (stream.IsReading && info.Sender.IsMasterClient)
+		else
 		{
+			if (!stream.IsReading || !info.Sender.IsMasterClient)
+			{
+				return;
+			}
 			bool flag = greyZoneActive;
 			greyZoneActive = (bool)stream.ReceiveNext();
 			greyZoneActivationTime = ((double)stream.ReceiveNext()).GetFinite();
@@ -552,7 +571,14 @@ public class GreyZoneManager : MonoBehaviourPun, IPunObservable, IInRoomCallback
 			UpdateSummonerVisuals();
 			if (greyZoneActive && !flag)
 			{
-				ActivateGreyZoneLocal();
+				if (m_areas.Count > 0)
+				{
+					ActivateGreyZoneLocal();
+				}
+				else
+				{
+					greyZoneActive = false;
+				}
 			}
 			else if (!greyZoneActive && flag)
 			{

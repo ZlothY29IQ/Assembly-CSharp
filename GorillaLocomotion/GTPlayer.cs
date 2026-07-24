@@ -1432,6 +1432,28 @@ public class GTPlayer : MonoBehaviour
 		teleportToTrain = enable;
 	}
 
+	public void TeleportCleanup()
+	{
+		ClearHandHolds();
+		leftHand.OnTeleport();
+		rightHand.OnTeleport();
+		lastHeadPosition = headCollider.transform.position;
+		lastOpenHeadPosition = lastHeadPosition;
+		lastPosition = base.transform.position;
+		for (int i = 0; i < 12; i++)
+		{
+			if (stiltStates[i].isActive)
+			{
+				stiltStates[i].OnTeleport();
+			}
+		}
+		Physics.SyncTransforms();
+		GorillaTagger.Instance.offlineVRRig.transform.position = lastPosition;
+		GorillaTagger.Instance.offlineVRRig.leftHandLink.BreakLink();
+		GorillaTagger.Instance.offlineVRRig.rightHandLink.BreakLink();
+		ForceRigidBodySync();
+	}
+
 	public void TeleportTo(Vector3 position, Quaternion rotation, bool keepVelocity = false, bool center = false)
 	{
 		if (center)

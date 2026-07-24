@@ -1,4 +1,5 @@
 using System;
+using GorillaExtensions;
 using GorillaLocomotion.Climbing;
 using GorillaTag.Gravity;
 using UnityEngine;
@@ -77,17 +78,9 @@ public class GTPlayerTransform : MonkeGravityController
 		}
 	}
 
-	public static void RotateToForward(in Vector3 targetForward)
-	{
-		if (!(targetForward == Forward))
-		{
-			RotateFromToDirection(Forward, in targetForward);
-		}
-	}
-
 	public static void RotateFromToDirection(in Vector3 currentDir, in Vector3 targetDir)
 	{
-		Quaternion currentRotation = k_transform.rotation;
+		Quaternion currentRotation = k_rigidBody.rotation;
 		SetRotation(Quaternion.FromToRotation(currentDir, targetDir) * currentRotation, in currentRotation);
 	}
 
@@ -99,7 +92,7 @@ public class GTPlayerTransform : MonkeGravityController
 
 	public static void SetRotation(in Quaternion targetRotation)
 	{
-		SetRotation(in targetRotation, k_transform.rotation);
+		SetRotation(in targetRotation, k_rigidBody.rotation);
 	}
 
 	private static void SetRotation(in Quaternion newRotation, in Quaternion currentRotation)
@@ -138,8 +131,10 @@ public class GTPlayerTransform : MonkeGravityController
 			}
 		}
 		k_rotationPosOffsetChange -= vector;
-		k_rigidBody.position = pivotPoint - vector;
+		Vector3 position = pivotPoint - vector;
+		k_rigidBody.position = position;
 		k_rigidBody.rotation = newRotation;
+		k_transform.SetPositionAndRotation(position, newRotation);
 		Up = newRotation * Vector3.up;
 		Down = Up * -1f;
 		Forward = newRotation * Vector3.forward;
@@ -161,6 +156,51 @@ public class GTPlayerTransform : MonkeGravityController
 	public static void ResetRotationPositionOffset()
 	{
 		k_rotationPosOffsetChange = Vector3.zero;
+	}
+
+	public static void TeleportFromTo(Transform sourceNode, Transform targetNode, bool keepVelocity, bool centre, in Vector3? offset = null)
+	{
+		Vector3 position = k_rigidBody.position;
+		Quaternion currentRot = k_rigidBody.rotation;
+		Vector3 position2 = sourceNode.InverseTransformPoint(position);
+		Vector3 targetPos = targetNode.TransformPoint(position2);
+		if (offset.HasValue)
+		{
+			targetPos += offset.Value;
+		}
+		Quaternion localRotation = sourceNode.InverseTransformRotation(currentRot);
+		TeleportTo(in targetPos, targetNode.TransformRotation(localRotation), in currentRot, keepVelocity, centre);
+	}
+
+	public static void TeleportTo(in Vector3 targetPos, in Quaternion targetRot, bool keepVelocity, bool centre)
+	{
+		TeleportTo(in targetPos, in targetRot, k_rigidBody.rotation, keepVelocity, centre);
+	}
+
+	private static void TeleportTo(in Vector3 targetPos, in Quaternion targetRot, in Quaternion currentRot, bool keepVelocity, bool centre)
+	{
+		Vector3 position = targetPos;
+		if (centre)
+		{
+			Vector3 position2 = k_rigidBody.position;
+			Vector3 vector = k_playerInstance.mainCamera.transform.position - position2;
+			position -= vector;
+		}
+		k_rigidBody.isKinematic = true;
+		k_rigidBody.position = position;
+		k_transform.position = position;
+		SetRotation(in targetRot, in currentRot);
+		k_rigidBody.isKinematic = false;
+		if (keepVelocity)
+		{
+			Vector3 linearVelocity = k_rigidBody.linearVelocity;
+			k_rigidBody.linearVelocity = targetRot * Quaternion.Inverse(currentRot) * linearVelocity;
+		}
+		else
+		{
+			k_rigidBody.linearVelocity = Vector3.zero;
+		}
+		k_playerInstance.TeleportCleanup();
 	}
 
 	protected override void Awake()

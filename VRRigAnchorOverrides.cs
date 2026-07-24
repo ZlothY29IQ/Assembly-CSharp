@@ -17,6 +17,11 @@ public class VRRigAnchorOverrides : MonoBehaviour
 	public Transform chestDefaultTransform;
 
 	[SerializeField]
+	private Transform chestBodyTrackingOffset;
+
+	private Vector3 chestDefaultLocalPos;
+
+	[SerializeField]
 	public Transform huntComputer;
 
 	[SerializeField]
@@ -100,9 +105,15 @@ public class VRRigAnchorOverrides : MonoBehaviour
 		}
 		int num = MapPositionToIndex(TransferrableObject.PositionState.OnChest);
 		overrideAnchors[num] = chestDefaultTransform;
+		chestDefaultLocalPos = chestDefaultTransform.localPosition;
 		huntDefaultTransform = huntComputer;
 		builderResizeButtonDefaultTransform = builderResizeButton;
 		activeAntiClippingOffsets = default(CosmeticAnchorAntiIntersectOffsets);
+	}
+
+	public void EnableChestBodyTracking(bool enabled)
+	{
+		chestDefaultTransform.localPosition = ((enabled && chestBodyTrackingOffset != null) ? chestBodyTrackingOffset.localPosition : chestDefaultLocalPos);
 	}
 
 	private void OnEnable()
@@ -337,19 +348,34 @@ public class VRRigAnchorOverrides : MonoBehaviour
 		UpdateName();
 	}
 
-	private void UpdateName()
+	private static bool TryGetLargestOffset(CosmeticAnchorAntiClipEntry[] entries, out XformOffset best)
 	{
-		for (int i = 0; i < nameOffsets.Length; i++)
+		best = XformOffset.Identity;
+		float num = -1f;
+		for (int i = 0; i < entries.Length; i++)
 		{
-			if (nameOffsets[i].enabled)
+			if (entries[i].enabled)
 			{
-				nameTransform.parent = nameDefaultAnchor;
-				nameTransform.localRotation = nameOffsets[i].offset.rot;
-				nameTransform.localPosition = nameOffsets[i].offset.pos;
-				return;
+				float sqrMagnitude = entries[i].offset.pos.sqrMagnitude;
+				if (sqrMagnitude > num)
+				{
+					num = sqrMagnitude;
+					best = entries[i].offset;
+				}
 			}
 		}
-		if ((bool)nameDefaultAnchor)
+		return num >= 0f;
+	}
+
+	private void UpdateName()
+	{
+		if (TryGetLargestOffset(nameOffsets, out var best))
+		{
+			nameTransform.parent = nameDefaultAnchor;
+			nameTransform.localRotation = best.rot;
+			nameTransform.localPosition = best.pos;
+		}
+		else if ((bool)nameDefaultAnchor)
 		{
 			nameTransform.parent = nameDefaultAnchor;
 			nameTransform.localRotation = Quaternion.identity;
@@ -420,16 +446,13 @@ public class VRRigAnchorOverrides : MonoBehaviour
 		{
 			return;
 		}
-		for (int i = 0; i < badgeOffsets.Length; i++)
+		if (TryGetLargestOffset(badgeOffsets, out var best))
 		{
-			if (badgeOffsets[i].enabled)
-			{
-				Matrix4x4 matrix4x = Matrix4x4.TRS(badgeDefaultPos, badgeDefaultRot, currentBadgeTransform.localScale);
-				Matrix4x4 matrix = Matrix4x4.TRS(badgeOffsets[i].offset.pos, badgeOffsets[i].offset.rot, Vector3.one) * matrix4x;
-				currentBadgeTransform.localRotation = matrix.rotation;
-				currentBadgeTransform.localPosition = matrix.Position();
-				return;
-			}
+			Matrix4x4 matrix4x = Matrix4x4.TRS(badgeDefaultPos, badgeDefaultRot, currentBadgeTransform.localScale);
+			Matrix4x4 matrix = Matrix4x4.TRS(best.pos, best.rot, Vector3.one) * matrix4x;
+			currentBadgeTransform.localRotation = matrix.rotation;
+			currentBadgeTransform.localPosition = matrix.Position();
+			return;
 		}
 		GameObject[] array = badgeAnchors;
 		foreach (GameObject gameObject in array)

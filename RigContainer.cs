@@ -275,17 +275,20 @@ public class RigContainer : MonoBehaviour
 				bool playerTutorialCompletion = NetworkSystem.Instance.GetPlayerTutorialCompletion(owningPlayerID);
 				GorillaGameManager.instance.NewVRRig(netView.Owner, netView.ViewID, playerTutorialCompletion);
 			}
-			_ = vrrig.OwningNetPlayer.IsLocal;
-			if (!vrrig.isOfflineVRRig && vrrig.InitializedCosmetics)
+			if (!vrrig.isOfflineVRRig)
 			{
-				netView.SendRPC("RPC_RequestCosmetics", netView.Owner);
+				if (vrrig.InitializedCosmetics)
+				{
+					netView.SendRPC("RPC_RequestCosmetics", netView.Owner);
+				}
+				StartCoroutine(QueueAutomute(Creator));
 			}
 		}
-		Initialized = true;
-		if (!vrrig.isOfflineVRRig)
+		else if (!vrrig.isOfflineVRRig)
 		{
-			StartCoroutine(QueueAutomute(Creator));
+			RefreshVoiceChat();
 		}
+		Initialized = true;
 	}
 
 	private static IEnumerator QueueAutomute(NetPlayer player)

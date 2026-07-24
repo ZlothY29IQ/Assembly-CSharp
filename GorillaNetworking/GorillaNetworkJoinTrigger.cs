@@ -107,7 +107,7 @@ public class GorillaNetworkJoinTrigger : GorillaTriggerBox
 			{
 				ui.SetState(JoinTriggerVisualState.AlreadyInRoom, GetActiveNetworkZone, GetDesiredNetworkZone, GetActiveGameType, GetDesiredGameTypeLocalized);
 			}
-			else if (FriendshipGroupDetection.Instance.IsInParty)
+			else if (FriendshipGroupDetection.Instance.IsInParty && (!ui.HasFriendCollider || FriendshipGroupDetection.Instance.IsPartyWithinCollider(ui.FriendJoinCollider, checkLocal: true)))
 			{
 				ui.SetState(CanPartyJoin() ? JoinTriggerVisualState.LeaveRoomAndPartyJoin : JoinTriggerVisualState.AbandonPartyAndSoloJoin, GetActiveNetworkZone, GetDesiredNetworkZone, GetActiveGameType, GetDesiredGameTypeLocalized);
 			}

@@ -1,7 +1,7 @@
+using GorillaNetworking;
 using UnityEngine;
-using UnityEngine.Events;
 
-public class TeleportStation : Tappable
+public class TeleportStation : MonoBehaviour
 {
 	[SerializeField]
 	private Transform target;
@@ -19,48 +19,65 @@ public class TeleportStation : Tappable
 	private GTZone teleportToZone;
 
 	[SerializeField]
-	private GameObject firstPersonEffect;
+	private XSceneRef sourceFriendColliderRef;
 
 	[SerializeField]
-	private GameObject thirdPersonEffectStart;
+	private XSceneRef destinationFriendColliderRef;
 
 	[SerializeField]
-	private GameObject thirdPersonEffectEnd;
+	private XSceneRef destinationJoinTriggerRef;
+
+	private GorillaFriendCollider sourceFriendCollider;
+
+	private GorillaFriendCollider destinationFriendCollider;
+
+	private GorillaNetworkJoinTrigger destinationJoinTrigger;
 
 	[SerializeField]
 	private int effectTime;
 
-	[SerializeField]
-	private UnityEvent on3PTeleport;
-
-	[SerializeField]
-	private UnityEvent on1PTeleport;
-
 	private void Start()
 	{
-		firstPersonEffect.SetActive(value: false);
-		thirdPersonEffectStart.SetActive(value: false);
-		thirdPersonEffectEnd.SetActive(value: false);
-		TeleportStationManager.Initialize(firstPersonEffect, thirdPersonEffectStart, thirdPersonEffectEnd);
+		if (!sourceFriendColliderRef.TryResolve(out sourceFriendCollider))
+		{
+			Debug.LogError($"Unable to resolve source friend collider: {sourceFriendColliderRef}!");
+		}
+		if (!destinationFriendColliderRef.TryResolve(out destinationFriendCollider))
+		{
+			Debug.LogError($"Unable to resolve source friend collider: {destinationFriendCollider}!");
+		}
+		if (!destinationJoinTriggerRef.TryResolve(out destinationJoinTrigger))
+		{
+			Debug.LogError($"Unable to resolve source friend collider: {destinationJoinTriggerRef}!");
+		}
 	}
 
-	public override void OnTapLocal(float tapStrength, float tapTime, PhotonMessageInfoWrapped sender)
+	public void Attempt1PTeleport(PhotonMessageInfoWrapped sender)
 	{
-		RigContainer playerRig;
-		if (sender.Sender == null || VRRig.LocalRig.Creator == sender.Sender)
-		{
-			TeleportStationManager.Instance.FirstPersonTeleport(targetPos, targetRot, targetSlop, teleportToZone, effectTime);
-			on1PTeleport?.Invoke();
-		}
-		else if (VRRigCache.Instance.TryGetVrrig(sender.Sender, out playerRig) && FXSystem.CheckCallSpam(playerRig.Rig.fxSettings, 13, sender.SentServerTime))
+		TeleportStationManager.Instance.FirstPersonTeleport(targetPos, targetRot, targetSlop, teleportToZone, sourceFriendCollider, destinationFriendCollider, destinationJoinTrigger, effectTime);
+	}
+
+	public void Attempt3PTeleport(PhotonMessageInfoWrapped sender)
+	{
+		if (VRRigCache.Instance.TryGetVrrig(sender.Sender, out var playerRig))
 		{
 			TeleportStationManager.Instance.ThirdPersonTeleport(playerRig.Rig, effectTime);
-			on3PTeleport?.Invoke();
 		}
 	}
 
-	public void Test3pTeleport()
+	private int LowestActorNumberInFriendCollider()
 	{
-		TeleportStationManager.Instance.ThirdPersonTeleport(VRRig.LocalRig, effectTime);
+		sourceFriendCollider.RefreshPlayersWithinBounds();
+		destinationFriendCollider.RefreshPlayersWithinBounds();
+		int num = int.MaxValue;
+		NetPlayer[] allNetPlayers = NetworkSystem.Instance.AllNetPlayers;
+		for (int i = 0; i < allNetPlayers.Length; i++)
+		{
+			if (num > allNetPlayers[i].ActorNumber && (sourceFriendCollider.playerIDsCurrentlyTouching.Contains(allNetPlayers[i].UserId) || destinationFriendCollider.playerIDsCurrentlyTouching.Contains(allNetPlayers[i].UserId)))
+			{
+				num = allNetPlayers[i].ActorNumber;
+			}
+		}
+		return num;
 	}
 }

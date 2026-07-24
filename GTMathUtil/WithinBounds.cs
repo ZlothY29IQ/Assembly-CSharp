@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace GTMathUtil;
 
-internal class WithinBounds
+public class WithinBounds
 {
 	public static bool PointWithinBoxColliderBounds(Vector3 point, BoxCollider boxCollider)
 	{

@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using GT_CustomMapSupportRuntime;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -246,5 +248,26 @@ public class SizeChanger : GorillaTriggerBox
 		}
 		centerPoint = Vector3.zero;
 		return false;
+	}
+
+	public void CopyProperties(SizeChangerSettings settings)
+	{
+		myType = settings.type switch
+		{
+			SizeChangerSettings.ChangerType.Static => ChangerType.Static, 
+			SizeChangerSettings.ChangerType.Continuous => ChangerType.Continuous, 
+			SizeChangerSettings.ChangerType.Radius => ChangerType.Radius, 
+			_ => throw new Exception($"Unhandled SizeChangerSettings.ChangerType {settings.type}"), 
+		};
+		staticEasing = settings.staticEasing;
+		maxScale = settings.maxScale;
+		minScale = settings.minScale;
+		startPos = settings.startPos;
+		endPos = settings.endPos;
+		scaleAwayFromPoint = settings.scaleAwayFromPoint;
+		alwaysControlWhenEntered = settings.alwaysControlWhenEntered;
+		priority = settings.priority;
+		startRadius = settings.startRadius;
+		endRadius = settings.endRadius;
 	}
 }

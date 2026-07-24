@@ -338,6 +338,7 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		typeof(TorusZoneSettings),
 		typeof(PlanetZoneSettings),
 		typeof(CubicPlanetZoneSettings),
+		typeof(SizeChangerSettings),
 		typeof(ProBuilderMesh),
 		typeof(TMP_Text),
 		typeof(TextMeshPro),
@@ -1602,6 +1603,12 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		{
 			gameObject.AddComponent<SurfaceMover>().CopySettings(component5);
 			UnityEngine.Object.Destroy(component5);
+		}
+		SizeChangerSettings component6 = gameObject.GetComponent<SizeChangerSettings>();
+		if ((object)component6 != null)
+		{
+			gameObject.AddComponent<SizeChanger>().CopyProperties(component6);
+			UnityEngine.Object.Destroy(component6);
 		}
 		ReplaceGravityDataOnlyScripts(gameObject);
 	}

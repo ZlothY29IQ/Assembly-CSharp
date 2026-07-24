@@ -109,10 +109,6 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 
 	private int lastLowestActorNr;
 
-	private RaycastHit[] correctionRaycastHit = new RaycastHit[1];
-
-	public LayerMask correctionRaycastMask;
-
 	private float waitForZoneLoadFallbackTimer;
 
 	public float waitForZoneLoadFallbackMaxTime = 5f;
@@ -293,20 +289,25 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 		LeadElevatorJoin(elevatorByLocation[currentLocation].friendCollider, elevatorByLocation[destination].friendCollider, elevatorByLocation[destination].joinTrigger);
 	}
 
+	public static void SetupFriendGroup(GorillaFriendCollider sourceFriendCollider, GorillaFriendCollider destinationFriendCollider)
+	{
+		PhotonNetworkController.Instance.FriendIDList = new List<string>(sourceFriendCollider.playerIDsCurrentlyTouching);
+		PhotonNetworkController.Instance.FriendIDList.AddRange(destinationFriendCollider.playerIDsCurrentlyTouching);
+		foreach (string friendID in PhotonNetworkController.Instance.FriendIDList)
+		{
+			_ = friendID;
+		}
+		PhotonNetworkController.Instance.shuffler = UnityEngine.Random.Range(0, 99).ToString().PadLeft(2, '0') + UnityEngine.Random.Range(0, 99999999).ToString().PadLeft(8, '0');
+		PhotonNetworkController.Instance.keyStr = UnityEngine.Random.Range(0, 99999999).ToString().PadLeft(8, '0');
+	}
+
 	public static void LeadElevatorJoin(GorillaFriendCollider sourceFriendCollider, GorillaFriendCollider destinationFriendCollider, GorillaNetworkJoinTrigger destinationJoinTrigger)
 	{
 		if (NetworkSystem.Instance.InRoom)
 		{
 			sourceFriendCollider.RefreshPlayersWithinBounds();
 			destinationFriendCollider.RefreshPlayersWithinBounds();
-			PhotonNetworkController.Instance.FriendIDList = new List<string>(sourceFriendCollider.playerIDsCurrentlyTouching);
-			PhotonNetworkController.Instance.FriendIDList.AddRange(destinationFriendCollider.playerIDsCurrentlyTouching);
-			foreach (string friendID in PhotonNetworkController.Instance.FriendIDList)
-			{
-				_ = friendID;
-			}
-			PhotonNetworkController.Instance.shuffler = UnityEngine.Random.Range(0, 99).ToString().PadLeft(2, '0') + UnityEngine.Random.Range(0, 99999999).ToString().PadLeft(8, '0');
-			PhotonNetworkController.Instance.keyStr = UnityEngine.Random.Range(0, 99999999).ToString().PadLeft(8, '0');
+			SetupFriendGroup(sourceFriendCollider, destinationFriendCollider);
 			RoomSystem.SendElevatorFollowCommand(PhotonNetworkController.Instance.shuffler, PhotonNetworkController.Instance.keyStr, sourceFriendCollider, destinationFriendCollider);
 			PhotonNetwork.SendAllOutgoingCommands();
 			PhotonNetworkController.Instance.AttemptToJoinPublicRoom(destinationJoinTrigger, JoinType.JoinWithElevator);
@@ -322,14 +323,7 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 		GorillaComputer.instance.UpdateScreen();
 		if (NetworkSystem.Instance.InRoom)
 		{
-			PhotonNetworkController.Instance.FriendIDList = new List<string>(sourceFriendCollider.playerIDsCurrentlyTouching);
-			PhotonNetworkController.Instance.FriendIDList.AddRange(destinationFriendCollider.playerIDsCurrentlyTouching);
-			foreach (string friendID in PhotonNetworkController.Instance.FriendIDList)
-			{
-				_ = friendID;
-			}
-			PhotonNetworkController.Instance.shuffler = UnityEngine.Random.Range(0, 99).ToString().PadLeft(2, '0') + UnityEngine.Random.Range(0, 99999999).ToString().PadLeft(8, '0');
-			PhotonNetworkController.Instance.keyStr = UnityEngine.Random.Range(0, 99999999).ToString().PadLeft(8, '0');
+			SetupFriendGroup(sourceFriendCollider, destinationFriendCollider);
 			RoomSystem.SendShuttleFollowCommand(PhotonNetworkController.Instance.shuffler, PhotonNetworkController.Instance.keyStr, sourceFriendCollider, destinationFriendCollider);
 			PhotonNetwork.SendAllOutgoingCommands();
 			List<(string, string)> additionalCustomProperties = null;
@@ -804,28 +798,16 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 			elevatorByLocation[destination].videoDisplay.SetActive(value: true);
 			DestinationVideoPlayerAudioSource.transform.position = elevatorByLocation[destination].videoAudio.transform.position;
 		}
-		float num = gRElevator2.transform.rotation.eulerAngles.y - gRElevator.transform.rotation.eulerAngles.y;
 		GTPlayer instance = GTPlayer.Instance;
-		VRRig localRig = VRRig.LocalRig;
-		Vector3 vector = localRig.transform.position - instance.transform.position;
-		Vector3 vector2 = instance.headCollider.transform.position - instance.transform.position;
-		Vector3 vector3 = gRElevator2.transform.TransformPoint(gRElevator.transform.InverseTransformPoint(instance.transform.position));
-		Vector3 vector4 = localRig.transform.position - gRElevator.transform.position;
-		vector4.x *= 0.8f;
-		vector4.z *= 0.8f;
-		vector3 = gRElevator2.transform.position + (Quaternion.Euler(0f, num, 0f) * vector4 - vector) + localRig.headConstraint.rotation * localRig.head.trackingPositionOffset;
-		Vector3 vector5 = Vector3.zero;
-		Vector3 vector6 = gRElevator2.transform.position + (Quaternion.Euler(0f, num, 0f) * vector4 - vector) + vector2 - gRElevator2.transform.position;
-		float magnitude = vector6.magnitude;
-		vector6 = vector6.normalized;
-		if (Physics.SphereCastNonAlloc(gRElevator2.transform.position, instance.headCollider.radius * 1.5f, vector6, correctionRaycastHit, magnitude * 1.05f, correctionRaycastMask) > 0)
+		Vector3 position = gRElevator.transform.InverseTransformPoint(instance.transform.position);
+		Vector3 position2 = gRElevator2.transform.TransformPoint(position);
+		Quaternion quaternion = Quaternion.Inverse(gRElevator.transform.rotation) * instance.transform.rotation;
+		Quaternion rotation = gRElevator2.transform.rotation * quaternion;
+		if (position.sqrMagnitude > 1E-08f)
 		{
-			vector5 = vector6 * instance.headCollider.radius * -1.5f;
+			position2 -= gRElevator2.transform.TransformDirection(position.normalized) * 0.001f;
 		}
-		instance.TeleportTo(vector3 + vector5, instance.transform.rotation);
-		instance.turnParent.transform.RotateAround(instance.headCollider.transform.position, base.transform.up, num);
-		localRig.transform.position = instance.transform.position + vector;
-		instance.InitializeValues();
+		instance.TeleportTo(position2, rotation);
 		justTeleported = true;
 		instance.disableMovement = true;
 		GorillaComputer.instance.allowedMapsToJoin = elevatorByLocation[destination].joinTrigger.myCollider.myAllowedMapsToJoin;

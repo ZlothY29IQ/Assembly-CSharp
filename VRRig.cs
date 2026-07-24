@@ -4252,9 +4252,10 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 	{
 		for (int i = 0; i < deactivatedRenderers.Count; i++)
 		{
-			if (deactivatedRenderers[i] != null)
+			Renderer renderer = deactivatedRenderers[i];
+			if (renderer.IsNotNull())
 			{
-				deactivatedRenderers[i].forceRenderingOff = false;
+				renderer.forceRenderingOff = false;
 			}
 		}
 		deactivatedRenderers.Clear();

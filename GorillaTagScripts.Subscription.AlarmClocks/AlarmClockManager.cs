@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using GorillaLocomotion;
 using GorillaNetworking;
 using JetBrains.Annotations;
@@ -17,6 +16,8 @@ public sealed class AlarmClockManager : MonoBehaviour
 	public class AlarmClockData
 	{
 		public string Key;
+
+		public bool VIMOnly;
 
 		public GTZone[] Zones;
 
@@ -48,6 +49,8 @@ public sealed class AlarmClockManager : MonoBehaviour
 	[CanBeNull]
 	private AlarmClock _activeClock;
 
+	private Dictionary<string, object> _telemetryDict;
+
 	private float _trackingEndTime;
 
 	public static AlarmClockManager Instance { get; private set; }
@@ -74,11 +77,12 @@ public sealed class AlarmClockManager : MonoBehaviour
 		ActiveKey = PlayerPrefs.GetString("AlarmClock");
 		if (!string.IsNullOrEmpty(ActiveKey))
 		{
-			AlarmClockData alarmClockData = _clockData.FirstOrDefault((AlarmClockData c) => c.Key == ActiveKey);
-			if (alarmClockData != null && alarmClockData.SpawnPoint != _defaultSpawn)
+			AlarmClockData clockData = GetClockData(ActiveKey);
+			if (clockData != null && clockData.SpawnPoint != _defaultSpawn)
 			{
-				_activeClockData = alarmClockData;
-				_teleportTarget = alarmClockData.SpawnPoint;
+				_activeClockData = clockData;
+				_teleportTarget = clockData.SpawnPoint;
+				SendTelemetryEvent("wake_begin", ActiveKey);
 				StartCoroutine(PerformWakeUpSequence());
 				return;
 			}
@@ -104,7 +108,7 @@ public sealed class AlarmClockManager : MonoBehaviour
 			yield return null;
 		}
 		PersistLog.Log($"[AC][F{Time.frameCount}] Game systems loaded");
-		if (PlayFabAuthenticator.instance != null && SubscriptionManager.IsLocalSubscribed())
+		if (!_activeClockData.VIMOnly || ((bool)PlayFabAuthenticator.instance && SubscriptionManager.IsLocalSubscribed()))
 		{
 			RequestLoadZones();
 			yield return null;
@@ -149,6 +153,7 @@ public sealed class AlarmClockManager : MonoBehaviour
 			GTPlayer.Instance.disableMovement = false;
 			PrivateUIRoom.StopForcedOverlay(PrivateUIRoom.OverlaySource.AlarmClock);
 			OnWakeUp?.Invoke();
+			SendTelemetryEvent("wake_complete", ActiveKey);
 		}
 		else
 		{
@@ -160,7 +165,8 @@ public sealed class AlarmClockManager : MonoBehaviour
 			{
 				PersistLog.Log($"[AC][F{Time.frameCount}] AlarmClockManager failed wake up because login failed.");
 			}
-			PersistLog.Log("No subscription.  Clearing clock data.");
+			SendTelemetryEvent("wake_abort", ActiveKey);
+			PersistLog.Log("VIM Only destination [" + ActiveKey + "] and no subscription.  Clearing clock data.");
 			PlayerPrefs.SetString("AlarmClock", "");
 			StartCoroutine(ClearUnsubPlayerData());
 		}
@@ -181,6 +187,7 @@ public sealed class AlarmClockManager : MonoBehaviour
 			_activeClock?.OnDeactivate?.Invoke();
 			_activeClock = null;
 			ActiveKey = "";
+			SendTelemetryEvent("unset", clock.Key);
 		}
 		else
 		{
@@ -188,6 +195,7 @@ public sealed class AlarmClockManager : MonoBehaviour
 			_activeClock = clock;
 			_activeClock?.OnActivate?.Invoke();
 			ActiveKey = clock.Key;
+			SendTelemetryEvent("set", clock.Key);
 		}
 		PlayerPrefs.SetString("AlarmClock", ActiveKey);
 		Debug.Log("Alarm clock data set to \"" + ActiveKey + "\".");
@@ -199,6 +207,17 @@ public sealed class AlarmClockManager : MonoBehaviour
 		{
 			Instance = null;
 		}
+	}
+
+	private void SendTelemetryEvent(string eventType, string key)
+	{
+		if (_telemetryDict == null)
+		{
+			_telemetryDict = new Dictionary<string, object>();
+		}
+		_telemetryDict["event_type"] = eventType;
+		_telemetryDict["clock_key"] = key;
+		GorillaTelemetry.EnqueueTelemetryEvent("alarmclock_event", _telemetryDict);
 	}
 
 	[UsedImplicitly]
@@ -264,6 +283,28 @@ public sealed class AlarmClockManager : MonoBehaviour
 	{
 		PersistLog.Log(string.Format("[AC][F{0}] Requesting zones: {1}", Time.frameCount, string.Join(", ", _activeClockData.Zones)));
 		ZoneManagement.SetActiveZones(_activeClockData.Zones);
+	}
+
+	private AlarmClockData GetClockData(string key)
+	{
+		AlarmClockData[] clockData = _clockData;
+		foreach (AlarmClockData alarmClockData in clockData)
+		{
+			if (alarmClockData.Key == key)
+			{
+				return alarmClockData;
+			}
+		}
+		return null;
+	}
+
+	public static bool IsVIMOnly(string key)
+	{
+		if (!Instance)
+		{
+			return false;
+		}
+		return Instance.GetClockData(key)?.VIMOnly ?? false;
 	}
 
 	private void StartTracking()

@@ -47,6 +47,12 @@ public class VRRigCache : MonoBehaviour
 	[OnEnterPlay_Clear]
 	private static readonly List<VRRig> m_activeRigs = new List<VRRig>(20);
 
+	[OnEnterPlay_Clear]
+	private static readonly List<VRRig> m_allRigs = new List<VRRig>(21);
+
+	[OnEnterPlay_Clear]
+	private static readonly List<RigContainer> m_allRigContainers = new List<RigContainer>(21);
+
 	[OnEnterPlay_Set(false)]
 	private static bool _isBatchingRigActivations;
 
@@ -60,6 +66,10 @@ public class VRRigCache : MonoBehaviour
 	public static IReadOnlyList<RigContainer> ActiveRigContainers => m_activeRigContainers;
 
 	public static IReadOnlyList<VRRig> ActiveRigs => m_activeRigs;
+
+	public static IReadOnlyList<VRRig> AllRigs => m_allRigs;
+
+	public static IReadOnlyList<RigContainer> AllRigContainers => m_allRigContainers;
 
 	[field: OnEnterPlay_Set(false)]
 	public static bool isInitialized { get; private set; }
@@ -127,6 +137,10 @@ public class VRRigCache : MonoBehaviour
 		{
 			networkParent = base.transform;
 		}
+		m_allRigs.Add(localRig.Rig);
+		m_allRigContainers.Add(localRig);
+		m_activeRigContainers.Add(localRig);
+		m_activeRigs.Add(localRig.Rig);
 		for (int i = 0; i < rigAmount; i++)
 		{
 			RigContainer rigContainer = SpawnRig();
@@ -134,8 +148,6 @@ public class VRRigCache : MonoBehaviour
 			rigContainer.Rig.BuildInitialize();
 			rigContainer.Rig.transform.parent = null;
 		}
-		m_activeRigContainers.Add(localRig);
-		m_activeRigs.Add(localRig.Rig);
 		isInitialized = true;
 		VRRigCache.OnPostInitialize?.Invoke();
 		VRRigCache.OnPostSpawnRig?.Invoke();
@@ -147,7 +159,15 @@ public class VRRigCache : MonoBehaviour
 		{
 			rigTemplate.SetActive(value: false);
 		}
-		return UnityEngine.Object.Instantiate(rigTemplate, rigParent, worldPositionStays: false)?.GetComponent<RigContainer>();
+		RigContainer rigContainer = UnityEngine.Object.Instantiate(rigTemplate, rigParent, worldPositionStays: false)?.GetComponent<RigContainer>();
+		VRRig item = null;
+		if (rigContainer.IsNotNull())
+		{
+			item = rigContainer.Rig;
+		}
+		m_allRigs.Add(item);
+		m_allRigContainers.Add(rigContainer);
+		return rigContainer;
 	}
 
 	internal bool TryGetVrrig(Player targetPlayer, out RigContainer playerRig)

@@ -566,7 +566,7 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 
 	public bool internetFailure;
 
-	public string[] _allowedMapsToJoin;
+	private string[] _allowedMapsToJoin;
 
 	public bool limitOnlineScreens;
 
@@ -1160,7 +1160,7 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 	{
 		groupMapJoin = PlayerPrefs.GetString("groupMapJoin", "FOREST");
 		groupMapJoinIndex = PlayerPrefs.GetInt("groupMapJoinIndex", 0);
-		allowedMapsToJoin = friendJoinCollider.myAllowedMapsToJoin;
+		_allowedMapsToJoin = friendJoinCollider.myAllowedMapsToJoin;
 	}
 
 	private void InitializeTroopState()
@@ -1526,7 +1526,7 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 
 	private GorillaNetworkJoinTrigger GetSelectedMapJoinTrigger()
 	{
-		primaryTriggersByZone.TryGetValue(allowedMapsToJoin[Mathf.Min(allowedMapsToJoin.Length - 1, groupMapJoinIndex)], out var value);
+		primaryTriggersByZone.TryGetValue(_allowedMapsToJoin[Mathf.Min(_allowedMapsToJoin.Length - 1, groupMapJoinIndex)], out var value);
 		return value;
 	}
 
@@ -1551,7 +1551,7 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 	public void OnGroupJoinButtonPress(int mapJoinIndex, GorillaFriendCollider chosenFriendJoinCollider)
 	{
 		Debug.Log("On Group button press. Map:" + mapJoinIndex + " - collider: " + chosenFriendJoinCollider.name);
-		if (mapJoinIndex >= allowedMapsToJoin.Length)
+		if (mapJoinIndex >= _allowedMapsToJoin.Length)
 		{
 			roomNotAllowed = true;
 			currentStateIndex = 0;
@@ -1757,6 +1757,11 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 		case GorillaKeyboardBindings.option1:
 			if (FriendshipGroupDetection.Instance.IsInParty)
 			{
+				if (FriendshipGroupDetection.Instance.IsPartyWithinCollider(friendJoinCollider))
+				{
+					OnGroupJoinButtonPress(0, friendJoinCollider);
+					return;
+				}
 				FriendshipGroupDetection.Instance.LeaveParty();
 				DisconnectAfterDelay(1f);
 			}
@@ -1993,46 +1998,29 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 			switch (buttonPressed)
 			{
 			case GorillaKeyboardBindings.one:
-				groupMapJoin = "FOREST";
-				groupMapJoinIndex = 0;
-				PlayerPrefs.SetString("groupMapJoin", groupMapJoin);
-				PlayerPrefs.SetInt("groupMapJoinIndex", groupMapJoinIndex);
-				PlayerPrefs.Save();
+				SetGroupMapJoin("FOREST", 0);
 				break;
 			case GorillaKeyboardBindings.two:
-				groupMapJoin = "CAVE";
-				groupMapJoinIndex = 1;
-				PlayerPrefs.SetString("groupMapJoin", groupMapJoin);
-				PlayerPrefs.SetInt("groupMapJoinIndex", groupMapJoinIndex);
-				PlayerPrefs.Save();
+				SetGroupMapJoin("CANYON", 1);
 				break;
 			case GorillaKeyboardBindings.three:
-				groupMapJoin = "CANYON";
-				groupMapJoinIndex = 2;
-				PlayerPrefs.SetString("groupMapJoin", groupMapJoin);
-				PlayerPrefs.SetInt("groupMapJoinIndex", groupMapJoinIndex);
-				PlayerPrefs.Save();
-				break;
-			case GorillaKeyboardBindings.four:
-				groupMapJoin = "CITY";
-				groupMapJoinIndex = 3;
-				PlayerPrefs.SetString("groupMapJoin", groupMapJoin);
-				PlayerPrefs.SetInt("groupMapJoinIndex", groupMapJoinIndex);
-				PlayerPrefs.Save();
-				break;
-			case GorillaKeyboardBindings.five:
-				groupMapJoin = "CLOUDS";
-				groupMapJoinIndex = 4;
-				PlayerPrefs.SetString("groupMapJoin", groupMapJoin);
-				PlayerPrefs.SetInt("groupMapJoinIndex", groupMapJoinIndex);
-				PlayerPrefs.Save();
+				SetGroupMapJoin("CITY", 2);
 				break;
 			case GorillaKeyboardBindings.enter:
-				OnGroupJoinButtonPress(Mathf.Min(allowedMapsToJoin.Length - 1, groupMapJoinIndex), friendJoinCollider);
+				OnGroupJoinButtonPress(Mathf.Min(_allowedMapsToJoin.Length - 1, groupMapJoinIndex), friendJoinCollider);
 				break;
 			}
 			roomFull = false;
 		}
+	}
+
+	private void SetGroupMapJoin(string groupMap, int groupMapIndex)
+	{
+		groupMapJoin = groupMap;
+		groupMapJoinIndex = groupMapIndex;
+		PlayerPrefs.SetString("groupMapJoin", groupMapJoin);
+		PlayerPrefs.SetInt("groupMapJoinIndex", groupMapJoinIndex);
+		PlayerPrefs.Save();
 	}
 
 	private void ProcessTroopState(GorillaKeyboardBindings buttonPressed)
@@ -2592,11 +2580,11 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 		}
 		string text = "";
 		string result = "";
-		string text2 = ((allowedMapsToJoin.Length > 1) ? groupMapJoin : allowedMapsToJoin[0].ToUpper());
+		string text2 = ((_allowedMapsToJoin.Length > 1) ? groupMapJoin : _allowedMapsToJoin[0].ToUpper());
 		string text3 = "";
-		if (allowedMapsToJoin.Length > 1)
+		if (_allowedMapsToJoin.Length > 1)
 		{
-			text = "\n\nUSE NUMBER KEYS TO SELECT DESTINATION\n1: FOREST, 2: CAVE, 3: CANYON, 4: CITY, 5: CLOUDS.";
+			text = "\n\nUSE NUMBER KEYS TO SELECT DESTINATION\n1: FOREST, 2: CANYON, 3: CITY.";
 			LocalisationManager.TryGetKeyForCurrentLocale("GROUP_SCREEN_DESTINATIONS", out result, text);
 			text3 = result;
 		}
@@ -2608,7 +2596,7 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 		{
 			GorillaNetworkJoinTrigger selectedMapJoinTrigger = GetSelectedMapJoinTrigger();
 			string text5 = "";
-			if (selectedMapJoinTrigger.CanPartyJoin())
+			if (!selectedMapJoinTrigger.CanPartyJoin())
 			{
 				text = "\n\n<color=red>CANNOT JOIN BECAUSE YOUR GROUP IS NOT HERE</color>";
 				LocalisationManager.TryGetKeyForCurrentLocale("GROUP_SCREEN_CANNOT_JOIN", out result, text);
@@ -3040,13 +3028,13 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 		{
 			if (FriendshipGroupDetection.Instance.IsPartyWithinCollider(friendJoinCollider))
 			{
-				text = "YOUR GROUP WILL TRAVEL WITH YOU.";
+				text = "\nYOUR GROUP WILL TRAVEL WITH YOU.";
 				LocalisationManager.TryGetKeyForCurrentLocale("ROOM_GROUP_TRAVEL", out result, text);
 				screenText.Append(result.TrailingSpace());
 			}
 			else
 			{
-				text = "<color=red>YOU WILL LEAVE YOUR PARTY UNLESS YOU GATHER THEM HERE FIRST!</color> ";
+				text = "\n<color=red>YOU WILL LEAVE YOUR PARTY UNLESS YOU GATHER THEM HERE FIRST!</color> ";
 				LocalisationManager.TryGetKeyForCurrentLocale("ROOM_PARTY_WARNING", out result, text);
 				screenText.Append(result);
 			}
@@ -3256,7 +3244,7 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 				{
 					CustomMapManager.UnloadMap(returnToSinglePlayerIfInPublic: false);
 				}
-				networkController.AttemptToJoinSpecificRoom(roomToJoin, FriendshipGroupDetection.Instance.IsInParty ? JoinType.JoinWithParty : JoinType.Solo);
+				networkController.AttemptToJoinSpecificRoom(roomToJoin, FriendshipGroupDetection.Instance.IsInParty ? JoinType.ForceJoinWithParty : JoinType.Solo);
 				break;
 			case NameCheckResult.Warning:
 				roomToJoin = "";

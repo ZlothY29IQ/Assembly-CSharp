@@ -53,6 +53,7 @@ public class MagicRingCosmetic : MonoBehaviour
 		emissiveAmount = Mathf.MoveTowards(emissiveAmount, (fadeState == FadeState.FadedIn) ? 1f : 0f, Time.deltaTime / fadeTime);
 		ringRenderer.GetPropertyBlock(materialPropertyBlock);
 		materialPropertyBlock.SetColor(ShaderProps._EmissionColor, new Color(defaultEmissiveColor.r, defaultEmissiveColor.g, defaultEmissiveColor.b, emissiveAmount));
+		materialPropertyBlock.SetFloat(ShaderProps._EmissiveAmount, emissiveAmount);
 		ringRenderer.SetPropertyBlock(materialPropertyBlock);
 	}
 }

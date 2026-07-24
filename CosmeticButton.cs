@@ -1,4 +1,5 @@
 using GorillaExtensions;
+using GorillaNetworking;
 using UnityEngine;
 
 public class CosmeticButton : GorillaPressableButton
@@ -78,5 +79,14 @@ public class CosmeticButton : GorillaPressableButton
 		{
 			myTmpText2.transform.position += posOffset;
 		}
+	}
+
+	protected override bool AllowNonSubscribedPress()
+	{
+		if (CosmeticsController.instance == null || string.IsNullOrEmpty(SetCosmeticItemID) || !CosmeticsController.instance.currentWornSet.HasItem(SetCosmeticItemID))
+		{
+			return false;
+		}
+		return true;
 	}
 }

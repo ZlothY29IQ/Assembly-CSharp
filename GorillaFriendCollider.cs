@@ -26,6 +26,11 @@ public class GorillaFriendCollider : MonoBehaviour, IGorillaSliceableSimple
 
 	public bool manualRefreshOnly;
 
+	[Tooltip("If true, then when the number of players in the collider changes call the zone callbacks.")]
+	public bool updatePartyZoneCallbacks;
+
+	private JoinTriggerUI ui;
+
 	private float _nextUpdateTime = -1f;
 
 	private static List<VRRig> playerRigs = new List<VRRig>();
@@ -34,7 +39,7 @@ public class GorillaFriendCollider : MonoBehaviour, IGorillaSliceableSimple
 
 	private static readonly ProfilerMarker profiler_SliceUpdate = new ProfilerMarker("GT/FriendCollider.SliceUpdate");
 
-	public void Awake()
+	private void Awake()
 	{
 		thisCapsule = GetComponent<CapsuleCollider>();
 		thisBox = GetComponent<BoxCollider>();
@@ -51,14 +56,24 @@ public class GorillaFriendCollider : MonoBehaviour, IGorillaSliceableSimple
 		VRRigCache.Instance.GetActiveRigs(playerRigs);
 	}
 
-	public void OnEnable()
+	private void OnEnable()
 	{
 		GorillaSlicerSimpleManager.RegisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
 	}
 
-	public void OnDisable()
+	private void OnDisable()
 	{
 		GorillaSlicerSimpleManager.UnregisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
+	}
+
+	public void RegisterUI(JoinTriggerUI joinUI)
+	{
+		ui = joinUI;
+	}
+
+	public void UnregisterUI()
+	{
+		ui = null;
 	}
 
 	private void AddUserID(in string userID)
@@ -82,22 +97,35 @@ public class GorillaFriendCollider : MonoBehaviour, IGorillaSliceableSimple
 
 	public void RefreshPlayersWithinBounds()
 	{
+		int count = playerIDsCurrentlyTouching.Count;
 		playerIDsCurrentlyTouching.Clear();
+		NetPlayer localPlayer = NetworkSystem.Instance.LocalPlayer;
+		if (localPlayer == null)
+		{
+			return;
+		}
+		bool flag = thisBox != null;
+		bool flag2 = thisCapsule != null;
 		for (int i = 0; i < playerRigs.Count; i++)
 		{
 			float y = playerRigs[i].bodyTransform.transform.position.y;
-			bool num = !applyCapsuleYLimits || (y >= capsuleColliderYLimits.x && y <= capsuleColliderYLimits.y);
-			bool flag = (thisBox != null && WithinBounds.PointWithinBoxColliderBounds(playerRigs[i].rigContainer.SpeakerHead.position, thisBox)) || (thisBox == null && thisCapsule != null && WithinBounds.PointWithinCapsuleColliderBounds(playerRigs[i].rigContainer.SpeakerHead.position, thisCapsule));
-			if (num && flag)
+			if ((!applyCapsuleYLimits || (y >= capsuleColliderYLimits.x && y <= capsuleColliderYLimits.y)) && ((flag && WithinBounds.PointWithinBoxColliderBounds(playerRigs[i].rigContainer.SpeakerHead.position, thisBox)) || (!flag && flag2 && WithinBounds.PointWithinCapsuleColliderBounds(playerRigs[i].rigContainer.SpeakerHead.position, thisCapsule))))
 			{
-				playerIDsCurrentlyTouching.Add(playerRigs[i].isLocal ? NetworkSystem.Instance.LocalPlayer.UserId : playerRigs[i].creator.UserId);
+				playerIDsCurrentlyTouching.Add(playerRigs[i].isLocal ? localPlayer.UserId : playerRigs[i].creator.UserId);
 			}
 		}
-		if (NetworkSystem.Instance.InRoom && NetworkSystem.Instance.LocalPlayer != null && playerIDsCurrentlyTouching.Contains(NetworkSystem.Instance.LocalPlayer.UserId) && GorillaComputer.instance.friendJoinCollider != this)
+		if (NetworkSystem.Instance.InRoom)
 		{
-			GorillaComputer.instance.allowedMapsToJoin = myAllowedMapsToJoin;
-			GorillaComputer.instance.friendJoinCollider = this;
-			GorillaComputer.instance.UpdateScreen();
+			if (playerIDsCurrentlyTouching.Contains(localPlayer.UserId) && GorillaComputer.instance.friendJoinCollider != this)
+			{
+				GorillaComputer.instance.allowedMapsToJoin = myAllowedMapsToJoin;
+				GorillaComputer.instance.friendJoinCollider = this;
+				GorillaComputer.instance.UpdateScreen();
+			}
+			if (updatePartyZoneCallbacks && count != playerIDsCurrentlyTouching.Count && ui != null)
+			{
+				ui.TriggerUpdateUI();
+			}
 		}
 	}
 }

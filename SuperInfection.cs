@@ -64,6 +64,10 @@ public class SuperInfection : MonoBehaviour, IGorillaSliceableSimple
 	{
 		get
 		{
+			if (siManager == null)
+			{
+				return false;
+			}
 			if (siManager.gameEntityManager.IsAuthority())
 			{
 				return siManager.gameEntityManager.IsZoneActive();
@@ -255,9 +259,9 @@ public class SuperInfection : MonoBehaviour, IGorillaSliceableSimple
 		}
 	}
 
-	public void Update()
+	private void UpdateResources()
 	{
-		if (!IsAuthorityAndActive)
+		if (!siManager.gameEntityManager.IsZoneActive())
 		{
 			return;
 		}
@@ -382,20 +386,28 @@ public class SuperInfection : MonoBehaviour, IGorillaSliceableSimple
 
 	public void SliceUpdate()
 	{
-		if (!siManager.gameEntityManager.IsAuthority())
+		if (siManager == null)
 		{
-			return;
+			siManager = SuperInfectionManager.GetSIManagerForZone(zone);
 		}
-		for (int num = activeGadgets.Count - 1; num >= 0; num--)
+		else
 		{
-			if (activeGadgets[num] == null)
+			if (!siManager.gameEntityManager.IsAuthority())
 			{
-				activeGadgets.RemoveAt(num);
+				return;
 			}
-			else if (activeGadgets[num].transform.position.y < resourceResetHeight)
+			for (int num = activeGadgets.Count - 1; num >= 0; num--)
 			{
-				siManager.gameEntityManager.RequestDestroyItem(activeGadgets[num].gameEntity.id);
+				if (activeGadgets[num] == null)
+				{
+					activeGadgets.RemoveAt(num);
+				}
+				else if (activeGadgets[num].transform.position.y < resourceResetHeight)
+				{
+					siManager.gameEntityManager.RequestDestroyItem(activeGadgets[num].gameEntity.id);
+				}
 			}
+			UpdateResources();
 		}
 	}
 

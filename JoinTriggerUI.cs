@@ -1,5 +1,4 @@
 using System;
-using GorillaExtensions;
 using GorillaNetworking;
 using TMPro;
 using UnityEngine;
@@ -11,7 +10,14 @@ public class JoinTriggerUI : MonoBehaviour
 
 	private GorillaNetworkJoinTrigger joinTrigger;
 
-	private bool joinTrigger_isRefResolved;
+	private bool joinTriggerResolved;
+
+	[SerializeField]
+	private XSceneRef friendColliderRef;
+
+	private GorillaFriendCollider friendCollider;
+
+	private bool friendColliderResolved;
 
 	[SerializeField]
 	private MeshRenderer milestoneRenderer;
@@ -27,9 +33,14 @@ public class JoinTriggerUI : MonoBehaviour
 
 	private new bool didStart;
 
+	public bool HasFriendCollider => friendColliderResolved;
+
+	public GorillaFriendCollider FriendJoinCollider => friendCollider;
+
 	private void Awake()
 	{
-		joinTrigger_isRefResolved = joinTriggerRef.TryResolve(out joinTrigger) && joinTrigger != null;
+		joinTriggerResolved = joinTriggerRef.TryResolve(out joinTrigger) && joinTrigger != null;
+		friendColliderResolved = friendColliderRef.TryResolve(out friendCollider) && friendCollider != null;
 	}
 
 	private void Start()
@@ -40,17 +51,33 @@ public class JoinTriggerUI : MonoBehaviour
 
 	private void OnEnable()
 	{
-		if (didStart && _IsValid())
+		if (didStart && IsValid())
 		{
 			joinTrigger.RegisterUI(this);
+			if (friendColliderResolved)
+			{
+				friendCollider.RegisterUI(this);
+			}
 		}
 	}
 
 	private void OnDisable()
 	{
-		if (_IsValid())
+		if (IsValid())
 		{
 			joinTrigger.UnregisterUI(this);
+			if (friendColliderResolved)
+			{
+				friendCollider.UnregisterUI();
+			}
+		}
+	}
+
+	public void TriggerUpdateUI()
+	{
+		if (IsValid())
+		{
+			joinTrigger.UpdateUI();
 		}
 	}
 
@@ -101,19 +128,9 @@ public class JoinTriggerUI : MonoBehaviour
 		}
 	}
 
-	private bool _IsValid()
+	private bool IsValid()
 	{
-		if (!joinTrigger_isRefResolved)
-		{
-			if (joinTriggerRef.TargetID == 0)
-			{
-				Debug.LogError("ERROR!!!  JoinTriggerUI: XSceneRef `joinTriggerRef` is not assigned so could not resolve. Path=" + base.transform.GetPathQ(), this);
-			}
-			else
-			{
-				Debug.LogError("ERROR!!!  JoinTriggerUI: XSceneRef `joinTriggerRef` could not be resolved. Path=" + base.transform.GetPathQ(), this);
-			}
-		}
-		return joinTrigger_isRefResolved;
+		_ = joinTriggerResolved;
+		return joinTriggerResolved;
 	}
 }

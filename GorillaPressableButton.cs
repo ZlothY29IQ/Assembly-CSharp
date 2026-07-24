@@ -58,6 +58,8 @@ public class GorillaPressableButton : MonoBehaviour, IClickable
 
 	public Material nonSubscriberMaterial;
 
+	public bool allowNonSubscriberBypassCheck;
+
 	protected bool _localPlayerSubscribed;
 
 	private bool _subscriptionChecked;
@@ -237,7 +239,7 @@ public class GorillaPressableButton : MonoBehaviour, IClickable
 
 	private void PressButton(bool isLeftHand)
 	{
-		if ((!isSubscriberOnlyButton || _localPlayerSubscribed) && (!isOwnerOnlyButton || IsOwnedByLocalPlayer()))
+		if ((!isSubscriberOnlyButton || _localPlayerSubscribed || (allowNonSubscriberBypassCheck && AllowNonSubscribedPress())) && (!isOwnerOnlyButton || IsOwnedByLocalPlayer()))
 		{
 			touchTime = Time.time;
 			onPressButton?.Invoke();
@@ -251,6 +253,11 @@ public class GorillaPressableButton : MonoBehaviour, IClickable
 				GorillaTagger.Instance.myVRRig.SendRPC("RPC_PlayHandTap", RpcTarget.Others, 67, isLeftHand, 0.05f);
 			}
 		}
+	}
+
+	protected virtual bool AllowNonSubscribedPress()
+	{
+		return false;
 	}
 
 	public void Click(bool leftHand = false)

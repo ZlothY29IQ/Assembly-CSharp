@@ -81,11 +81,19 @@ public class EnvironmentProximityReactorManager : NetworkSceneObject
 	private void OnPlayerLeft(NetPlayer player)
 	{
 		pendingEvents.Remove(player.ActorNumber);
+		for (int i = 0; i < reactors.Count; i++)
+		{
+			reactors[i]?.RemoveSharedActor(player.ActorNumber);
+		}
 	}
 
 	private void OnLeftRoom()
 	{
 		pendingEvents.Clear();
+		for (int i = 0; i < reactors.Count; i++)
+		{
+			reactors[i]?.ClearRemoteActors();
+		}
 	}
 
 	private void OnPlayerJoined(NetPlayer newPlayer)
@@ -207,7 +215,7 @@ public class EnvironmentProximityReactorManager : NetworkSceneObject
 				}
 				else
 				{
-					ApplyProximityEventToReactor(pendingProximityEvent.reactorId, pendingProximityEvent.blockIndex, pendingProximityEvent.isBelow);
+					ApplyProximityEventToReactor(pendingProximityEvent.reactorId, pendingProximityEvent.blockIndex, pendingProximityEvent.isBelow, actorNumber);
 					value.RemoveAt(num);
 				}
 			}
@@ -254,7 +262,7 @@ public class EnvironmentProximityReactorManager : NetworkSceneObject
 			value = new List<PendingProximityEvent>();
 			pendingEvents[actorNumber] = value;
 		}
-		else if (value.Exists((PendingProximityEvent e) => e.reactorId == reactorId))
+		else if (value.Exists((PendingProximityEvent e) => e.reactorId == reactorId && e.blockIndex == blockIndex))
 		{
 			return;
 		}
@@ -268,14 +276,14 @@ public class EnvironmentProximityReactorManager : NetworkSceneObject
 		});
 	}
 
-	private void ApplyProximityEventToReactor(int reactorId, int blockIndex, bool isBelow)
+	private void ApplyProximityEventToReactor(int reactorId, int blockIndex, bool isBelow, int senderActorNumber)
 	{
 		for (int i = 0; i < reactors.Count; i++)
 		{
 			EnvironmentProximityReactor environmentProximityReactor = reactors[i];
 			if (!(environmentProximityReactor == null) && environmentProximityReactor.reactorId == reactorId)
 			{
-				environmentProximityReactor.ApplySharedProximity(blockIndex, isBelow);
+				environmentProximityReactor.ApplySharedProximity(blockIndex, isBelow, senderActorNumber);
 				break;
 			}
 		}
@@ -396,6 +404,14 @@ public class EnvironmentProximityReactorManager : NetworkSceneObject
 		{
 			MonkeAgent.instance.SendReport("Sent invalid reactorId in ProximityStateRPC", info.Sender.UserId, info.Sender.NickName);
 		}
+		else if (!isBelow)
+		{
+			if (pendingEvents.TryGetValue(info.Sender.ActorNumber, out var value))
+			{
+				value.RemoveAll((PendingProximityEvent e) => e.reactorId == reactorId && e.blockIndex == blockIndex);
+			}
+			ApplyProximityEventToReactor(reactorId, blockIndex, isBelow: false, info.Sender.ActorNumber);
+		}
 		else if (CheckPlayerRateLimit(info.Sender))
 		{
 			if (!SenderHasValidCosmetic(reactorId, blockIndex, info))
@@ -408,7 +424,7 @@ public class EnvironmentProximityReactorManager : NetworkSceneObject
 			}
 			else
 			{
-				ApplyProximityEventToReactor(reactorId, blockIndex, isBelow);
+				ApplyProximityEventToReactor(reactorId, blockIndex, isBelow, info.Sender.ActorNumber);
 			}
 		}
 	}

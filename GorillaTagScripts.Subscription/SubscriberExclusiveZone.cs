@@ -63,8 +63,6 @@ public class SubscriberExclusiveZone : MonoBehaviour, IGorillaSliceableSimple
 
 	private bool bodyColliderWasDisabled;
 
-	private List<VRRig> rigs = new List<VRRig>();
-
 	private void Awake()
 	{
 		if (restrictedZone != null)
@@ -261,27 +259,27 @@ public class SubscriberExclusiveZone : MonoBehaviour, IGorillaSliceableSimple
 
 	public void SliceUpdate()
 	{
-		VRRigCache.Instance.GetActiveRigs(rigs);
+		IReadOnlyList<VRRig> activeRigs = VRRigCache.ActiveRigs;
 		if (restrictedZoneCollider == null)
 		{
 			return;
 		}
-		for (int i = 0; i < rigs.Count; i++)
+		for (int i = 0; i < activeRigs.Count; i++)
 		{
-			if (!rigs[i].isOfflineVRRig && !SubscriptionManager.GetSubscriptionDetails(rigs[i]).active)
+			if (!activeRigs[i].isOfflineVRRig && !SubscriptionManager.GetSubscriptionDetails(activeRigs[i]).active)
 			{
-				Vector3 vector = restrictedZoneCollider.transform.InverseTransformPoint(rigs[i].syncPos);
+				Vector3 vector = restrictedZoneCollider.transform.InverseTransformPoint(activeRigs[i].syncPos);
 				Vector3 vector2 = ((BoxCollider)restrictedZoneCollider).size / 2f;
 				Vector3 center = ((BoxCollider)restrictedZoneCollider).center;
 				if (vector.x < vector2.x + center.x && vector.x > 0f - vector2.x + center.x && vector.y < vector2.y + center.y && vector.y > 0f - vector2.y + center.y && vector.z < vector2.z + center.z && vector.z > 0f - vector2.z + center.z)
 				{
-					rigs[i].InOverrideSubscriptionZone = true;
-					rigs[i].OverrideSubscriptionZoneLocation = ejectionPoint.position;
+					activeRigs[i].InOverrideSubscriptionZone = true;
+					activeRigs[i].OverrideSubscriptionZoneLocation = ejectionPoint.position;
 				}
 				else
 				{
-					rigs[i].InOverrideSubscriptionZone = false;
-					rigs[i].OverrideSubscriptionZoneLocation = Vector3.zero;
+					activeRigs[i].InOverrideSubscriptionZone = false;
+					activeRigs[i].OverrideSubscriptionZoneLocation = Vector3.zero;
 				}
 			}
 		}
@@ -289,11 +287,11 @@ public class SubscriberExclusiveZone : MonoBehaviour, IGorillaSliceableSimple
 
 	public void ClearAllRigOverrides()
 	{
-		VRRigCache.Instance.GetActiveRigs(rigs);
-		for (int i = 0; i < rigs.Count; i++)
+		IReadOnlyList<VRRig> allRigs = VRRigCache.AllRigs;
+		for (int i = 0; i < allRigs.Count; i++)
 		{
-			rigs[i].InOverrideSubscriptionZone = false;
-			rigs[i].OverrideSubscriptionZoneLocation = Vector3.zero;
+			allRigs[i].InOverrideSubscriptionZone = false;
+			allRigs[i].OverrideSubscriptionZoneLocation = Vector3.zero;
 		}
 	}
 
