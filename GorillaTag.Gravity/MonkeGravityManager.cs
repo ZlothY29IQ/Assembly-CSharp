@@ -44,13 +44,19 @@ public class MonkeGravityManager : MonoBehaviour
 	public static void AddMonkeGravityController(MonkeGravityController gravity)
 	{
 		Collider activatorCollider = gravity.ActivatorCollider;
-		k_allowedColliders.TryAdd(activatorCollider, gravity);
+		if (activatorCollider != null)
+		{
+			k_allowedColliders.TryAdd(activatorCollider, gravity);
+		}
 		k_controllers.Add(in gravity);
 	}
 
 	public static void RemoveMonkeGravityController(MonkeGravityController gravity)
 	{
-		k_allowedColliders.Remove(gravity.ActivatorCollider);
+		if (gravity.ActivatorCollider != null)
+		{
+			k_allowedColliders.Remove(gravity.ActivatorCollider);
+		}
 		k_controllers.Remove(in gravity);
 	}
 

@@ -10,6 +10,7 @@ using Modio.Mods;
 using Modio.Users;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class CustomMapsListScreen : CustomMapsTerminalScreen
 {
@@ -43,8 +44,9 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 	[SerializeField]
 	private CustomMapsScreenButton allMapsButton;
 
+	[FormerlySerializedAs("officialMapsButton")]
 	[SerializeField]
-	private CustomMapsScreenButton officialMapsButton;
+	private CustomMapsScreenButton communityMapsButton;
 
 	[SerializeField]
 	private CustomMapsScreenButton favoriteMapsButton;
@@ -70,8 +72,9 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 	[SerializeField]
 	private string browseModsTitle = "AVAILABLE MODS";
 
+	[FormerlySerializedAs("officialModsTitle")]
 	[SerializeField]
-	private string officialModsTitle = "OFFICIAL MODS";
+	private string communityModsTitle = "COMMUNITY MODS";
 
 	[SerializeField]
 	private string installedModsTitle = "INSTALLED MODS";
@@ -110,7 +113,7 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 	private int maxModListItemLength = 25;
 
 	[SerializeField]
-	private string officialMapsTag = "Official Maps";
+	private string communityMapsTag = "Community";
 
 	[SerializeField]
 	private string featuredModsPlayFabKey = "VStumpFeaturedMaps";
@@ -183,7 +186,7 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 
 	private bool isAscendingOrder;
 
-	private bool officialMapsOnly;
+	private bool communityMapsOnly;
 
 	private bool useMapName = true;
 
@@ -207,7 +210,7 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 
 	public ListScreenState currentState;
 
-	public bool OfficialMapsOnly => officialMapsOnly;
+	public bool CommunityMapsOnly => communityMapsOnly;
 
 	public int CurrentModPage => currentModPage;
 
@@ -373,8 +376,8 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 			break;
 		case CustomMapKeyboardBinding.all:
 		{
-			bool flag = officialMapsOnly;
-			officialMapsOnly = false;
+			bool flag = communityMapsOnly;
+			communityMapsOnly = false;
 			displayFeaturedMods = sortType == SortModsBy.Popular;
 			if (flag)
 			{
@@ -385,8 +388,8 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 		}
 		case CustomMapKeyboardBinding.mustplay:
 		{
-			bool flag2 = !officialMapsOnly;
-			officialMapsOnly = true;
+			bool flag2 = !communityMapsOnly;
+			communityMapsOnly = true;
 			displayFeaturedMods = false;
 			if (flag2)
 			{
@@ -430,7 +433,7 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 		case 0:
 			SortType = SortModsBy.Popular;
 			useMapName = true;
-			displayFeaturedMods = !officialMapsOnly;
+			displayFeaturedMods = !communityMapsOnly;
 			break;
 		case 1:
 			SortType = SortModsBy.DateSubmitted;
@@ -461,7 +464,7 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 			sortTypeIndex = 0;
 			SortType = SortModsBy.Popular;
 			useMapName = true;
-			displayFeaturedMods = !officialMapsOnly;
+			displayFeaturedMods = !communityMapsOnly;
 			break;
 		}
 	}
@@ -475,8 +478,8 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 			switch (currentState)
 			{
 			case ListScreenState.AvailableMods:
-				allMapsButton.SetButtonActive(!officialMapsOnly);
-				officialMapsButton.SetButtonActive(officialMapsOnly);
+				allMapsButton.SetButtonActive(!communityMapsOnly);
+				communityMapsButton.SetButtonActive(communityMapsOnly);
 				favoriteMapsButton.SetButtonActive(active: false);
 				installedMapsButton.SetButtonActive(active: false);
 				subscribedMapsButton.SetButtonActive(active: false);
@@ -484,7 +487,7 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 				break;
 			case ListScreenState.InstalledMods:
 				allMapsButton.SetButtonActive(active: false);
-				officialMapsButton.SetButtonActive(active: false);
+				communityMapsButton.SetButtonActive(active: false);
 				favoriteMapsButton.SetButtonActive(active: false);
 				subscribedMapsButton.SetButtonActive(active: false);
 				searchButton.SetButtonActive(active: false);
@@ -492,7 +495,7 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 				break;
 			case ListScreenState.FavoriteMods:
 				allMapsButton.SetButtonActive(active: false);
-				officialMapsButton.SetButtonActive(active: false);
+				communityMapsButton.SetButtonActive(active: false);
 				installedMapsButton.SetButtonActive(active: false);
 				subscribedMapsButton.SetButtonActive(active: false);
 				searchButton.SetButtonActive(active: false);
@@ -500,7 +503,7 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 				break;
 			case ListScreenState.SubscribedMods:
 				allMapsButton.SetButtonActive(active: false);
-				officialMapsButton.SetButtonActive(active: false);
+				communityMapsButton.SetButtonActive(active: false);
 				installedMapsButton.SetButtonActive(active: false);
 				favoriteMapsButton.SetButtonActive(active: false);
 				searchButton.SetButtonActive(active: false);
@@ -621,9 +624,9 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 			loadingAvailableMods = true;
 			ModSearchFilter modSearchFilter = new ModSearchFilter(currentAvailableModsRequestPage++, numModsPerRequest);
 			modSearchFilter.SortBy = sortType;
-			if (officialMapsOnly)
+			if (communityMapsOnly)
 			{
-				modSearchFilter.AddTag(officialMapsTag);
+				modSearchFilter.AddTag(communityMapsTag);
 			}
 			modSearchFilter.IsSortAscending = isAscendingOrder;
 			var (error, modioPage) = await ModIOManager.GetMods(modSearchFilter.GetModsFilter());
@@ -1072,9 +1075,9 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 		switch (currentState)
 		{
 		case ListScreenState.AvailableMods:
-			if (officialMapsOnly)
+			if (communityMapsOnly)
 			{
-				return officialModsTitle;
+				return communityModsTitle;
 			}
 			return browseModsTitle;
 		case ListScreenState.InstalledMods:

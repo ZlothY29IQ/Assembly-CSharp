@@ -2,10 +2,25 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using GorillaNetworking;
+using GorillaTagScripts;
+using Photon.Pun;
 using UnityEngine;
 
 public class BetterDayNightManager : MonoBehaviour, IGorillaSliceableSimple, ITimeOfDaySystem
 {
+	private struct RPCDataCache
+	{
+		public bool Pending;
+
+		public int Value;
+
+		public void Reset()
+		{
+			Pending = false;
+			Value = 0;
+		}
+	}
+
 	public enum Season
 	{
 		Winter,
@@ -21,6 +36,12 @@ public class BetterDayNightManager : MonoBehaviour, IGorillaSliceableSimple, ITi
 		All
 	}
 
+	public enum RPC
+	{
+		ChangeFixedWeather,
+		ChangeTimeOfDay
+	}
+
 	private class ScheduledEvent
 	{
 		public long lastDayCalled;
@@ -30,6 +51,10 @@ public class BetterDayNightManager : MonoBehaviour, IGorillaSliceableSimple, ITi
 		public Action action;
 	}
 
+	private RPCDataCache m_fixedDataCache;
+
+	private RPCDataCache m_setTimeDataCache;
+
 	public const int TIME_OF_DAY_COUNT = 10;
 
 	[OnEnterPlay_SetNull]
@@ -37,6 +62,8 @@ public class BetterDayNightManager : MonoBehaviour, IGorillaSliceableSimple, ITi
 
 	[OnEnterPlay_Clear]
 	public static List<PerSceneRenderData> allScenesRenderData = new List<PerSceneRenderData>();
+
+	public PhotonView photonView;
 
 	public Shader standard;
 
@@ -108,7 +135,7 @@ public class BetterDayNightManager : MonoBehaviour, IGorillaSliceableSimple, ITi
 
 	public int mySeed;
 
-	public System.Random randomNumberGenerator = new System.Random();
+	public System.Random randomNumberGenerator;
 
 	public WeatherType[] weatherCycle;
 
@@ -153,6 +180,10 @@ public class BetterDayNightManager : MonoBehaviour, IGorillaSliceableSimple, ITi
 	private float lastTimeChecked;
 
 	private Func<int, int> timeIndexOverrideFunc;
+
+	private int lastSentTimeIndex = -1;
+
+	public CallLimitersList<CallLimiter, RPC> rpcSpamChecks = new CallLimitersList<CallLimiter, RPC>();
 
 	public int overrideIndex = -1;
 
@@ -215,7 +246,17 @@ public class BetterDayNightManager : MonoBehaviour, IGorillaSliceableSimple, ITi
 		allScenesRenderData.Remove(data);
 	}
 
-	public void OnEnable()
+	private void Awake()
+	{
+		RoomSystem.JoinedRoomEvent += new Action(OnRoomJoin);
+		RoomSystem.PlayerJoinedEvent += new Action<NetPlayer>(OnPlayerJoined);
+		NetworkSystem.Instance.OnMasterClientSwitchedEvent += new Action<NetPlayer>(OnMasterClientSwitched);
+		m_fixedDataCache.Reset();
+		m_setTimeDataCache.Reset();
+		SubscriptionManager.OnSubscriptionData = (Action)Delegate.Combine(SubscriptionManager.OnSubscriptionData, new Action(OnSubscrptionData));
+	}
+
+	private void OnEnable()
 	{
 		GorillaSlicerSimpleManager.RegisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
 		if (instance == null)
@@ -242,14 +283,14 @@ public class BetterDayNightManager : MonoBehaviour, IGorillaSliceableSimple, ITi
 		StartCoroutine(InitialUpdate());
 	}
 
-	public void OnDisable()
+	private void OnDisable()
 	{
 		GorillaSlicerSimpleManager.UnregisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
 	}
 
-	public void UpdateTimeOfDay()
+	public void UpdateTimeOfDay(bool forceUpdate = false)
 	{
-		if (Time.time < lastTimeChecked + currentTimestep)
+		if (!forceUpdate && Time.time < lastTimeChecked + currentTimestep)
 		{
 			return;
 		}
@@ -267,16 +308,7 @@ public class BetterDayNightManager : MonoBehaviour, IGorillaSliceableSimple, ITi
 				currentWeatherIndex = (int)(initialDayCycles * dayNightLightmapNames.Length) % weatherCycle.Length;
 				baseSeconds = TimeSpan.FromMilliseconds(GorillaComputer.instance.startupMillis).TotalSeconds * timeMultiplier % totalSeconds;
 				currentTime = (baseSeconds + (double)Time.realtimeSinceStartup * timeMultiplier) % totalSeconds;
-				currentIndexSeconds = 0.0;
-				for (int i = 0; i < timeOfDayRange.Length; i++)
-				{
-					currentIndexSeconds += timeOfDayRange[i] * 3600.0;
-					if (currentIndexSeconds > currentTime)
-					{
-						currentTimeIndex = i;
-						break;
-					}
-				}
+				FindTimeOfDayIndex();
 				currentWeatherIndex += currentTimeIndex;
 			}
 			else if (!computerInit && baseSeconds == 0.0)
@@ -285,16 +317,7 @@ public class BetterDayNightManager : MonoBehaviour, IGorillaSliceableSimple, ITi
 				currentWeatherIndex = (int)(initialDayCycles * dayNightLightmapNames.Length) % weatherCycle.Length;
 				baseSeconds = TimeSpan.FromTicks(DateTime.UtcNow.Ticks).TotalSeconds * timeMultiplier % totalSeconds;
 				currentTime = baseSeconds % totalSeconds;
-				currentIndexSeconds = 0.0;
-				for (int j = 0; j < timeOfDayRange.Length; j++)
-				{
-					currentIndexSeconds += timeOfDayRange[j] * 3600.0;
-					if (currentIndexSeconds > currentTime)
-					{
-						currentTimeIndex = j;
-						break;
-					}
-				}
+				FindTimeOfDayIndex();
 				currentWeatherIndex += currentTimeIndex - 1;
 				if (currentWeatherIndex < 0)
 				{
@@ -302,16 +325,7 @@ public class BetterDayNightManager : MonoBehaviour, IGorillaSliceableSimple, ITi
 				}
 			}
 			currentTime = ((currentSetting == TimeSettings.Normal) ? ((baseSeconds + (double)Time.realtimeSinceStartup * timeMultiplier) % totalSeconds) : currentTime);
-			currentIndexSeconds = 0.0;
-			for (int k = 0; k < timeOfDayRange.Length; k++)
-			{
-				currentIndexSeconds += timeOfDayRange[k] * 3600.0;
-				if (currentIndexSeconds > currentTime)
-				{
-					currentTimeIndex = k;
-					break;
-				}
-			}
+			FindTimeOfDayIndex();
 			if (timeIndexOverrideFunc != null)
 			{
 				currentTimeIndex = timeIndexOverrideFunc(currentTimeIndex);
@@ -342,6 +356,20 @@ public class BetterDayNightManager : MonoBehaviour, IGorillaSliceableSimple, ITi
 		}
 	}
 
+	private void FindTimeOfDayIndex()
+	{
+		currentIndexSeconds = 0.0;
+		for (int i = 0; i < timeOfDayRange.Length; i++)
+		{
+			currentIndexSeconds += timeOfDayRange[i] * 3600.0;
+			if (currentIndexSeconds > currentTime)
+			{
+				currentTimeIndex = i;
+				break;
+			}
+		}
+	}
+
 	private void ChangeLerps(float newLerp)
 	{
 		Shader.SetGlobalFloat(_GlobalDayNightLerpValue, newLerp);
@@ -353,7 +381,7 @@ public class BetterDayNightManager : MonoBehaviour, IGorillaSliceableSimple, ITi
 	{
 		fromWeatherIndex = currentWeatherIndex;
 		toWeatherIndex = (currentWeatherIndex + 1) % weatherCycle.Length;
-		if (weatherCycle[fromWeatherIndex] == WeatherType.Raining)
+		if (weatherCycle[fromWeatherIndex] == WeatherType.Raining && currentSetting != TimeSettings.Static)
 		{
 			fromSky = dayNightWeatherSkyboxTextures[fromIndex];
 		}
@@ -363,7 +391,7 @@ public class BetterDayNightManager : MonoBehaviour, IGorillaSliceableSimple, ITi
 		}
 		fromSky2 = cloudsDayNightSkyboxTextures[fromIndex];
 		fromSky3 = beachDayNightSkyboxTextures[fromIndex];
-		if (weatherCycle[toWeatherIndex] == WeatherType.Raining)
+		if (weatherCycle[toWeatherIndex] == WeatherType.Raining && currentSetting != TimeSettings.Static)
 		{
 			toSky = dayNightWeatherSkyboxTextures[toIndex];
 		}
@@ -395,6 +423,7 @@ public class BetterDayNightManager : MonoBehaviour, IGorillaSliceableSimple, ITi
 				if (allScenesRenderDatum.CheckShouldRepopulate())
 				{
 					shouldRepopulate = true;
+					break;
 				}
 			}
 		}
@@ -436,29 +465,41 @@ public class BetterDayNightManager : MonoBehaviour, IGorillaSliceableSimple, ITi
 
 	public WeatherType CurrentWeather()
 	{
-		if (!overrideWeather)
+		if (overrideWeather)
 		{
-			return weatherCycle[currentWeatherIndex];
+			return overrideWeatherType;
 		}
-		return overrideWeatherType;
+		if (currentSetting == TimeSettings.Static)
+		{
+			return WeatherType.None;
+		}
+		return weatherCycle[currentWeatherIndex];
 	}
 
 	public WeatherType NextWeather()
 	{
-		if (!overrideWeather)
+		if (overrideWeather)
 		{
-			return weatherCycle[(currentWeatherIndex + 1) % weatherCycle.Length];
+			return overrideWeatherType;
 		}
-		return overrideWeatherType;
+		if (currentSetting == TimeSettings.Static)
+		{
+			return WeatherType.None;
+		}
+		return weatherCycle[(currentWeatherIndex + 1) % weatherCycle.Length];
 	}
 
 	public WeatherType LastWeather()
 	{
-		if (!overrideWeather)
+		if (overrideWeather)
 		{
-			return weatherCycle[(currentWeatherIndex - 1) % weatherCycle.Length];
+			return overrideWeatherType;
 		}
-		return overrideWeatherType;
+		if (currentSetting == TimeSettings.Static)
+		{
+			return WeatherType.None;
+		}
+		return weatherCycle[(currentWeatherIndex - 1) % weatherCycle.Length];
 	}
 
 	private void GenerateWeatherEventTimes()
@@ -561,8 +602,9 @@ public class BetterDayNightManager : MonoBehaviour, IGorillaSliceableSimple, ITi
 		animatingLightFlash = null;
 	}
 
-	public void SetTimeOfDay(int timeIndex)
+	public void SetTimeOfDay(int timeIndex, bool forceUpdate = false)
 	{
+		lastSentTimeIndex = timeIndex;
 		double num = 0.0;
 		for (int i = 0; i < timeIndex; i++)
 		{
@@ -570,6 +612,31 @@ public class BetterDayNightManager : MonoBehaviour, IGorillaSliceableSimple, ITi
 		}
 		currentTime = num * 3600.0;
 		currentSetting = TimeSettings.Static;
+		if (forceUpdate)
+		{
+			FindTimeOfDayIndex();
+			UpdateTimeOfDay(forceUpdate: true);
+		}
+	}
+
+	public void IncrementTimeOfDay(int change)
+	{
+		int timeOfDayIndex = (currentTimeIndex + timeOfDayRange.Length + change) % timeOfDayRange.Length;
+		SetTimeOfDayIndex(timeOfDayIndex);
+	}
+
+	private void SetTimeOfDayIndex(int newIndex)
+	{
+		if (lastSentTimeIndex == -1 || lastSentTimeIndex != newIndex)
+		{
+			WeatherType weather = overrideWeatherType;
+			SetTimeOfDay(newIndex);
+			if (overrideWeather)
+			{
+				SetFixedWeather(weather);
+			}
+			SetOverrideIndex(newIndex);
+		}
 	}
 
 	public void FastForward(float seconds)
@@ -577,14 +644,212 @@ public class BetterDayNightManager : MonoBehaviour, IGorillaSliceableSimple, ITi
 		baseSeconds += seconds;
 	}
 
-	public void SetFixedWeather(WeatherType weather)
+	public void ClearTimeOfDay(bool forceUpdate = false)
+	{
+		currentSetting = TimeSettings.Normal;
+		lastSentTimeIndex = -1;
+		if (forceUpdate)
+		{
+			UpdateTimeOfDay(forceUpdate: true);
+		}
+	}
+
+	public string GetTimeOfDayString()
+	{
+		if (currentSetting == TimeSettings.Normal)
+		{
+			return "DEFAULT";
+		}
+		string text = currentTimeOfDay;
+		if (currentTimeIndex >= 0 && currentTimeIndex < dayNightLightmapNames.Length)
+		{
+			text = dayNightLightmapNames[currentTimeIndex];
+		}
+		if (lastSentTimeIndex == 3 && !text.Equals("10am", StringComparison.OrdinalIgnoreCase))
+		{
+			text = "10am";
+		}
+		return text;
+	}
+
+	public void SetFixedWeather(WeatherType weather, bool forceUpdate = false)
 	{
 		overrideWeather = true;
 		overrideWeatherType = weather;
+		if (forceUpdate)
+		{
+			UpdateTimeOfDay(forceUpdate: true);
+		}
 	}
 
-	public void ClearFixedWeather()
+	public void ClearFixedWeather(bool forceUpdate = false)
 	{
 		overrideWeather = false;
+		if (forceUpdate)
+		{
+			UpdateTimeOfDay(forceUpdate: true);
+		}
+	}
+
+	public string GetWeatherString()
+	{
+		if (!overrideWeather)
+		{
+			return "DEFAULT";
+		}
+		if (overrideWeatherType == WeatherType.Raining)
+		{
+			return "RAINING";
+		}
+		return "DEFAULT";
+	}
+
+	public void SetFixedWeatherNetworked(WeatherType weather)
+	{
+		if (PhotonNetwork.InRoom && PhotonNetwork.IsMasterClient && SubscriptionManager.IsLocalSubscribed())
+		{
+			HandleFixedWeather(weather);
+			photonView.RPC("ChangeFixedWeatherRPC", RpcTarget.Others, weather);
+		}
+	}
+
+	public void SetTimeOfDayNetworked(int timeIndex)
+	{
+		if (PhotonNetwork.InRoom && PhotonNetwork.IsMasterClient && SubscriptionManager.IsLocalSubscribed())
+		{
+			HandleTimeOfDay(timeIndex);
+			photonView.RPC("ChangeTimeOfDayRPC", RpcTarget.Others, timeIndex);
+		}
+	}
+
+	[PunRPC]
+	private void ChangeFixedWeatherRPC(int weather, PhotonMessageInfo info)
+	{
+		if (info.Sender != null && info.Sender.IsMasterClient && (RoomSystem.WasRoomPrivate || RoomSystem.WasRoomSubscription) && !rpcSpamChecks.IsSpamming(RPC.ChangeFixedWeather) && weather >= 0 && weather <= 2)
+		{
+			if (RoomSystem.WasRoomPrivate && !SubscriptionManager.IsPlayerSubscribed(info.Sender))
+			{
+				m_fixedDataCache.Pending = true;
+				m_fixedDataCache.Value = weather;
+			}
+			else
+			{
+				m_fixedDataCache.Reset();
+				HandleFixedWeather((WeatherType)weather);
+			}
+		}
+	}
+
+	private void HandleFixedWeather(WeatherType weather)
+	{
+		switch (weather)
+		{
+		case WeatherType.None:
+			ClearFixedWeather(forceUpdate: true);
+			GorillaScoreboardTotalUpdater.instance.UpdateActiveScoreboards();
+			break;
+		case WeatherType.Raining:
+		case WeatherType.All:
+			SetFixedWeather(weather, forceUpdate: true);
+			GorillaScoreboardTotalUpdater.instance.UpdateActiveScoreboards();
+			break;
+		}
+	}
+
+	[PunRPC]
+	private void ChangeTimeOfDayRPC(int timeIndex, PhotonMessageInfo info)
+	{
+		if (info.Sender != null && info.Sender.IsMasterClient && (RoomSystem.WasRoomPrivate || RoomSystem.WasRoomSubscription) && !rpcSpamChecks.IsSpamming(RPC.ChangeTimeOfDay) && timeIndex >= -1 && timeIndex < timeOfDayRange.Length)
+		{
+			if (RoomSystem.WasRoomPrivate && !SubscriptionManager.IsPlayerSubscribed(info.Sender))
+			{
+				m_setTimeDataCache.Pending = true;
+				m_setTimeDataCache.Value = timeIndex;
+			}
+			else
+			{
+				m_setTimeDataCache.Reset();
+				HandleTimeOfDay(timeIndex);
+			}
+		}
+	}
+
+	private void HandleTimeOfDay(int timeIndex)
+	{
+		if (timeIndex >= -1 && timeIndex < timeOfDayRange.Length)
+		{
+			if (timeIndex == -1)
+			{
+				ClearTimeOfDay(forceUpdate: true);
+				GorillaScoreboardTotalUpdater.instance.UpdateActiveScoreboards();
+			}
+			else
+			{
+				SetTimeOfDay(timeIndex, forceUpdate: true);
+				GorillaScoreboardTotalUpdater.instance.UpdateActiveScoreboards();
+			}
+		}
+	}
+
+	private void OnRoomJoin()
+	{
+		ClearTimeOfDay();
+		ClearFixedWeather();
+		m_fixedDataCache.Reset();
+		m_setTimeDataCache.Reset();
+	}
+
+	private void OnPlayerJoined(NetPlayer player)
+	{
+		if (NetworkSystem.Instance.IsMasterClient && SubscriptionManager.IsLocalSubscribed() && PhotonNetwork.IsMasterClient && SubscriptionManager.IsLocalSubscribed())
+		{
+			if (overrideWeather)
+			{
+				photonView.RPC("ChangeFixedWeatherRPC", RpcTarget.Others, overrideWeatherType);
+			}
+			if (currentSetting == TimeSettings.Static)
+			{
+				photonView.RPC("ChangeTimeOfDayRPC", RpcTarget.Others, lastSentTimeIndex);
+			}
+		}
+	}
+
+	private void OnMasterClientSwitched(NetPlayer newMasterClient)
+	{
+		m_fixedDataCache.Reset();
+		m_setTimeDataCache.Reset();
+		if (PhotonNetwork.IsMasterClient && !SubscriptionManager.IsLocalSubscribed())
+		{
+			ClearTimeOfDay();
+			ClearFixedWeather(forceUpdate: true);
+			photonView.RPC("ChangeTimeOfDayRPC", RpcTarget.Others, -1);
+			photonView.RPC("ChangeFixedWeatherRPC", RpcTarget.Others, WeatherType.None);
+		}
+	}
+
+	private void OnSubscrptionData()
+	{
+		if (!m_fixedDataCache.Pending || !m_setTimeDataCache.Pending)
+		{
+			return;
+		}
+		if (!RoomSystem.JoinedRoom)
+		{
+			m_fixedDataCache.Reset();
+			m_setTimeDataCache.Reset();
+		}
+		else if (SubscriptionManager.IsPlayerSubscribed(NetworkSystem.Instance.MasterClient))
+		{
+			if (m_fixedDataCache.Pending)
+			{
+				HandleFixedWeather((WeatherType)m_fixedDataCache.Value);
+				m_fixedDataCache.Reset();
+			}
+			if (m_setTimeDataCache.Pending)
+			{
+				HandleTimeOfDay(m_setTimeDataCache.Value);
+				m_setTimeDataCache.Reset();
+			}
+		}
 	}
 }

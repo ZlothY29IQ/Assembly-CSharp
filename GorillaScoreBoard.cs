@@ -36,13 +36,21 @@ public class GorillaScoreBoard : MonoBehaviour
 
 	public GameObject textsParent;
 
+	public GTZone[] allowedWeatherControlZones;
+
+	public GameObject weatherControlsParent;
+
 	public TextMeshPro boardText;
 
 	public TextMeshPro buttonText;
 
 	public TextMeshPro roomControlsText;
 
+	public TextMeshPro weatherControlsText;
+
 	public GameObject roomControlsToggle;
+
+	public GameObject weatherControlsToggle;
 
 	public bool needsUpdate;
 
@@ -51,6 +59,10 @@ public class GorillaScoreBoard : MonoBehaviour
 	public string initialGameMode;
 
 	private bool roomControlsActive;
+
+	private bool allowWeatherControls = true;
+
+	private bool weatherControlsActive;
 
 	private string tempGmName;
 
@@ -65,8 +77,6 @@ public class GorillaScoreBoard : MonoBehaviour
 	private StringBuilder stringBuilder = new StringBuilder(220);
 
 	private StringBuilder buttonStringBuilder = new StringBuilder(720);
-
-	public bool RoomControlsActive => roomControlsActive;
 
 	public bool IsDirty
 	{
@@ -88,7 +98,7 @@ public class GorillaScoreBoard : MonoBehaviour
 		{
 			linesParent.SetActive(awake);
 		}
-		ToggleRoomControlButton();
+		ToggleRoomControlButtons();
 	}
 
 	private string GetBeginningString()
@@ -144,22 +154,54 @@ public class GorillaScoreBoard : MonoBehaviour
 			return;
 		}
 		roomControlsActive = !roomControlsActive;
+		if (roomControlsActive)
+		{
+			weatherControlsActive = false;
+		}
 		SetDirty();
 	}
 
 	public void CleanupRoomControls()
 	{
 		roomControlsActive = false;
+		weatherControlsActive = false;
 		rightPanel.SetActive(value: false);
+		weatherControlsParent.SetActive(value: false);
 		for (int i = 0; i < lines.Count; i++)
 		{
 			lines[i].ToggleRoomControlButtons(toggle: false);
 		}
 	}
 
-	private void ToggleRoomControlButton()
+	private void ToggleRoomControlButtons()
 	{
-		roomControlsToggle.gameObject.SetActive(RoomControls.CanModerate());
+		bool active = RoomControls.CanModerate();
+		roomControlsToggle.gameObject.SetActive(active);
+		if (allowWeatherControls)
+		{
+			weatherControlsToggle.gameObject.SetActive(active);
+		}
+		else
+		{
+			weatherControlsToggle.gameObject.SetActive(value: false);
+		}
+	}
+
+	[ContextMenu("Toggle Weather Controls")]
+	public void ToggleWeatherControls()
+	{
+		if (!RoomControls.CanModerate(out var cannotReason))
+		{
+			Debug.LogWarning("Cannot toggle weather controls: " + cannotReason + ".");
+			return;
+		}
+		weatherControlsActive = !weatherControlsActive;
+		Debug.Log($"Weather controls active: {weatherControlsActive}");
+		if (weatherControlsActive)
+		{
+			roomControlsActive = false;
+		}
+		SetDirty();
 	}
 
 	public void RedrawPlayerLines()
@@ -176,11 +218,21 @@ public class GorillaScoreBoard : MonoBehaviour
 				num++;
 			}
 		}
-		if (roomControlsActive)
+		if (roomControlsActive || weatherControlsActive)
 		{
 			leftPanel.transform.localScale = new Vector3(0.7f, 1f, 1f);
 			leftPanel.transform.localPosition = new Vector3(leftPanelRoomControlXOffset, 0f);
 			rightPanel.SetActive(value: true);
+			if (roomControlsActive)
+			{
+				roomControlsText.gameObject.SetActive(value: true);
+				weatherControlsParent.SetActive(value: false);
+			}
+			else if (weatherControlsActive)
+			{
+				roomControlsText.gameObject.SetActive(value: false);
+				weatherControlsParent.SetActive(value: true);
+			}
 		}
 		else
 		{
@@ -258,6 +310,7 @@ public class GorillaScoreBoard : MonoBehaviour
 		}
 		boardText.text = stringBuilder.ToString();
 		buttonText.text = buttonStringBuilder.ToString();
+		UpdateWeatherText();
 		_isDirty = false;
 	}
 
@@ -273,6 +326,21 @@ public class GorillaScoreBoard : MonoBehaviour
 	private void Start()
 	{
 		GorillaScoreboardTotalUpdater.RegisterScoreboard(this);
+		CheckZoneForControls();
+	}
+
+	private void CheckZoneForControls()
+	{
+		ZoneDef zoneDef = ZoneGraphBSP.Instance.FindZoneAtPoint(base.transform.position);
+		allowWeatherControls = false;
+		for (int i = 0; i < allowedWeatherControlZones.Length; i++)
+		{
+			if (zoneDef.zoneId == allowedWeatherControlZones[i])
+			{
+				allowWeatherControls = true;
+				break;
+			}
+		}
 	}
 
 	private void OnEnable()
@@ -286,6 +354,7 @@ public class GorillaScoreBoard : MonoBehaviour
 		RoomControls.OnRoomControlsEnabledChanged -= new Action<bool>(OnRoomControlsEnabledChanged);
 		RoomControls.OnRoomControlsEnabledChanged += new Action<bool>(OnRoomControlsEnabledChanged);
 		roomControlsToggle.gameObject.SetActive(value: false);
+		weatherControlsToggle.gameObject.SetActive(value: false);
 	}
 
 	private void OnDisable()
@@ -318,7 +387,32 @@ public class GorillaScoreBoard : MonoBehaviour
 			roomControlsActive = false;
 		}
 		SetDirty();
-		ToggleRoomControlButton();
+		ToggleRoomControlButtons();
+	}
+
+	public void SetTimeOfDay(int timeOfDay)
+	{
+		BetterDayNightManager.instance.SetTimeOfDayNetworked(timeOfDay);
+	}
+
+	public void SetWeatherClear()
+	{
+		SetWeather(BetterDayNightManager.WeatherType.None);
+	}
+
+	public void SetWeatherRain()
+	{
+		SetWeather(BetterDayNightManager.WeatherType.Raining);
+	}
+
+	private void SetWeather(BetterDayNightManager.WeatherType weather)
+	{
+		BetterDayNightManager.instance.SetFixedWeatherNetworked(weather);
+	}
+
+	private void UpdateWeatherText()
+	{
+		weatherControlsText.text = "TIME OF DAY: " + BetterDayNightManager.instance.GetTimeOfDayString() + "   WEATHER: " + BetterDayNightManager.instance.GetWeatherString();
 	}
 
 	public void SetDirty()

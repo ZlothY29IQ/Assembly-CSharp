@@ -25,18 +25,8 @@ public class VoxelWorld : MonoBehaviour
 	[Header("World Settings")]
 	public VoxelMaterialSet MaterialSet;
 
-	public GenerationParameters generationParameters = new GenerationParameters
-	{
-		NoiseScale = 0.01f,
-		GroundLevel = 0f,
-		HeightScale = 0.01f,
-		Octaves = 4,
-		Persistence = 0.5f,
-		IsoLevel = 0f,
-		Seed = 12345,
-		NormalThreshold = 60f,
-		AreaWeightedNormals = true
-	};
+	[SerializeReference]
+	public VoxelGenerator generator;
 
 	[SerializeField]
 	private WorldType worldType;
@@ -63,9 +53,14 @@ public class VoxelWorld : MonoBehaviour
 	private bool persistChanges = true;
 
 	[Header("References")]
-	public ChunkComponent chunkPrefab;
+	[SerializeField]
+	private ChunkComponent chunkPrefab;
 
-	public Transform target;
+	[SerializeField]
+	private Transform target;
+
+	[SerializeField]
+	private Transform root;
 
 	protected Dictionary<int3, Chunk> chunks = new Dictionary<int3, Chunk>();
 
@@ -99,11 +94,31 @@ public class VoxelWorld : MonoBehaviour
 
 	private static UnityEngine.BoundsInt _opBounds;
 
+	private static List<Chunk> _opChunks = new List<Chunk>();
+
+	private static List<Chunk> _opChangedChunks = new List<Chunk>();
+
+	private static List<ChunkTaskSet> _opChunkJobs = new List<ChunkTaskSet>();
+
 	private static Chunk _opChunk;
 
 	private static bool _opAnyChanged;
 
 	private static Func<int3, (byte density, byte material), (byte density, byte material)> _opSetDataFunction;
+
+	private List<Chunk> _tempChunkList;
+
+	public Transform Root
+	{
+		get
+		{
+			if (!root)
+			{
+				return base.transform;
+			}
+			return root;
+		}
+	}
 
 	public IEnumerable<Chunk> Chunks => chunks.Values;
 
@@ -133,7 +148,7 @@ public class VoxelWorld : MonoBehaviour
 
 	public int VoxelCount { get; private set; }
 
-	public MeshGenerationMode MeshGenerationMode => generationParameters.MeshGenerationMode;
+	public MeshGenerationMode MeshGenerationMode => generator.meshParameters.MeshGenerationMode;
 
 	public bool WorldGenerationComplete
 	{
@@ -207,7 +222,7 @@ public class VoxelWorld : MonoBehaviour
 		{
 			SetFor(base.gameObject, this);
 		}
-		switch (generationParameters.MeshGenerationMode)
+		switch (generator.meshParameters.MeshGenerationMode)
 		{
 		case MeshGenerationMode.MarchingCubes:
 			Chunk.Pad = 1;
@@ -222,11 +237,20 @@ public class VoxelWorld : MonoBehaviour
 		{
 			target = base.transform;
 		}
+		if (!root)
+		{
+			root = base.transform;
+		}
 		Id = this.GenerateHashcodeFromPath();
 	}
 
 	private void Start()
 	{
+		if (worldType == WorldType.Bounded)
+		{
+			OptimizeWorld();
+		}
+		generator.InitWorld(this);
 		Chunk.DefaultSize = chunkSize;
 		ChunkSize = Chunk.DefaultSize;
 		VoxelDimension = chunkSize + Chunk.Pad;
@@ -592,6 +616,36 @@ public class VoxelWorld : MonoBehaviour
 		generationQueueChanged = true;
 	}
 
+	private void OptimizeWorld()
+	{
+		UnityEngine.BoundsInt boundsInt = generator.GetWorldBounds();
+		if (boundsInt != default(UnityEngine.BoundsInt))
+		{
+			if (!root || root == base.transform)
+			{
+				root = new GameObject("VoxelWorldRoot").transform;
+				root.SetParent(base.transform);
+				root.localPosition = Vector3.zero;
+				root.localRotation = Quaternion.identity;
+				root.localScale = Vector3.one;
+			}
+			else if (root.parent != base.transform)
+			{
+				root.SetParent(base.transform, worldPositionStays: true);
+				root.localRotation = Quaternion.identity;
+				root.localScale = Vector3.one;
+			}
+			Vector3Int vector3Int = Vector3Int.one - boundsInt.min;
+			Debug.Log($"Min: {boundsInt.min} Shift: {vector3Int}");
+			generator.ShiftWorldBounds(vector3Int);
+			root.localPosition += (Vector3)(-vector3Int) * Scale;
+			if (worldType == WorldType.Bounded)
+			{
+				worldBounds = generator.GetWorldBounds();
+			}
+		}
+	}
+
 	public void ResetChunk(int3 chunkId)
 	{
 		if (chunks.TryGetValue(chunkId, out var value) && value.IsDataChanged)
@@ -599,7 +653,7 @@ public class VoxelWorld : MonoBehaviour
 			if (chunkJobs.TryGetValue(chunkId, out var value2))
 			{
 				value2.Complete();
-				chunkJobs.Remove(chunkId);
+				RemoveChunkTask(value2);
 			}
 			value.IsDataGenerated = false;
 			value.IsDirty = true;
@@ -619,26 +673,22 @@ public class VoxelWorld : MonoBehaviour
 			return;
 		}
 		value.IsDirty = false;
-		ChunkTaskSet chunkTaskSet = new ChunkTaskSet(value, generationParameters);
+		ChunkTaskSet chunkTaskSet = new ChunkTaskSet(value, generator);
 		ChunkState state = value.State;
 		if (state < ChunkState.VoxelDataGenerated)
 		{
-			chunkTaskSet.AddTask(ChunkTask.CreateVoxelDataJob);
+			chunkTaskSet.AddTask(generator.CreateVoxelDataJob);
 		}
 		if (state < ChunkState.MeshDataGenerated)
 		{
-			if (generationParameters.MeshGenerationMode == MeshGenerationMode.MarchingCubes)
+			if (generator.PostProcessMesh)
 			{
-				chunkTaskSet.AddTask(ChunkTask.CreateMeshDataJob, CreateChunkMesh);
-			}
-			else if (generationParameters.MeshGenerationMode == MeshGenerationMode.SurfaceNets)
-			{
-				chunkTaskSet.AddTask(ChunkTask.CreateMeshDataJob);
-				chunkTaskSet.AddTask(ChunkTask.CreateSurfaceNetsPostProcessingJob, CreateChunkMesh);
+				chunkTaskSet.AddTask(generator.CreateMeshDataJob);
+				chunkTaskSet.AddTask(generator.CreateMeshPostProcessJob, CreateChunkMesh);
 			}
 			else
 			{
-				Debug.LogError($"Unknown mesh generation mode: {generationParameters.MeshGenerationMode}");
+				chunkTaskSet.AddTask(generator.CreateMeshDataJob, CreateChunkMesh);
 			}
 		}
 		else if (state < ChunkState.MeshCreated)
@@ -655,7 +705,7 @@ public class VoxelWorld : MonoBehaviour
 		}
 		if (!chunkTaskSet.IsEmpty)
 		{
-			chunkJobs.Add(value.Id, chunkTaskSet);
+			AddChunkTask(chunkTaskSet);
 			chunkTaskSet.Start();
 		}
 		else
@@ -666,10 +716,10 @@ public class VoxelWorld : MonoBehaviour
 
 	private void MeshChunkImmediately(Chunk chunk)
 	{
-		ChunkTask.CreateMeshDataJob(chunk, generationParameters).Complete();
-		if (generationParameters.MeshGenerationMode == MeshGenerationMode.SurfaceNets)
+		generator.CreateMeshDataJob(chunk).Complete();
+		if (generator.PostProcessMesh)
 		{
-			ChunkTask.CreateSurfaceNetsPostProcessingJob(chunk, generationParameters).Complete();
+			generator.CreateMeshPostProcessJob(chunk).Complete();
 		}
 		chunk.Mesh = CreateMesh(chunk);
 		if ((bool)chunk.Mesh)
@@ -678,6 +728,42 @@ public class VoxelWorld : MonoBehaviour
 		}
 		AssignMesh(chunk);
 		chunkJobs.Remove(chunk.Id);
+	}
+
+	private void MeshChunks(List<Chunk> chunks)
+	{
+		if (chunks.Count != 0)
+		{
+			ChunkTaskSet chunkTaskSet = new ChunkTaskSet(chunks, generator);
+			if (generator.PostProcessMesh)
+			{
+				chunkTaskSet.AddTask(generator.CreateMeshDataJob);
+				chunkTaskSet.AddTask(generator.CreateMeshPostProcessJob, CreateChunkMesh);
+			}
+			else
+			{
+				chunkTaskSet.AddTask(generator.CreateMeshDataJob, CreateChunkMesh);
+			}
+			chunkTaskSet.AddTask(ChunkTask.CreateCollisionJob, AssignMesh);
+			AddChunkTask(chunkTaskSet);
+			chunkTaskSet.Start();
+		}
+	}
+
+	private void AddChunkTask(ChunkTaskSet chunkTask)
+	{
+		foreach (Chunk chunk in chunkTask.Chunks)
+		{
+			chunkJobs.Add(chunk.Id, chunkTask);
+		}
+	}
+
+	private void RemoveChunkTask(ChunkTaskSet chunkTask)
+	{
+		foreach (Chunk chunk in chunkTask.Chunks)
+		{
+			chunkJobs.Remove(chunk.Id);
+		}
 	}
 
 	private void CreateChunkMesh(Chunk chunk)
@@ -720,7 +806,7 @@ public class VoxelWorld : MonoBehaviour
 			if (!chunk.Component)
 			{
 				ChunkComponent chunkComponent = _chunkComponentPool.Get();
-				chunkComponent.transform.SetParent(base.transform, worldPositionStays: false);
+				chunkComponent.transform.SetParent(root, worldPositionStays: false);
 				chunkComponent.transform.localScale = Vector3.one * worldScale;
 				chunkComponent.transform.localPosition = (chunk.Id * ChunkSize).ToVector3() * worldScale;
 				chunk.SetComponent(chunkComponent);
@@ -743,9 +829,67 @@ public class VoxelWorld : MonoBehaviour
 		chunk.IsDirty = false;
 	}
 
+	private void PrepForOperationOnChunks(UnityEngine.BoundsInt bounds)
+	{
+		_opBounds = bounds;
+		GetChunksForBounds(_opBounds, ref _opChunks);
+		_opChangedChunks.Clear();
+		_opChunkJobs.Clear();
+		foreach (Chunk opChunk in _opChunks)
+		{
+			if (chunkJobs.TryGetValue(opChunk.Id, out var value))
+			{
+				value.Complete();
+				if (!_opChunkJobs.Contains(value))
+				{
+					_opChunkJobs.Add(value);
+				}
+			}
+		}
+	}
+
+	private void FinalizeOperationOnChunks(bool immediate)
+	{
+		foreach (ChunkTaskSet opChunkJob in _opChunkJobs)
+		{
+			for (int i = 0; i < opChunkJob.Chunks.Count; i++)
+			{
+				Chunk chunk = opChunkJob.Chunks[i];
+				if (_opChangedChunks.Contains(chunk))
+				{
+					chunkJobs.Remove(chunk.Id);
+					if (opChunkJob.Chunks.Count > 1)
+					{
+						opChunkJob.Chunks.RemoveAt(i--);
+					}
+				}
+				else
+				{
+					completedJobs.Add(chunk.Id);
+				}
+			}
+		}
+		if (_opChangedChunks.Count <= 0)
+		{
+			return;
+		}
+		if (immediate)
+		{
+			MeshChunks(_opChangedChunks);
+			return;
+		}
+		foreach (Chunk opChangedChunk in _opChangedChunks)
+		{
+			opChangedChunk.IsMeshGenerated = false;
+			opChangedChunk.IsDirty = true;
+		}
+	}
+
 	public void SetVoxelDensityCustom(UnityEngine.BoundsInt worldBounds, Func<int3, byte, byte> setDensityFunction, bool immediate = true)
 	{
-		ForEachChunkInBounds(worldBounds, SetVoxelDensityInChunk);
+		PrepForOperationOnChunks(worldBounds);
+		ForEachChunk(_opChunks, SetVoxelDensityInChunk);
+		FinalizeOperationOnChunks(immediate);
 		void SetDensity(int3 voxelWorldPosition, int3 voxelLocalPosition, int voxelIndex, byte density)
 		{
 			byte b = setDensityFunction(voxelWorldPosition, density);
@@ -757,30 +901,12 @@ public class VoxelWorld : MonoBehaviour
 		}
 		void SetVoxelDensityInChunk()
 		{
-			ChunkTaskSet value;
-			bool flag = chunkJobs.TryGetValue(_opChunk.Id, out value);
-			if (flag)
-			{
-				value.Complete();
-			}
 			_opAnyChanged = false;
 			ForEachVoxelInChunkInBounds(_opBounds, _opChunk, SetDensity);
 			if (_opAnyChanged)
 			{
 				_opChunk.IsDataChanged = true;
-				if (immediate)
-				{
-					MeshChunkImmediately(_opChunk);
-				}
-				else
-				{
-					_opChunk.IsMeshGenerated = false;
-					_opChunk.IsDirty = true;
-				}
-			}
-			else if (flag)
-			{
-				HandleJobCompletion(value);
+				_opChangedChunks.Add(_opChunk);
 			}
 		}
 	}
@@ -788,7 +914,9 @@ public class VoxelWorld : MonoBehaviour
 	public void SetVoxelDataCustom(UnityEngine.BoundsInt worldBounds, Func<int3, (byte density, byte material), (byte density, byte material)> setDataFunction, bool immediate = true)
 	{
 		_opSetDataFunction = setDataFunction;
-		ForEachChunkInBounds(worldBounds, SetVoxelDataInChunk);
+		PrepForOperationOnChunks(worldBounds);
+		ForEachChunk(_opChunks, SetVoxelDataInChunk);
+		FinalizeOperationOnChunks(immediate);
 		static void SetVoxelData(int3 voxelWorldPosition, int3 voxelLocalPosition, int voxelIndex, byte density, byte material)
 		{
 			var (b, b2) = _opSetDataFunction(voxelWorldPosition, (density, material));
@@ -801,30 +929,12 @@ public class VoxelWorld : MonoBehaviour
 		}
 		void SetVoxelDataInChunk()
 		{
-			ChunkTaskSet value;
-			bool flag = chunkJobs.TryGetValue(_opChunk.Id, out value);
-			if (flag)
-			{
-				value.Complete();
-			}
 			_opAnyChanged = false;
 			ForEachVoxelInChunkInBounds(_opBounds, _opChunk, SetVoxelData);
 			if (_opAnyChanged)
 			{
 				_opChunk.IsDataChanged = true;
-				if (immediate)
-				{
-					MeshChunkImmediately(_opChunk);
-				}
-				else
-				{
-					_opChunk.IsMeshGenerated = false;
-					_opChunk.IsDirty = true;
-				}
-			}
-			else if (flag)
-			{
-				HandleJobCompletion(value);
+				_opChangedChunks.Add(_opChunk);
 			}
 		}
 	}
@@ -1153,6 +1263,33 @@ public class VoxelWorld : MonoBehaviour
 		}
 	}
 
+	private void ForEachChunk(List<Chunk> opChunks, Action action)
+	{
+		foreach (Chunk opChunk in opChunks)
+		{
+			_opChunk = opChunk;
+			action();
+		}
+	}
+
+	public bool ChunksHaveJobs(UnityEngine.BoundsInt worldBounds)
+	{
+		GetChunksForBounds(worldBounds, ref _tempChunkList);
+		return ChunksHaveJobs(_tempChunkList);
+	}
+
+	public bool ChunksHaveJobs(IList<Chunk> chunks)
+	{
+		foreach (Chunk chunk in chunks)
+		{
+			if (chunkJobs.ContainsKey(chunk.Id))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public void GetChunksForBounds(UnityEngine.BoundsInt worldBounds, ref List<Chunk> list)
 	{
 		if (list == null)
@@ -1285,7 +1422,13 @@ public class VoxelWorld : MonoBehaviour
 		{
 			Debug.LogWarning($"{chunk} job completed with state {chunk.State} and dirty {chunk.IsDirty}");
 		}
-		completedJobs.Add(chunkTask.Chunk.Id);
+		foreach (Chunk chunk2 in chunkTask.Chunks)
+		{
+			if (!completedJobs.Contains(chunk2.Id))
+			{
+				completedJobs.Add(chunk2.Id);
+			}
+		}
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1335,13 +1478,13 @@ public class VoxelWorld : MonoBehaviour
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Vector3 GetLocalPosition(Vector3 worldPosition)
 	{
-		return Matrix4x4.TRS(base.transform.position, base.transform.rotation, Vector3.one * worldScale).inverse.MultiplyPoint(worldPosition);
+		return Matrix4x4.TRS(root.position, root.rotation, Vector3.one * worldScale).inverse.MultiplyPoint(worldPosition);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Vector3 GetWorldPosition(Vector3 localPosition)
 	{
-		return Matrix4x4.TRS(base.transform.position, base.transform.rotation, Vector3.one * worldScale).MultiplyPoint(localPosition);
+		return Matrix4x4.TRS(root.position, root.rotation, Vector3.one * worldScale).MultiplyPoint(localPosition);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1362,18 +1505,21 @@ public class VoxelWorld : MonoBehaviour
 		return localPosition.RoundToInt();
 	}
 
-	private void OnDrawGizmosSelected()
+	private void OnDrawGizmos()
 	{
-		Matrix4x4 matrix = Matrix4x4.TRS(base.transform.position, base.transform.rotation, Vector3.one * worldScale);
-		Vector3 vector = worldBounds.min;
-		Vector3 vector2 = worldBounds.max;
-		Vector3 vector3 = (vector + vector2) / 2f;
-		Vector3 size = vector2 - vector;
-		Gizmos.color = Color.green;
-		Gizmos.DrawLine(base.transform.position, matrix.MultiplyPoint(vector3));
-		Gizmos.matrix = matrix;
-		Gizmos.DrawWireCube(vector3, size);
-		Gizmos.color = new Color(0f, 1f, 0f, 0.25f);
-		Gizmos.DrawCube(vector3, size);
+		if (worldType == WorldType.Bounded)
+		{
+			Transform transform = Root;
+			Matrix4x4 matrix = Matrix4x4.TRS(transform.position, transform.rotation, Vector3.one * worldScale);
+			Vector3 vector = worldBounds.min;
+			Vector3 vector2 = worldBounds.max;
+			Vector3 vector3 = (vector + vector2) / 2f;
+			Vector3 size = vector2 - vector;
+			Gizmos.color = Color.green;
+			Gizmos.DrawLine(base.transform.position, matrix.MultiplyPoint(vector3));
+			Gizmos.matrix = matrix;
+			Gizmos.DrawWireCube(vector3, size);
+		}
+		generator?.DrawGizmos(this);
 	}
 }

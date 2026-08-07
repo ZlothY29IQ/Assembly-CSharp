@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
@@ -25,6 +26,8 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 		public uint colorRG;
 
 		public uint colorBA;
+
+		public float range;
 	}
 
 	private struct LightDataLegacy
@@ -136,6 +139,15 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 		SetAmbientLightDynamic(Color.black);
 		SetCustomDynamicLightingEnabled(enable: false);
 		SetMaxLights(20);
+		StartCoroutine(Preheat());
+	}
+
+	private IEnumerator Preheat()
+	{
+		yield return null;
+		SetCustomDynamicLightingEnabled(enable: true);
+		yield return null;
+		SetCustomDynamicLightingEnabled(enable: false);
 	}
 
 	private void OnDestroy()
@@ -450,33 +462,39 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 
 	public void GetFromLight(int lightIndex, int gameLightIndex)
 	{
-		if (lightDataBuffer != null)
+		if (lightDataBuffer == null)
 		{
-			GameLight gameLight = null;
-			if (gameLightIndex >= 0 && gameLightIndex < gameLights.Count)
+			return;
+		}
+		GameLight gameLight = null;
+		if (gameLightIndex >= 0 && gameLightIndex < gameLights.Count)
+		{
+			gameLight = gameLights[gameLightIndex];
+		}
+		if (!(gameLight == null) && !(gameLight.light == null))
+		{
+			gameLight.cachedPosition = gameLight.transform.position;
+			gameLight.cachedColorAndIntensity = (float)gameLight.intensityMult * gameLight.light.intensity * (gameLight.negativeLight ? (-1f) : 1f) * gameLight.light.color;
+			if (gameLight.applyRange && gameLight.light.range > 0f)
 			{
-				gameLight = gameLights[gameLightIndex];
+				gameLight.range = 0.005f / gameLight.light.range;
 			}
-			if (!(gameLight == null) && !(gameLight.light == null))
+			Vector3 cachedPosition = gameLight.cachedPosition;
+			Vector4 cachedColorAndIntensity = gameLight.cachedColorAndIntensity;
+			lightData[lightIndex] = new LightDataPacked
 			{
-				gameLight.cachedPosition = gameLight.transform.position;
-				gameLight.cachedColorAndIntensity = (float)gameLight.intensityMult * gameLight.light.intensity * (gameLight.negativeLight ? (-1f) : 1f) * gameLight.light.color;
-				Vector3 cachedPosition = gameLight.cachedPosition;
-				Vector4 cachedColorAndIntensity = gameLight.cachedColorAndIntensity;
-				lightData[lightIndex] = new LightDataPacked
-				{
-					posXY = PackHalf2(cachedPosition.x, cachedPosition.y),
-					posZW = PackHalf2(cachedPosition.z, 1f),
-					colorRG = PackHalf2(cachedColorAndIntensity.x, cachedColorAndIntensity.y),
-					colorBA = PackHalf2(cachedColorAndIntensity.z, cachedColorAndIntensity.w)
-				};
-				lightDataLegacy[lightIndex] = new LightDataLegacy
-				{
-					position = new float4(cachedPosition.x, cachedPosition.y, cachedPosition.z, 1f),
-					color = new float4(cachedColorAndIntensity.x, cachedColorAndIntensity.y, cachedColorAndIntensity.z, cachedColorAndIntensity.w),
-					direction = float4.zero
-				};
-			}
+				posXY = PackHalf2(cachedPosition.x, cachedPosition.y),
+				posZW = PackHalf2(cachedPosition.z, 1f),
+				colorRG = PackHalf2(cachedColorAndIntensity.x, cachedColorAndIntensity.y),
+				colorBA = PackHalf2(cachedColorAndIntensity.z, cachedColorAndIntensity.w),
+				range = gameLight.range
+			};
+			lightDataLegacy[lightIndex] = new LightDataLegacy
+			{
+				position = new float4(cachedPosition.x, cachedPosition.y, cachedPosition.z, 1f),
+				color = new float4(cachedColorAndIntensity.x, cachedColorAndIntensity.y, cachedColorAndIntensity.z, cachedColorAndIntensity.w),
+				direction = float4.zero
+			};
 		}
 	}
 

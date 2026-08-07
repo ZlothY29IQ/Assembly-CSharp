@@ -43,6 +43,8 @@ public class CyclicalActivator : MonoBehaviour, IGorillaSliceableSimple
 	[SerializeField]
 	private CyclicalActivatorObject[] objects;
 
+	private float previousS = -1f;
+
 	private void OnEnable()
 	{
 		GorillaSlicerSimpleManager.RegisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.LateUpdate);
@@ -55,14 +57,19 @@ public class CyclicalActivator : MonoBehaviour, IGorillaSliceableSimple
 
 	void IGorillaSliceableSimple.SliceUpdate()
 	{
-		if (!(GorillaComputer.instance == null) && GorillaComputer.instance.GetServerTime().Year >= 2000)
+		if (GorillaComputer.instance == null || GorillaComputer.instance.GetServerTime().Year < 2000)
 		{
-			DateTime serverTime = GorillaComputer.instance.GetServerTime();
-			float nowSeconds = (float)(serverTime.Minute * 60) + ((float)serverTime.Second + (float)serverTime.Millisecond * 0.001f);
+			return;
+		}
+		DateTime serverTime = GorillaComputer.instance.GetServerTime();
+		float num = (float)(serverTime.Minute * 60) + ((float)serverTime.Second + (float)serverTime.Millisecond * 0.001f);
+		if (num != previousS)
+		{
 			for (int i = 0; i < objects.Length; i++)
 			{
-				objects[i].gameObject.SetActive(objects[i].schedule.CheckTime(nowSeconds));
+				objects[i].gameObject.SetActive(objects[i].schedule.CheckTime(num));
 			}
+			previousS = num;
 		}
 	}
 }

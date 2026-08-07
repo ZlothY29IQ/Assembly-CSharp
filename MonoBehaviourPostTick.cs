@@ -4,12 +4,12 @@ public abstract class MonoBehaviourPostTick : MonoBehaviour, ITickSystemPost
 {
 	public bool PostTickRunning { get; set; }
 
-	public void OnEnable()
+	public virtual void OnEnable()
 	{
 		TickSystem<object>.AddPostTickCallback(this);
 	}
 
-	public void OnDisable()
+	public virtual void OnDisable()
 	{
 		TickSystem<object>.RemovePostTickCallback(this);
 	}

@@ -51,6 +51,21 @@ public class RigEventVolume : MonoBehaviour
 
 	private bool localRigPresent;
 
+	[SerializeField]
+	private UnityEvent<int> CountChangedAbsolute;
+
+	[SerializeField]
+	private UnityEvent<float> CountChangedRelative;
+
+	[SerializeField]
+	private bool applyMultipliers;
+
+	[SerializeField]
+	private AnimationCurve MulitplierAbsolute;
+
+	[SerializeField]
+	private AnimationCurve MulitplierRelative;
+
 	public VRRig[] Rigs => rigs.ToArray();
 
 	public int RigCount => gameObjects.Keys.Count;
@@ -181,17 +196,28 @@ public class RigEventVolume : MonoBehaviour
 
 	private void countChanged(int oldValue, int newValue, int oldPlayerCount, int newPlayerCount)
 	{
+		float num = (float)newValue / (float)newPlayerCount;
 		if (newValue > oldValue)
 		{
-			if ((mode == Mode.RELATIVE && (float)newValue / (float)newPlayerCount >= relThreshold && (float)oldValue / (float)oldPlayerCount < relThreshold) || (mode == Mode.ABSOLUTE && newValue >= absThreshold && oldValue < absThreshold))
+			if ((mode == Mode.RELATIVE && num >= relThreshold && (float)oldValue / (float)oldPlayerCount < relThreshold) || (mode == Mode.ABSOLUTE && newValue >= absThreshold && oldValue < absThreshold))
 			{
 				GoesOverThreshold?.Invoke();
 			}
 		}
-		else if (newValue < oldValue && ((mode == Mode.RELATIVE && (float)newValue / (float)newPlayerCount < relThreshold && (float)oldValue / (float)oldPlayerCount >= relThreshold) || (mode == Mode.ABSOLUTE && newValue < absThreshold && oldValue >= absThreshold)))
+		else if (newValue < oldValue && ((mode == Mode.RELATIVE && num < relThreshold && (float)oldValue / (float)oldPlayerCount >= relThreshold) || (mode == Mode.ABSOLUTE && newValue < absThreshold && oldValue >= absThreshold)))
 		{
 			GoesUnderThreshold?.Invoke();
 		}
 		this.OnCountChanged?.Invoke();
+		if (applyMultipliers)
+		{
+			CountChangedAbsolute?.Invoke(Mathf.RoundToInt(MulitplierAbsolute.Evaluate(newValue)));
+			CountChangedRelative?.Invoke(MulitplierAbsolute.Evaluate(num));
+		}
+		else
+		{
+			CountChangedAbsolute?.Invoke(newValue);
+			CountChangedRelative?.Invoke(num);
+		}
 	}
 }

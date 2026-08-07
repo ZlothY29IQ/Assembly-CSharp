@@ -1236,6 +1236,11 @@ public class NetworkSystemFusion : NetworkSystem
 		return playerRig.Rig.rigSerializer.tutorialComplete;
 	}
 
+	public override string GetPlayerPlatform(NetPlayer player)
+	{
+		return "";
+	}
+
 	public override int GlobalPlayerCount()
 	{
 		if (regionCrawler == null)

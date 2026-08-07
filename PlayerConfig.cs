@@ -15,4 +15,6 @@ public class PlayerConfig
 	public const string Nope = "nope";
 
 	public const string FlagTrue = "flagged";
+
+	public const string Player_Platform = "platform";
 }

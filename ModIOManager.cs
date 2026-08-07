@@ -207,6 +207,7 @@ public class ModIOManager : MonoBehaviour, ISteamCredentialProvider, IOculusCred
 			ModioLog.Error?.Log($"[ModIOManager::InitInternal] Error initializing mod.io: {error}");
 			return error;
 		}
+		ModInstallationManagement.DownloadAndExtractAsSingleJob = false;
 		EnableModManagement();
 		initialized = true;
 		await GetFavoriteMods();

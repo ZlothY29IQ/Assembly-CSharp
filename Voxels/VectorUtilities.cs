@@ -37,6 +37,24 @@ public static class VectorUtilities
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static Vector3Int RoundToVectorInt(this Vector3 v)
+	{
+		return new Vector3Int((int)math.round(v.x), (int)math.round(v.y), (int)math.round(v.z));
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static Vector3Int FloorToVectorInt(this Vector3 v)
+	{
+		return new Vector3Int((int)math.floor(v.x), (int)math.floor(v.y), (int)math.floor(v.z));
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static Vector3Int CeilToVectorInt(this Vector3 v)
+	{
+		return new Vector3Int((int)math.ceil(v.x), (int)math.ceil(v.y), (int)math.ceil(v.z));
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static int3 RoundToInt(this float3 v)
 	{
 		return (int3)math.round(v);
@@ -46,6 +64,12 @@ public static class VectorUtilities
 	public static int3 CeilToInt(this float3 v)
 	{
 		return new int3(Mathf.CeilToInt(v.x), Mathf.CeilToInt(v.y), Mathf.CeilToInt(v.z));
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static Vector3 Ceil(this Vector3 v)
+	{
+		return new Vector3(math.ceil(v.x), math.ceil(v.y), math.ceil(v.z));
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]

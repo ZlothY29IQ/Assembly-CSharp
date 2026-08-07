@@ -42,26 +42,19 @@ public class TimeOfDayDependentAudio : MonoBehaviour, IGorillaSliceableSimple, I
 			myEmissionModule = myParticleSystem.emission;
 			startingEmissionRate = myEmissionModule.rateOverTime.constant;
 		}
-		if (isModified)
-		{
-			positionMultiplier = positionMultiplierSet;
-		}
-		else
-		{
-			positionMultiplier = 1f;
-		}
+		positionMultiplier = (isModified ? positionMultiplierSet : 1f);
 		if (volumes == null)
 		{
 			volumes = new float[10];
 		}
 	}
 
-	public void OnEnable()
+	private void OnEnable()
 	{
 		GorillaSlicerSimpleManager.RegisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.FixedUpdate);
 	}
 
-	public void OnDisable()
+	private void OnDisable()
 	{
 		GorillaSlicerSimpleManager.UnregisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.FixedUpdate);
 	}

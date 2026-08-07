@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using GT_CustomMapSupportRuntime;
 using GorillaExtensions;
 using UnityEngine;
 
@@ -103,11 +105,7 @@ public class MonkeGravityController : MonoBehaviour, ICallbackUnique, ICallBack
 		{
 			m_targetTransform = base.transform;
 		}
-		if (m_alwaysInZone != null)
-		{
-			m_alwaysInZone.AddTarget(this);
-		}
-		else if (m_activatorCollider.IsNull())
+		if (m_alwaysInZone == null && m_activatorCollider.IsNull())
 		{
 			m_activatorCollider = GetComponent<Collider>();
 			if (m_activatorCollider.IsNull())
@@ -127,6 +125,10 @@ public class MonkeGravityController : MonoBehaviour, ICallbackUnique, ICallBack
 		if (m_register)
 		{
 			MonkeGravityManager.AddMonkeGravityController(this);
+			if (m_alwaysInZone != null)
+			{
+				m_alwaysInZone.AddTarget(this);
+			}
 		}
 	}
 
@@ -329,6 +331,79 @@ public class MonkeGravityController : MonoBehaviour, ICallbackUnique, ICallBack
 		if (quaternion == Quaternion.identity)
 		{
 			m_needsRotationRecovery = false;
+		}
+	}
+
+	public void CopyProperties(MonkeGravityControllerSettings settings, BasicGravityZone alwaysInZone)
+	{
+		m_useRotation = settings.useRotation;
+		m_instantRotation = settings.instantRotation;
+		m_overrideForceMode = settings.overrideForceMode;
+		m_forceModeOverride = settings.forceModeOverride;
+		m_preferredRotationDirection = settings.preferredRotationDirection switch
+		{
+			MonkeGravityControllerSettings.RotationDirection.None => RotationDirection.None, 
+			MonkeGravityControllerSettings.RotationDirection.Forward => RotationDirection.Forward, 
+			MonkeGravityControllerSettings.RotationDirection.Backward => RotationDirection.Backward, 
+			MonkeGravityControllerSettings.RotationDirection.Left => RotationDirection.Left, 
+			MonkeGravityControllerSettings.RotationDirection.Right => RotationDirection.Right, 
+			_ => throw new NotImplementedException(), 
+		};
+		if (m_register)
+		{
+			MonkeGravityManager.RemoveMonkeGravityController(this);
+			m_register = false;
+		}
+		if (settings.activatorCollider != null)
+		{
+			m_activatorCollider = settings.activatorCollider;
+		}
+		if (settings.targetRigidbody != null)
+		{
+			m_targetRigidBody = settings.targetRigidbody;
+		}
+		if (settings.targetTransform != null)
+		{
+			m_targetTransform = settings.targetTransform;
+		}
+		m_alwaysInZone = alwaysInZone;
+		if (m_targetRigidBody.IsNull())
+		{
+			m_targetRigidBody = GetComponent<Rigidbody>();
+		}
+		if (m_targetTransform.IsNull())
+		{
+			m_targetTransform = base.transform;
+		}
+		if (m_activatorCollider.IsNull())
+		{
+			m_activatorCollider = GetComponent<Collider>();
+		}
+		if ((m_activatorCollider.IsNull() && m_alwaysInZone == null) || m_targetRigidBody.IsNull())
+		{
+			return;
+		}
+		m_register = true;
+		m_globalGravityIntent = m_targetRigidBody.useGravity;
+		if (base.isActiveAndEnabled)
+		{
+			MonkeGravityManager.AddMonkeGravityController(this);
+			if (m_alwaysInZone != null)
+			{
+				m_alwaysInZone.AddTarget(this);
+			}
+		}
+	}
+
+	public void AssignReferencesIfMissing(Rigidbody rb, Collider col, Transform tr)
+	{
+		if (!m_register)
+		{
+			m_targetRigidBody = rb;
+			m_activatorCollider = col;
+			m_targetTransform = tr;
+			m_globalGravityIntent = rb.useGravity;
+			m_register = true;
 		}
 	}
 }

@@ -1,5 +1,5 @@
 using System.Linq;
-using JetBrains.Annotations;
+using Pooling;
 using UnityEngine;
 
 namespace Voxels;
@@ -19,10 +19,12 @@ public class VoxelMaterialSet : ScriptableObject
 
 	private Material _material;
 
-	[CanBeNull]
+	private int _lastFrame;
+
+	private int _callCount;
+
 	private Texture2DArray TextureArray { get; set; }
 
-	[CanBeNull]
 	public Material Material
 	{
 		get
@@ -65,12 +67,23 @@ public class VoxelMaterialSet : ScriptableObject
 
 	public void PlayDigFX(Vector3 position, Vector3 normal, int[] amounts)
 	{
+		int frameCount = Time.frameCount;
+		if (_lastFrame != frameCount)
+		{
+			_callCount = 0;
+		}
+		if (_callCount >= 5)
+		{
+			return;
+		}
 		for (int i = 0; i < Materials.Length; i++)
 		{
 			int num = amounts[i];
 			if (num > 0)
 			{
-				Object.Instantiate((num >= 20) ? Materials[i].digBigFX : Materials[i].digFX, position, Quaternion.LookRotation(normal));
+				_lastFrame = frameCount;
+				_callCount++;
+				((num >= 20) ? Materials[i].digBigFX : Materials[i].digFX).Get(position, Quaternion.LookRotation(normal));
 			}
 		}
 	}

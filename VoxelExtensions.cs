@@ -134,7 +134,7 @@ public static class VoxelExtensions
 		Vector3Int vector3Int = Vector3Int.one * Mathf.CeilToInt(action.radius);
 		Vector3Int position2 = v.ToVectorInt() - vector3Int;
 		_lastBounds = new UnityEngine.BoundsInt(position2, vector3Int * 2);
-		VoxelManager.Mine(world, _lastBounds, hit.point, hit.normal, vector, action);
+		VoxelManager.Mine(world, hit.point, hit.normal, vector, action);
 	}
 
 	private static void Mine_SurfaceNets(this VoxelWorld world, RaycastHit hit, VoxelAction action)
@@ -173,7 +173,7 @@ public static class VoxelExtensions
 		Vector3Int vector3Int = Vector3Int.one * Mathf.CeilToInt(action.radius);
 		Vector3Int position = v.ToVectorInt() - vector3Int;
 		_lastBounds = new UnityEngine.BoundsInt(position, vector3Int * 2);
-		VoxelManager.Mine(world, _lastBounds, hit.point, hit.normal, end, action);
+		VoxelManager.Mine(world, hit.point, hit.normal, end, action);
 	}
 
 	private static void AddMined(byte material, int amount)
@@ -185,9 +185,9 @@ public static class VoxelExtensions
 		}
 	}
 
-	public static int[] PerformLocalMiningOperation(this VoxelWorld world, UnityEngine.BoundsInt bounds, Vector3 hitPoint, Vector3 hitNormal, VoxelOperation op)
+	public static int[] PerformLocalMiningOperation(this VoxelWorld world, Vector3 hitPoint, Vector3 hitNormal, VoxelOperation op, bool immediate = true)
 	{
-		_lastBounds = bounds;
+		_lastBounds = world.GetBounds(op.origin, op.radius);
 		_opMaterialSet = world.MaterialSet;
 		_op = op;
 		_opTotalMined = 0;
@@ -195,14 +195,14 @@ public static class VoxelExtensions
 		switch (_op.operationType)
 		{
 		case OperationType.Subtract:
-			world.SetVoxelDataCustom(bounds, MineAt);
+			world.SetVoxelDataCustom(_lastBounds, MineAt, immediate);
 			if (_opTotalMined > 0)
 			{
 				world.MaterialSet.PlayDigFX(hitPoint, hitNormal, _opMined);
 			}
 			break;
 		case OperationType.Add:
-			world.SetVoxelDataCustom(bounds, UnMineAt);
+			world.SetVoxelDataCustom(_lastBounds, UnMineAt, immediate);
 			break;
 		default:
 			throw new ArgumentOutOfRangeException();
@@ -210,7 +210,7 @@ public static class VoxelExtensions
 		return _opMined;
 	}
 
-	public static void PerformLocalOperation(this VoxelWorld world, Vector3 localPosition, VoxelAction action)
+	public static void PerformLocalOperation(this VoxelWorld world, Vector3 localPosition, VoxelAction action, bool immediate = true)
 	{
 		UnityEngine.BoundsInt bounds = world.GetBounds(localPosition, action.radius);
 		_opAction = action;
@@ -218,10 +218,10 @@ public static class VoxelExtensions
 		switch (_opAction.operation)
 		{
 		case OperationType.Subtract:
-			world.SetVoxelDensityCustom(bounds, SubtractAt);
+			world.SetVoxelDensityCustom(bounds, SubtractAt, immediate);
 			break;
 		case OperationType.Add:
-			world.SetVoxelDensityCustom(bounds, AddAt);
+			world.SetVoxelDensityCustom(bounds, AddAt, immediate);
 			break;
 		default:
 			throw new ArgumentOutOfRangeException();
@@ -360,6 +360,37 @@ public static class VoxelExtensions
 	public static UnityEngine.BoundsInt Union(this UnityEngine.BoundsInt a, UnityEngine.BoundsInt b)
 	{
 		return new UnityEngine.BoundsInt(VectorUtilities.Min(a.min, b.min), VectorUtilities.Max(a.max, b.max));
+	}
+
+	public static UnityEngine.BoundsInt GetBounds(this VoxelWorld world, int3 point, int radius)
+	{
+		int3 int5 = point / 256;
+		int3 int6 = point - int5 * 256;
+		int5 += new int3(Round(int6.x), Round(int6.y), Round(int6.z));
+		int num = Ceil(radius);
+		return new UnityEngine.BoundsInt((int5 - num).ToVectorInt(), new int3(num * 2).ToVectorInt());
+		static int Ceil(int value)
+		{
+			int num2 = value / 256;
+			if (value - num2 * 256 > 0)
+			{
+				num2++;
+			}
+			return num2;
+		}
+		static int Round(int value)
+		{
+			int num2 = 128;
+			if (value >= -num2)
+			{
+				if (value <= num2)
+				{
+					return 0;
+				}
+				return 1;
+			}
+			return -1;
+		}
 	}
 
 	public static UnityEngine.BoundsInt GetBounds(this VoxelWorld world, float3 point, float radius)

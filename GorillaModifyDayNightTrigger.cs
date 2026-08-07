@@ -17,9 +17,9 @@ public class GorillaModifyDayNightTrigger : GorillaTriggerBox
 		}
 		else
 		{
-			_ = timeOfDayIndex % BetterDayNightManager.instance.timeOfDayRange.Length;
-			BetterDayNightManager.instance.SetTimeOfDay(timeOfDayIndex);
-			BetterDayNightManager.instance.SetOverrideIndex(timeOfDayIndex);
+			int num = timeOfDayIndex % BetterDayNightManager.instance.timeOfDayRange.Length;
+			BetterDayNightManager.instance.SetTimeOfDay(num);
+			BetterDayNightManager.instance.SetOverrideIndex(num);
 		}
 		if (setFixedWeather)
 		{

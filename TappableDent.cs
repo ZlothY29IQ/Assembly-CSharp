@@ -32,13 +32,23 @@ public class TappableDent : Tappable
 
 	public override void OnTapLocal(float tapStrength, float tapTime, PhotonMessageInfoWrapped info)
 	{
-		numTapsSoFar++;
-		if (numTapsSoFar >= numTapsToDestroy)
+		if (numTapsSoFar <= numTapsToDestroy)
 		{
-			parent.SetActive(value: false);
-			return;
+			numTapsSoFar++;
+			if (numTapsSoFar >= numTapsToDestroy)
+			{
+				parent.SetActive(value: false);
+				return;
+			}
+			base.transform.localPosition += offsetPerTap;
+			base.transform.localScale += scaleOffsetPerTap;
 		}
-		base.transform.localPosition += offsetPerTap;
-		base.transform.localScale += scaleOffsetPerTap;
+	}
+
+	public void ChangeNumTapsToDestroy(int i)
+	{
+		float num = (float)numTapsSoFar / (float)numTapsToDestroy;
+		numTapsToDestroy = i;
+		numTapsSoFar = Mathf.RoundToInt((float)numTapsToDestroy * num);
 	}
 }

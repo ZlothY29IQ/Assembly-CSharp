@@ -166,15 +166,13 @@ public class SIResource : MonoBehaviour, IGorillaSliceableSimple
 		{
 			myGameEntity = GetComponent<GameEntity>();
 		}
-		if (myGameEntity == null)
+		if (!(myGameEntity == null))
 		{
-			Debug.LogError("missing gameentity reference! bad!", base.gameObject);
-			return;
+			GameEntity gameEntity = myGameEntity;
+			gameEntity.OnGrabbed = (Action)Delegate.Combine(gameEntity.OnGrabbed, new Action(SetLastGrabbed));
+			_rb = GetComponent<Rigidbody>();
+			myGameEntity.onEntityDestroyed += HandleOnDestroyed;
 		}
-		GameEntity gameEntity = myGameEntity;
-		gameEntity.OnGrabbed = (Action)Delegate.Combine(gameEntity.OnGrabbed, new Action(SetLastGrabbed));
-		_rb = GetComponent<Rigidbody>();
-		myGameEntity.onEntityDestroyed += HandleOnDestroyed;
 	}
 
 	public void SliceUpdate()

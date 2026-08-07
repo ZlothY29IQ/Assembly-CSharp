@@ -98,7 +98,7 @@ public class RandomCarveableObject : NetworkComponent
 
 	private void SetBoundsDensity(byte density)
 	{
-		world.SetVoxels(_voxels, density, materialId);
+		world.SetVoxels(_voxels, density, materialId, immediate: false);
 	}
 
 	private void CollectVoxelSet()

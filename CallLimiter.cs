@@ -42,6 +42,11 @@ public class CallLimiter
 		maxLatency = latencyMax;
 	}
 
+	public virtual CallLimiter GetCopy()
+	{
+		return new CallLimiter(callHistoryLength, timeCooldown, (float)maxLatency);
+	}
+
 	public bool CheckCallServerTime(double time)
 	{
 		double currentTime = PhotonNetwork.CurrentTime;

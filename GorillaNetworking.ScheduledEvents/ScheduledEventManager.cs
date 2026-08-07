@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using ExitGames.Client.Photon;
@@ -11,7 +10,7 @@ using UnityEngine;
 namespace GorillaNetworking.ScheduledEvents;
 
 [RequireComponent(typeof(PhotonView))]
-public class ScheduledEventManager : MonoBehaviour, IInRoomCallbacks, IPunObservable
+public class ScheduledEventManager : MonoBehaviour, IGorillaSliceableSimple, IInRoomCallbacks, IPunObservable
 {
 	private enum StartKind
 	{
@@ -53,8 +52,6 @@ public class ScheduledEventManager : MonoBehaviour, IInRoomCallbacks, IPunObserv
 
 	private bool showEndedInRoom;
 
-	private Coroutine graceEndWatcher;
-
 	private ScheduledEventPhase currentPhase;
 
 	private readonly HashSet<ScheduledEventControlledObject> registered = new HashSet<ScheduledEventControlledObject>();
@@ -73,7 +70,7 @@ public class ScheduledEventManager : MonoBehaviour, IInRoomCallbacks, IPunObserv
 			{
 				return 0.0;
 			}
-			return Math.Max(0.0, PhotonTimestamp.Now.SecondsUntil(scheduledStart));
+			return PhotonTimestamp.Now.SecondsUntil(scheduledStart);
 		}
 	}
 
@@ -88,11 +85,10 @@ public class ScheduledEventManager : MonoBehaviour, IInRoomCallbacks, IPunObserv
 		if (Instance != null && Instance != this)
 		{
 			UnityEngine.Object.Destroy(this);
+			return;
 		}
-		else
-		{
-			Instance = this;
-		}
+		Instance = this;
+		currentPhase = ScheduledEventPhase.None;
 	}
 
 	private async void Start()
@@ -130,7 +126,6 @@ public class ScheduledEventManager : MonoBehaviour, IInRoomCallbacks, IPunObserv
 			NetworkSystem.Instance.OnMultiplayerStarted -= new Action(OnMultiplayerStarted);
 			NetworkSystem.Instance.OnReturnedToSinglePlayer -= new Action(OnReturnedToSinglePlayer);
 		}
-		StopGraceEndWatcher();
 		if (GorillaComputer.instance != null)
 		{
 			GorillaComputer instance = GorillaComputer.instance;
@@ -142,7 +137,20 @@ public class ScheduledEventManager : MonoBehaviour, IInRoomCallbacks, IPunObserv
 		}
 	}
 
-	private void Update()
+	private void OnEnable()
+	{
+		if (Instance == this)
+		{
+			GorillaSlicerSimpleManager.RegisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
+		}
+	}
+
+	private void OnDisable()
+	{
+		GorillaSlicerSimpleManager.UnregisterSliceable(this, GorillaSlicerSimpleManager.UpdateStep.Update);
+	}
+
+	public void SliceUpdate()
 	{
 		RefreshPhase();
 	}
@@ -183,6 +191,7 @@ public class ScheduledEventManager : MonoBehaviour, IInRoomCallbacks, IPunObserv
 
 	private void RefreshPhase()
 	{
+		MaintainRoomStateAsMaster();
 		ScheduledEventPhase scheduledEventPhase = ComputePhase();
 		if (scheduledEventPhase != currentPhase)
 		{
@@ -214,11 +223,39 @@ public class ScheduledEventManager : MonoBehaviour, IInRoomCallbacks, IPunObserv
 			}
 			return ScheduledEventPhase.During;
 		}
+		if (NetworkSystem.Instance != null && NetworkSystem.Instance.InRoom)
+		{
+			if (!useForcedEventTime && string.IsNullOrEmpty(titleDataKey))
+			{
+				return ScheduledEventPhase.NoEvent;
+			}
+			if (IsResolved)
+			{
+				return ScheduledEventPhase.After;
+			}
+			return ScheduledEventPhase.Before;
+		}
+		return ComputeOfflinePhase();
+	}
+
+	private ScheduledEventPhase ComputeOfflinePhase()
+	{
 		if (!useForcedEventTime && string.IsNullOrEmpty(titleDataKey))
 		{
 			return ScheduledEventPhase.NoEvent;
 		}
-		if (IsResolved)
+		if (!scheduledStartKnown)
+		{
+			return ScheduledEventPhase.Before;
+		}
+		DateTime serverNow = ((GorillaComputer.instance != null) ? GorillaComputer.instance.GetServerTime() : DateTime.UtcNow);
+		ScheduledEventInfo current = GetCurrent(serverNow);
+		bool creatorSeenRecently = ScheduledEventMatchmaking.HasSeenScheduledEventRecently(serverNow);
+		if (ScheduledEventMatchmaking.ResolveCreateState(current, serverNow, creatorSeenRecently) == "post-event")
+		{
+			return ScheduledEventPhase.After;
+		}
+		if (!current.isActive)
 		{
 			return ScheduledEventPhase.After;
 		}
@@ -299,7 +336,6 @@ public class ScheduledEventManager : MonoBehaviour, IInRoomCallbacks, IPunObserv
 	{
 		lastKnownState = ReadRoomState();
 		showEndedInRoom = lastKnownState == "post-event";
-		EnsureGraceEndWatcher();
 		if (NetworkSystem.Instance.IsMasterClient && startKind == StartKind.Unresolved)
 		{
 			PhotonTimestamp? photonTimestamp = ComputeStartTime();
@@ -319,7 +355,6 @@ public class ScheduledEventManager : MonoBehaviour, IInRoomCallbacks, IPunObserv
 	{
 		lastKnownState = null;
 		showEndedInRoom = false;
-		StopGraceEndWatcher();
 		SetStartState(StartKind.Unresolved, default(PhotonTimestamp));
 		RefreshPhase();
 	}
@@ -362,12 +397,12 @@ public class ScheduledEventManager : MonoBehaviour, IInRoomCallbacks, IPunObserv
 	{
 		if (PhotonNetwork.CurrentRoom != null)
 		{
-			ExitGames.Client.Photon.Hashtable propertiesToSet = new ExitGames.Client.Photon.Hashtable { { "scheduledEventState", state } };
+			Hashtable propertiesToSet = new Hashtable { { "scheduledEventState", state } };
 			PhotonNetwork.CurrentRoom.SetCustomProperties(propertiesToSet);
 		}
 	}
 
-	void IInRoomCallbacks.OnRoomPropertiesUpdate(ExitGames.Client.Photon.Hashtable propertiesThatChanged)
+	void IInRoomCallbacks.OnRoomPropertiesUpdate(Hashtable propertiesThatChanged)
 	{
 		if (propertiesThatChanged.TryGetValue("scheduledEventState", out var value))
 		{
@@ -385,14 +420,12 @@ public class ScheduledEventManager : MonoBehaviour, IInRoomCallbacks, IPunObserv
 			{
 				showEndedInRoom = false;
 			}
-			EnsureGraceEndWatcher();
 			RefreshPhase();
 		}
 	}
 
 	void IInRoomCallbacks.OnMasterClientSwitched(Player newMasterClient)
 	{
-		EnsureGraceEndWatcher();
 	}
 
 	void IInRoomCallbacks.OnPlayerEnteredRoom(Player newPlayer)
@@ -403,40 +436,21 @@ public class ScheduledEventManager : MonoBehaviour, IInRoomCallbacks, IPunObserv
 	{
 	}
 
-	void IInRoomCallbacks.OnPlayerPropertiesUpdate(Player targetPlayer, ExitGames.Client.Photon.Hashtable changedProps)
+	void IInRoomCallbacks.OnPlayerPropertiesUpdate(Player targetPlayer, Hashtable changedProps)
 	{
 	}
 
-	private void EnsureGraceEndWatcher()
+	private void MaintainRoomStateAsMaster()
 	{
-	}
-
-	private void StopGraceEndWatcher()
-	{
-		if (graceEndWatcher != null)
+		if (!(NetworkSystem.Instance == null) && NetworkSystem.Instance.InRoom && NetworkSystem.Instance.IsMasterClient && !(lastKnownState != "post-event"))
 		{
-			StopCoroutine(graceEndWatcher);
-			graceEndWatcher = null;
-		}
-	}
-
-	private IEnumerator GraceEndWatcherCoroutine()
-	{
-		WaitForSeconds wait = new WaitForSeconds(30f);
-		while (true)
-		{
-			if (!NetworkSystem.Instance.InRoom || !NetworkSystem.Instance.IsMasterClient || lastKnownState != "post-event")
+			DateTime serverNow = ((GorillaComputer.instance != null) ? GorillaComputer.instance.GetServerTime() : DateTime.UtcNow);
+			if (ScheduledEventMatchmaking.GracePeriodEnded(GetCurrent(serverNow), serverNow))
 			{
-				yield break;
+				SetRoomState("regular");
+				lastKnownState = "regular";
 			}
-			DateTime serverTime = GorillaComputer.instance.GetServerTime();
-			if (ScheduledEventMatchmaking.GracePeriodEnded(GetCurrent(serverTime), serverTime))
-			{
-				break;
-			}
-			yield return wait;
 		}
-		SetRoomState("regular");
 	}
 
 	private PhotonTimestamp? ComputeStartTime()

@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using Cysharp.Text;
 using Fusion;
 using GorillaExtensions;
+using GorillaGameModes;
 using GorillaLocomotion;
 using GorillaNetworking;
 using GorillaTag;
@@ -3487,9 +3488,10 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		{
 			return false;
 		}
+		bool flag = GorillaGameModes.GameMode.CurrentGameModeType == GameModeType.SuperCasual || GorillaGameModes.GameMode.CurrentGameModeType == GameModeType.SuperInfect;
 		for (int i = 0; i < zoneComponents.Count; i++)
 		{
-			if (!zoneComponents[i].IsZoneReady())
+			if ((flag || !(zoneComponents[i] is SuperInfectionManager)) && !zoneComponents[i].IsZoneReady())
 			{
 				return false;
 			}
@@ -3651,16 +3653,13 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 
 	private void OnNetworkJoinedRoom()
 	{
-		HasAnyScenePlacedInScene(GetZoneSceneName());
+		GetZoneSceneName();
 		zoneClearReason = ZoneClearReason.JoinZone;
 		SetZoneState(ZoneState.WaitingToEnterZone);
 	}
 
 	private void OnNetworkLeftRoom()
 	{
-		for (int i = 0; i < entities.Count; i++)
-		{
-		}
 		zoneClearReason = ZoneClearReason.Disconnect;
 		if (zoneStateData.state != ZoneState.WaitingToEnterZone)
 		{

@@ -125,7 +125,7 @@ public class TitleDataDateRefActivation : MonoBehaviour, IGorillaSliceableSimple
 		}
 		catch (Exception ex)
 		{
-			Debug.Log("TitleDataDateRefActivation :: onTD :: " + ex.Message + " :: " + ex.StackTrace);
+			Debug.LogError("TitleDataDateRefActivation :: onTD :: " + ex.Message + " :: " + ex.StackTrace);
 			readyState = ReadyState.Crashed;
 		}
 	}
@@ -149,7 +149,7 @@ public class TitleDataDateRefActivation : MonoBehaviour, IGorillaSliceableSimple
 
 	private void onTDError(PlayFabError error)
 	{
-		Debug.Log($"TitleDataDateRefActivation :: onTDError :: {error}");
+		Debug.LogError($"TitleDataDateRefActivation :: onTDError :: {error}");
 		readyState = ReadyState.Crashed;
 	}
 

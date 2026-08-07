@@ -240,6 +240,10 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 
 	private static List<MapEntity> entitiesToCreate = new List<MapEntity>(GT_CustomMapSupportRuntime.Constants.aiAgentLimit);
 
+	private static List<(MonkeGravityControllerSettings settings, BasicGravityZoneSettings alwaysInZoneSettings)> monkeGravityControllersToReplace = new List<(MonkeGravityControllerSettings, BasicGravityZoneSettings)>();
+
+	private static Dictionary<BasicGravityZoneSettings, BasicGravityZone> replacedGravityZones = new Dictionary<BasicGravityZoneSettings, BasicGravityZone>();
+
 	private static LightmapData[] lightmaps;
 
 	private static List<Texture2D> lightmapsToKeep = new List<Texture2D>();
@@ -339,6 +343,7 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		typeof(PlanetZoneSettings),
 		typeof(CubicPlanetZoneSettings),
 		typeof(SizeChangerSettings),
+		typeof(MonkeGravityControllerSettings),
 		typeof(ProBuilderMesh),
 		typeof(TMP_Text),
 		typeof(TextMeshPro),
@@ -369,6 +374,8 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		typeof(AudioListener),
 		typeof(VideoPlayer)
 	};
+
+	public const long LocalMapModId = 999999999L;
 
 	public static ModId LoadedMapModId => loadedMapModId;
 
@@ -628,13 +635,16 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		}
 		loadedMapModId = attemptedLoadID;
 		loadedMapModFileId = 0L;
-		ModIOManager.GetMod(new ModId(loadedMapModId), forceUpdate: false, delegate(Error error, Mod mod)
+		if (loadedMapModId != 999999999L)
 		{
-			if (!error && mod != null && mod.File != null)
+			ModIOManager.GetMod(new ModId(loadedMapModId), forceUpdate: false, delegate(Error error, Mod mod)
 			{
-				loadedMapModFileId = mod.File.Id;
-			}
-		});
+				if (!error && mod != null && mod.File != null)
+				{
+					loadedMapModFileId = mod.File.Id;
+				}
+			});
+		}
 		foreach (string initialSceneName in initialSceneNames)
 		{
 			int num = -1;
@@ -1126,6 +1136,8 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		int processChildrenEndingProgress = endingProgress - Mathf.RoundToInt((float)num * 0.02f);
 		initializePhaseTwoComponents.Clear();
 		entitiesToCreate.Clear();
+		monkeGravityControllersToReplace.Clear();
+		replacedGravityZones.Clear();
 		yield return ProcessChildObjects(sceneDescriptor.gameObject, useProgressCallback, num2, processChildrenEndingProgress);
 		if (shouldAbortSceneLoad || errorEncounteredDuringLoad)
 		{
@@ -1257,6 +1269,21 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		{
 		}
 		initializePhaseTwoComponents.Clear();
+		foreach (var (monkeGravityControllerSettings, basicGravityZoneSettings) in monkeGravityControllersToReplace)
+		{
+			if (!monkeGravityControllerSettings.IsNull())
+			{
+				BasicGravityZone value = null;
+				if ((object)basicGravityZoneSettings != null)
+				{
+					replacedGravityZones.TryGetValue(basicGravityZoneSettings, out value);
+				}
+				monkeGravityControllerSettings.gameObject.AddComponent<MonkeGravityController>().CopyProperties(monkeGravityControllerSettings, value);
+				UnityEngine.Object.Destroy(monkeGravityControllerSettings);
+			}
+		}
+		monkeGravityControllersToReplace.Clear();
+		replacedGravityZones.Clear();
 		if (entitiesToCreate.Count > 0)
 		{
 			for (int j = 0; j < entitiesToCreate.Count; j++)
@@ -1610,6 +1637,11 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 			gameObject.AddComponent<SizeChanger>().CopyProperties(component6);
 			UnityEngine.Object.Destroy(component6);
 		}
+		MonkeGravityControllerSettings component7 = gameObject.GetComponent<MonkeGravityControllerSettings>();
+		if ((object)component7 != null)
+		{
+			monkeGravityControllersToReplace.Add((component7, component7.alwaysInZone));
+		}
 		ReplaceGravityDataOnlyScripts(gameObject);
 	}
 
@@ -1622,30 +1654,40 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		}
 		if (component is ConsensusGravityZoneSettings consensusGravityZoneSettings)
 		{
-			gameObject.AddComponent<ConsensusGravityZone>().CopyProperties(consensusGravityZoneSettings);
+			ConsensusGravityZone consensusGravityZone = gameObject.AddComponent<ConsensusGravityZone>();
+			consensusGravityZone.CopyProperties(consensusGravityZoneSettings);
+			replacedGravityZones.Add(consensusGravityZoneSettings, consensusGravityZone);
 			UnityEngine.Object.Destroy(consensusGravityZoneSettings);
 		}
 		else if (component is TorusZoneSettings torusZoneSettings)
 		{
-			gameObject.AddComponent<TorusZone>().CopyProperties(torusZoneSettings);
+			TorusZone torusZone = gameObject.AddComponent<TorusZone>();
+			torusZone.CopyProperties(torusZoneSettings);
+			replacedGravityZones.Add(torusZoneSettings, torusZone);
 			UnityEngine.Object.Destroy(torusZoneSettings);
 		}
 		else if (component is PlanetZoneSettings planetZoneSettings)
 		{
 			if (planetZoneSettings is CubicPlanetZoneSettings cubicPlanetZoneSettings)
 			{
-				gameObject.AddComponent<CubicPlanetZone>().CopyProperties(cubicPlanetZoneSettings);
+				CubicPlanetZone cubicPlanetZone = gameObject.AddComponent<CubicPlanetZone>();
+				cubicPlanetZone.CopyProperties(cubicPlanetZoneSettings);
+				replacedGravityZones.Add(cubicPlanetZoneSettings, cubicPlanetZone);
 				UnityEngine.Object.Destroy(cubicPlanetZoneSettings);
 			}
 			else
 			{
-				gameObject.AddComponent<PlanetZone>().CopyProperties(planetZoneSettings);
+				PlanetZone planetZone = gameObject.AddComponent<PlanetZone>();
+				planetZone.CopyProperties(planetZoneSettings);
+				replacedGravityZones.Add(planetZoneSettings, planetZone);
 				UnityEngine.Object.Destroy(planetZoneSettings);
 			}
 		}
 		else
 		{
-			gameObject.AddComponent<BasicGravityZone>().CopyProperties(component);
+			BasicGravityZone basicGravityZone = gameObject.AddComponent<BasicGravityZone>();
+			basicGravityZone.CopyProperties(component);
+			replacedGravityZones.Add(component, basicGravityZone);
 			UnityEngine.Object.Destroy(component);
 		}
 	}

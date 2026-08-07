@@ -13,6 +13,7 @@ public class VoxelInteractor : MonoBehaviour
 	private float rayLength = 0.1f;
 
 	[SerializeField]
+	[Range(0.25f, 2f)]
 	private float cooldown = 0.25f;
 
 	[SerializeField]

@@ -990,12 +990,12 @@ public class NetworkSystemPUN : NetworkSystem
 		{
 			return false;
 		}
-		Player player2 = PhotonNetwork.CurrentRoom.GetPlayer(player.ActorNumber);
-		if (player2 == null)
+		Player playerRef = player.GetPlayerRef();
+		if (playerRef == null)
 		{
 			return false;
 		}
-		if (player2.CustomProperties.TryGetValue("didTutorial", out var value))
+		if (playerRef.CustomProperties.TryGetValue("didTutorial", out var value))
 		{
 			bool flag = default(bool);
 			int num;
@@ -1011,6 +1011,28 @@ public class NetworkSystemPUN : NetworkSystem
 			return (byte)((uint)num | (flag ? 1u : 0u)) != 0;
 		}
 		return false;
+	}
+
+	public override string GetPlayerPlatform(NetPlayer player)
+	{
+		if (player == null)
+		{
+			return "";
+		}
+		Player playerRef = player.GetPlayerRef();
+		if (playerRef == null)
+		{
+			return "";
+		}
+		if (!playerRef.CustomProperties.TryGetValue("platform", out var value))
+		{
+			return "";
+		}
+		if (!(value is string result))
+		{
+			return "";
+		}
+		return result;
 	}
 
 	public override string GetMyUserID()

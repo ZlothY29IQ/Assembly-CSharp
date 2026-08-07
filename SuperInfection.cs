@@ -392,7 +392,7 @@ public class SuperInfection : MonoBehaviour, IGorillaSliceableSimple
 		}
 		else
 		{
-			if (!siManager.gameEntityManager.IsAuthority())
+			if (!NetworkSystem.Instance.InRoom || !SuperInfectionManager.IsSuperGameMode() || !siManager.gameEntityManager.IsAuthority())
 			{
 				return;
 			}

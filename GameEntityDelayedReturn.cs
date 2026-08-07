@@ -311,7 +311,7 @@ public class GameEntityDelayedReturn : MonoBehaviour, IGameEntityComponent, IDel
 			base.transform.SetPositionAndRotation(initialPosition, initialRotation);
 			base.transform.localScale = initialScale;
 		}
-		Rigidbody componentInParent = GetComponentInParent<Rigidbody>();
+		Rigidbody componentInParent = GetComponentInParent<Rigidbody>(includeInactive: true);
 		if (componentInParent != null)
 		{
 			componentInParent.linearVelocity = Vector3.zero;

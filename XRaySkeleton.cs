@@ -21,11 +21,20 @@ public class XRaySkeleton : SyncToPlayerColor, IGorillaSimpleBackgroundWorker
 	protected override void Awake()
 	{
 		base.Awake();
+	}
+
+	internal void OnBuildInitialize()
+	{
 		target = renderer.material;
 		mats = rig.materialsToChangeTo;
 		tagMaterials = new Material[mats.Length];
 		tagMaterials[0] = new Material(target);
-		GorillaSimpleBackgroundWorkerManager.WorkerSignup(this);
+		while (currentIndex < mats.Length)
+		{
+			Material material = new Material(mats[currentIndex]);
+			tagMaterials[currentIndex] = material;
+			currentIndex++;
+		}
 	}
 
 	public void SimpleWork()

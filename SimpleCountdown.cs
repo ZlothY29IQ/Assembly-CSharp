@@ -121,7 +121,7 @@ public class SimpleCountdown : ObservableBehavior
 			}
 			else if (mode == Mode.ScheduledEvent)
 			{
-				double value = ((ScheduledEventManager.Instance != null) ? ScheduledEventManager.Instance.SecondsUntilEventStart : 0.0);
+				double value = ((ScheduledEventManager.Instance != null && ScheduledEventManager.Instance.SecondsUntilEventStart > 0.0) ? ScheduledEventManager.Instance.SecondsUntilEventStart : 0.0);
 				dt = serverTime.AddSeconds(value);
 			}
 			timeSpan = dt - serverTime;

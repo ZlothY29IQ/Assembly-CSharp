@@ -304,8 +304,11 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 
 	public static bool IsSuperGameMode()
 	{
-		GameModeType currentGameModeType = GameMode.CurrentGameModeType;
-		return currentGameModeType == GameModeType.SuperInfect || currentGameModeType == GameModeType.SuperCasual;
+		if (GameMode.CurrentGameModeType != GameModeType.SuperInfect)
+		{
+			return GameMode.CurrentGameModeType == GameModeType.SuperCasual;
+		}
+		return true;
 	}
 
 	public void OnCreateGameEntity(GameEntity entity)
@@ -380,43 +383,49 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 		if ((object)zoneSuperInfection == null && HasSIZonePlatform)
 		{
 			PendingZoneInit = true;
-			return;
 		}
-		activeSuperInfectionManager = this;
-		if (gameEntityManager.IsAuthority() && zoneSuperInfection != null)
+		else
 		{
-			TestSpawnGadget();
-		}
-		if (zoneSuperInfection != null)
-		{
-			zoneSuperInfection.OnZoneInit();
-		}
-		if (SIPlayer.Get(NetworkSystem.Instance.LocalPlayer.ActorNumber) != null)
-		{
-			progression.Init();
-			if (progression.ClientReady)
+			if (!IsSuperGameMode())
 			{
-				SIPlayer.SetAndBroadcastProgression();
+				return;
 			}
-			else
+			activeSuperInfectionManager = this;
+			if (gameEntityManager.IsAuthority() && zoneSuperInfection != null)
 			{
-				progression.OnClientReady += WhenReady;
+				TestSpawnGadget();
 			}
-		}
-		allSnapPoints.Clear();
-		foreach (GameEntity gameEntity in gameEntityManager.GetGameEntities())
-		{
-			if (gameEntity == null)
+			if (zoneSuperInfection != null)
 			{
-				continue;
+				zoneSuperInfection.OnZoneInit();
 			}
-			List<SuperInfectionSnapPoint> value;
-			using (CollectionPool<List<SuperInfectionSnapPoint>, SuperInfectionSnapPoint>.Get(out value))
+			if (SIPlayer.Get(NetworkSystem.Instance.LocalPlayer.ActorNumber) != null)
 			{
-				gameEntity.GetComponentsInChildren(includeInactive: true, value);
-				foreach (SuperInfectionSnapPoint item in value)
+				progression.Init();
+				if (progression.ClientReady)
 				{
-					RegisterSnapPoint(item);
+					SIPlayer.SetAndBroadcastProgression();
+				}
+				else
+				{
+					progression.OnClientReady += WhenReady;
+				}
+			}
+			allSnapPoints.Clear();
+			foreach (GameEntity gameEntity in gameEntityManager.GetGameEntities())
+			{
+				if (gameEntity == null)
+				{
+					continue;
+				}
+				List<SuperInfectionSnapPoint> value;
+				using (CollectionPool<List<SuperInfectionSnapPoint>, SuperInfectionSnapPoint>.Get(out value))
+				{
+					gameEntity.GetComponentsInChildren(includeInactive: true, value);
+					foreach (SuperInfectionSnapPoint item in value)
+					{
+						RegisterSnapPoint(item);
+					}
 				}
 			}
 		}

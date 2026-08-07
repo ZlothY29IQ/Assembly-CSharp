@@ -502,6 +502,18 @@ public abstract class NetworkSystem : MonoBehaviour
 
 	public abstract bool GetPlayerTutorialCompletion(int playerID);
 
+	public string GetMyPlatform()
+	{
+		return PlayFabAuthenticator.instance?.platform?.ToString() ?? "";
+	}
+
+	public string GetPlayerPlatform(int playerID)
+	{
+		return GetPlayerPlatform(GetPlayer(playerID));
+	}
+
+	public abstract string GetPlayerPlatform(NetPlayer player);
+
 	public void AddVoiceSettings(SO_NetworkVoiceSettings settings)
 	{
 		VoiceSettings = settings;

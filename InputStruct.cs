@@ -4,8 +4,8 @@ using Fusion;
 using UnityEngine;
 
 [Serializable]
-[StructLayout(LayoutKind.Explicit, Size = 168)]
-[NetworkStructWeaved(42)]
+[StructLayout(LayoutKind.Explicit, Size = 176)]
+[NetworkStructWeaved(44)]
 public struct InputStruct : INetworkStruct
 {
 	[FieldOffset(0)]
@@ -103,4 +103,7 @@ public struct InputStruct : INetworkStruct
 
 	[FieldOffset(164)]
 	public float lastHandTouchedGroundAtTime;
+
+	[FieldOffset(168)]
+	public long packedGTPlayerStats;
 }

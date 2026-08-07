@@ -7,9 +7,9 @@ public struct VoxelOperation(Vector3 origin, VoxelAction action)
 
 	public OperationType operationType = action.operation;
 
-	public int radius = (int)(action.radius * 256f);
+	public short radius = (short)(action.radius * 256f);
 
-	public int strength = (int)(action.strength * 256f);
+	public short strength = (short)(action.strength * 256f);
 
 	public byte material = action.material;
 
@@ -24,5 +24,10 @@ public struct VoxelOperation(Vector3 origin, VoxelAction action)
 			return true;
 		}
 		return false;
+	}
+
+	public override string ToString()
+	{
+		return string.Join(", ", origin, operationType, radius, strength, material);
 	}
 }

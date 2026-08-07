@@ -80,15 +80,15 @@ public class SkyboxController : MonoBehaviour
 			_nextSky = skyMaterials[(num4 + 1) % num];
 			skyFront.sharedMaterial = _currentSky;
 			skyBack.sharedMaterial = _nextSky;
-			if (_currentSky.renderQueue != 3000)
+			if (_currentSky != null && _currentSky.renderQueue != 3000)
 			{
 				SetFrontToTransparent();
+				_currentSky.SetFloat(ShaderProps._SkyAlpha, 1f - num5);
 			}
-			if (_nextSky.renderQueue == 3000)
+			if (_nextSky != null && _nextSky.renderQueue == 3000)
 			{
 				SetBackToOpaque();
 			}
-			_currentSky.SetFloat(ShaderProps._SkyAlpha, 1f - num5);
 		}
 	}
 

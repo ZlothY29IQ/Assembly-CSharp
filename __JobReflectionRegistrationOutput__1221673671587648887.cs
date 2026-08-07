@@ -37,8 +37,9 @@ internal class __JobReflectionRegistrationOutput__1221673671587648887
 			IJobExtensions.EarlyJobInit<EdMeshCombinerPrefab.CopyMeshJob>();
 			IJobParallelForExtensions.EarlyJobInit<FillChunkJob>();
 			IJobExtensions.EarlyJobInit<CollisionJob>();
-			IJobParallelForExtensions.EarlyJobInit<GenerateVoxelDataJob>();
 			IJobExtensions.EarlyJobInit<MarchingCubesMeshingJob>();
+			IJobParallelForExtensions.EarlyJobInit<PerlinVoxelGenerator.VoxelDataJob>();
+			IJobParallelForExtensions.EarlyJobInit<SDFVoxelGenerator.VoxelDataJob>();
 			IJobExtensions.EarlyJobInit<SortChunksJob>();
 			IJobParallelForExtensions.EarlyJobInit<MeshUtilities.FaceNormalJob>();
 			IJobExtensions.EarlyJobInit<MeshUtilities.SplitJob>();

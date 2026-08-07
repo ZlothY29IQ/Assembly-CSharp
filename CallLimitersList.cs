@@ -9,6 +9,26 @@ public class CallLimitersList<Titem, Tenum> where Titem : CallLimiter, new() whe
 	[SerializeField]
 	private Titem[] m_callLimiters;
 
+	public CallLimitersList()
+	{
+	}
+
+	public CallLimitersList(CallLimitersList<Titem, Tenum> source)
+	{
+		Titem[] callLimiters = source.m_callLimiters;
+		m_callLimiters = new Titem[callLimiters.Length];
+		for (int i = 0; i < m_callLimiters.Length; i++)
+		{
+			Titem val = callLimiters[i];
+			m_callLimiters[i] = (Titem)val.GetCopy();
+		}
+	}
+
+	public CallLimitersList<Titem, Tenum> GetCopy()
+	{
+		return new CallLimitersList<Titem, Tenum>(this);
+	}
+
 	public bool IsSpamming(Tenum index)
 	{
 		return IsSpamming((int)(object)index);

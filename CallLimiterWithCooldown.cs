@@ -19,6 +19,11 @@ public class CallLimiterWithCooldown : CallLimiter
 		spamCoolDown = coolDownSpam;
 	}
 
+	public override CallLimiter GetCopy()
+	{
+		return new CallLimiterWithCooldown(spamCoolDown, callHistoryLength, timeCooldown, (float)maxLatency);
+	}
+
 	public override bool CheckCallTime(float time)
 	{
 		if (blockCall && time < blockStartTime + spamCoolDown)

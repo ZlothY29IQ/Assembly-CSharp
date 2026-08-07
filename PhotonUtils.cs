@@ -37,6 +37,7 @@ public static class PhotonUtils
 			PhotonPeer.RegisterType(typeof(Voxel), 88, SerializeVoxel, DeserializeVoxel);
 			PhotonPeer.RegisterType(typeof(VoxelAction), 89, SerializeVoxelAction, DeserializeVoxelAction);
 			PhotonPeer.RegisterType(typeof(VoxelOperation), 90, SerializeVoxelOperation, DeserializeVoxelOperation);
+			PhotonPeer.RegisterType(typeof(VoxelManager.VoxelMineOperation), 77, SerializeVoxelMineOperation, DeserializeVoxelMineOperation);
 		}
 
 		public static byte[] SerializeColor32(object value)
@@ -87,6 +88,16 @@ public static class PhotonUtils
 		public static object DeserializeVoxelOperation(byte[] data)
 		{
 			return CastToStruct<VoxelOperation>(data);
+		}
+
+		public static byte[] SerializeVoxelMineOperation(object value)
+		{
+			return CastToBytes((VoxelManager.VoxelMineOperation)value);
+		}
+
+		public static object DeserializeVoxelMineOperation(byte[] data)
+		{
+			return CastToStruct<VoxelManager.VoxelMineOperation>(data);
 		}
 
 		private static short SerializeVoxel(StreamBuffer stream, object value)

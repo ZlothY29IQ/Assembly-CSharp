@@ -1,7 +1,8 @@
+using GorillaTag;
 using GorillaTag.Cosmetics;
 using UnityEngine;
 
-public class VoiceLoudnessReactor2 : MonoBehaviour, ITickSystemTick
+public class VoiceLoudnessReactor2 : MonoBehaviour, ITickSystemTick, IDynamicFloat
 {
 	[Tooltip("Multiply the microphone input by this value. A good default is 15.")]
 	public float sensitivity = 15f;
@@ -11,6 +12,8 @@ public class VoiceLoudnessReactor2 : MonoBehaviour, ITickSystemTick
 	private GorillaSpeakerLoudness gsl;
 
 	private float Loudness => gsl.Loudness * sensitivity;
+
+	float IDynamicFloat.floatValue => Loudness;
 
 	public bool TickRunning { get; set; }
 

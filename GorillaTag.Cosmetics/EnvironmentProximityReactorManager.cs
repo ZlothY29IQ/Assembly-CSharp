@@ -35,6 +35,9 @@ public class EnvironmentProximityReactorManager : NetworkSceneObject
 
 	private const float cosmeticSyncTimeout = 10f;
 
+	[SerializeField]
+	private int m_maxCachedEvents = 10;
+
 	private static readonly HashSet<EnvironmentProximityReactor> registry = new HashSet<EnvironmentProximityReactor>();
 
 	public static EnvironmentProximityReactorManager Instance => instance;
@@ -262,7 +265,7 @@ public class EnvironmentProximityReactorManager : NetworkSceneObject
 			value = new List<PendingProximityEvent>();
 			pendingEvents[actorNumber] = value;
 		}
-		else if (value.Exists((PendingProximityEvent e) => e.reactorId == reactorId && e.blockIndex == blockIndex))
+		else if (value.Count >= m_maxCachedEvents || value.Exists((PendingProximityEvent e) => e.reactorId == reactorId && e.blockIndex == blockIndex))
 		{
 			return;
 		}
@@ -404,17 +407,21 @@ public class EnvironmentProximityReactorManager : NetworkSceneObject
 		{
 			MonkeAgent.instance.SendReport("Sent invalid reactorId in ProximityStateRPC", info.Sender.UserId, info.Sender.NickName);
 		}
-		else if (!isBelow)
+		else
 		{
-			if (pendingEvents.TryGetValue(info.Sender.ActorNumber, out var value))
+			if (!CheckPlayerRateLimit(info.Sender))
 			{
-				value.RemoveAll((PendingProximityEvent e) => e.reactorId == reactorId && e.blockIndex == blockIndex);
+				return;
 			}
-			ApplyProximityEventToReactor(reactorId, blockIndex, isBelow: false, info.Sender.ActorNumber);
-		}
-		else if (CheckPlayerRateLimit(info.Sender))
-		{
-			if (!SenderHasValidCosmetic(reactorId, blockIndex, info))
+			if (!isBelow)
+			{
+				if (pendingEvents.TryGetValue(info.Sender.ActorNumber, out var value))
+				{
+					value.RemoveAll((PendingProximityEvent e) => e.reactorId == reactorId && e.blockIndex == blockIndex);
+				}
+				ApplyProximityEventToReactor(reactorId, blockIndex, isBelow: false, info.Sender.ActorNumber);
+			}
+			else if (!SenderHasValidCosmetic(reactorId, blockIndex, info))
 			{
 				TryCacheProximityEvent(reactorId, blockIndex, isBelow, info);
 			}

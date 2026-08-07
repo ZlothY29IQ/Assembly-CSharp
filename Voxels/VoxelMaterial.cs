@@ -1,4 +1,5 @@
 using System;
+using Pooling;
 using UnityEngine;
 
 namespace Voxels;
@@ -12,7 +13,7 @@ public struct VoxelMaterial
 
 	public int hardness;
 
-	public GameObject digFX;
+	public PoolableFX digFX;
 
-	public GameObject digBigFX;
+	public PoolableFX digBigFX;
 }

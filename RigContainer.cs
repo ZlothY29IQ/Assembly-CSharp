@@ -59,6 +59,8 @@ public class RigContainer : MonoBehaviour
 	[SerializeField]
 	private VRRigEvents rigEvents;
 
+	private PlayerStatsReadonly m_playerStats;
+
 	public bool hasManualMute;
 
 	public int playerChatQuality = 2;
@@ -135,6 +137,22 @@ public class RigContainer : MonoBehaviour
 	public CapsuleCollider BodyCollider => bodyCollider;
 
 	public VRRigEvents RigEvents => rigEvents;
+
+	public PlayerStatsReadonly PlayerStats
+	{
+		get
+		{
+			if (Rig.isOfflineVRRig)
+			{
+				return new PlayerStatsReadonly(GTPlayerStats.Ping, GTPlayerStats.FPS, GTPlayerStats.TargetFPS);
+			}
+			return m_playerStats;
+		}
+		internal set
+		{
+			m_playerStats = value;
+		}
+	}
 
 	public bool IsMutedFor(MuteReason reasons)
 	{

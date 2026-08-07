@@ -245,7 +245,14 @@ public class BatteryCharger : MonoBehaviour
 
 	public void SetEventPhase(int phase)
 	{
-		state.SetEventPhase(phase);
+		if (state == null)
+		{
+			Debug.LogWarning("BatteryChargeState has not been binded yet!");
+		}
+		else
+		{
+			state.SetEventPhase(phase);
+		}
 	}
 
 	public void SetChargePerCrankDegree(float chargeRate)

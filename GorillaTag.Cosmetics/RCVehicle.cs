@@ -295,10 +295,7 @@ public class RCVehicle : MonoBehaviour, ISpawnable
 			}
 			return;
 		}
-		if (localState != localStatePrev)
-		{
-			ResetToSpawnPosition();
-		}
+		ResetToSpawnPosition();
 		if (connectedRemote == null)
 		{
 			SetDisabledState();
@@ -325,18 +322,8 @@ public class RCVehicle : MonoBehaviour, ISpawnable
 		switch (localState)
 		{
 		default:
-			if (localStatePrev != State.DockedLeft)
-			{
-				useLeftDock = true;
-				ResetToSpawnPosition();
-			}
-			break;
-		case State.DockedRight:
-			if (localStatePrev != State.DockedRight)
-			{
-				useLeftDock = false;
-				ResetToSpawnPosition();
-			}
+			useLeftDock = localState != State.DockedRight;
+			ResetToSpawnPosition();
 			break;
 		case State.Mobilized:
 			if (localStatePrev != State.Mobilized)

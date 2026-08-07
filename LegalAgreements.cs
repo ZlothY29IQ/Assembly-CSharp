@@ -234,7 +234,7 @@ public class LegalAgreements : MonoBehaviour
 		}
 		if (state == 1)
 		{
-			string text2 = Regex.Unescape(cachedText.Substring(1, cachedText.Length - 2));
+			string text2 = Regex.Unescape(cachedText);
 			try
 			{
 				if (string.IsNullOrEmpty(text2))

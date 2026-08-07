@@ -7,11 +7,11 @@ namespace Voxels;
 
 public class ChunkTaskSet
 {
-	public delegate ChunkTask ChunkTaskDelegate(Chunk chunk, GenerationParameters parameters);
+	public delegate ChunkTask ChunkTaskDelegate(Chunk chunk);
 
 	public List<Chunk> Chunks;
 
-	public GenerationParameters Parameters;
+	public VoxelGenerator Generator;
 
 	public Queue<(ChunkTaskDelegate task, Action<Chunk> callback)> Tasks;
 
@@ -52,24 +52,24 @@ public class ChunkTaskSet
 		}
 	}
 
-	public ChunkTaskSet(GenerationParameters parameters)
+	public ChunkTaskSet(VoxelGenerator generator)
 	{
 		Chunks = new List<Chunk>();
-		Parameters = parameters;
+		Generator = generator;
 		Tasks = new Queue<(ChunkTaskDelegate, Action<Chunk>)>();
 	}
 
-	public ChunkTaskSet(Chunk chunk, GenerationParameters parameters, params (ChunkTaskDelegate task, Action<Chunk> callback)[] tasks)
+	public ChunkTaskSet(Chunk chunk, VoxelGenerator parameters, params (ChunkTaskDelegate task, Action<Chunk> callback)[] tasks)
 	{
 		Chunks = new List<Chunk> { chunk };
-		Parameters = parameters;
+		Generator = parameters;
 		Tasks = new Queue<(ChunkTaskDelegate, Action<Chunk>)>(tasks);
 	}
 
-	public ChunkTaskSet(IList<Chunk> chunks, GenerationParameters parameters, params (ChunkTaskDelegate task, Action<Chunk> callback)[] tasks)
+	public ChunkTaskSet(IList<Chunk> chunks, VoxelGenerator parameters, params (ChunkTaskDelegate task, Action<Chunk> callback)[] tasks)
 	{
 		Chunks = new List<Chunk>(chunks);
-		Parameters = parameters;
+		Generator = parameters;
 		Tasks = new Queue<(ChunkTaskDelegate, Action<Chunk>)>(tasks);
 	}
 
@@ -175,12 +175,12 @@ public class ChunkTaskSet
 	{
 		if (Chunks.Count == 1)
 		{
-			return (task?.Invoke(Chunks[0], Parameters) ?? default(ChunkTask), callback);
+			return (task?.Invoke(Chunks[0]) ?? default(ChunkTask), callback);
 		}
 		NativeArray<JobHandle> jobs = new NativeArray<JobHandle>(Chunks.Count, Allocator.Temp);
 		for (int i = 0; i < Chunks.Count; i++)
 		{
-			jobs[i] = task?.Invoke(Chunks[i], Parameters).Handle ?? default(JobHandle);
+			jobs[i] = task?.Invoke(Chunks[i]).Handle ?? default(JobHandle);
 		}
 		JobHandle handle = JobHandle.CombineDependencies(jobs);
 		jobs.Dispose();

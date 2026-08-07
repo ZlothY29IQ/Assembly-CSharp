@@ -874,6 +874,16 @@ public static class GTExt
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static bool IsMagnitudeValid(this in Vector3 v, float magnitude = 1000f)
+	{
+		if (!v.IsNaN() && !v.IsInfinity())
+		{
+			return v.sqrMagnitude < magnitude * magnitude;
+		}
+		return false;
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static Vector3 GetValidWithFallback(this in Vector3 v, in Vector3 safeVal)
 	{
 		if (!v.IsValid(10000f))

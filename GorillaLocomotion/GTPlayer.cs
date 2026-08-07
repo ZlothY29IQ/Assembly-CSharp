@@ -3088,24 +3088,37 @@ public class GTPlayer : MonoBehaviour
 	{
 		Vector3 vector = linkA.LinkPosition - linkA.grabbedLink.LinkPosition;
 		Vector3 vector2 = linkB.LinkPosition - linkB.grabbedLink.LinkPosition;
-		Vector3 vector3 = (vector + vector2) * 0.33f;
-		linkA.grabbedLink.myRig.TrySweptOffsetMove(vector - vector3, out var _, out var _);
-		linkB.grabbedLink.myRig.TrySweptOffsetMove(vector2 - vector3, out var _, out var _);
-		playerRigidBody.MovePosition(playerRigidBody.position - vector3);
-		playerRigidBody.linearVelocity = Vector3.zero;
+		Vector3 v = (vector + vector2) * 0.33f;
+		linkA.grabbedLink.myRig.TrySweptOffsetMove(vector - v, out var _, out var _);
+		linkB.grabbedLink.myRig.TrySweptOffsetMove(vector2 - v, out var _, out var _);
+		if (!v.IsMagnitudeValid(5f * scale))
+		{
+			linkA.BreakLink();
+			linkB.BreakLink();
+		}
+		else
+		{
+			playerRigidBody.MovePosition(playerRigidBody.position - v);
+			playerRigidBody.linearVelocity = Vector3.zero;
+		}
 	}
 
 	private void TakeMyHand_PositionBoth(TakeMyHand_HandLink link)
 	{
-		Vector3 vector = (link.grabbedLink.LinkPosition - link.LinkPosition) * 0.5f;
-		link.grabbedLink.myRig.TrySweptOffsetMove(-vector, out var handCollided, out var buttCollided);
+		Vector3 v = (link.grabbedLink.LinkPosition - link.LinkPosition) * 0.5f;
+		link.grabbedLink.myRig.TrySweptOffsetMove(-v, out var handCollided, out var buttCollided);
 		if (handCollided || buttCollided)
 		{
 			TakeMyHand_PositionChild_LocalPlayer(link);
 		}
 		else
 		{
-			playerRigidBody.transform.position += vector;
+			if (!v.IsMagnitudeValid(5f * scale))
+			{
+				link.BreakLink();
+				return;
+			}
+			playerRigidBody.transform.position += v;
 		}
 		playerRigidBody.linearVelocity = Vector3.zero;
 	}
@@ -3114,23 +3127,34 @@ public class GTPlayer : MonoBehaviour
 	{
 		Vector3 vector = (link1.grabbedLink.LinkPosition - link1.LinkPosition) * 0.5f;
 		Vector3 vector2 = (link2.grabbedLink.LinkPosition - link2.LinkPosition) * 0.5f;
-		Vector3 vector3 = (vector + vector2) * 0.5f;
-		link1.grabbedLink.myRig.TrySweptOffsetMove(-vector3, out var handCollided, out var buttCollided);
+		Vector3 v = (vector + vector2) * 0.5f;
+		link1.grabbedLink.myRig.TrySweptOffsetMove(-v, out var handCollided, out var buttCollided);
 		if (handCollided || buttCollided)
 		{
 			TakeMyHand_PositionChild_LocalPlayer(link1, link2);
 		}
 		else
 		{
-			playerRigidBody.transform.position += vector3;
+			if (!v.IsMagnitudeValid(5f * scale))
+			{
+				link1.BreakLink();
+				link2.BreakLink();
+				return;
+			}
+			playerRigidBody.transform.position += v;
 		}
 		playerRigidBody.linearVelocity = Vector3.zero;
 	}
 
 	private void TakeMyHand_PositionChild_LocalPlayer(TakeMyHand_HandLink parentLink)
 	{
-		Vector3 vector = parentLink.grabbedLink.LinkPosition - parentLink.LinkPosition;
-		playerRigidBody.transform.position += vector;
+		Vector3 v = parentLink.grabbedLink.LinkPosition - parentLink.LinkPosition;
+		if (!v.IsMagnitudeValid(5f * scale))
+		{
+			parentLink.BreakLink();
+			return;
+		}
+		playerRigidBody.transform.position += v;
 		playerRigidBody.linearVelocity = Vector3.zero;
 	}
 
@@ -3138,8 +3162,17 @@ public class GTPlayer : MonoBehaviour
 	{
 		Vector3 vector = linkA.grabbedLink.LinkPosition - linkA.LinkPosition;
 		Vector3 vector2 = linkB.grabbedLink.LinkPosition - linkB.LinkPosition;
-		playerRigidBody.transform.position += (vector + vector2) * 0.5f;
-		playerRigidBody.linearVelocity = Vector3.zero;
+		Vector3 v = (vector + vector2) * 0.5f;
+		if (!v.IsMagnitudeValid(5f * scale))
+		{
+			linkA.BreakLink();
+			linkB.BreakLink();
+		}
+		else
+		{
+			playerRigidBody.transform.position += v;
+			playerRigidBody.linearVelocity = Vector3.zero;
+		}
 	}
 
 	private void TakeMyHand_PositionChild_RemotePlayer(TakeMyHand_HandLink childLink)
