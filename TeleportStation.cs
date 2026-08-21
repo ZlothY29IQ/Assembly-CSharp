@@ -1,4 +1,5 @@
 using GorillaNetworking;
+using GorillaTagScripts;
 using UnityEngine;
 
 public class TeleportStation : MonoBehaviour
@@ -52,16 +53,29 @@ public class TeleportStation : MonoBehaviour
 		}
 	}
 
-	public void Attempt1PTeleport(PhotonMessageInfoWrapped sender)
+	public void Attempt1PTeleport(PhotonMessageInfoWrapped info)
 	{
 		TeleportStationManager.Instance.FirstPersonTeleport(targetPos, targetRot, targetSlop, teleportToZone, sourceFriendCollider, destinationFriendCollider, destinationJoinTrigger, effectTime);
 	}
 
-	public void Attempt3PTeleport(PhotonMessageInfoWrapped sender)
+	public void Attempt3PTeleport(PhotonMessageInfoWrapped info)
 	{
-		if (VRRigCache.Instance.TryGetVrrig(sender.Sender, out var playerRig))
+		if (!VRRigCache.Instance.TryGetVrrig(info.Sender, out var playerRig))
 		{
-			TeleportStationManager.Instance.ThirdPersonTeleport(playerRig.Rig, effectTime);
+			return;
+		}
+		TeleportStationManager.Instance.ThirdPersonTeleport(playerRig.Rig, effectTime);
+		if (!NetworkSystem.Instance.SessionIsPrivate && FriendshipGroupDetection.Instance.IsInParty && FriendshipGroupDetection.Instance.IsInMyGroup(info.Sender.UserId))
+		{
+			NetPlayer localPlayer = NetworkSystem.Instance.LocalPlayer;
+			if (sourceFriendCollider.playerIDsCurrentlyTouching.Contains(localPlayer.UserId))
+			{
+				Attempt1PTeleport(info);
+			}
+			else
+			{
+				FriendshipGroupDetection.Instance.LeaveParty();
+			}
 		}
 	}
 

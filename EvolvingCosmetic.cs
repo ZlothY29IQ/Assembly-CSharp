@@ -272,6 +272,7 @@ public class EvolvingCosmetic : MonoBehaviour, ICosmeticStateSync
 			CosmeticsController.CosmeticCategory.Hat => VRRigReliableState.StateSyncSlots.Hat, 
 			CosmeticsController.CosmeticCategory.Shirt => VRRigReliableState.StateSyncSlots.Shirt, 
 			CosmeticsController.CosmeticCategory.Face => VRRigReliableState.StateSyncSlots.Face, 
+			CosmeticsController.CosmeticCategory.Pants => VRRigReliableState.StateSyncSlots.Pants, 
 			_ => throw new Exception($"Unhandled CosmeticCategory {cosmeticSOFromDisplayName.info.category.Value}"), 
 		};
 	}

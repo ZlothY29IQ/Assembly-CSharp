@@ -2,6 +2,7 @@ using System;
 using GorillaExtensions;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.XR;
 
 namespace GorillaTag.Cosmetics;
 
@@ -22,7 +23,11 @@ public class FingerFlexEvent2 : MonoBehaviour, ITickSystemTick
 			Index,
 			Middle,
 			IndexAndMiddle,
-			IndexOrMiddle
+			IndexOrMiddle,
+			StickLeft,
+			StickRight,
+			StickUp,
+			StickDown
 		}
 
 		public enum HandType
@@ -281,6 +286,18 @@ public class FingerFlexEvent2 : MonoBehaviour, ITickSystemTick
 					break;
 				case FlexEvent.FingerType.IndexOrMiddle:
 					num2 = (flag ? Mathf.Max(myRig.leftIndex.calcT, myRig.leftMiddle.calcT) : Mathf.Max(myRig.rightIndex.calcT, myRig.rightMiddle.calcT));
+					break;
+				case FlexEvent.FingerType.StickLeft:
+					num2 = Mathf.Max(0f, 0f - ControllerInputPoller.Primary2DAxis(flag ? XRNode.LeftHand : XRNode.RightHand).x);
+					break;
+				case FlexEvent.FingerType.StickRight:
+					num2 = Mathf.Max(0f, ControllerInputPoller.Primary2DAxis(flag ? XRNode.LeftHand : XRNode.RightHand).x);
+					break;
+				case FlexEvent.FingerType.StickUp:
+					num2 = Mathf.Max(0f, ControllerInputPoller.Primary2DAxis(flag ? XRNode.LeftHand : XRNode.RightHand).y);
+					break;
+				case FlexEvent.FingerType.StickDown:
+					num2 = Mathf.Max(0f, 0f - ControllerInputPoller.Primary2DAxis(flag ? XRNode.LeftHand : XRNode.RightHand).y);
 					break;
 				default:
 					global::_003CPrivateImplementationDetails_003E.ThrowSwitchExpressionException(fingerType);

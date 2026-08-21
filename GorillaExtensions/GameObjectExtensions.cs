@@ -17,4 +17,9 @@ public static class GameObjectExtensions
 		while (obj != null);
 		return false;
 	}
+
+	public static bool IsPrefab(this GameObject go)
+	{
+		return false;
+	}
 }

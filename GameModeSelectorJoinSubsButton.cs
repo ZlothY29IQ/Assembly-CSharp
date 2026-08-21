@@ -78,7 +78,7 @@ public class GameModeSelectorJoinSubsButton : MonoBehaviour
 
 	private void DisableButtonSubscribers()
 	{
-		DisableButton("ONLY FOR\nSUBSCRIBERS");
+		DisableButton("ONLY FOR SUBSCRIBERS");
 	}
 
 	private void DisableButtonPrivate()
@@ -88,7 +88,7 @@ public class GameModeSelectorJoinSubsButton : MonoBehaviour
 
 	private void DisableButtonInPublicRoom()
 	{
-		DisableButton("ALREADY IN\nPUBLIC ROOM");
+		DisableButton("ALREADY IN PUBLIC ROOM");
 	}
 
 	private void DisableButton(string disabled)

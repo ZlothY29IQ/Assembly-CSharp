@@ -1,10 +1,13 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Text;
 using Newtonsoft.Json;
 using PlayFab;
 using PlayFab.ClientModels;
 using PlayFab.CloudScriptModels;
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace GorillaNetworking;
 
@@ -81,6 +84,45 @@ public class GorillaServer : MonoBehaviour, ISerializationCallbackReceiver
 			FunctionName = "TryDistributeCurrencyV2",
 			FunctionParameter = new { }
 		}, successCallback, errorCallback);
+	}
+
+	public void ReconcileBundleRewards(Action<string> successCallback, Action<string> errorCallback)
+	{
+		successCallback = DebugWrapCb(successCallback, "ReconcileBundleRewards result");
+		errorCallback = DebugWrapCb(errorCallback, "ReconcileBundleRewards error");
+		if (!MothershipClientContext.IsClientLoggedIn())
+		{
+			errorCallback("Not logged in to Mothership");
+		}
+		else
+		{
+			StartCoroutine(SendReconcileBundleRewards(successCallback, errorCallback));
+		}
+	}
+
+	private IEnumerator SendReconcileBundleRewards(Action<string> successCallback, Action<string> errorCallback)
+	{
+		string s = JsonConvert.SerializeObject(new
+		{
+			mothershipId = MothershipClientContext.MothershipId,
+			mothershipToken = MothershipClientContext.Token,
+			mothershipEnvId = MothershipClientApiUnity.EnvironmentId,
+			mothershipDeploymentId = MothershipClientApiUnity.DeploymentId
+		});
+		using UnityWebRequest www = new UnityWebRequest(PlayFabAuthenticatorSettings.IapApiBaseUrl + "/api/ReconcileBundleRewards", "POST");
+		www.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(s));
+		www.downloadHandler = new DownloadHandlerBuffer();
+		www.SetRequestHeader("Content-Type", "application/json");
+		www.timeout = 15;
+		yield return www.SendWebRequest();
+		if (www.result != UnityWebRequest.Result.Success)
+		{
+			errorCallback($"{www.responseCode}: {www.downloadHandler.text}");
+		}
+		else
+		{
+			successCallback(www.downloadHandler.text);
+		}
 	}
 
 	public void AddOrRemoveDLCOwnership(Action<ExecuteFunctionResult> successCallback, Action<PlayFabError> errorCallback)

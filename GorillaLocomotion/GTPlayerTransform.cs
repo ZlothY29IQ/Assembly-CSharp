@@ -291,12 +291,15 @@ public class GTPlayerTransform : MonkeGravityController
 
 	public override void CallBack()
 	{
-		base.CallBack();
-		PhysicsUp = base.GravityUp;
-		PhysicsDown = base.GravityDown;
-		if (base.GravityZonesCount <= 0 && Up != PhysicsUp)
+		if (!IgnoreGravityForce && !k_playerInstance.isClimbing && k_playerInstance.GravityOverrideCount <= 0)
 		{
-			ApplyGravityUpRotation(PhysicsUp, MonkeGravityManager.DefaultGravityInfo.rotationSpeed * Time.fixedDeltaTime);
+			base.CallBack();
+			PhysicsUp = base.GravityUp;
+			PhysicsDown = base.GravityDown;
+			if (base.GravityZonesCount <= 0 && Up != PhysicsUp)
+			{
+				ApplyGravityUpRotation(PhysicsUp, MonkeGravityManager.DefaultGravityInfo.rotationSpeed * Time.fixedDeltaTime);
+			}
 		}
 	}
 }

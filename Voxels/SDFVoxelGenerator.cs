@@ -61,6 +61,8 @@ public class SDFVoxelGenerator : VoxelGenerator
 
 		public int dimension;
 
+		public bool blocky;
+
 		public float noiseScale;
 
 		public float heightScale;
@@ -137,7 +139,12 @@ public class SDFVoxelGenerator : VoxelGenerator
 				}
 			}
 			materials[index] = value;
-			voxels[index] = num4.ToByte();
+			byte b = num4.ToByte();
+			if (blocky)
+			{
+				b = (byte)(b.IsSolid() ? 255u : 0u);
+			}
+			voxels[index] = b;
 		}
 
 		private static float GetDistance(SDFPrimitive primitive, float3 position)
@@ -162,8 +169,10 @@ public class SDFVoxelGenerator : VoxelGenerator
 
 	public byte fill;
 
+	public bool Blocky;
+
 	[Header("Noise")]
-	public float NoiseScale = 2f;
+	public float NoiseScale;
 
 	public float Frequency = 0.1f;
 
@@ -189,6 +198,7 @@ public class SDFVoxelGenerator : VoxelGenerator
 			chunkPosition = chunk.Id,
 			chunkSize = chunk.Size.x,
 			dimension = chunk.Dimensions.x,
+			blocky = Blocky,
 			seed = Seed,
 			voxels = chunk.Density,
 			materials = chunk.Material,
@@ -264,7 +274,7 @@ public class SDFVoxelGenerator : VoxelGenerator
 		world.SetWorldBounds(GetWorldBounds());
 	}
 
-	public void SetPrimitive(UnityEngine.BoundsInt worldBounds)
+	public void SetPrimitive(UnityEngine.BoundsInt worldBounds, byte material = 0)
 	{
 		Vector3 vector = ((Vector3)worldBounds.min + (Vector3)worldBounds.max) / 2f;
 		Primitives = new SDFPrimitive[1];
@@ -274,7 +284,7 @@ public class SDFVoxelGenerator : VoxelGenerator
 			Shape = Shape.Cube,
 			Position = vector,
 			Size = (Vector3)worldBounds.size,
-			Material = 0
+			Material = material
 		};
 	}
 }

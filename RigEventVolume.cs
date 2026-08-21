@@ -91,14 +91,13 @@ public class RigEventVolume : MonoBehaviour
 				NetworkSystem.Instance.OnPlayerLeft += new Action<NetPlayer>(OnNetLeft);
 			}
 		}
+		else
+		{
+			NetworkSystem.Instance.OnPlayerLeft += new Action<NetPlayer>(OnNetLeft);
+		}
 	}
 
 	private void OnDisable()
-	{
-		OnDestroy();
-	}
-
-	private void OnDestroy()
 	{
 		if (mode == Mode.RELATIVE)
 		{
@@ -115,6 +114,10 @@ public class RigEventVolume : MonoBehaviour
 				NetworkSystem.Instance.OnPlayerLeft -= new Action<NetPlayer>(OnNetLeft);
 			}
 		}
+		else
+		{
+			NetworkSystem.Instance.OnPlayerLeft -= new Action<NetPlayer>(OnNetLeft);
+		}
 	}
 
 	private void OnNetJoined(NetPlayer np)
@@ -125,8 +128,28 @@ public class RigEventVolume : MonoBehaviour
 
 	private void OnNetLeft(NetPlayer np)
 	{
-		int num = ((PhotonNetwork.CurrentRoom == null) ? 1 : PhotonNetwork.CurrentRoom.PlayerCount);
-		countChanged(gameObjects.Count, gameObjects.Count, num + 1, num);
+		foreach (VRRig allRig in VRRigCache.AllRigs)
+		{
+			if (allRig.creator != np || !rigs.Contains(allRig))
+			{
+				continue;
+			}
+			RigEventVolumeTrigger trigger = null;
+			foreach (RigEventVolumeTrigger key in gameObjects.Keys)
+			{
+				if (key.Rig == allRig)
+				{
+					trigger = key;
+					break;
+				}
+			}
+			HandleRigExit(trigger, allRig);
+		}
+		if (mode == Mode.RELATIVE)
+		{
+			int num = ((PhotonNetwork.CurrentRoom == null) ? 1 : PhotonNetwork.CurrentRoom.PlayerCount);
+			countChanged(gameObjects.Count, gameObjects.Count, num + 1, num);
+		}
 	}
 
 	private void OnJoined(RigContainer rc)
@@ -171,26 +194,33 @@ public class RigEventVolume : MonoBehaviour
 
 	private void OnTriggerExit(Collider other)
 	{
-		if (!other.gameObject.TryGetComponent<RigEventVolumeTrigger>(out var component))
+		if (other.gameObject.TryGetComponent<RigEventVolumeTrigger>(out var component) && gameObjects.ContainsKey(component))
 		{
-			return;
+			gameObjects[component]--;
+			if (gameObjects[component] < 0)
+			{
+				HandleRigExit(component, component.Rig);
+			}
 		}
-		gameObjects[component]--;
-		if (gameObjects[component] < 0)
+	}
+
+	private void HandleRigExit(RigEventVolumeTrigger trigger, VRRig rig)
+	{
+		if ((bool)trigger)
 		{
-			gameObjects.Remove(component);
-			rigs.Remove(component.Rig);
-			RigExits?.Invoke(component.Rig);
-			if (component.Rig == VRRig.LocalRig)
-			{
-				LocalRigExits?.Invoke(component.Rig);
-				localRigPresent = false;
-			}
-			if (mode != Mode.NONE)
-			{
-				int num = ((!(rigCollection == null)) ? rigCollection.Rigs.Count : ((PhotonNetwork.CurrentRoom == null) ? 1 : PhotonNetwork.CurrentRoom.PlayerCount));
-				countChanged(gameObjects.Count + 1, gameObjects.Count, num, num);
-			}
+			gameObjects.Remove(trigger);
+		}
+		rigs.Remove(rig);
+		RigExits?.Invoke(rig);
+		if (rig == VRRig.LocalRig)
+		{
+			LocalRigExits?.Invoke(rig);
+			localRigPresent = false;
+		}
+		if (mode != Mode.NONE)
+		{
+			int num = ((!(rigCollection == null)) ? rigCollection.Rigs.Count : ((PhotonNetwork.CurrentRoom == null) ? 1 : PhotonNetwork.CurrentRoom.PlayerCount));
+			countChanged(gameObjects.Count + 1, gameObjects.Count, num, num);
 		}
 	}
 

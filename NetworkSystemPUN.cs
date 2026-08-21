@@ -1284,6 +1284,7 @@ public class NetworkSystemPUN : NetworkSystem
 	{
 		if (!ApplicationQuittingState.IsQuitting)
 		{
+			PersistLog.Log("Disconnect callback, cause: " + cause);
 			groupJoinOverrideGameMode = "";
 			await RefreshNonce();
 			if (internalState == InternalState.Searching_Disconnecting)

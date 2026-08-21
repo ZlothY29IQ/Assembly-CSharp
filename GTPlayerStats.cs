@@ -1,6 +1,7 @@
 using GorillaTag;
 using Photon.Pun;
 using UnityEngine;
+using UnityEngine.XR;
 using Utilities;
 
 public class GTPlayerStats : MonoBehaviourPostTick
@@ -68,15 +69,18 @@ public class GTPlayerStats : MonoBehaviourPostTick
 		}
 		m_ping.AddSample(sample2);
 		Ping = (short)m_ping.Average;
-		TargetFPS = (short)Screen.currentResolution.refreshRateRatio.numerator;
-		int vSyncCount = QualitySettings.vSyncCount;
-		if (vSyncCount > 0)
+		TargetFPS = (short)Screen.currentResolution.refreshRateRatio.value;
+		if (!XRSettings.enabled)
 		{
-			TargetFPS /= (short)vSyncCount;
-		}
-		else if (Application.targetFrameRate < 0)
-		{
-			TargetFPS = -1;
+			int vSyncCount = QualitySettings.vSyncCount;
+			if (vSyncCount > 0)
+			{
+				TargetFPS /= (short)vSyncCount;
+			}
+			else if (Application.targetFrameRate < 0)
+			{
+				TargetFPS = -1;
+			}
 		}
 	}
 }

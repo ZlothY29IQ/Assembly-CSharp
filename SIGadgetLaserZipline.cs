@@ -56,6 +56,8 @@ public class SIGadgetLaserZipline : SIGadget, ICallBack
 
 	private VRRig activeCallbackOnRig;
 
+	private bool isTriggerPressed;
+
 	private bool wasTriggerPressed;
 
 	private bool isLineBroken;
@@ -151,6 +153,7 @@ public class SIGadgetLaserZipline : SIGadget, ICallBack
 			activeCallbackOnRig = null;
 			hasActiveCallback = false;
 			SIPlayer.LocalPlayer.OnKnockback -= OnKnockback;
+			GTPlayerTransform.IgnoreGravityRotation = false;
 		}
 	}
 
@@ -192,13 +195,13 @@ public class SIGadgetLaserZipline : SIGadget, ICallBack
 
 	protected override void OnUpdateAuthority(float dt)
 	{
-		bool num = m_buttonActivatable.CheckInput();
+		isTriggerPressed = m_buttonActivatable.CheckInput();
 		bool flag = GTPlayer.Instance.IsGroundedButt || GTPlayer.Instance.IsGroundedHand || GTPlayer.Instance.IsTentacleActive;
 		if (flag)
 		{
 			groundedCooldown.Reset();
 		}
-		if (num)
+		if (isTriggerPressed)
 		{
 			if (isLineBroken)
 			{
@@ -267,7 +270,7 @@ public class SIGadgetLaserZipline : SIGadget, ICallBack
 					ziplineDirection += up * -0.5f;
 					ziplineDirection.Normalize();
 				}
-				activatedAtRotation = Quaternion.LookRotation(ziplineDirection);
+				activatedAtRotation = Quaternion.LookRotation(ziplineDirection, GTPlayerTransform.PhysicsUp);
 				wasTriggerPressed = true;
 				wasSlidingUngrounded = !GTPlayer.Instance.IsGroundedButt && !GTPlayer.Instance.IsGroundedHand;
 				gameEntity.RequestState(gameEntity.id, GetStateLong());
@@ -282,12 +285,12 @@ public class SIGadgetLaserZipline : SIGadget, ICallBack
 			Vector3 rigidbodyVelocity = GTPlayer.Instance.RigidbodyVelocity;
 			GTPlayer.Instance.LaserZiplineActiveAtFrame = Time.frameCount + 1;
 			float magnitude = rigidbodyVelocity.magnitude;
-			float num2 = Vector3.Dot(GTPlayer.Instance.RigidbodyVelocity, ziplineDirection);
-			if (_speedBoost > 0f && num2 < speedBoostVelocityCap)
+			float num = Vector3.Dot(GTPlayer.Instance.RigidbodyVelocity, ziplineDirection);
+			if (_speedBoost > 0f && num < speedBoostVelocityCap)
 			{
-				num2 += Time.deltaTime * _speedBoost;
+				num += Time.deltaTime * _speedBoost;
 			}
-			AccumulateVelocity(ziplineDirection * num2);
+			AccumulateVelocity(ziplineDirection * num);
 			UpdateAudioPitch(magnitude);
 			wasTriggerPressed = true;
 		}
@@ -299,8 +302,8 @@ public class SIGadgetLaserZipline : SIGadget, ICallBack
 			wasTriggerPressed = false;
 			wasSlidingUngrounded = false;
 			coolingDownUntilTimestamp = Time.time + cooldownDuration;
-			float num3 = Vector3.Dot(GTPlayer.Instance.RigidbodyVelocity, ziplineDirection);
-			AccumulateVelocity(ziplineDirection * num3);
+			float num2 = Vector3.Dot(GTPlayer.Instance.RigidbodyVelocity, ziplineDirection);
+			AccumulateVelocity(ziplineDirection * num2);
 			if (FindAttachedHand(out var isLeft))
 			{
 				GorillaVelocityTracker interactPointVelocityTracker = GTPlayer.Instance.GetInteractPointVelocityTracker(isLeft);
@@ -322,7 +325,7 @@ public class SIGadgetLaserZipline : SIGadget, ICallBack
 				vector2.Normalize();
 				vector2 += up2 * -0.5f;
 			}
-			Quaternion b = zipline.parent.InverseTransformRotation(Quaternion.LookRotation(vector2));
+			Quaternion b = zipline.parent.InverseTransformRotation(Quaternion.LookRotation(vector2, up2));
 			zipline.transform.localRotation = Quaternion.Lerp(zipline.transform.localRotation, b, Time.deltaTime * 25f);
 		}
 	}
@@ -394,6 +397,7 @@ public class SIGadgetLaserZipline : SIGadget, ICallBack
 		}
 		if (IsEquippedLocal())
 		{
+			GTPlayerTransform.IgnoreGravityRotation = true;
 			ResetLocalAppliedPositionOffset();
 			Vector3 point = activatedAtPoint - zipline.transform.TransformPoint(ziplineAnchorOffset);
 			point = GTExt.ProjectOnPlane(point, Vector3.zero, ziplineDirection);

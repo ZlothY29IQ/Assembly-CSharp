@@ -1473,8 +1473,6 @@ public class GTPlayer : MonoBehaviour
 			playerRigidBody.isKinematic = false;
 			playerRigidBody.linearVelocity = quaternion * linearVelocity;
 		}
-		playerRigidBody.position = position;
-		playerRigidBody.rotation = rotation;
 		base.transform.position = position;
 		base.transform.rotation = rotation;
 		lastHeadPosition = headCollider.transform.position;
@@ -2906,7 +2904,7 @@ public class GTPlayer : MonoBehaviour
 		}
 	}
 
-	public void HandleTentacleMovement()
+	private bool HandleTentacleMovement()
 	{
 		Vector3 vector;
 		if (hasLeftHandTentacleMove)
@@ -2926,13 +2924,14 @@ public class GTPlayer : MonoBehaviour
 		{
 			if (!hasRightHandTentacleMove)
 			{
-				return;
+				return false;
 			}
 			vector = rightHandTentacleMove;
 			hasRightHandTentacleMove = false;
 		}
 		playerRigidBody.transform.position += vector;
 		playerRigidBody.linearVelocity = Vector3.zero;
+		return true;
 	}
 
 	public HandLinkAuthorityStatus TakeMyHand_GetSelfHandLinkAuthority()
@@ -3456,10 +3455,10 @@ public class GTPlayer : MonoBehaviour
 		{
 			position = leftHand.controllerTransform.position;
 		}
-		turnParent.transform.RotateAround(position, GTPlayerTransform.Up, degrees);
+		turnParent.transform.RotateAround(position, base.transform.up, degrees);
 		degreesTurnedThisFrame = degrees;
 		averagedVelocity = Vector3.zero;
-		Quaternion quaternion = Quaternion.AngleAxis(degrees, GTPlayerTransform.Up);
+		Quaternion quaternion = Quaternion.AngleAxis(degrees, base.transform.up);
 		for (int i = 0; i < velocityHistory.Length; i++)
 		{
 			velocityHistory[i] = quaternion * velocityHistory[i];
@@ -4029,7 +4028,7 @@ public class GTPlayer : MonoBehaviour
 		float num = -1f;
 		for (int i = 0; i < bodyCollisionContactsCount; i++)
 		{
-			float num2 = Vector3.Dot(bodyCollisionContacts[i].normal, Vector3.up);
+			float num2 = Vector3.Dot(bodyCollisionContacts[i].normal, GTPlayerTransform.Up);
 			if (num2 > num)
 			{
 				bodyGroundContact = bodyCollisionContacts[i];

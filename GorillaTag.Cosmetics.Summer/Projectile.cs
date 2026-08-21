@@ -114,9 +114,17 @@ public class Projectile : MonoBehaviour, IProjectile
 		Vector3 vector = Time.fixedDeltaTime * 2f * rigidbody.linearVelocity;
 		Vector3 origin = base.transform.position - vector;
 		float magnitude = vector.magnitude;
-		other.Raycast(new Ray(origin, vector / magnitude), out var hitInfo, 2f * magnitude);
-		position = hitInfo.point;
-		normal = hitInfo.normal;
+		Vector3 direction = ((magnitude > 0f) ? (vector / magnitude) : Vector3.zero);
+		if (other.Raycast(new Ray(origin, direction), out var hitInfo, 2f * magnitude))
+		{
+			position = hitInfo.point;
+			normal = hitInfo.normal;
+		}
+		else
+		{
+			position = base.transform.position;
+			normal = Vector3.up;
+		}
 	}
 
 	private void OnCollisionEnter(Collision other)

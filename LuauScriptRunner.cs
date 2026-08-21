@@ -92,21 +92,4 @@ public class LuauScriptRunner
 	{
 		return new LuauScriptRunner(File.ReadAllText(Path.Join(Application.persistentDataPath, "Scripts", filePath)), filePath, bindings, tick);
 	}
-
-	~LuauScriptRunner()
-	{
-		LuauVm.ClassBuilders.Clear();
-		Bindings.LuauPlayerList.Clear();
-		Bindings.LuauGameObjectList.Clear();
-		Bindings.LuauGameObjectListReverse.Clear();
-		Bindings.LuauGameObjectStates.Clear();
-		Bindings.LuauVRRigList.Clear();
-		Bindings.LuauAIAgentList.Clear();
-		Bindings.Components.ComponentList.Clear();
-		ReflectionMetaNames.ReflectedNames.Clear();
-		if (BurstClassInfo.ClassList.InfoFields.Data.IsCreated)
-		{
-			BurstClassInfo.ClassList.InfoFields.Data.Clear();
-		}
-	}
 }

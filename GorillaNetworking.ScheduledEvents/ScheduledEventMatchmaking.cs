@@ -18,7 +18,7 @@ public static class ScheduledEventMatchmaking
 		{
 			return true;
 		}
-		return serverNow > e.scheduledStart + TimeSpan.FromMinutes(15.0);
+		return serverNow > e.scheduledStart + ScheduledEventManager.Instance.GracePeriod;
 	}
 
 	public static string ResolveCreateState(ScheduledEventInfo e, DateTime serverNow, bool creatorSeenRecently)
@@ -27,7 +27,7 @@ public static class ScheduledEventMatchmaking
 		{
 			return "regular";
 		}
-		DateTime dateTime = e.scheduledStart + TimeSpan.FromMinutes(15.0);
+		DateTime dateTime = e.scheduledStart + ScheduledEventManager.Instance.GracePeriod;
 		bool flag = serverNow > dateTime - TimeSpan.FromMinutes(5.0);
 		if (!(serverNow < e.scheduledStart) && (creatorSeenRecently || flag))
 		{

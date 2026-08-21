@@ -83,6 +83,18 @@ public class MonkeGravityController : MonoBehaviour, ICallbackUnique, ICallBack
 
 	public int GravityZonesCount => m_gravityZones.Count;
 
+	public bool GlobalGravityIntent
+	{
+		get
+		{
+			return m_globalGravityIntent;
+		}
+		set
+		{
+			m_globalGravityIntent = value;
+		}
+	}
+
 	bool ICallbackUnique.Registered { get; set; }
 
 	public void SetPersonalGravityDirection(Vector3 direction)
@@ -105,9 +117,9 @@ public class MonkeGravityController : MonoBehaviour, ICallbackUnique, ICallBack
 		{
 			m_targetTransform = base.transform;
 		}
-		if (m_alwaysInZone == null && m_activatorCollider.IsNull())
+		if (m_alwaysInZone.IsNull() && m_activatorCollider.IsNull())
 		{
-			m_activatorCollider = GetComponent<Collider>();
+			m_activatorCollider = GetComponentInChildren<Collider>();
 			if (m_activatorCollider.IsNull())
 			{
 				return;
@@ -138,12 +150,7 @@ public class MonkeGravityController : MonoBehaviour, ICallbackUnique, ICallBack
 		{
 			m_targetRigidBody.useGravity = m_globalGravityIntent;
 			MonkeGravityManager.RemoveMonkeGravityController(this);
-			for (int num = m_gravityZones.Count - 1; num > -1; num--)
-			{
-				BasicGravityZone basicGravityZone = m_gravityZones[num];
-				basicGravityZone.RemoveTarget(this);
-				OnLeftGravityZone(basicGravityZone);
-			}
+			ClearAllGravityZones();
 		}
 	}
 
@@ -280,6 +287,19 @@ public class MonkeGravityController : MonoBehaviour, ICallbackUnique, ICallBack
 			}
 		}
 		m_highestAuthorityLevel = num;
+	}
+
+	public void ClearAllGravityZones()
+	{
+		if (m_gravityZones.Count >= 1)
+		{
+			for (int num = m_gravityZones.Count - 1; num > -1; num--)
+			{
+				BasicGravityZone basicGravityZone = m_gravityZones[num];
+				basicGravityZone.RemoveTarget(this);
+				OnLeftGravityZone(basicGravityZone);
+			}
+		}
 	}
 
 	public virtual void ApplyGravityForce(in Vector3 force, ForceMode forceType = ForceMode.Acceleration)

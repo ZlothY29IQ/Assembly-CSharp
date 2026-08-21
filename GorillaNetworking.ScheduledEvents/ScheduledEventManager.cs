@@ -21,14 +21,16 @@ public class ScheduledEventManager : MonoBehaviour, IGorillaSliceableSimple, IIn
 
 	public const int SCHEDULED_EVENT_MAX_DELAY_MINUTES = 5;
 
-	public const int SCHEDULED_EVENT_GRACE_PERIOD_MINUTES = 15;
-
 	public const int SCHEDULED_EVENT_SEEN_COOLDOWN_HOURS = 12;
 
 	[Header("Schedule")]
 	[SerializeField]
 	[Tooltip("PlayFab Title Data key whose value parses as a DateTime (date + time of day). Empty = no event configured.")]
 	private string titleDataKey;
+
+	[SerializeField]
+	[Tooltip("PlayFab Title Data key whose value parses as an ElapsedTime (e.g. \"00:10:00\").")]
+	private string graceTitleDataKey;
 
 	[SerializeField]
 	[Tooltip("If true, ignore titleDataKey and use forceEventTime instead. For local testing without editing PlayFab Title Data.")]
@@ -39,6 +41,8 @@ public class ScheduledEventManager : MonoBehaviour, IGorillaSliceableSimple, IIn
 	private string forceEventTime;
 
 	private DateTime scheduledStartUtc = DateTime.MinValue;
+
+	private TimeSpan gracePeriodDuration = TimeSpan.FromMinutes(10.0);
 
 	private bool scheduledStartKnown;
 
@@ -54,9 +58,15 @@ public class ScheduledEventManager : MonoBehaviour, IGorillaSliceableSimple, IIn
 
 	private ScheduledEventPhase currentPhase;
 
+	private int eventSubphase = -1;
+
 	private readonly HashSet<ScheduledEventControlledObject> registered = new HashSet<ScheduledEventControlledObject>();
 
 	public static ScheduledEventManager Instance { get; private set; }
+
+	public TimeSpan GracePeriod => gracePeriodDuration;
+
+	public bool DataReady => !fetchInFlight;
 
 	public bool IsResolved => startKind != StartKind.Unresolved;
 
@@ -76,9 +86,28 @@ public class ScheduledEventManager : MonoBehaviour, IGorillaSliceableSimple, IIn
 
 	public ScheduledEventPhase CurrentPhase => currentPhase;
 
+	public int EventSubphase => eventSubphase;
+
+	public DateTime PreviousEventSubphaseStartTime { get; private set; }
+
+	public DateTime EventSubphaseStartTime { get; private set; }
+
 	public event Action OnChanged;
 
 	public event Action<ScheduledEventPhase> OnPhaseChanged;
+
+	public event Action<int> OnSubphaseChanged;
+
+	public void SetEventSubphase(int subphase)
+	{
+		if (subphase != eventSubphase && (!PhotonNetwork.InRoom || PhotonNetwork.IsMasterClient))
+		{
+			eventSubphase = subphase;
+			PreviousEventSubphaseStartTime = EventSubphaseStartTime;
+			EventSubphaseStartTime = DateTime.Now;
+			this.OnSubphaseChanged?.Invoke(subphase);
+		}
+	}
 
 	private void Awake()
 	{
@@ -200,6 +229,10 @@ public class ScheduledEventManager : MonoBehaviour, IGorillaSliceableSimple, IIn
 				SetRoomState("event-in-progress");
 			}
 			currentPhase = scheduledEventPhase;
+			if (scheduledEventPhase == ScheduledEventPhase.During)
+			{
+				SetEventSubphase(0);
+			}
 			this.OnPhaseChanged?.Invoke(scheduledEventPhase);
 			ApplyPhaseToAll();
 		}
@@ -248,10 +281,10 @@ public class ScheduledEventManager : MonoBehaviour, IGorillaSliceableSimple, IIn
 		{
 			return ScheduledEventPhase.Before;
 		}
-		DateTime serverNow = ((GorillaComputer.instance != null) ? GorillaComputer.instance.GetServerTime() : DateTime.UtcNow);
-		ScheduledEventInfo current = GetCurrent(serverNow);
-		bool creatorSeenRecently = ScheduledEventMatchmaking.HasSeenScheduledEventRecently(serverNow);
-		if (ScheduledEventMatchmaking.ResolveCreateState(current, serverNow, creatorSeenRecently) == "post-event")
+		DateTime serverTime = GorillaComputer.instance.GetServerTime();
+		ScheduledEventInfo current = GetCurrent(serverTime);
+		bool creatorSeenRecently = ScheduledEventMatchmaking.HasSeenScheduledEventRecently(serverTime);
+		if (ScheduledEventMatchmaking.ResolveCreateState(current, serverTime, creatorSeenRecently) == "post-event")
 		{
 			return ScheduledEventPhase.After;
 		}
@@ -294,6 +327,7 @@ public class ScheduledEventManager : MonoBehaviour, IGorillaSliceableSimple, IIn
 			await Task.Yield();
 		}
 		PlayFabTitleDataCache.Instance.GetTitleData(titleDataKey, OnTitleData, OnTitleDataError);
+		PlayFabTitleDataCache.Instance.GetTitleData(graceTitleDataKey, OnGraceTitleData, OnGraceTitleDataError);
 	}
 
 	private void OnTitleData(string raw)
@@ -314,13 +348,29 @@ public class ScheduledEventManager : MonoBehaviour, IGorillaSliceableSimple, IIn
 		Debug.Log($"ScheduledEventManager :: title data fetch failed: {error}");
 	}
 
+	private void OnGraceTitleData(string raw)
+	{
+		fetchInFlight = false;
+		if (!TimeSpan.TryParse(raw, out gracePeriodDuration))
+		{
+			Debug.Log("ScheduledEventManager :: could not parse time interval '" + raw + "' for key " + graceTitleDataKey);
+		}
+	}
+
+	private void OnGraceTitleDataError(PlayFabError error)
+	{
+		fetchInFlight = false;
+		Debug.Log($"ScheduledEventManager :: grace title data fetch failed: {error}");
+		gracePeriodDuration = TimeSpan.FromMinutes(10.0);
+	}
+
 	public ScheduledEventInfo GetCurrent(DateTime serverNow)
 	{
 		if (!scheduledStartKnown)
 		{
 			return ScheduledEventInfo.None;
 		}
-		DateTime dateTime = scheduledStartUtc + TimeSpan.FromMinutes(15.0);
+		DateTime dateTime = scheduledStartUtc + gracePeriodDuration;
 		if (serverNow >= dateTime)
 		{
 			return ScheduledEventInfo.None;
@@ -361,6 +411,11 @@ public class ScheduledEventManager : MonoBehaviour, IGorillaSliceableSimple, IIn
 
 	public void OnShowEnded()
 	{
+		if (currentPhase == ScheduledEventPhase.During)
+		{
+			PreviousEventSubphaseStartTime = EventSubphaseStartTime;
+			EventSubphaseStartTime = DateTime.Now;
+		}
 		if (NetworkSystem.Instance.InRoom && NetworkSystem.Instance.IsMasterClient)
 		{
 			SetRoomState("post-event");
@@ -444,8 +499,8 @@ public class ScheduledEventManager : MonoBehaviour, IGorillaSliceableSimple, IIn
 	{
 		if (!(NetworkSystem.Instance == null) && NetworkSystem.Instance.InRoom && NetworkSystem.Instance.IsMasterClient && !(lastKnownState != "post-event"))
 		{
-			DateTime serverNow = ((GorillaComputer.instance != null) ? GorillaComputer.instance.GetServerTime() : DateTime.UtcNow);
-			if (ScheduledEventMatchmaking.GracePeriodEnded(GetCurrent(serverNow), serverNow))
+			DateTime serverTime = GorillaComputer.instance.GetServerTime();
+			if (ScheduledEventMatchmaking.GracePeriodEnded(GetCurrent(serverTime), serverTime))
 			{
 				SetRoomState("regular");
 				lastKnownState = "regular";
@@ -482,6 +537,7 @@ public class ScheduledEventManager : MonoBehaviour, IGorillaSliceableSimple, IIn
 				StartKind.Scheduled => scheduledStart.Value, 
 				_ => double.NaN, 
 			});
+			stream.SendNext(eventSubphase);
 			return;
 		}
 		double num = (double)stream.ReceiveNext();
@@ -496,6 +552,12 @@ public class ScheduledEventManager : MonoBehaviour, IGorillaSliceableSimple, IIn
 		else
 		{
 			SetStartState(StartKind.Scheduled, new PhotonTimestamp(num));
+		}
+		int num2 = (int)stream.ReceiveNext();
+		if (num2 != eventSubphase)
+		{
+			eventSubphase = num2;
+			this.OnSubphaseChanged?.Invoke(eventSubphase);
 		}
 	}
 

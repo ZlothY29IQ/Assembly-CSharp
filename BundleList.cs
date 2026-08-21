@@ -4,6 +4,8 @@ internal class BundleList
 
 	public BundleData[] data;
 
+	public bool IsLoaded => data != null;
+
 	public void FromJson(string jsonString)
 	{
 		data = JSonHelper.FromJson<BundleData>(jsonString);
@@ -33,6 +35,29 @@ internal class BundleList
 			}
 		}
 		data[activeBundleIdx].isActive = true;
+	}
+
+	public bool HasMothershipRewards(string playFabItemName)
+	{
+		if (data == null || string.IsNullOrEmpty(playFabItemName))
+		{
+			return false;
+		}
+		for (int i = 0; i < data.Length; i++)
+		{
+			if (!(data[i].playFabItemName != playFabItemName))
+			{
+				if (data[i].mothershipTransactionIds != null && data[i].mothershipTransactionIds.Length != 0)
+				{
+					return true;
+				}
+				if (data[i].progressionNodes != null && data[i].progressionNodes.Length != 0)
+				{
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	public bool HasSku(string skuName, out int idx)

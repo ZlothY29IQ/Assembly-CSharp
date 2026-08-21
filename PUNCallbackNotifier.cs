@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using ExitGames.Client.Photon;
 using Photon.Pun;
 using Photon.Realtime;
-using UnityEngine;
 
 public class PUNCallbackNotifier : MonoBehaviourPunCallbacks, IOnEventCallback
 {
@@ -54,7 +53,6 @@ public class PUNCallbackNotifier : MonoBehaviourPunCallbacks, IOnEventCallback
 
 	public override void OnDisconnected(DisconnectCause cause)
 	{
-		Debug.Log("Disconnect callback, cause:" + cause);
 		parentSystem.OnDisconnected(cause);
 	}
 
@@ -75,7 +73,11 @@ public class PUNCallbackNotifier : MonoBehaviourPunCallbacks, IOnEventCallback
 
 	public override void OnCustomAuthenticationResponse(Dictionary<string, object> data)
 	{
-		base.OnCustomAuthenticationResponse(data);
-		NetworkSystem.Instance.CustomAuthenticationResponse(data);
+		parentSystem.CustomAuthenticationResponse(data);
+	}
+
+	public override void OnCustomAuthenticationFailed(string debugMessage)
+	{
+		parentSystem.CustomAuthenticationFailed(debugMessage);
 	}
 }

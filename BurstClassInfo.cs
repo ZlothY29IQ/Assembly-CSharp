@@ -7,6 +7,7 @@ using AOT;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
+using UnityEngine;
 
 [BurstCompile]
 public static class BurstClassInfo
@@ -66,9 +67,9 @@ public static class BurstClassInfo
 	}
 
 	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-	internal unsafe delegate int Index_00004D55_0024PostfixBurstDelegate(lua_State* L);
+	internal unsafe delegate int Index_00004D64_0024PostfixBurstDelegate(lua_State* L);
 
-	internal static class Index_00004D55_0024BurstDirectCall
+	internal static class Index_00004D64_0024BurstDirectCall
 	{
 		private static IntPtr Pointer;
 
@@ -77,7 +78,7 @@ public static class BurstClassInfo
 		{
 			if (Pointer == (IntPtr)0)
 			{
-				Pointer = BurstCompiler.CompileFunctionPointer<Index_00004D55_0024PostfixBurstDelegate>(Index).Value;
+				Pointer = BurstCompiler.CompileFunctionPointer<Index_00004D64_0024PostfixBurstDelegate>(Index).Value;
 			}
 			P_0 = Pointer;
 		}
@@ -104,9 +105,9 @@ public static class BurstClassInfo
 	}
 
 	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-	internal unsafe delegate int NewIndex_00004D56_0024PostfixBurstDelegate(lua_State* L);
+	internal unsafe delegate int NewIndex_00004D65_0024PostfixBurstDelegate(lua_State* L);
 
-	internal static class NewIndex_00004D56_0024BurstDirectCall
+	internal static class NewIndex_00004D65_0024BurstDirectCall
 	{
 		private static IntPtr Pointer;
 
@@ -115,7 +116,7 @@ public static class BurstClassInfo
 		{
 			if (Pointer == (IntPtr)0)
 			{
-				Pointer = BurstCompiler.CompileFunctionPointer<NewIndex_00004D56_0024PostfixBurstDelegate>(NewIndex).Value;
+				Pointer = BurstCompiler.CompileFunctionPointer<NewIndex_00004D65_0024PostfixBurstDelegate>(NewIndex).Value;
 			}
 			P_0 = Pointer;
 		}
@@ -142,9 +143,9 @@ public static class BurstClassInfo
 	}
 
 	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-	internal unsafe delegate int NameCall_00004D57_0024PostfixBurstDelegate(lua_State* L);
+	internal unsafe delegate int NameCall_00004D66_0024PostfixBurstDelegate(lua_State* L);
 
-	internal static class NameCall_00004D57_0024BurstDirectCall
+	internal static class NameCall_00004D66_0024BurstDirectCall
 	{
 		private static IntPtr Pointer;
 
@@ -153,7 +154,7 @@ public static class BurstClassInfo
 		{
 			if (Pointer == (IntPtr)0)
 			{
-				Pointer = BurstCompiler.CompileFunctionPointer<NameCall_00004D57_0024PostfixBurstDelegate>(NameCall).Value;
+				Pointer = BurstCompiler.CompileFunctionPointer<NameCall_00004D66_0024PostfixBurstDelegate>(NameCall).Value;
 			}
 			P_0 = Pointer;
 		}
@@ -247,27 +248,28 @@ public static class BurstClassInfo
 			item.FunctionList.TryAdd(functionPtr.Key, functionPtr.Value.Value);
 		}
 		ClassList.InfoFields.Data.Add(item.NameHash, item);
+		Debug.Log($"[NewClass] Registered {className}, MetaHash={item.NameHash}, Count={ClassList.InfoFields.Data.Count}, Contains={ClassList.InfoFields.Data.ContainsKey(item.NameHash)}");
 	}
 
 	[BurstCompile]
-	[MonoPInvokeCallback(typeof(Index_00004D55_0024PostfixBurstDelegate))]
+	[MonoPInvokeCallback(typeof(Index_00004D64_0024PostfixBurstDelegate))]
 	public unsafe static int Index(lua_State* L)
 	{
-		return Index_00004D55_0024BurstDirectCall.Invoke(L);
+		return Index_00004D64_0024BurstDirectCall.Invoke(L);
 	}
 
 	[BurstCompile]
-	[MonoPInvokeCallback(typeof(NewIndex_00004D56_0024PostfixBurstDelegate))]
+	[MonoPInvokeCallback(typeof(NewIndex_00004D65_0024PostfixBurstDelegate))]
 	public unsafe static int NewIndex(lua_State* L)
 	{
-		return NewIndex_00004D56_0024BurstDirectCall.Invoke(L);
+		return NewIndex_00004D65_0024BurstDirectCall.Invoke(L);
 	}
 
 	[BurstCompile]
-	[MonoPInvokeCallback(typeof(NameCall_00004D57_0024PostfixBurstDelegate))]
+	[MonoPInvokeCallback(typeof(NameCall_00004D66_0024PostfixBurstDelegate))]
 	public unsafe static int NameCall(lua_State* L)
 	{
-		return NameCall_00004D57_0024BurstDirectCall.Invoke(L);
+		return NameCall_00004D66_0024BurstDirectCall.Invoke(L);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -279,6 +281,7 @@ public static class BurstClassInfo
 		Luau.luaL_getmetafield(L, 1, k);
 		if (!ClassList.InfoFields.Data.TryGetValue((int)Luau.luaL_checknumber(L, -1), out var item))
 		{
+			Debug.LogError($"[LuauBindings::Index] Internal Class Info Error: MetaHash={(int)Luau.luaL_checknumber(L, -1)}");
 			FixedString32Bytes output2 = "\"Internal Class Info Error\"";
 			Luau.luaL_errorL(L, (sbyte*)UnsafeUtility.AddressOf(ref output2) + 2);
 			return 0;
@@ -347,8 +350,10 @@ public static class BurstClassInfo
 		FixedString32Bytes output = _k_metatableLookup;
 		byte* k = (byte*)UnsafeUtility.AddressOf(ref output) + 2;
 		Luau.luaL_getmetafield(L, 1, k);
-		if (!ClassList.InfoFields.Data.TryGetValue((int)Luau.luaL_checknumber(L, -1), out var item))
+		int num = (int)Luau.luaL_checknumber(L, -1);
+		if (!ClassList.InfoFields.Data.TryGetValue(num, out var item))
 		{
+			Debug.LogError($"[LuauBindings::NewIndex] Internal Class Info Error: MetaHash={num}");
 			FixedString32Bytes output2 = "\"Internal Class Info Error\"";
 			Luau.luaL_errorL(L, (sbyte*)UnsafeUtility.AddressOf(ref output2) + 2);
 			return 0;
@@ -407,8 +412,10 @@ public static class BurstClassInfo
 		FixedString32Bytes output = _k_metatableLookup;
 		byte* k = (byte*)UnsafeUtility.AddressOf(ref output) + 2;
 		Luau.luaL_getmetafield(L, 1, k);
-		if (!ClassList.InfoFields.Data.TryGetValue((int)Luau.luaL_checknumber(L, -1), out var item))
+		int num = (int)Luau.luaL_checknumber(L, -1);
+		if (!ClassList.InfoFields.Data.TryGetValue(num, out var item))
 		{
+			Debug.LogError($"[LuauBindings::NameCall] Internal Class Info Error: MetaHash={num}, Count={ClassList.InfoFields.Data.Count}, IsCreated={ClassList.InfoFields.Data.IsCreated}, Contains={ClassList.InfoFields.Data.ContainsKey(num)}");
 			FixedString32Bytes output2 = "\"Internal Class Info Error\"";
 			Luau.luaL_errorL(L, (sbyte*)UnsafeUtility.AddressOf(ref output2) + 2);
 			return 0;

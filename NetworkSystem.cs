@@ -212,7 +212,13 @@ public abstract class NetworkSystem : MonoBehaviour
 
 	internal void CustomAuthenticationResponse(Dictionary<string, object> response)
 	{
+		PersistLog.Log("Custom authentication succeeded");
 		this.OnCustomAuthenticationResponse?.Invoke(response);
+	}
+
+	internal void CustomAuthenticationFailed(string debugMessage)
+	{
+		PersistLog.Log("Custom authentication failed: " + debugMessage);
 	}
 
 	public virtual void Initialise()

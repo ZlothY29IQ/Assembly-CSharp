@@ -642,7 +642,23 @@ public class VoxelWorld : MonoBehaviour
 			if (worldType == WorldType.Bounded)
 			{
 				worldBounds = generator.GetWorldBounds();
+				OptimizeChunkSize();
 			}
+		}
+	}
+
+	private void OptimizeChunkSize()
+	{
+		if (worldType == WorldType.Bounded)
+		{
+			Vector3Int vector3Int = math.max(worldBounds.min.ToInt3() + worldBounds.size.ToInt3(), worldBounds.size.ToInt3()).ToVectorInt();
+			vector3Int += Vector3Int.one;
+			int b = Mathf.Max(vector3Int.x, vector3Int.y, vector3Int.z);
+			chunkSize = Mathf.Min(Mathf.Max(1, b), 32);
+		}
+		else
+		{
+			chunkSize = 32;
 		}
 	}
 
@@ -1217,7 +1233,11 @@ public class VoxelWorld : MonoBehaviour
 				for (int k = item.z; k <= item2.z; k++)
 				{
 					int3 key = new int3(i, j, k);
-					if (!chunks.TryGetValue(key, out var _))
+					if (!chunks.TryGetValue(key, out var value))
+					{
+						return false;
+					}
+					if (value.State < ChunkState.MeshAssigned)
 					{
 						return false;
 					}
@@ -1417,16 +1437,11 @@ public class VoxelWorld : MonoBehaviour
 		{
 			Debug.LogError("Chunk is null in HandleJobCompletion");
 		}
-		Chunk chunk = chunkTask.Chunk;
-		if (chunk.State < ChunkState.MeshAssigned || chunk.IsDirty)
+		foreach (Chunk chunk in chunkTask.Chunks)
 		{
-			Debug.LogWarning($"{chunk} job completed with state {chunk.State} and dirty {chunk.IsDirty}");
-		}
-		foreach (Chunk chunk2 in chunkTask.Chunks)
-		{
-			if (!completedJobs.Contains(chunk2.Id))
+			if (!completedJobs.Contains(chunk.Id))
 			{
-				completedJobs.Add(chunk2.Id);
+				completedJobs.Add(chunk.Id);
 			}
 		}
 	}

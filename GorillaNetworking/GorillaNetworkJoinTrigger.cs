@@ -93,36 +93,44 @@ public class GorillaNetworkJoinTrigger : GorillaTriggerBox
 
 	public void UpdateUI()
 	{
-		if (!(ui == null) && !(NetworkSystem.Instance == null))
+		if (ui == null || NetworkSystem.Instance == null)
 		{
-			if (GorillaScoreboardTotalUpdater.instance.offlineTextErrorString != null)
+			return;
+		}
+		if (GorillaScoreboardTotalUpdater.instance.offlineTextErrorString != null)
+		{
+			ui.SetState(JoinTriggerVisualState.ConnectionError, GetActiveNetworkZone, GetDesiredNetworkZone, GetActiveGameType, GetDesiredGameTypeLocalized);
+		}
+		else if (NetworkSystem.Instance.SessionIsPrivate)
+		{
+			ui.SetState(JoinTriggerVisualState.InPrivateRoom, GetActiveNetworkZone, GetDesiredNetworkZone, GetActiveGameType, GetDesiredGameTypeLocalized);
+		}
+		else if (NetworkSystem.Instance.InRoom && NetworkSystem.Instance.GameModeString == GetFullDesiredGameModeString())
+		{
+			ui.SetState(JoinTriggerVisualState.AlreadyInRoom, GetActiveNetworkZone, GetDesiredNetworkZone, GetActiveGameType, GetDesiredGameTypeLocalized);
+		}
+		else if (FriendshipGroupDetection.Instance.IsInParty)
+		{
+			if (CanPartyJoin() && (!ui.HasFriendCollider || FriendshipGroupDetection.Instance.IsPartyWithinCollider(ui.FriendJoinCollider)))
 			{
-				ui.SetState(JoinTriggerVisualState.ConnectionError, GetActiveNetworkZone, GetDesiredNetworkZone, GetActiveGameType, GetDesiredGameTypeLocalized);
-			}
-			else if (NetworkSystem.Instance.SessionIsPrivate)
-			{
-				ui.SetState(JoinTriggerVisualState.InPrivateRoom, GetActiveNetworkZone, GetDesiredNetworkZone, GetActiveGameType, GetDesiredGameTypeLocalized);
-			}
-			else if (NetworkSystem.Instance.InRoom && NetworkSystem.Instance.GameModeString == GetFullDesiredGameModeString())
-			{
-				ui.SetState(JoinTriggerVisualState.AlreadyInRoom, GetActiveNetworkZone, GetDesiredNetworkZone, GetActiveGameType, GetDesiredGameTypeLocalized);
-			}
-			else if (FriendshipGroupDetection.Instance.IsInParty && (!ui.HasFriendCollider || FriendshipGroupDetection.Instance.IsPartyWithinCollider(ui.FriendJoinCollider, checkLocal: true)))
-			{
-				ui.SetState(CanPartyJoin() ? JoinTriggerVisualState.LeaveRoomAndPartyJoin : JoinTriggerVisualState.AbandonPartyAndSoloJoin, GetActiveNetworkZone, GetDesiredNetworkZone, GetActiveGameType, GetDesiredGameTypeLocalized);
-			}
-			else if (!NetworkSystem.Instance.InRoom)
-			{
-				ui.SetState(JoinTriggerVisualState.NotConnectedSoloJoin, GetActiveNetworkZone, GetDesiredNetworkZone, GetActiveGameType, GetDesiredGameTypeLocalized);
-			}
-			else if (PhotonNetworkController.Instance.currentJoinTrigger == primaryTriggerForMyZone)
-			{
-				ui.SetState(JoinTriggerVisualState.ChangingGameModeSoloJoin, GetActiveNetworkZone, GetDesiredNetworkZone, GetActiveGameType, GetDesiredGameTypeLocalized);
+				ui.SetState(JoinTriggerVisualState.LeaveRoomAndPartyJoin, GetActiveNetworkZone, GetDesiredNetworkZone, GetActiveGameType, GetDesiredGameTypeLocalized);
 			}
 			else
 			{
-				ui.SetState(JoinTriggerVisualState.LeaveRoomAndSoloJoin, GetActiveNetworkZone, GetDesiredNetworkZone, GetActiveGameType, GetDesiredGameTypeLocalized);
+				ui.SetState(JoinTriggerVisualState.AbandonPartyAndSoloJoin, GetActiveNetworkZone, GetDesiredNetworkZone, GetActiveGameType, GetDesiredGameTypeLocalized);
 			}
+		}
+		else if (!NetworkSystem.Instance.InRoom)
+		{
+			ui.SetState(JoinTriggerVisualState.NotConnectedSoloJoin, GetActiveNetworkZone, GetDesiredNetworkZone, GetActiveGameType, GetDesiredGameTypeLocalized);
+		}
+		else if (PhotonNetworkController.Instance.currentJoinTrigger == primaryTriggerForMyZone)
+		{
+			ui.SetState(JoinTriggerVisualState.ChangingGameModeSoloJoin, GetActiveNetworkZone, GetDesiredNetworkZone, GetActiveGameType, GetDesiredGameTypeLocalized);
+		}
+		else
+		{
+			ui.SetState(JoinTriggerVisualState.LeaveRoomAndSoloJoin, GetActiveNetworkZone, GetDesiredNetworkZone, GetActiveGameType, GetDesiredGameTypeLocalized);
 		}
 	}
 

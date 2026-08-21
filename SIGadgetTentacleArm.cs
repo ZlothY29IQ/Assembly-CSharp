@@ -299,8 +299,7 @@ public class SIGadgetTentacleArm : SIGadget, ICallBack, IEnergyGadget
 		}
 		if (hasGravityOverride)
 		{
-			GTPlayer.Instance.UnsetGravityOverride(this);
-			hasGravityOverride = false;
+			RemoveGravityOverride();
 		}
 		heldPlayerCallback.Unregister();
 	}
@@ -473,7 +472,7 @@ public class SIGadgetTentacleArm : SIGadget, ICallBack, IEnergyGadget
 		{
 			if (!flag4)
 			{
-				float num3 = Vector3.Dot(hitInfo2.normal, Vector3.up);
+				float num3 = Vector3.Dot(hitInfo2.normal, GTPlayerTransform.Instance.GravityUp);
 				if (num3 >= _min_grab_dot)
 				{
 					_current_grab_fps = ((num3 >= _wall_angle_dot) ? FuelPerSecond_Holding : (FuelPerSecond_Holding * FuelCost_Wall_Multiplier));
@@ -675,8 +674,7 @@ public class SIGadgetTentacleArm : SIGadget, ICallBack, IEnergyGadget
 		if (IsEquippedLocal())
 		{
 			lastRequestedPlayerPosition = GTPlayer.Instance.transform.position;
-			GTPlayer.Instance.SetGravityOverride(this, GravityOverrideFunction);
-			hasGravityOverride = true;
+			SetGravityOverride();
 			SIPlayer.LocalPlayer.OnKnockback += OnKnockback;
 			gameEntity.RequestState(gameEntity.id, GetStateLong());
 		}
@@ -699,8 +697,7 @@ public class SIGadgetTentacleArm : SIGadget, ICallBack, IEnergyGadget
 		isHoldingHand = false;
 		if (hasGravityOverride)
 		{
-			GTPlayer.Instance.UnsetGravityOverride(this);
-			hasGravityOverride = false;
+			RemoveGravityOverride();
 		}
 		if (IsEquippedLocal() && !IsBlocked(SIExclusionType.AffectsLocalMovement))
 		{
@@ -732,6 +729,18 @@ public class SIGadgetTentacleArm : SIGadget, ICallBack, IEnergyGadget
 			isGripBroken = true;
 			ClearClawAnchor();
 		}
+	}
+
+	private void SetGravityOverride()
+	{
+		GTPlayer.Instance.SetGravityOverride(this, GravityOverrideFunction);
+		hasGravityOverride = true;
+	}
+
+	private void RemoveGravityOverride()
+	{
+		GTPlayer.Instance.UnsetGravityOverride(this);
+		hasGravityOverride = false;
 	}
 
 	private void GravityOverrideFunction(GTPlayer player)

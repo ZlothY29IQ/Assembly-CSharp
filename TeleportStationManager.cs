@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using GorillaLocomotion;
 using GorillaNetworking;
 using GorillaTagScripts;
+using Photon.Pun;
 using UnityEngine;
 
 public class TeleportStationManager : MonoBehaviour
@@ -29,6 +30,8 @@ public class TeleportStationManager : MonoBehaviour
 		private GameObject firstPersonEffect;
 
 		private int phase;
+
+		public int Phase => phase;
 
 		public float EffectTimeRemains => effectTimeRemains;
 
@@ -76,21 +79,29 @@ public class TeleportStationManager : MonoBehaviour
 			case 2:
 				targetPos.x += Random.Range(0f - targetSlop.x, targetSlop.x);
 				targetPos.z += Random.Range(0f - targetSlop.z, targetSlop.z);
+				phase++;
 				instance.TeleportTo(targetPos, Quaternion.Euler(0f, targetRot + Random.Range(0f - targetSlop.y, targetSlop.y), 0f), keepVelocity: false, center: true);
 				if (teleportToZone != GTZone.none)
 				{
 					ZoneManagement.SetActiveZone(teleportToZone);
 				}
+				GTPlayerTransform.Instance.ClearAllGravityZones();
 				if (NetworkSystem.Instance.InRoom)
 				{
-					if (!NetworkSystem.Instance.SessionIsPrivate)
+					int num = LowestActorNumberInFriendCollider();
+					if (!NetworkSystem.Instance.SessionIsPrivate && num == NetworkSystem.Instance.LocalPlayer.ActorNumber)
 					{
+						SetupFriendGroup(sourceFriendCollider, destinationFriendCollider, refreshFriendList: true);
+						RoomSystem.SendElevatorFollowCommand(PhotonNetworkController.Instance.shuffler, PhotonNetworkController.Instance.keyStr, sourceFriendCollider, destinationFriendCollider);
+						PhotonNetwork.SendAllOutgoingCommands();
 						if (FriendshipGroupDetection.Instance.IsInParty)
 						{
-							FriendshipGroupDetection.Instance.LeaveParty();
+							PhotonNetworkController.Instance.AttemptToJoinPublicRoom(destinationJoinTrigger, JoinType.ForceJoinWithParty);
 						}
-						SetupFriendGroup(sourceFriendCollider, destinationFriendCollider);
-						PhotonNetworkController.Instance.AttemptToJoinPublicRoom(destinationJoinTrigger, JoinType.JoinWithNearby);
+						else
+						{
+							PhotonNetworkController.Instance.AttemptToJoinPublicRoom(destinationJoinTrigger, JoinType.JoinWithNearby);
+						}
 					}
 				}
 				else
@@ -98,10 +109,9 @@ public class TeleportStationManager : MonoBehaviour
 					SetupFriendGroup(sourceFriendCollider, destinationFriendCollider);
 					PhotonNetworkController.Instance.AttemptToJoinPublicRoom(destinationJoinTrigger, JoinType.JoinWithNearby);
 				}
-				phase++;
 				break;
 			case 3:
-				if (effectTimeRemains < 0f)
+				if (effectTimeRemains <= 0f)
 				{
 					firstPersonEffect.SetActive(value: false);
 					firstPersonEffect.transform.parent = go.transform;
@@ -131,8 +141,13 @@ public class TeleportStationManager : MonoBehaviour
 			return num;
 		}
 
-		private void SetupFriendGroup(GorillaFriendCollider source, GorillaFriendCollider destination)
+		private void SetupFriendGroup(GorillaFriendCollider source, GorillaFriendCollider destination, bool refreshFriendList = false)
 		{
+			if (refreshFriendList)
+			{
+				PhotonNetworkController.Instance.FriendIDList = new List<string>(source.playerIDsCurrentlyTouching);
+				PhotonNetworkController.Instance.FriendIDList.AddRange(destination.playerIDsCurrentlyTouching);
+			}
 			PhotonNetworkController.Instance.shuffler = Random.Range(0, 99).ToString().PadLeft(2, '0') + Random.Range(0, 99999999).ToString().PadLeft(8, '0');
 			PhotonNetworkController.Instance.keyStr = Random.Range(0, 99999999).ToString().PadLeft(8, '0');
 		}

@@ -293,10 +293,6 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 	{
 		PhotonNetworkController.Instance.FriendIDList = new List<string>(sourceFriendCollider.playerIDsCurrentlyTouching);
 		PhotonNetworkController.Instance.FriendIDList.AddRange(destinationFriendCollider.playerIDsCurrentlyTouching);
-		foreach (string friendID in PhotonNetworkController.Instance.FriendIDList)
-		{
-			_ = friendID;
-		}
 		PhotonNetworkController.Instance.shuffler = UnityEngine.Random.Range(0, 99).ToString().PadLeft(2, '0') + UnityEngine.Random.Range(0, 99999999).ToString().PadLeft(8, '0');
 		PhotonNetworkController.Instance.keyStr = UnityEngine.Random.Range(0, 99999999).ToString().PadLeft(8, '0');
 	}

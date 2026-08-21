@@ -93,7 +93,7 @@ public class VoxelInteractor : MonoBehaviour
 		}
 		if (_hitColliders == null)
 		{
-			_hitColliders = new Collider[5];
+			_hitColliders = new Collider[20];
 		}
 		_hitWorlds.Clear();
 		int num = Physics.OverlapSphereNonAlloc(base.transform.position, action.radius, _hitColliders, layerMask);

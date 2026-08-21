@@ -39,8 +39,8 @@ public class JoinTriggerUI : MonoBehaviour
 
 	private void Awake()
 	{
-		joinTriggerResolved = joinTriggerRef.TryResolve(out joinTrigger) && joinTrigger != null;
 		friendColliderResolved = friendColliderRef.TryResolve(out friendCollider) && friendCollider != null;
+		joinTriggerResolved = joinTriggerRef.TryResolve(out joinTrigger) && joinTrigger != null;
 	}
 
 	private void Start()

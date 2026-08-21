@@ -435,8 +435,6 @@ public class FriendshipGroupDetection : NetworkSceneObject, ITickSystemTick
 
 	private void UpdateWarningSigns()
 	{
-		_ = GorillaTagger.Instance.offlineVRRig.zoneEntity;
-		_ = PhotonNetworkController.Instance.CurrentRoomZone;
 		GroupJoinZoneAB groupJoinZoneAB = 0;
 		if (myPartyMemberIDs != null)
 		{

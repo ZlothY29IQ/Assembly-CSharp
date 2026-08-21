@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using Cysharp.Threading.Tasks;
 using Fusion;
 using Photon.Pun;
@@ -58,7 +56,6 @@ public class RandomCarveableObject : NetworkComponent
 			world = GetComponentInParent<VoxelWorld>();
 		}
 		spawnFX.SetActive(value: false);
-		world.SetWorldBounds(new UnityEngine.BoundsInt(Vector3Int.zero, (Chunk.DefaultSize - 1).ToVectorInt()));
 		for (int num = spawnPoint.childCount - 1; num >= 0; num--)
 		{
 			JamUtil.Destroy(spawnPoint.GetChild(num).gameObject);
@@ -99,30 +96,6 @@ public class RandomCarveableObject : NetworkComponent
 	private void SetBoundsDensity(byte density)
 	{
 		world.SetVoxels(_voxels, density, materialId, immediate: false);
-	}
-
-	private void CollectVoxelSet()
-	{
-		Bounds localBounds = _carveable.GetComponentInChildren<Renderer>().localBounds;
-		Vector3 min = localBounds.min;
-		Vector3 max = localBounds.max;
-		HashSet<int3> hashSet = new HashSet<int3>();
-		for (float num = min.x; num <= max.x; num += 0.1f)
-		{
-			for (float num2 = min.y; num2 <= max.y; num2 += 0.1f)
-			{
-				for (float num3 = min.z; num3 <= max.z; num3 += 0.1f)
-				{
-					hashSet.Add(GetVoxel(num, num2, num3));
-				}
-			}
-		}
-		_voxels = hashSet.ToArray();
-		_voxelBounds = VoxelWorld.GetBoundsFor(_voxels);
-		int3 GetVoxel(float x, float y, float z)
-		{
-			return world.GetVoxelForWorldPosition(_carveable.transform.TransformPoint(new Vector3(x, y, z)));
-		}
 	}
 
 	private void SetCarveable(int index)
@@ -204,18 +177,12 @@ public class RandomCarveableObject : NetworkComponent
 			}
 			spawnFX.SetActive(value: false);
 			await UniTask.WaitUntil(() => world.WorldGenerationComplete);
-			ClearWorld();
 			SetCarveable(index);
 			_carveable.gameObject.SetActive(value: false);
-			CollectVoxelSet();
-			if (!world.WorldBounds.Contains(_voxelBounds))
-			{
-				world.SetWorldBounds(world.WorldBounds.Union(_voxelBounds));
-				await UniTask.WaitUntil(() => world.BoundsChunksLoaded(_voxelBounds));
-			}
-			spawnFX.SetActive(value: true);
-			FillBounds();
+			world.ResetChunk(int3.zero);
+			await UniTask.WaitUntil(() => world.BoundsChunksLoaded(world.WorldBounds), PlayerLoopTiming.PostLateUpdate);
 			_carveable.gameObject.SetActive(value: true);
+			spawnFX.SetActive(value: true);
 			if (HasAuthority)
 			{
 				IncrementVersion();

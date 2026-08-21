@@ -1157,6 +1157,8 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 
 	private BundleList bundleList = new BundleList();
 
+	private const string mothershipRewardsGrantedKey = "mshipRewardsGranted";
+
 	public string BundleSkuName = "2024_i_lava_you_pack";
 
 	public string BundlePlayfabItemName = "LSABG.";
@@ -3161,10 +3163,43 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		GetCosmeticsPlayFabCatalogDataInternal();
 	}
 
+	private void ReconcileBundleRewardsIfNeeded(List<ItemInstance> inventory)
+	{
+		if (inventory != null && bundleList.IsLoaded)
+		{
+			bool flag = false;
+			foreach (ItemInstance item in inventory)
+			{
+				if (bundleList.HasMothershipRewards(item.ItemId) && (item.CustomData == null || !item.CustomData.ContainsKey("mshipRewardsGranted")))
+				{
+					flag = true;
+					break;
+				}
+			}
+			if (!flag)
+			{
+				return;
+			}
+		}
+		if (GorillaServer.Instance == null)
+		{
+			Debug.LogWarning("ReconcileBundleRewards skipped: GorillaServer.Instance is null");
+			return;
+		}
+		GorillaServer.Instance.ReconcileBundleRewards(delegate(string result)
+		{
+			Debug.Log("ReconcileBundleRewards success: " + result);
+		}, delegate(string error)
+		{
+			Debug.LogWarning("ReconcileBundleRewards failed: " + error);
+		});
+	}
+
 	private void GetCosmeticsPlayFabCatalogDataInternal()
 	{
 		PlayFabClientAPI.GetUserInventory(new GetUserInventoryRequest(), delegate(GetUserInventoryResult result)
 		{
+			ReconcileBundleRewardsIfNeeded(result.Inventory);
 			PlayFabClientAPI.GetCatalogItems(new GetCatalogItemsRequest
 			{
 				CatalogVersion = catalog
