@@ -233,15 +233,18 @@ public class GameEntity : MonoBehaviour
 		rigidBody = GetComponent<Rigidbody>();
 		if (gravityController == null)
 		{
-			if (rigidBody != null)
+			if (TryGetComponent<MonkeGravityController>(out gravityController))
 			{
-				rigidBody.useGravity = false;
+				if (rigidBody != null)
+				{
+					gravityController.GlobalGravityIntent = rigidBody.useGravity;
+					rigidBody.useGravity = false;
+				}
 			}
-			if (!TryGetComponent<MonkeGravityController>(out gravityController))
+			else
 			{
 				gravityController = base.gameObject.AddComponent<MonkeGravityController>();
 			}
-			gravityController.GlobalGravityIntent = false;
 		}
 		heldByActorNumber = -1;
 		heldByHandIndex = -1;
