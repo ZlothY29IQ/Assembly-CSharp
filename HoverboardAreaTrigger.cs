@@ -13,7 +13,7 @@ public class HoverboardAreaTrigger : MonoBehaviour
 
 	private void OnTriggerExit(Collider other)
 	{
-		if (other != GTPlayer.Instance.headCollider)
+		if (other == GTPlayer.Instance.headCollider)
 		{
 			GTPlayer.Instance.RemoveHoverArea(this);
 		}

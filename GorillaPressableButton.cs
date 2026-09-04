@@ -84,22 +84,39 @@ public class GorillaPressableButton : MonoBehaviour, IClickable
 
 	protected virtual void OnEnable()
 	{
-		LocalisationManager.RegisterOnLanguageChanged(RefreshText);
 		if (isSubscriberOnlyButton)
 		{
 			SubscriptionManager.OnLocalSubscriptionData = (Action)Delegate.Combine(SubscriptionManager.OnLocalSubscriptionData, new Action(CheckSubscription));
 			CheckSubscription();
 		}
+		LocalisationManager.RegisterOnLanguageChanged(RefreshText);
 		RefreshText();
+	}
+
+	public void SetIsSubscriberButton(bool newIsSubscriberToggle)
+	{
+		if (isSubscriberOnlyButton != newIsSubscriberToggle)
+		{
+			isSubscriberOnlyButton = newIsSubscriberToggle;
+			if (isSubscriberOnlyButton)
+			{
+				SubscriptionManager.OnLocalSubscriptionData = (Action)Delegate.Combine(SubscriptionManager.OnLocalSubscriptionData, new Action(CheckSubscription));
+				CheckSubscription();
+			}
+			else
+			{
+				SubscriptionManager.OnLocalSubscriptionData = (Action)Delegate.Remove(SubscriptionManager.OnLocalSubscriptionData, new Action(CheckSubscription));
+			}
+		}
 	}
 
 	protected virtual void OnDisable()
 	{
-		LocalisationManager.UnregisterOnLanguageChanged(RefreshText);
 		if (isSubscriberOnlyButton)
 		{
 			SubscriptionManager.OnLocalSubscriptionData = (Action)Delegate.Remove(SubscriptionManager.OnLocalSubscriptionData, new Action(CheckSubscription));
 		}
+		LocalisationManager.UnregisterOnLanguageChanged(RefreshText);
 	}
 
 	private void CheckSubscription()

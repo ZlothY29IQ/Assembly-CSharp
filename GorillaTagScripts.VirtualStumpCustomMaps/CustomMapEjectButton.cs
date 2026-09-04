@@ -41,23 +41,7 @@ public class CustomMapEjectButton : GorillaPressableButton
 		if (!processing)
 		{
 			processing = true;
-			switch (ejectType)
-			{
-			case EjectType.ReturnToVirtualStump:
-				CustomMapManager.ReturnToVirtualStump();
-				processing = false;
-				break;
-			case EjectType.EjectFromVirtualStump:
-				CustomMapManager.ExitVirtualStump(FinishTeleport);
-				break;
-			}
-		}
-	}
-
-	private void FinishTeleport(bool success = true)
-	{
-		if (processing)
-		{
+			CustomMapManager.ReturnToVirtualStump();
 			processing = false;
 		}
 	}
