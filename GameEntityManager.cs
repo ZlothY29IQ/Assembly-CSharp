@@ -24,6 +24,10 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 
 	public delegate void ZoneClearEvent(GTZone zoneId);
 
+	public delegate void AuthorityChangeEvent(NetPlayer fromPlayer, NetPlayer toPlayer);
+
+	public delegate void ZoneActiveChangeEvent(bool active);
+
 	private enum ZoneState
 	{
 		WaitingToEnterZone,
@@ -254,6 +258,10 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 	public event ZoneStartEvent onZoneStart;
 
 	public event ZoneClearEvent onZoneClear;
+
+	public event AuthorityChangeEvent OnAuthorityChanged;
+
+	public event ZoneActiveChangeEvent OnZoneActiveChanged;
 
 	protected override void Awake()
 	{
@@ -3515,6 +3523,7 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		{
 			return;
 		}
+		bool flag = IsZoneActive();
 		zoneStateData.state = newState;
 		zoneStateData.stateStartTime = Time.timeAsDouble;
 		switch (zoneStateData.state)
@@ -3522,10 +3531,10 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		case ZoneState.WaitingToEnterZone:
 		{
 			bool num = ShouldClearZone();
-			bool flag = zoneClearReason == ZoneClearReason.MigrateGameEntityZone;
-			bool flag2 = zoneClearReason == ZoneClearReason.Disconnect;
-			bool ignoreHeldGadgets = !num && !flag && !flag2;
-			if (flag2 && activeManager == this)
+			bool flag2 = zoneClearReason == ZoneClearReason.MigrateGameEntityZone;
+			bool flag3 = zoneClearReason == ZoneClearReason.Disconnect;
+			bool ignoreHeldGadgets = !num && !flag2 && !flag3;
+			if (flag3 && activeManager == this)
 			{
 				activeManager = null;
 				GamePlayerLocal.instance.currGameEntityManager = null;
@@ -3592,8 +3601,11 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 			}
 			break;
 		}
-		case ZoneState.WaitingToRequestState:
-			break;
+		}
+		bool flag4 = IsZoneActive();
+		if (flag4 != flag)
+		{
+			this.OnZoneActiveChanged?.Invoke(flag4);
 		}
 	}
 
@@ -3738,6 +3750,7 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 
 	public void OnOwnershipTransferred(NetPlayer toPlayer, NetPlayer fromPlayer)
 	{
+		this.OnAuthorityChanged?.Invoke(fromPlayer, toPlayer);
 		if (toPlayer == null || !toPlayer.IsLocal || fromPlayer == null || fromPlayer.InRoom || !GamePlayer.TryGetGamePlayer(fromPlayer.ActorNumber, out var out_gamePlayer))
 		{
 			return;
@@ -3820,7 +3833,7 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		s_scenePlacedEntities.Remove(scene.name);
 	}
 
-	private string GetZoneSceneName()
+	internal string GetZoneSceneName()
 	{
 		if (string.IsNullOrEmpty(cachedZoneSceneName))
 		{

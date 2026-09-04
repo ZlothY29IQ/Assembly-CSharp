@@ -53,7 +53,7 @@ public class SubscriptionManager : MonoBehaviour
 	}
 
 	[Serializable]
-	private class MothershipSubscription
+	private class GorillaTagSubscription
 	{
 		public string SubscriptionId;
 
@@ -64,6 +64,8 @@ public class SubscriptionManager : MonoBehaviour
 		public DateTimeOffset MostRecentBillingCycleStartDate;
 
 		public DateTimeOffset MostRecentBillingCycleEndDate;
+
+		public DateTimeOffset? ExpirationTime;
 
 		public int TotalLifetimeSeconds;
 
@@ -115,7 +117,7 @@ public class SubscriptionManager : MonoBehaviour
 	[Serializable]
 	private class GetMySubscriptionsAndTheirBenefitsResponse
 	{
-		public List<MothershipSubscription> Subscriptions;
+		public List<GorillaTagSubscription> Subscriptions;
 
 		public Dictionary<string, List<GrantedSubscriptionBenefit>> PreviouslyGrantedBenefitsBySubscriptionSku;
 
@@ -275,17 +277,17 @@ public class SubscriptionManager : MonoBehaviour
 					{
 						if (!(getMySubscriptionsAndTheirBenefitsResponse.Subscriptions[i].Sku != "fan_club"))
 						{
-							MothershipSubscription mothershipSubscription = getMySubscriptionsAndTheirBenefitsResponse.Subscriptions[i];
-							int daysAccrued = mothershipSubscription.TotalLifetimeSeconds / 86400;
-							DateTime localDateTime = mothershipSubscription.MostRecentBillingCycleStartDate.LocalDateTime;
-							DateTime localDateTime2 = mothershipSubscription.MostRecentBillingCycleEndDate.LocalDateTime;
+							GorillaTagSubscription gorillaTagSubscription = getMySubscriptionsAndTheirBenefitsResponse.Subscriptions[i];
+							int daysAccrued = gorillaTagSubscription.TotalLifetimeSeconds / 86400;
+							DateTime localDateTime = gorillaTagSubscription.MostRecentBillingCycleStartDate.LocalDateTime;
+							DateTime localDateTime2 = gorillaTagSubscription.MostRecentBillingCycleEndDate.LocalDateTime;
 							int autoRenewMonths = Mathf.RoundToInt((float)(localDateTime2 - localDateTime).Days / 30f);
 							localSubscriptionDetails = new SubscriptionDetails
 							{
-								active = mothershipSubscription.IsActive,
+								active = (DateTimeOffset.UtcNow < (gorillaTagSubscription.ExpirationTime ?? gorillaTagSubscription.MostRecentBillingCycleEndDate)),
 								daysAccrued = daysAccrued,
 								tier = 1,
-								autoRenew = !mothershipSubscription.IsCancelling,
+								autoRenew = !gorillaTagSubscription.IsCancelling,
 								autoRenewMonths = autoRenewMonths,
 								subscriptionActiveUntilDate = localDateTime2
 							};
@@ -310,30 +312,30 @@ public class SubscriptionManager : MonoBehaviour
 				{
 					if (responseCode < 600)
 					{
-						goto IL_0461;
+						goto IL_0486;
 					}
 				}
 				else if (responseCode == 408 || responseCode == 429)
 				{
-					goto IL_0461;
+					goto IL_0486;
 				}
 				flag2 = false;
-				goto IL_0469;
+				goto IL_048e;
 			}
-			goto IL_046d;
-			IL_0461:
+			goto IL_0492;
+			IL_0486:
 			flag2 = true;
-			goto IL_0469;
-			IL_0521:
+			goto IL_048e;
+			IL_0546:
 			MarkResolved();
 			break;
-			IL_0469:
+			IL_048e:
 			flag = flag2;
-			goto IL_046d;
-			IL_046d:
+			goto IL_0492;
+			IL_0492:
 			if (!flag)
 			{
-				goto IL_0521;
+				goto IL_0546;
 			}
 			if (retryCount < maxRetries)
 			{
@@ -343,7 +345,7 @@ public class SubscriptionManager : MonoBehaviour
 				continue;
 			}
 			Debug.LogError("[SubscriptionResults] Maximum retries attempted");
-			goto IL_0521;
+			goto IL_0546;
 		}
 		static void MarkInitialized()
 		{

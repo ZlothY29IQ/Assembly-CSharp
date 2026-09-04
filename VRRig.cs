@@ -656,6 +656,8 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	private const int showSubscriber_BIT = 4194304;
 
+	private const int portalShenanigans_BIT = 8388608;
+
 	private const int speakingLoudnessVal_BITSHIFT = 24;
 
 	private GorillaIK myIk;
@@ -702,11 +704,14 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	private RaycastHit[] rayCastNonAllocColliders = new RaycastHit[5];
 
-	private bool inDuplicationZone;
+	private RigDisplacementZone displacementZone;
 
-	private RigDuplicationZone duplicationZone;
+	private bool renderTransformDisplaced;
 
 	private Vector3 cachedRenderTransformPos = new Vector3(0f, -1.65f, 0f);
+
+	[NonSerialized]
+	public bool portalShenanigansBit;
 
 	private bool pendingCosmeticUpdate = true;
 
@@ -972,6 +977,20 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 	}
 
 	public bool IsPlayerMeshHidden => !mainSkin.enabled;
+
+	public bool IsInDisplacementZone => displacementZone != null;
+
+	public bool IsVisuallyDisplaced
+	{
+		get
+		{
+			if (displacementZone != null)
+			{
+				return displacementZone.IsDisplacingRig(this);
+			}
+			return false;
+		}
+	}
 
 	bool IUserCosmeticsCallback.PendingUpdate
 	{
@@ -1639,7 +1658,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		if (leftHandLink.IsLinkActive())
 		{
 			VRRig myRig = leftHandLink.grabbedLink.myRig;
-			if (isLocal && myRig.inDuplicationZone && myRig.duplicationZone.IsApplyingDisplacement)
+			if (isLocal && myRig.IsVisuallyDisplaced)
 			{
 				leftHandLink.BreakLink();
 			}
@@ -1651,7 +1670,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		if (rightHandLink.IsLinkActive())
 		{
 			VRRig myRig2 = rightHandLink.grabbedLink.myRig;
-			if (isLocal && myRig2.inDuplicationZone && myRig2.duplicationZone.IsApplyingDisplacement)
+			if (isLocal && myRig2.IsVisuallyDisplaced)
 			{
 				rightHandLink.BreakLink();
 			}
@@ -1672,9 +1691,20 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 				ForceResetFrozenEffect();
 			}
 		}
-		if (inDuplicationZone)
+		if (!isLocal && (displacementZone != null || renderTransformDisplaced))
 		{
-			renderTransform.position = base.transform.position + duplicationZone.GetVisualOffsetForRigs(cachedRenderTransformPos);
+			Vector3 vector = base.transform.position + cachedRenderTransformPos;
+			Vector3 vector2 = ((displacementZone != null) ? displacementZone.GetDisplacementForRig(this, vector) : Vector3.zero);
+			if (vector2 == Vector3.zero)
+			{
+				renderTransform.localPosition = cachedRenderTransformPos;
+			}
+			else
+			{
+				renderTransform.position = vector + vector2;
+			}
+			myIk.renderDisplacement = vector2;
+			renderTransformDisplaced = vector2 != Vector3.zero;
 		}
 		if (frozenEffect.activeSelf && GorillaGameManager.instance is GorillaFreezeTagManager gorillaFreezeTagManager)
 		{
@@ -1891,7 +1921,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		bool flag = leftHandLink.IsLinkActive() || rightHandLink.IsLinkActive();
 		GorillaGameManager activeGameMode = GorillaGameModes.GameMode.ActiveGameMode;
 		bool flag2 = (object)activeGameMode != null && activeGameMode.GameType() == GameModeType.PropHunt;
-		int packedFields = 0 + (remoteUseReplacementVoice ? 512 : 0) + ((grabbedRopeIndex != -1) ? 1024 : 0) + (grabbedRopeIsPhotonView ? 2048 : 0) + (flag ? 4096 : 0) + (hoverboardVisual.IsHeld ? 8192 : 0) + (hoverboardVisual.IsLeftHanded ? 16384 : 0) + ((mountedMovingSurfaceId != -1) ? 32768 : 0) + (flag2 ? 65536 : 0) + (propHuntHandFollower.IsLeftHand ? 131072 : 0) + (leftHandLink.CanBeGrabbed() ? 262144 : 0) + (rightHandLink.CanBeGrabbed() ? 524288 : 0) + (leftHandLink.IsTentacleGrab ? 1048576 : 0) + (rightHandLink.IsTentacleGrab ? 2097152 : 0) + (ShowGoldNameTag ? 4194304 : 0) + (num << 24);
+		int packedFields = 0 + (remoteUseReplacementVoice ? 512 : 0) + ((grabbedRopeIndex != -1) ? 1024 : 0) + (grabbedRopeIsPhotonView ? 2048 : 0) + (flag ? 4096 : 0) + (hoverboardVisual.IsHeld ? 8192 : 0) + (hoverboardVisual.IsLeftHanded ? 16384 : 0) + ((mountedMovingSurfaceId != -1) ? 32768 : 0) + (flag2 ? 65536 : 0) + (propHuntHandFollower.IsLeftHand ? 131072 : 0) + (leftHandLink.CanBeGrabbed() ? 262144 : 0) + (rightHandLink.CanBeGrabbed() ? 524288 : 0) + (leftHandLink.IsTentacleGrab ? 1048576 : 0) + (rightHandLink.IsTentacleGrab ? 2097152 : 0) + (ShowGoldNameTag ? 4194304 : 0) + (portalShenanigansBit ? 8388608 : 0) + (num << 24);
 		result.packedFields = packedFields;
 		result.packedCompetitiveData = PackCompetitiveData();
 		if (grabbedRopeIndex != -1)
@@ -1926,6 +1956,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 			result.lastHandTouchedGroundAtTime = LastHandTouchedGroundAtNetworkTime;
 		}
 		result.packedGTPlayerStats = GTPlayerStats.GetPackedValues();
+		result.gtPlayerStatsFlags = (int)GTPlayerStats.SystemPropertiesFlags;
 		return result;
 	}
 
@@ -1955,6 +1986,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		syncRotation.SetValueSafe(BitPackUtils.UnpackQuaternionFromNetwork(data.rotation));
 		int packedFields = data.packedFields;
 		remoteUseReplacementVoice = (packedFields & 0x200) != 0;
+		portalShenanigansBit = (packedFields & 0x800000) != 0;
 		if ((packedFields & 0x400000) != 0 && SubscriptionManager.GetSubscriptionDetails(this).active)
 		{
 			playerText1.color = SubscriptionManager.SUBSCRIBER_NAME_COLOR;
@@ -2026,7 +2058,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		LastHandTouchedGroundAtNetworkTime = data.lastHandTouchedGroundAtTime;
 		UpdateRopeData();
 		UpdateMovingMonkeBlockData();
-		rigContainer.PlayerStats = GTPlayerStats.UnPackValues(data.packedGTPlayerStats);
+		rigContainer.PlayerStats = GTPlayerStats.UnPackValues(data.packedGTPlayerStats, data.gtPlayerStatsFlags);
 		AddVelocityToQueue(syncPos, data.serverTimeStamp);
 	}
 
@@ -2034,9 +2066,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 	{
 		if (isOfflineVRRig)
 		{
-			bool num = SubscriptionManager.IsLocalSubscribed();
-			bool subscriptionSettingBool = SubscriptionManager.GetSubscriptionSettingBool(SubscriptionManager.SubscriptionFeatures.IOBT);
-			if (num && subscriptionSettingBool && myIk != null)
+			if (SubscriptionManager.GetSubscriptionSettingBool(SubscriptionManager.SubscriptionFeatures.IOBT) && myIk != null)
 			{
 				return myIk.usingUpdatedIK;
 			}
@@ -2100,6 +2130,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 			stream.SendNext(inputStruct.propHuntPosRot);
 		}
 		stream.SendNext(inputStruct.packedGTPlayerStats);
+		stream.SendNext(inputStruct.gtPlayerStatsFlags);
 	}
 
 	void IWrappedSerializable.OnSerializeRead(PhotonStream stream, PhotonMessageInfo info)
@@ -2161,6 +2192,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 			data.propHuntPosRot = (long)stream.ReceiveNext();
 		}
 		data.packedGTPlayerStats = (long)stream.ReceiveNext();
+		data.gtPlayerStatsFlags = (int)stream.ReceiveNext();
 		data.serverTimeStamp = info.SentServerTime;
 		SerializeReadShared(data);
 	}
@@ -3676,10 +3708,14 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 			_rankedInfoUpdated = false;
 			TemporaryCosmeticEffects.Clear();
 			m_sentRankedScore = false;
-			if (inDuplicationZone)
+			displacementZone = null;
+			renderTransformDisplaced = false;
+			renderTransform.localPosition = cachedRenderTransformPos;
+			if (myIk != null)
 			{
-				ClearDuplicationZone(duplicationZone);
+				myIk.renderDisplacement = Vector3.zero;
 			}
+			portalShenanigansBit = false;
 			try
 			{
 				CallLimitType<CallLimiter>[] callSettings = fxSettings.callSettings;
@@ -4128,18 +4164,16 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		return false;
 	}
 
-	public void SetDuplicationZone(RigDuplicationZone duplicationZone)
+	public void SetDisplacementZone(RigDisplacementZone displacementZone)
 	{
-		this.duplicationZone = duplicationZone;
-		inDuplicationZone = duplicationZone != null;
+		this.displacementZone = displacementZone;
 	}
 
-	public void ClearDuplicationZone(RigDuplicationZone duplicationZone)
+	public void ClearDisplacementZone(RigDisplacementZone displacementZone)
 	{
-		if (this.duplicationZone == duplicationZone)
+		if (this.displacementZone == displacementZone)
 		{
-			SetDuplicationZone(null);
-			renderTransform.localPosition = cachedRenderTransformPos;
+			this.displacementZone = null;
 		}
 	}
 

@@ -75,6 +75,8 @@ public class CustomMapsTerminal : MonoBehaviour
 
 	public static int CurrentScreen => (int)localCurrentScreen;
 
+	public static ScreenType PreviousScreen => previousScreen;
+
 	public static bool IsDriver => localDriverID == LocalPlayerID;
 
 	private void Awake()

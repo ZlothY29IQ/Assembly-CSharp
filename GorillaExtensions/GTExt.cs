@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Cysharp.Text;
+using Unity.Mathematics;
 using Unity.XR.CoreUtils;
 using UnityEngine;
 using UnityEngine.Pool;
@@ -630,11 +631,11 @@ public static class GTExt
 		Debug.Log(vector);
 		Debug.Log(vector.magnitude);
 		Debug.Log(Vector3.Dot(fromVector, toVector) + 1f);
-		Quaternion quaternion = new Quaternion(vector.x, vector.y, vector.z, 1f + Vector3.Dot(toVector, fromVector));
-		Debug.Log(quaternion);
-		Debug.Log(quaternion.eulerAngles);
-		Debug.Log(quaternion.normalized);
-		return quaternion.normalized;
+		Quaternion quaternion2 = new Quaternion(vector.x, vector.y, vector.z, 1f + Vector3.Dot(toVector, fromVector));
+		Debug.Log(quaternion2);
+		Debug.Log(quaternion2.eulerAngles);
+		Debug.Log(quaternion2.normalized);
+		return quaternion2.normalized;
 	}
 
 	public static Vector3 Position(this Matrix4x4 matrix)
@@ -900,6 +901,38 @@ public static class GTExt
 		{
 			v = newVal;
 		}
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static bool IsNaN(this in half3 h)
+	{
+		return math.any(math.isnan(h));
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static bool IsInfinity(this in half3 h)
+	{
+		return math.any(math.isinf(h));
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static bool ValuesInRange(this in half3 h, in float maxVal)
+	{
+		if (math.abs(h.x) <= maxVal && math.abs(h.y) <= maxVal)
+		{
+			return math.abs(h.z) <= maxVal;
+		}
+		return false;
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static bool IsValid(this in half3 h, in float maxVal = 10000f)
+	{
+		if (!h.IsNaN() && !h.IsInfinity())
+		{
+			return h.ValuesInRange(in maxVal);
+		}
+		return false;
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]

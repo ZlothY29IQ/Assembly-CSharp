@@ -159,8 +159,7 @@ public class StickyProjectile : MonoBehaviour, IProjectile, ITickSystemTick
 		if (alignToHitNormal)
 		{
 			float magnitude = vector.magnitude;
-			other.Raycast(new Ray(vector2, vector / magnitude), out var hitInfo, 2f * magnitude);
-			vector3 = hitInfo.point;
+			vector3 = ((!other.Raycast(new Ray(vector2, vector / magnitude), out var hitInfo, 2f * magnitude)) ? base.transform.position : hitInfo.point);
 			rotation = Quaternion.LookRotation(hitInfo.normal, UnityEngine.Random.onUnitSphere);
 		}
 		else

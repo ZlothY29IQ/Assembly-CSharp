@@ -55,7 +55,10 @@ public class InteractionPoint : MonoBehaviour, ISpawnable, IBuildValidation
 		else
 		{
 			parentHoldable = GetComponentInParent<IHoldableObject>(includeInactive: true);
-			parentHoldableObject = parentHoldable.gameObject;
+			if (parentHoldable != null)
+			{
+				parentHoldableObject = parentHoldable.gameObject;
+			}
 		}
 		if (parentHoldable == null)
 		{
@@ -87,6 +90,10 @@ public class InteractionPoint : MonoBehaviour, ISpawnable, IBuildValidation
 	{
 		wasInLeft = false;
 		wasInRight = false;
+		if (!IsSpawned && parentHoldableObject != null)
+		{
+			OnSpawn(null);
+		}
 	}
 
 	public void OnDisable()

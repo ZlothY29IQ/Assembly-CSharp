@@ -125,9 +125,16 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 		{
 			Debug.LogError("[LOCALIZATION::ATM_MANAGER] Failed to get key for [ATM_CREATOR_CODE]");
 		}
-		foreach (ATM_UI atmUI in atmUIs)
+		for (int num = atmUIs.Count - 1; num >= 0; num--)
 		{
-			atmUI.SetCreatorCodeTitle(result);
+			if (atmUIs[num] == null)
+			{
+				atmUIs.RemoveAt(num);
+			}
+			else
+			{
+				atmUIs[num].SetCreatorCodeTitle(result);
+			}
 		}
 		SwitchToStage(ATMStages.Unavailable);
 		smallDisplays = new List<CreatorCodeSmallDisplay>();
@@ -405,6 +412,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 
 	public void AddATM(ATM_UI newATM, Tuple<string, string> creatorCode)
 	{
+		atmUIs.RemoveAll((ATM_UI atm) => !atm);
 		atmUIs.Add(newATM);
 		if (creatorCode != null)
 		{
@@ -447,7 +455,7 @@ public class ATM_Manager : MonoBehaviour, IBuildValidation
 		currentATMStage = newStage;
 		foreach (ATM_UI atmUI in atmUIs)
 		{
-			if (!atmUI.atmText)
+			if (!atmUI || !atmUI.atmText)
 			{
 				continue;
 			}

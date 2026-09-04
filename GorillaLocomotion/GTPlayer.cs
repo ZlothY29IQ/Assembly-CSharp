@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using AA;
@@ -531,6 +532,8 @@ public class GTPlayer : MonoBehaviour
 
 	public LayerMask locomotionEnabledLayers;
 
+	public LayerMask hoverboardLocomotionLayers;
+
 	public LayerMask waterLayer;
 
 	public bool wasHeadTouching;
@@ -864,7 +867,9 @@ public class GTPlayer : MonoBehaviour
 
 	private readonly Dictionary<UnityEngine.Object, Action<GTPlayer>> gravityOverrides = new Dictionary<UnityEngine.Object, Action<GTPlayer>>();
 
-	private int hoverAllowedCount;
+	private readonly List<HoverboardAreaTrigger> inHoverAreas = new List<HoverboardAreaTrigger>(2);
+
+	private readonly List<ForceDisableHoverboardTrigger> inHoverDisablers = new List<ForceDisableHoverboardTrigger>(1);
 
 	[Header("Hoverboard")]
 	[SerializeField]
@@ -1045,7 +1050,7 @@ public class GTPlayer : MonoBehaviour
 	{
 		get
 		{
-			if (bodyOverlappingWaterVolumes.Count <= 0)
+			if (bodyOverlappingWaterVolumes.Count <= 0 || !(bodyOverlappingWaterVolumes[0] != null))
 			{
 				return null;
 			}
@@ -1677,7 +1682,13 @@ public class GTPlayer : MonoBehaviour
 			activeWaterCurrents.Clear();
 			for (int i = 0; i < bodyOverlappingWaterVolumes.Count; i++)
 			{
-				if (bodyOverlappingWaterVolumes[i].GetSurfaceQueryForPoint(vector, out var result))
+				WaterVolume.SurfaceQuery result;
+				if (bodyOverlappingWaterVolumes[i] == null)
+				{
+					bodyOverlappingWaterVolumes.RemoveAt(i);
+					i--;
+				}
+				else if (bodyOverlappingWaterVolumes[i].GetSurfaceQueryForPoint(vector, out result))
 				{
 					float num4 = Vector3.Dot(result.surfacePoint - vector, result.surfaceNormal);
 					if (num4 > num3)
@@ -1710,7 +1721,7 @@ public class GTPlayer : MonoBehaviour
 				bool flag = headInWater;
 				float num5 = Vector3.Dot(waterSurfaceForHead.surfacePoint - headCollider.transform.position, waterSurfaceForHead.surfaceNormal);
 				float num6 = Vector3.Dot(headCollider.transform.position - (waterSurfaceForHead.surfacePoint - waterSurfaceForHead.surfaceNormal * waterSurfaceForHead.maxDepth), waterSurfaceForHead.surfaceNormal);
-				headInWater = (forcedUnderwater || (num5 > 0f && num6 > 0f)) && waterVolume.LiquidType != LiquidType.SwimInAir;
+				headInWater = (forcedUnderwater || (num5 > 0f && num6 > 0f)) && waterVolume != null && waterVolume.LiquidType != LiquidType.SwimInAir;
 				if (headInWater && !flag)
 				{
 					audioSetToUnderwater = true;
@@ -1885,7 +1896,7 @@ public class GTPlayer : MonoBehaviour
 		for (int i = 0; i < hoverboardCasts.Length; i++)
 		{
 			HoverBoardCast hoverBoardCast = hoverboardCasts[i];
-			hoverBoardCast.didHit = Physics.SphereCast(new Ray(hoverboardVisual.transform.TransformPoint(hoverBoardCast.localOrigin), hoverboardVisual.transform.rotation * hoverBoardCast.localDirection), hoverBoardCast.sphereRadius, out var hitInfo, hoverBoardCast.distance, locomotionEnabledLayers);
+			hoverBoardCast.didHit = Physics.SphereCast(new Ray(hoverboardVisual.transform.TransformPoint(hoverBoardCast.localOrigin), hoverboardVisual.transform.rotation * hoverBoardCast.localDirection), hoverBoardCast.sphereRadius, out var hitInfo, hoverBoardCast.distance, hoverboardLocomotionLayers);
 			if (hoverBoardCast.didHit)
 			{
 				if (hitInfo.collider.TryGetComponent<HoverboardCantHover>(out var _))
@@ -2018,23 +2029,105 @@ public class GTPlayer : MonoBehaviour
 		FreeHoverboardManager.instance.PreserveMaxHoverboardsConstraint(NetworkSystem.Instance.LocalPlayer.ActorNumber);
 	}
 
-	public void SetHoverAllowed(bool allowed, bool force = false)
+	public void AddHoverArea(HoverboardAreaTrigger area)
 	{
-		if (allowed)
+		if (area == null)
 		{
-			hoverAllowedCount++;
-			isHoverAllowed = true;
 			return;
 		}
-		hoverAllowedCount = ((!force && hoverAllowedCount != 0) ? (hoverAllowedCount - 1) : 0);
-		if (hoverAllowedCount == 0 && isHoverAllowed)
+		for (int i = 0; i < inHoverAreas.Count; i++)
 		{
-			isHoverAllowed = false;
-			if (enableHoverMode)
+			if (inHoverAreas[i] == area)
 			{
-				SetHoverActive(enable: false);
-				VRRig.LocalRig.hoverboardVisual.SetNotHeld();
+				return;
 			}
+		}
+		inHoverAreas.Add(area);
+		RefreshHoverAllowed();
+	}
+
+	public void RemoveHoverArea(HoverboardAreaTrigger area)
+	{
+		if (area == null)
+		{
+			return;
+		}
+		for (int num = inHoverAreas.Count - 1; num >= 0; num--)
+		{
+			if (inHoverAreas[num] == area)
+			{
+				inHoverAreas.RemoveAt(num);
+				RefreshHoverAllowed();
+				break;
+			}
+		}
+	}
+
+	public void AddHoverDisabler(ForceDisableHoverboardTrigger disabler)
+	{
+		if (disabler == null)
+		{
+			return;
+		}
+		for (int i = 0; i < inHoverDisablers.Count; i++)
+		{
+			if (inHoverDisablers[i] == disabler)
+			{
+				return;
+			}
+		}
+		inHoverDisablers.Add(disabler);
+		RefreshHoverAllowed();
+	}
+
+	public void RemoveHoverDisabler(ForceDisableHoverboardTrigger disabler)
+	{
+		if (disabler == null)
+		{
+			return;
+		}
+		for (int num = inHoverDisablers.Count - 1; num >= 0; num--)
+		{
+			if (inHoverDisablers[num] == disabler)
+			{
+				inHoverDisablers.RemoveAt(num);
+				RefreshHoverAllowed();
+				break;
+			}
+		}
+	}
+
+	public void ForceHoverDisallowed()
+	{
+		if (inHoverAreas.Count != 0 || inHoverDisablers.Count != 0)
+		{
+			inHoverAreas.Clear();
+			inHoverDisablers.Clear();
+			RefreshHoverAllowed();
+		}
+	}
+
+	private void RefreshHoverAllowed()
+	{
+		bool flag = inHoverAreas.Count > 0 && inHoverDisablers.Count == 0;
+		if (flag != isHoverAllowed)
+		{
+			Debug.Log($"HoverAllowed {flag} because {inHoverAreas.Count} > 0 && {inHoverDisablers.Count} == 0");
+			isHoverAllowed = flag;
+			if (!flag && enableHoverMode)
+			{
+				StartCoroutine(DelayedRemoveHoverboard());
+			}
+		}
+	}
+
+	private IEnumerator DelayedRemoveHoverboard()
+	{
+		yield return null;
+		if (!isHoverAllowed && enableHoverMode)
+		{
+			SetHoverActive(enable: false);
+			VRRig.LocalRig.hoverboardVisual.SetNotHeld();
 		}
 	}
 

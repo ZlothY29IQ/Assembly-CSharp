@@ -47,7 +47,10 @@ public class Dockable : MonoBehaviour
 
 	public virtual void UnDock()
 	{
-		currentDock.NotifyUnDocked();
+		if (currentDock != null)
+		{
+			currentDock.NotifyUnDocked();
+		}
 		currentDock = null;
 		potentialDock = null;
 		undockTime = 0f;

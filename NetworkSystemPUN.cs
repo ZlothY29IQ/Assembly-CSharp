@@ -1035,6 +1035,28 @@ public class NetworkSystemPUN : NetworkSystem
 		return result;
 	}
 
+	public override string GetPlayerMothershipId(NetPlayer player)
+	{
+		if (player == null)
+		{
+			return "";
+		}
+		Player playerRef = player.GetPlayerRef();
+		if (playerRef == null)
+		{
+			return "";
+		}
+		if (!playerRef.CustomProperties.TryGetValue("mothershipId", out var value))
+		{
+			return "";
+		}
+		if (!(value is string result))
+		{
+			return "";
+		}
+		return result;
+	}
+
 	public override string GetMyUserID()
 	{
 		return PhotonNetwork.LocalPlayer.UserId;

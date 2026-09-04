@@ -133,7 +133,7 @@ public class LuauVm : MonoBehaviourPunCallbacks, IOnEventCallback
 						}
 						else if (obj.IsType<bool>())
 						{
-							Luau.lua_pushboolean(L, (int)obj);
+							Luau.lua_pushboolean(L, ((bool)obj) ? 1 : 0);
 						}
 						else if (obj.IsType<Vector3>())
 						{
@@ -168,6 +168,7 @@ public class LuauVm : MonoBehaviourPunCallbacks, IOnEventCallback
 								{
 									Bindings.LuauPlayer* ptr = Luau.lua_class_push<Bindings.LuauPlayer>(L);
 									ptr->PlayerID = netPlayer2.ActorNumber;
+									ptr->ScaleMultiplier = 1f;
 									ptr->PlayerName = netPlayer2.SanitizedNickName;
 									ptr->PlayerMaterial = 0;
 									ptr->IsMasterClient = netPlayer2.IsMasterClient;
@@ -242,6 +243,7 @@ public class LuauVm : MonoBehaviourPunCallbacks, IOnEventCallback
 							{
 								Bindings.LuauPlayer* ptr3 = Luau.lua_class_push<Bindings.LuauPlayer>(L);
 								ptr3->PlayerID = netPlayer3.ActorNumber;
+								ptr3->ScaleMultiplier = 1f;
 								ptr3->PlayerName = netPlayer3.SanitizedNickName;
 								ptr3->PlayerMaterial = 0;
 								ptr3->IsMasterClient = netPlayer3.IsMasterClient;

@@ -21,9 +21,14 @@ public sealed class AlarmClockManager : MonoBehaviour
 
 		public GTZone[] Zones;
 
+		[Tooltip("Skip waiting for the zone scenes to report loaded. Use for zones with no real backing scene (e.g. customMaps / the virtual stump), which are activated by object toggling and would otherwise never satisfy the load check and hang the wake-up.")]
+		public bool SkipZoneReadyWait;
+
 		public XSceneRef[] Objects;
 
 		public Transform SpawnPoint;
+
+		public UnityEvent OnSpawn;
 	}
 
 	public const string SaveDataKey = "AlarmClock";
@@ -112,20 +117,28 @@ public sealed class AlarmClockManager : MonoBehaviour
 		{
 			RequestLoadZones();
 			yield return null;
-			while (!AllZonesLoaded())
+			bool isVStump = false;
+			if (!_activeClockData.SkipZoneReadyWait)
 			{
-				while (ZoneManagement.instance.AnyActiveLoadOps())
+				while (!AllZonesLoaded())
 				{
-					yield return null;
+					while (ZoneManagement.instance.AnyActiveLoadOps())
+					{
+						yield return null;
+					}
+					if (!AllZonesLoaded())
+					{
+						PersistLog.Log(string.Format("[AC][F{0}] Missing zones.  Requested:{1} Active: {2}", Time.frameCount, string.Join(", ", _activeClockData.Zones), string.Join(", ", GetActiveZones())));
+						RequestLoadZones();
+						yield return null;
+					}
 				}
-				if (!AllZonesLoaded())
-				{
-					PersistLog.Log(string.Format("[AC][F{0}] Missing zones.  Requested:{1} Active: {2}", Time.frameCount, string.Join(", ", _activeClockData.Zones), string.Join(", ", GetActiveZones())));
-					RequestLoadZones();
-					yield return null;
-				}
+				PersistLog.Log($"[AC][F{Time.frameCount}] All zones loaded.");
 			}
-			PersistLog.Log($"[AC][F{Time.frameCount}] All zones loaded.");
+			else
+			{
+				isVStump = true;
+			}
 			XSceneRef[] objects = _activeClockData.Objects;
 			foreach (XSceneRef xSceneRef in objects)
 			{
@@ -152,7 +165,11 @@ public sealed class AlarmClockManager : MonoBehaviour
 			}
 			GTPlayer.Instance.disableMovement = false;
 			PrivateUIRoom.StopForcedOverlay(PrivateUIRoom.OverlaySource.AlarmClock);
-			OnWakeUp?.Invoke();
+			if (isVStump)
+			{
+				OnWakeUp?.Invoke();
+			}
+			_activeClockData.OnSpawn?.Invoke();
 			SendTelemetryEvent("wake_complete", ActiveKey);
 		}
 		else

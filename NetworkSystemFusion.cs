@@ -1241,6 +1241,11 @@ public class NetworkSystemFusion : NetworkSystem
 		return "";
 	}
 
+	public override string GetPlayerMothershipId(NetPlayer player)
+	{
+		return "";
+	}
+
 	public override int GlobalPlayerCount()
 	{
 		if (regionCrawler == null)

@@ -420,6 +420,11 @@ public class GameEntity : MonoBehaviour
 		return state;
 	}
 
+	public void RequestState(long newState)
+	{
+		RequestState(id, newState);
+	}
+
 	public void RequestState(GameEntityId id, long newState)
 	{
 		manager.RequestState(id, newState);

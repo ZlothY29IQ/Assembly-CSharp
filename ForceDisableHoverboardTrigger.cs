@@ -4,27 +4,40 @@ using UnityEngine;
 
 public class ForceDisableHoverboardTrigger : MonoBehaviour
 {
-	[Tooltip("If TRUE and the Hoverboard was enabled when the player entered this trigger, it will be re-enabled when they exit.")]
-	public bool reEnableOnExit = true;
-
 	public bool reEnableOnlyInVStump = true;
-
-	private bool wasEnabled;
 
 	public void OnTriggerEnter(Collider other)
 	{
 		if (other == GTPlayer.Instance.headCollider)
 		{
-			wasEnabled = GTPlayer.Instance.isHoverAllowed;
-			GTPlayer.Instance.SetHoverAllowed(allowed: false, force: true);
+			GTPlayer.Instance.AddHoverDisabler(this);
 		}
 	}
 
 	public void OnTriggerExit(Collider other)
 	{
-		if (reEnableOnExit && wasEnabled && (!reEnableOnlyInVStump || GorillaComputer.instance.IsPlayerInVirtualStump()) && other == GTPlayer.Instance.headCollider)
+		if (other == GTPlayer.Instance.headCollider)
 		{
-			GTPlayer.Instance.SetHoverAllowed(allowed: true);
+			if (reEnableOnlyInVStump && !GorillaComputer.instance.IsPlayerInVirtualStump())
+			{
+				GTPlayer.Instance.ForceHoverDisallowed();
+			}
+			else
+			{
+				GTPlayer.Instance.RemoveHoverDisabler(this);
+			}
+		}
+	}
+
+	private void OnDisable()
+	{
+		if (!ApplicationQuittingState.IsQuitting)
+		{
+			GTPlayer instance = GTPlayer.Instance;
+			if (instance != null)
+			{
+				instance.RemoveHoverDisabler(this);
+			}
 		}
 	}
 }

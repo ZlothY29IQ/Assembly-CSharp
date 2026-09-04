@@ -6,5 +6,6 @@ public enum MapLoadStatus
 	Downloading,
 	Loading,
 	Unloading,
-	Error
+	Error,
+	Installing
 }

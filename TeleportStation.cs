@@ -94,4 +94,10 @@ public class TeleportStation : MonoBehaviour
 		}
 		return num;
 	}
+
+	private void OnDrawGizmosSelected()
+	{
+		Gizmos.color = Color.magenta;
+		Gizmos.DrawWireSphere(targetPos, 3f);
+	}
 }

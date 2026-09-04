@@ -659,6 +659,8 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 
 	public float instrumentVolume;
 
+	public bool iobtMode;
+
 	public bool perfMode;
 
 	public bool isSubcribed;
@@ -725,6 +727,8 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 	private bool playerInVirtualStump;
 
 	private string virtualStumpRoomPrepend = "";
+
+	private string virtualStumpRoomModePrefix = "C";
 
 	private WaitForSeconds waitOneSecond = new WaitForSeconds(1f);
 
@@ -840,6 +844,8 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 
 	public string VStumpRoomPrepend => virtualStumpRoomPrepend;
 
+	public string VStumpRoomFullPrepend => virtualStumpRoomModePrefix + virtualStumpRoomPrepend;
+
 	public ComputerState currentState
 	{
 		get
@@ -899,6 +905,56 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 	public void AddSeverTime(int m)
 	{
 		startupTime = startupTime.AddMinutes(m);
+	}
+
+	private static bool IsValidVStumpModePrefix(char c)
+	{
+		if (c != 'A' && c != 'B')
+		{
+			return c == 'C';
+		}
+		return true;
+	}
+
+	public bool IsVStumpRoomName(string roomName)
+	{
+		if (string.IsNullOrEmpty(roomName) || string.IsNullOrEmpty(virtualStumpRoomPrepend))
+		{
+			return false;
+		}
+		if (roomName.Length > 1 && IsValidVStumpModePrefix(roomName[0]))
+		{
+			return roomName[1] == virtualStumpRoomPrepend[0];
+		}
+		return false;
+	}
+
+	public void SetVStumpRoomModePrefix(string prefix)
+	{
+		virtualStumpRoomModePrefix = ((prefix != null && prefix.Length == 1 && IsValidVStumpModePrefix(prefix[0])) ? prefix : "C");
+	}
+
+	public string StripVStumpRoomPrefix(string roomName)
+	{
+		if (string.IsNullOrEmpty(roomName) || string.IsNullOrEmpty(virtualStumpRoomPrepend))
+		{
+			return roomName;
+		}
+		int num = roomName.IndexOf(virtualStumpRoomPrepend, StringComparison.Ordinal);
+		if (num < 0)
+		{
+			return roomName;
+		}
+		return roomName.Substring(num + virtualStumpRoomPrepend.Length);
+	}
+
+	public string GetVStumpRoomDisplayName(string roomName)
+	{
+		if (!IsVStumpRoomName(roomName))
+		{
+			return roomName;
+		}
+		return roomName.Substring(1);
 	}
 
 	private void Awake()
@@ -1321,6 +1377,7 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 		disableParticles = PlayerPrefs.GetString("disableParticles", "FALSE") == "TRUE";
 		GorillaTagger.Instance.ShowCosmeticParticles(!disableParticles);
 		instrumentVolume = PlayerPrefs.GetFloat("instrumentVolume", 0.1f);
+		iobtMode = SubscriptionManager.GetSubscriptionSettingBool(SubscriptionManager.SubscriptionFeatures.IOBT);
 	}
 
 	private void InitializeRedeemState()
@@ -1774,13 +1831,13 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 			RequestUpdatedPermissions();
 			return;
 		case GorillaKeyboardBindings.enter:
-			if (flag && ((!playerInVirtualStump && roomToJoin != "") || (playerInVirtualStump && roomToJoin.Length > 1)))
+			if (flag && ((!playerInVirtualStump && roomToJoin != "") || (playerInVirtualStump && roomToJoin.Length > VStumpRoomFullPrepend.Length)))
 			{
 				CheckAutoBanListForRoomName(roomToJoin);
 			}
 			return;
 		case GorillaKeyboardBindings.delete:
-			if (flag && ((playerInVirtualStump && roomToJoin.Length > 1) || (!playerInVirtualStump && roomToJoin.Length > 0)))
+			if (flag && ((playerInVirtualStump && roomToJoin.Length > VStumpRoomFullPrepend.Length) || (!playerInVirtualStump && roomToJoin.Length > 0)))
 			{
 				roomToJoin = roomToJoin.Substring(0, roomToJoin.Length - 1);
 			}
@@ -2205,6 +2262,24 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 			GorillaTagger.Instance.ShowCosmeticParticles(!disableParticles);
 			break;
 		case GorillaKeyboardBindings.option3:
+			if (SubscriptionManager.IsSubscriptionFeatureAvailable(SubscriptionManager.SubscriptionFeatures.IOBT) && GorillaIK.playerIK != null && GorillaIK.playerIK.CanUpdateIK())
+			{
+				SubscriptionManager.SetSubscriptionSettingValue(SubscriptionManager.SubscriptionFeatures.IOBT, (!iobtMode) ? 1 : 0);
+				iobtMode = SubscriptionManager.GetSubscriptionSettingBool(SubscriptionManager.SubscriptionFeatures.IOBT);
+				GorillaIK.playerIK.DelayedUpdateIK(iobtMode);
+			}
+			break;
+		case GorillaKeyboardBindings.Q:
+			if (SubscriptionManager.IsSubscriptionFeatureAvailable(SubscriptionManager.SubscriptionFeatures.IOBT) && GorillaIK.playerIK != null)
+			{
+				GorillaIK.playerIK.CalibrateLeanOffset();
+			}
+			break;
+		case GorillaKeyboardBindings.delete:
+			if (SubscriptionManager.IsSubscriptionFeatureAvailable(SubscriptionManager.SubscriptionFeatures.IOBT) && GorillaIK.playerIK != null)
+			{
+				GorillaIK.playerIK.ResetLeanOffset();
+			}
 			break;
 		}
 	}
@@ -2512,6 +2587,19 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 		LocalisationManager.TryGetKeyForCurrentLocale("VISUALS_SCREEN_VOLUME", out result, defaultResult);
 		screenText.Append(result.TrailingSpace());
 		screenText.Append(Mathf.CeilToInt(instrumentVolume * 50f).ToString());
+		if (SubscriptionManager.IsSubscriptionFeatureAvailable(SubscriptionManager.SubscriptionFeatures.IOBT))
+		{
+			defaultResult = "\n\nPRESS OPTION 3 TO TOGGLE IOBT:";
+			result = defaultResult;
+			screenText.Append(result.TrailingSpace());
+			iobtMode = SubscriptionManager.GetSubscriptionSettingBool(SubscriptionManager.SubscriptionFeatures.IOBT);
+			text = (iobtMode ? "TRUE" : "FALSE");
+			LocalisationManager.TryGetKeyForCurrentLocale(text, out result, text);
+			screenText.Append(result);
+			defaultResult = "\n-PRESS Q TO CALIBRATE / DELETE TO RESET";
+			result = defaultResult;
+			screenText.Append(result);
+		}
 	}
 
 	private void VoiceScreen()
@@ -3044,7 +3132,7 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 		screenText.Append(result.TrailingSpace());
 		if (NetworkSystem.Instance.InRoom)
 		{
-			screenText.Append(NetworkSystem.Instance.RoomName.TrailingSpace());
+			screenText.Append(GetVStumpRoomDisplayName(NetworkSystem.Instance.RoomName).TrailingSpace());
 			if (NetworkSystem.Instance.SessionIsPrivate)
 			{
 				string text2 = GameMode.ActiveGameMode?.GameModeNameRoomLabel();
@@ -3073,7 +3161,7 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 			text = "\n\nROOM TO JOIN:";
 			LocalisationManager.TryGetKeyForCurrentLocale("ROOM_TO_JOIN", out result, text);
 			screenText.Append(result.TrailingSpace());
-			screenText.Append(roomToJoin);
+			screenText.Append(GetVStumpRoomDisplayName(roomToJoin));
 			if (roomFull)
 			{
 				text = "\n\nROOM FULL. JOIN ROOM FAILED.";
@@ -3242,18 +3330,22 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 				}
 				if (playerInVirtualStump)
 				{
+					if (CustomMapManager.IsInFeaturedMode())
+					{
+						CustomMapManager.PrepareFeaturedMapReloadOnRoomChange();
+					}
 					CustomMapManager.UnloadMap(returnToSinglePlayerIfInPublic: false);
 				}
 				networkController.AttemptToJoinSpecificRoom(roomToJoin, FriendshipGroupDetection.Instance.IsInParty ? JoinType.ForceJoinWithParty : JoinType.Solo);
 				break;
 			case NameCheckResult.Warning:
 				roomToJoin = "";
-				roomToJoin += (playerInVirtualStump ? virtualStumpRoomPrepend : "");
+				roomToJoin += (playerInVirtualStump ? VStumpRoomFullPrepend : "");
 				SwitchToWarningState();
 				break;
 			case NameCheckResult.Ban:
 				roomToJoin = "";
-				roomToJoin += (playerInVirtualStump ? virtualStumpRoomPrepend : "");
+				roomToJoin += (playerInVirtualStump ? VStumpRoomFullPrepend : "");
 				GorillaGameManager.ForceStopGame_DisconnectAndDestroy();
 				break;
 			}
@@ -3780,8 +3872,9 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 
 	public void SetInVirtualStump(bool inVirtualStump)
 	{
+		GrowingSnowballThrowable.ForceAOEEnabled = inVirtualStump;
 		playerInVirtualStump = inVirtualStump;
-		roomToJoin = (playerInVirtualStump ? (virtualStumpRoomPrepend + roomToJoin) : roomToJoin.RemoveAll(virtualStumpRoomPrepend));
+		roomToJoin = (playerInVirtualStump ? (VStumpRoomFullPrepend + roomToJoin) : StripVStumpRoomPrefix(roomToJoin));
 	}
 
 	public bool IsPlayerInVirtualStump()

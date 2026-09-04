@@ -25,6 +25,8 @@ public class CustomMapsGameManager : MonoBehaviour, IGameEntityZoneComponent
 
 	private static List<MapEntity> agentsToCreateOnZoneInit = new List<MapEntity>(128);
 
+	private bool hasCreatedPlacedEntitiesForZone;
+
 	private int TEST_index;
 
 	private int spawnCount;
@@ -230,15 +232,19 @@ public class CustomMapsGameManager : MonoBehaviour, IGameEntityZoneComponent
 
 	public void OnZoneInit()
 	{
-		if (!agentsToCreateOnZoneInit.IsNullOrEmpty())
+		if (!hasCreatedPlacedEntitiesForZone)
 		{
-			CreatePlacedEntities(agentsToCreateOnZoneInit);
-			agentsToCreateOnZoneInit.Clear();
+			hasCreatedPlacedEntitiesForZone = true;
+			if (!agentsToCreateOnZoneInit.IsNullOrEmpty() && gameEntityManager.IsAuthority())
+			{
+				CreatePlacedEntities(agentsToCreateOnZoneInit);
+			}
 		}
 	}
 
 	public void OnZoneClear(ZoneClearReason reason)
 	{
+		hasCreatedPlacedEntitiesForZone = false;
 	}
 
 	public bool ShouldClearZone()
@@ -326,6 +332,11 @@ public class CustomMapsGameManager : MonoBehaviour, IGameEntityZoneComponent
 		{
 			agentsToCreateOnZoneInit.AddRange(entitiesToCreate);
 		}
+	}
+
+	public static void ClearAgentsToCreate()
+	{
+		agentsToCreateOnZoneInit.Clear();
 	}
 
 	public void OnPlayerHit(GameEntityId hitByEntityId, GRPlayer player, Vector3 hitPosition)

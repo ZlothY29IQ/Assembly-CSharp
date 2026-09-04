@@ -7,5 +7,7 @@ public enum PlayerPlatform
 	[EnumMember(Value = "steam")]
 	Steam,
 	[EnumMember(Value = "sony")]
-	Sony
+	Sony,
+	[EnumMember(Value = "synthesisvr")]
+	SynthesisVR
 }

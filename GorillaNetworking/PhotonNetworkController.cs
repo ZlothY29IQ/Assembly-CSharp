@@ -572,7 +572,7 @@ public class PhotonNetworkController : MonoBehaviour
 			if (flag && GorillaComputer.instance.friendJoinCollider != null && !GorillaComputer.instance.friendJoinCollider.playerIDsCurrentlyTouching.Contains(NetworkSystem.Instance.LocalPlayer.UserId))
 			{
 				GorillaNetworkJoinTrigger joinTriggerFromFullGameModeString = GorillaComputer.instance.GetJoinTriggerFromFullGameModeString(NetworkSystem.Instance.GameModeString);
-				if (!joinTriggerFromFullGameModeString.groupJoinRequiredZonesAB.HasAnyFlag(VRRig.LocalRig.zoneEntity.currentNode.groupZoneAB))
+				if (joinTriggerFromFullGameModeString.groupJoinRequiredZonesAB != default(GroupJoinZoneAB) && !joinTriggerFromFullGameModeString.groupJoinRequiredZonesAB.HasAnyFlag(VRRig.LocalRig.zoneEntity.currentNode.groupZoneAB))
 				{
 					Debug.Log($"NOT ALLOWED IN ROOM: Joined {ParseZoneFromGameMode(NetworkSystem.Instance.GameModeString)} room but physically in {VRRig.LocalRig.zoneEntity.currentNode.groupZoneAB} zone");
 					PersistLog.Log($"NOT ALLOWED IN ROOM - FAILED JOIN: [PlayerZone:{VRRig.LocalRig.zoneEntity.currentNode.groupZoneAB} TriggerZone:{joinTriggerFromFullGameModeString.groupJoinRequiredZonesAB}  Trigger:{joinTriggerFromFullGameModeString.name}]");

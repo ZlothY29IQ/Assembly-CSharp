@@ -14,17 +14,17 @@ internal class UGCPermissionManager : MonoBehaviour
 
 	private class PlayFabPermissions : IUGCPermissions
 	{
-		private Action<bool> setUGCEnabled;
+		private Action<UGCAccessLevel> setAccessLevel;
 
-		public PlayFabPermissions(Action<bool> setUGCEnabled)
+		public PlayFabPermissions(Action<UGCAccessLevel> setAccessLevel)
 		{
-			this.setUGCEnabled = setUGCEnabled;
+			this.setAccessLevel = setAccessLevel;
 		}
 
 		public void Initialize()
 		{
 			bool safety = PlayFabAuthenticator.instance.GetSafety();
-			setUGCEnabled?.Invoke(!safety);
+			setAccessLevel?.Invoke((!safety) ? UGCAccessLevel.Full : UGCAccessLevel.Disabled);
 		}
 
 		public void CheckPermissions()
@@ -34,16 +34,16 @@ internal class UGCPermissionManager : MonoBehaviour
 
 	private class KIDPermissions : IUGCPermissions
 	{
-		private Action<bool> setUGCEnabled;
+		private Action<UGCAccessLevel> setAccessLevel;
 
-		public KIDPermissions(Action<bool> setUGCEnabled)
+		public KIDPermissions(Action<UGCAccessLevel> setAccessLevel)
 		{
-			this.setUGCEnabled = setUGCEnabled;
+			this.setAccessLevel = setAccessLevel;
 		}
 
-		private void SetUGCEnabled(bool enabled)
+		private void SetAccessLevel(UGCAccessLevel level)
 		{
-			setUGCEnabled?.Invoke(enabled);
+			setAccessLevel?.Invoke(level);
 		}
 
 		public void Initialize()
@@ -74,7 +74,7 @@ internal class UGCPermissionManager : MonoBehaviour
 			{
 			case Permission.ManagedByEnum.PROHIBITED:
 				Debug.Log("[UGCPermissionManager][KID] KID UGC prohibited.");
-				SetUGCEnabled(enabled: false);
+				SetAccessLevel(UGCAccessLevel.Disabled);
 				break;
 			case Permission.ManagedByEnum.PLAYER:
 				if (isEnabled)
@@ -84,17 +84,17 @@ internal class UGCPermissionManager : MonoBehaviour
 					{
 						KIDManager.SetFeatureOptIn(EKIDFeatures.Mods, optedIn: true);
 					}
-					SetUGCEnabled(enabled: true);
+					SetAccessLevel(UGCAccessLevel.Full);
 				}
 				else
 				{
 					Debug.LogFormat("[UGCPermissionManager][KID] KID UGC managed by player and disabled by default - using opt in status. (opted in: [{0}])", hasOptedIn);
-					SetUGCEnabled(hasOptedIn);
+					SetAccessLevel((!hasOptedIn) ? UGCAccessLevel.FeaturedMapsOnly : UGCAccessLevel.Full);
 				}
 				break;
 			case Permission.ManagedByEnum.GUARDIAN:
 				Debug.LogFormat("[UGCPermissionManager][KID] KID UGC managed by guardian. (opted in: [{0}], enabled: [{1}])", hasOptedIn, isEnabled);
-				SetUGCEnabled(isEnabled);
+				SetAccessLevel((!isEnabled) ? UGCAccessLevel.FeaturedMapsOnly : UGCAccessLevel.Full);
 				break;
 			}
 		}
@@ -109,19 +109,29 @@ internal class UGCPermissionManager : MonoBehaviour
 	[OnEnterPlay_SetNull]
 	private static Action onUGCDisabled;
 
-	private static bool? isUGCEnabled;
+	[OnEnterPlay_SetNull]
+	private static Action onVirtualStumpEnabled;
 
-	public static bool IsUGCDisabled => isUGCEnabled != true;
+	[OnEnterPlay_SetNull]
+	private static Action onVirtualStumpDisabled;
+
+	private static UGCAccessLevel? accessLevel;
+
+	public static bool IsUGCDisabled => accessLevel != UGCAccessLevel.Full;
+
+	public static bool FeaturedMapsOnly => accessLevel == UGCAccessLevel.FeaturedMapsOnly;
+
+	public static bool HasNoMapAccess => accessLevel.GetValueOrDefault() == UGCAccessLevel.Disabled;
 
 	public static void UsePlayFabSafety()
 	{
-		permissions = new PlayFabPermissions(SetUGCEnabled);
+		permissions = new PlayFabPermissions(SetAccessLevel);
 		permissions.Initialize();
 	}
 
 	public static void UseKID()
 	{
-		permissions = new KIDPermissions(SetUGCEnabled);
+		permissions = new KIDPermissions(SetAccessLevel);
 		permissions.Initialize();
 	}
 
@@ -150,18 +160,58 @@ internal class UGCPermissionManager : MonoBehaviour
 		onUGCDisabled = (Action)Delegate.Remove(onUGCDisabled, callback);
 	}
 
-	private static void SetUGCEnabled(bool enabled)
+	public static void SubscribeToVirtualStumpEnabled(Action callback)
 	{
-		if (enabled != isUGCEnabled)
+		onVirtualStumpEnabled = (Action)Delegate.Combine(onVirtualStumpEnabled, callback);
+	}
+
+	public static void UnsubscribeFromVirtualStumpEnabled(Action callback)
+	{
+		onVirtualStumpEnabled = (Action)Delegate.Remove(onVirtualStumpEnabled, callback);
+	}
+
+	public static void SubscribeToVirtualStumpDisabled(Action callback)
+	{
+		onVirtualStumpDisabled = (Action)Delegate.Combine(onVirtualStumpDisabled, callback);
+	}
+
+	public static void UnsubscribeFromVirtualStumpDisabled(Action callback)
+	{
+		onVirtualStumpDisabled = (Action)Delegate.Remove(onVirtualStumpDisabled, callback);
+	}
+
+	private static void SetAccessLevel(UGCAccessLevel level)
+	{
+		if (level == accessLevel)
 		{
-			isUGCEnabled = enabled;
-			if (enabled)
+			return;
+		}
+		bool hasValue = accessLevel.HasValue;
+		bool flag = accessLevel == UGCAccessLevel.Full;
+		bool flag2 = accessLevel.HasValue && accessLevel != UGCAccessLevel.Disabled;
+		accessLevel = level;
+		bool flag3 = level == UGCAccessLevel.Full;
+		bool flag4 = level != UGCAccessLevel.Disabled;
+		if (!hasValue || flag != flag3)
+		{
+			if (flag3)
 			{
 				onUGCEnabled?.Invoke();
 			}
 			else
 			{
 				onUGCDisabled?.Invoke();
+			}
+		}
+		if (!hasValue || flag2 != flag4)
+		{
+			if (flag4)
+			{
+				onVirtualStumpEnabled?.Invoke();
+			}
+			else
+			{
+				onVirtualStumpDisabled?.Invoke();
 			}
 		}
 	}

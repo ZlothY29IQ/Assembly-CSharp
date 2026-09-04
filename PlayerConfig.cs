@@ -17,4 +17,6 @@ public class PlayerConfig
 	public const string FlagTrue = "flagged";
 
 	public const string Player_Platform = "platform";
+
+	public const string Mothership_Id = "mothershipId";
 }

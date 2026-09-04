@@ -6,6 +6,8 @@ using Utilities;
 
 public class GTPlayerStats : MonoBehaviourPostTick
 {
+	private static SystemProperties s_systemPropertiesFlags;
+
 	private FloatAverages m_fps = new FloatAverages(30);
 
 	private IntAverages m_ping = new IntAverages(10);
@@ -18,17 +20,29 @@ public class GTPlayerStats : MonoBehaviourPostTick
 
 	public static short TargetFPS { get; private set; }
 
+	public static SystemProperties SystemPropertiesFlags
+	{
+		get
+		{
+			return s_systemPropertiesFlags;
+		}
+		private set
+		{
+			s_systemPropertiesFlags = value;
+		}
+	}
+
 	public static long GetPackedValues()
 	{
 		return (long)(0uL | (ulong)Ping | (ulong)((long)FPS << 16)) | ((long)TargetFPS << 32);
 	}
 
-	public static PlayerStatsReadonly UnPackValues(long values)
+	public static PlayerStatsReadonly UnPackValues(long values, int flags)
 	{
 		short ping = (short)values;
 		short fps = (short)(values >> 16);
 		short targetFps = (short)(values >> 32);
-		return new PlayerStatsReadonly(ping, fps, targetFps);
+		return new PlayerStatsReadonly(ping, fps, targetFps, (SystemProperties)flags);
 	}
 
 	private void Awake()

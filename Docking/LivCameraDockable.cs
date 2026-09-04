@@ -13,8 +13,8 @@ public class LivCameraDockable : Dockable
 			if (gTLckController != null)
 			{
 				gTLckController.ApplyCameraSettings(((LivCameraDock)currentDock).cameraSettings);
+				rotate = !gTLckController.IsTabletFollowingPlayer;
 			}
-			rotate = !gTLckController.IsTabletFollowingPlayer;
 		}
 	}
 }

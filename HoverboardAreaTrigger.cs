@@ -7,15 +7,23 @@ public class HoverboardAreaTrigger : MonoBehaviour
 	{
 		if (other == GTPlayer.Instance.headCollider)
 		{
-			GTPlayer.Instance.SetHoverAllowed(allowed: true);
+			GTPlayer.Instance.AddHoverArea(this);
 		}
 	}
 
 	private void OnTriggerExit(Collider other)
 	{
-		if (other == GTPlayer.Instance.headCollider)
+		if (other != GTPlayer.Instance.headCollider)
 		{
-			GTPlayer.Instance.SetHoverAllowed(allowed: false);
+			GTPlayer.Instance.RemoveHoverArea(this);
+		}
+	}
+
+	private void OnDisable()
+	{
+		if (!ApplicationQuittingState.IsQuitting)
+		{
+			GTPlayer.Instance.RemoveHoverArea(this);
 		}
 	}
 }

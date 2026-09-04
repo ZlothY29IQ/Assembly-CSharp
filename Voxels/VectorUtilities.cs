@@ -25,6 +25,18 @@ public static class VectorUtilities
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static half3 ToHalf3(this Vector3 v)
+	{
+		return new half3((half)v.x, (half)v.y, (half)v.z);
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static Vector3 ToVector3(this half3 h)
+	{
+		return new Vector3(h.x, h.y, h.z);
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static int3 ToInt3(this float3 v)
 	{
 		return new int3((int)v.x, (int)v.y, (int)v.z);

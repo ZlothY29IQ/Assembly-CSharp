@@ -655,6 +655,16 @@ public class PlayFabAuthenticator : MonoBehaviour
 
 	private void ShowMothershipAuthErrorMessage(string errorMessage, string errorCode, string traceId)
 	{
+		StartCoroutine(ShowMothershipAuthErrorMessageCoroutine(errorMessage, errorCode, traceId));
+	}
+
+	private IEnumerator ShowMothershipAuthErrorMessageCoroutine(string errorMessage, string errorCode, string traceId)
+	{
+		WaitForEndOfFrame frameYield = new WaitForEndOfFrame();
+		while (gorillaComputer == null)
+		{
+			yield return frameYield;
+		}
 		try
 		{
 			StringBuilder stringBuilder = new StringBuilder("UNABLE TO AUTHENTICATE WITH MOTHERSHIP.\nREASON: " + errorMessage);

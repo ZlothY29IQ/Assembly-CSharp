@@ -40,6 +40,14 @@ public class ModIOManager : MonoBehaviour, ISteamCredentialProvider, IOculusCred
 
 	private const string MODIO_ACCEPTED_PRIVACY_POLICY_ID_KEY = "modIOAcceptedPrivacyPolicyId";
 
+	public const string FEATURED_MAP_TAG = "Featured";
+
+	private const int MAX_FEATURED_MAPS_TO_PREFETCH = 50;
+
+	private const float MAX_PREFETCH_WAIT_PER_MAP_SECONDS = 600f;
+
+	private const int PREFETCH_POLL_INTERVAL_MS = 2000;
+
 	private const string MODIO_LAST_AUTH_METHOD_KEY = "modIOLassSuccessfulAuthMethod";
 
 	private const string FAVORITES_FILE_NAME = "favoriteMods.json";
@@ -57,6 +65,14 @@ public class ModIOManager : MonoBehaviour, ISteamCredentialProvider, IOculusCred
 	private static ModioWssAuthService accountLinkingAuthService = new ModioWssAuthService();
 
 	private static bool initialized;
+
+	[OnEnterPlay_Set(false)]
+	private static bool featuredMapsPrefetchStarted;
+
+	[OnEnterPlay_Set(false)]
+	private static bool featuredMapsRetrieved;
+
+	private static readonly List<Mod> retrievedFeaturedMaps = new List<Mod>();
 
 	private static bool refreshing;
 
@@ -128,6 +144,7 @@ public class ModIOManager : MonoBehaviour, ISteamCredentialProvider, IOculusCred
 			hasInstance = true;
 			UGCPermissionManager.SubscribeToUGCEnabled(OnUGCEnabled);
 			UGCPermissionManager.SubscribeToUGCDisabled(OnUGCDisabled);
+			UGCPermissionManager.SubscribeToVirtualStumpEnabled(OnMapAccessEnabled);
 			ModioServices.Bind<IModioAuthService>().FromInstance(accountLinkingAuthService, (ModioServicePriority)41);
 			ModioServices.Bind<IModioAuthService>().FromInstance(steamAuthService);
 			long gameId = ModioServices.Resolve<ModioSettings>().GameId;
@@ -152,6 +169,7 @@ public class ModIOManager : MonoBehaviour, ISteamCredentialProvider, IOculusCred
 			hasInstance = false;
 			UGCPermissionManager.UnsubscribeFromUGCEnabled(OnUGCEnabled);
 			UGCPermissionManager.UnsubscribeFromUGCDisabled(OnUGCDisabled);
+			UGCPermissionManager.UnsubscribeFromVirtualStumpEnabled(OnMapAccessEnabled);
 		}
 		NetworkSystem.Instance.OnMultiplayerStarted -= new Action(OnJoinedRoom);
 	}
@@ -169,14 +187,112 @@ public class ModIOManager : MonoBehaviour, ISteamCredentialProvider, IOculusCred
 	{
 	}
 
+	private static void OnMapAccessEnabled()
+	{
+		PrefetchFeaturedMaps();
+	}
+
+	private static async void PrefetchFeaturedMaps()
+	{
+		if (featuredMapsPrefetchStarted)
+		{
+			return;
+		}
+		featuredMapsPrefetchStarted = true;
+		Error error = await Initialize();
+		if ((bool)error)
+		{
+			ModioLog.Error?.Log("[ModIOManager::PrefetchFeaturedMaps] Failed to initialize mod.io, skipping featured maps prefetch: " + error.GetMessage());
+			featuredMapsPrefetchStarted = false;
+			return;
+		}
+		ModSearchFilter modSearchFilter = new ModSearchFilter(0, 50);
+		modSearchFilter.AddTag("Featured");
+		var (error2, modsPage) = await GetMods(modSearchFilter.GetModsFilter());
+		if ((bool)error2 || modsPage == null)
+		{
+			ModioLog.Error?.Log("[ModIOManager::PrefetchFeaturedMaps] Failed to retrieve featured maps: " + error2.GetMessage());
+			return;
+		}
+		if (modsPage.TotalSearchResults > modsPage.Data.Length)
+		{
+			ModioLog.Warning?.Log($"[ModIOManager::PrefetchFeaturedMaps] {modsPage.TotalSearchResults} featured maps " + $"found, only prefetching the first {modsPage.Data.Length}.");
+		}
+		int downloadsQueued = 0;
+		Mod[] data = modsPage.Data;
+		foreach (Mod featuredMod in data)
+		{
+			if (featuredMod?.File == null || (featuredMod.File.State != ModFileState.None && featuredMod.File.State != ModFileState.Queued) || !(await DownloadMod(featuredMod.Id)))
+			{
+				continue;
+			}
+			int num = downloadsQueued + 1;
+			downloadsQueued = num;
+			for (float waitedSeconds = 0f; waitedSeconds < 600f; waitedSeconds += 2f)
+			{
+				ModFileState modFileState = featuredMod.File?.State ?? ModFileState.None;
+				if (modFileState != ModFileState.None && modFileState != ModFileState.Queued && modFileState != ModFileState.Downloading && modFileState != ModFileState.Downloaded && modFileState != ModFileState.Installing)
+				{
+					break;
+				}
+				await Task.Delay(2000);
+			}
+		}
+		GTDev.Log($"[ModIOManager::PrefetchFeaturedMaps] Queued {downloadsQueued} of {modsPage.Data.Length} featured map downloads.");
+	}
+
 	public static bool IsInitialized()
 	{
 		return initialized;
 	}
 
+	public static bool IsFeaturedMap(Mod mod)
+	{
+		if (mod?.Tags == null)
+		{
+			return false;
+		}
+		ModTag[] tags = mod.Tags;
+		foreach (ModTag modTag in tags)
+		{
+			if (modTag != null && string.Equals(modTag.ApiName, "Featured", StringComparison.OrdinalIgnoreCase))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public static async Task<(Error error, List<Mod> featuredMaps)> GetFeaturedMaps(bool forceRefresh = false)
+	{
+		if (!forceRefresh && featuredMapsRetrieved)
+		{
+			return (error: Error.None, featuredMaps: new List<Mod>(retrievedFeaturedMaps));
+		}
+		Error error = await Initialize();
+		if ((bool)error)
+		{
+			return (error: error, featuredMaps: null);
+		}
+		ModSearchFilter modSearchFilter = new ModSearchFilter(0, 50);
+		modSearchFilter.AddTag("Featured");
+		var (error2, modioPage) = await GetMods(modSearchFilter.GetModsFilter());
+		if ((bool)error2 || modioPage == null)
+		{
+			return (error: error2, featuredMaps: null);
+		}
+		retrievedFeaturedMaps.Clear();
+		if (modioPage.Data != null)
+		{
+			retrievedFeaturedMaps.AddRange(modioPage.Data);
+		}
+		featuredMapsRetrieved = true;
+		return (error: Error.None, featuredMaps: new List<Mod>(retrievedFeaturedMaps));
+	}
+
 	public static async Task<Error> Initialize()
 	{
-		if (UGCPermissionManager.IsUGCDisabled)
+		if (UGCPermissionManager.HasNoMapAccess)
 		{
 			return new Error(ErrorCode.UNKNOWN, "MOD.IO FUNCTIONALITY IS CURRENTLY DISABLED.");
 		}
@@ -189,7 +305,7 @@ public class ModIOManager : MonoBehaviour, ISteamCredentialProvider, IOculusCred
 
 	private static async Task<Error> InitInternal()
 	{
-		if (UGCPermissionManager.IsUGCDisabled)
+		if (UGCPermissionManager.HasNoMapAccess)
 		{
 			return new Error(ErrorCode.UNKNOWN, "MOD.IO FUNCTIONALITY IS CURRENTLY DISABLED.");
 		}
@@ -244,6 +360,53 @@ public class ModIOManager : MonoBehaviour, ISteamCredentialProvider, IOculusCred
 		return (Error.None, flag, flag2);
 	}
 
+	public static async Task<Error> ShowTermsOfUseAtGameLoad()
+	{
+		if (!hasInstance)
+		{
+			return new Error(ErrorCode.NOT_INITIALIZED, "ModIOManager has no instance!");
+		}
+		if (UGCPermissionManager.HasNoMapAccess)
+		{
+			return Error.None;
+		}
+		Error error = await Initialize();
+		if ((bool)error)
+		{
+			return error;
+		}
+		var (error2, flag, flag2) = await instance.HasAcceptedLatestTerms();
+		if ((bool)error2)
+		{
+			return error2;
+		}
+		if (flag && flag2)
+		{
+			return Error.None;
+		}
+		error = await instance.ShowModIOTermsOfUse();
+		if ((bool)error)
+		{
+			return error;
+		}
+		await SaveAcceptedTermsIds();
+		return Error.None;
+	}
+
+	private static async Task SaveAcceptedTermsIds()
+	{
+		var (error, agreement) = await Agreement.GetAgreement(AgreementType.TermsOfUse);
+		if (!error)
+		{
+			PlayerPrefs.SetString("modIOAcceptedTermsOfUseId", agreement.Id.ToString());
+		}
+		var (error2, agreement2) = await Agreement.GetAgreement(AgreementType.PrivacyPolicy);
+		if (!error2)
+		{
+			PlayerPrefs.SetString("modIOAcceptedPrivacyPolicyId", agreement2.Id.ToString());
+		}
+	}
+
 	private async Task<Error> ShowModIOTermsOfUse()
 	{
 		if (!initialized)
@@ -252,15 +415,20 @@ public class ModIOManager : MonoBehaviour, ISteamCredentialProvider, IOculusCred
 		}
 		if (modIOTermsOfUsePrefab != null)
 		{
-			GameObject gameObject = UnityEngine.Object.Instantiate(modIOTermsOfUsePrefab, base.transform);
-			if (gameObject != null)
+			GameObject termsOfUseObject = UnityEngine.Object.Instantiate(modIOTermsOfUsePrefab, base.transform);
+			if (termsOfUseObject != null)
 			{
-				ModIOTermsOfUse_v2 component = gameObject.GetComponent<ModIOTermsOfUse_v2>();
+				ModIOTermsOfUse_v2 component = termsOfUseObject.GetComponent<ModIOTermsOfUse_v2>();
 				if (component != null)
 				{
 					CustomMapManager.DisableTeleportHUD();
-					gameObject.SetActive(value: true);
-					return await component.ShowTerms();
+					termsOfUseObject.SetActive(value: true);
+					Error obj = await component.ShowTerms();
+					if ((bool)obj)
+					{
+						UnityEngine.Object.Destroy(termsOfUseObject);
+					}
+					return obj;
 				}
 				ModioLog.Error?.Log("[ModIOManager::ShowModIOTermsOfUse] TermsOfUsePrefab doesn't contain a ModIOTermsOfUse component!");
 				return new Error(ErrorCode.NOT_INITIALIZED, "ModIOManager property 'ModIOTermsOfUsePrefab' object is missing the 'ModIOTermsOfUse_v2' script component.");
@@ -927,18 +1095,7 @@ public class ModIOManager : MonoBehaviour, ISteamCredentialProvider, IOculusCred
 				OnAuthenticationComplete(error);
 				return error;
 			}
-			Agreement agreement;
-			(error, agreement) = await Agreement.GetAgreement(AgreementType.TermsOfUse);
-			if (!error)
-			{
-				PlayerPrefs.SetString("modIOAcceptedTermsOfUseId", agreement.Id.ToString());
-			}
-			Agreement agreement2;
-			(error, agreement2) = await Agreement.GetAgreement(AgreementType.PrivacyPolicy);
-			if (!error)
-			{
-				PlayerPrefs.SetString("modIOAcceptedPrivacyPolicyId", agreement2.Id.ToString());
-			}
+			await SaveAcceptedTermsIds();
 		}
 		return await ContinuePlatformLogin();
 	}

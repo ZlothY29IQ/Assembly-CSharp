@@ -29,6 +29,18 @@ public class TeleportNode : GorillaTriggerBox
 
 	private float teleportTime;
 
+	private Transform destinationOverride;
+
+	public void SetDestinationOverride(Transform destination)
+	{
+		destinationOverride = destination;
+	}
+
+	public void ClearDestinationOverride()
+	{
+		destinationOverride = null;
+	}
+
 	public override void OnBoxTriggered()
 	{
 		if ((subsOnly && !SubscriptionManager.IsLocalSubscribed()) || Time.time - teleportTime < 0.1f)
@@ -41,11 +53,17 @@ public class TeleportNode : GorillaTriggerBox
 			Debug.LogError("[TeleportNode] Failed to resolve teleportFromRef.");
 			return;
 		}
-		if (!teleportToRef.TryResolve(out Transform result2))
+		Transform result2;
+		if (destinationOverride != null)
+		{
+			result2 = destinationOverride;
+		}
+		else if (!teleportToRef.TryResolve(out result2))
 		{
 			Debug.LogError("[TeleportNode] Failed to resolve teleportToRef.");
 			return;
 		}
+		Debug.LogWarning("[TeleportNode] '" + base.gameObject.name + "' fired -> destination '" + result2.name + "' " + $"(override={destinationOverride != null})");
 		GTPlayer instance = GTPlayer.Instance;
 		if (instance == null)
 		{

@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using GorillaTagScripts;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
@@ -244,32 +243,32 @@ public class GorillaIKMgr : MonoBehaviour
 		while (num2 < actualListSz)
 		{
 			GorillaIK gorillaIK = ikList[num2 / 2];
-			bool flag = gorillaIK.usingUpdatedIK && SubscriptionManager.GetSubscriptionDetails(gorillaIK.myRig).active;
+			bool usingUpdatedIK = gorillaIK.usingUpdatedIK;
 			if (gorillaIK != playerIK)
 			{
 				gorillaIK.lerpLeftElbowDirection = Vector3.Lerp(gorillaIK.lerpLeftElbowDirection, gorillaIK.leftElbowDirection, lerpValue);
 				gorillaIK.lerpRightElbowDirection = Vector3.Lerp(gorillaIK.lerpRightElbowDirection, gorillaIK.rightElbowDirection, lerpValue);
-				gorillaIK.lerpBodyRot = (flag ? Quaternion.Lerp(gorillaIK.lerpBodyRot, gorillaIK.targetBodyRot, lerpValue) : gorillaIK.bodyInitialRot);
+				gorillaIK.lerpBodyRot = (usingUpdatedIK ? Quaternion.Lerp(gorillaIK.lerpBodyRot, gorillaIK.targetBodyRot, lerpValue) : gorillaIK.bodyInitialRot);
 			}
 			else
 			{
 				gorillaIK.lerpLeftElbowDirection = gorillaIK.leftElbowDirection;
 				gorillaIK.lerpRightElbowDirection = gorillaIK.rightElbowDirection;
-				gorillaIK.lerpBodyRot = (flag ? gorillaIK.targetBodyRot : gorillaIK.bodyInitialRot);
+				gorillaIK.lerpBodyRot = (usingUpdatedIK ? gorillaIK.targetBodyRot : gorillaIK.bodyInitialRot);
 			}
 			job.input[num2] = new IKInput
 			{
-				targetPos = gorillaIK.GetShoulderLocalTargetPos_Left(flag),
+				targetPos = gorillaIK.GetShoulderLocalTargetPos_Left(usingUpdatedIK),
 				elbowDir = gorillaIK.lerpLeftElbowDirection,
 				bodyRot = gorillaIK.lerpBodyRot,
-				usingNewIK = flag
+				usingNewIK = usingUpdatedIK
 			};
 			job.input[num2 + 1] = new IKInput
 			{
-				targetPos = gorillaIK.GetShoulderLocalTargetPos_Right(flag),
+				targetPos = gorillaIK.GetShoulderLocalTargetPos_Right(usingUpdatedIK),
 				elbowDir = gorillaIK.lerpRightElbowDirection,
 				bodyRot = gorillaIK.lerpBodyRot,
-				usingNewIK = flag
+				usingNewIK = usingUpdatedIK
 			};
 			gorillaIK.ClearOverrides();
 			num2 += 2;

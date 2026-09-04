@@ -145,7 +145,7 @@ public class ZoneManagement : MonoBehaviour
 		ZoneData[] array = zones;
 		foreach (ZoneData zoneData in array)
 		{
-			if (zoneData.zone == gtZone && scenesLoaded.Contains(zoneData.sceneName))
+			if (zoneData.zone == gtZone && (zoneData.sceneName == "" || scenesLoaded.Contains(zoneData.sceneName)))
 			{
 				return true;
 			}
@@ -278,8 +278,11 @@ public class ZoneManagement : MonoBehaviour
 		foreach (string item3 in scenesToUnload)
 		{
 			scenesLoaded.Remove(item3);
-			AsyncOperation value = SceneManager.UnloadSceneAsync(item3);
-			_scenes_to_unloadOps[item3] = value;
+			if (SceneManager.GetSceneByName(item3).IsValid())
+			{
+				AsyncOperation value = SceneManager.UnloadSceneAsync(item3);
+				_scenes_to_unloadOps[item3] = value;
+			}
 		}
 		for (int num2 = 0; num2 < objectActivationState.Length; num2++)
 		{

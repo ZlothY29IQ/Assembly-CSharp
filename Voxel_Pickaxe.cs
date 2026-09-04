@@ -1,4 +1,5 @@
 using System;
+using Photon.Pun;
 using UnityEngine;
 using UnityEngine.Audio;
 using Voxels;
@@ -78,7 +79,7 @@ public class Voxel_Pickaxe : MonoBehaviour, IGameEntityComponent
 
 	private void OnDisable()
 	{
-		if (_gameEntity != null)
+		if ((bool)_gameEntity)
 		{
 			GameEntity gameEntity = _gameEntity;
 			gameEntity.OnGrabbed = (Action)Delegate.Remove(gameEntity.OnGrabbed, new Action(StartGrabbing));
@@ -100,15 +101,21 @@ public class Voxel_Pickaxe : MonoBehaviour, IGameEntityComponent
 
 	private void StartGrabbing()
 	{
-		Held = true;
-		VRRig componentInParent = GetComponentInParent<VRRig>();
-		_isLocal = componentInParent == VRRig.LocalRig;
-		ResetVelocity();
+		if (_gameEntity.heldByActorNumber == PhotonNetwork.LocalPlayer.ActorNumber)
+		{
+			Held = true;
+			VRRig componentInParent = GetComponentInParent<VRRig>();
+			_isLocal = componentInParent == VRRig.LocalRig;
+			ResetVelocity();
+		}
 	}
 
 	private void StopGrabbing()
 	{
-		Held = false;
+		if (_gameEntity.lastHeldByActorNumber == PhotonNetwork.LocalPlayer.ActorNumber)
+		{
+			Held = false;
+		}
 	}
 
 	private void ResetVelocity()

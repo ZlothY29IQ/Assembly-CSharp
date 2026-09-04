@@ -600,7 +600,7 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 					continue;
 				}
 				(Error, Mod) tuple = await ModIOManager.GetMod(new ModId(featuredModId));
-				if (!tuple.Item1)
+				if (!tuple.Item1 && (!UGCPermissionManager.FeaturedMapsOnly || ModIOManager.IsFeaturedMap(tuple.Item2)))
 				{
 					featuredModIds.Add(featuredModId);
 					featuredMods.Add(tuple.Item2);
@@ -627,6 +627,10 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 			if (communityMapsOnly)
 			{
 				modSearchFilter.AddTag(communityMapsTag);
+			}
+			if (UGCPermissionManager.FeaturedMapsOnly)
+			{
+				modSearchFilter.AddTag("Featured");
 			}
 			modSearchFilter.IsSortAscending = isAscendingOrder;
 			var (error, modioPage) = await ModIOManager.GetMods(modSearchFilter.GetModsFilter());

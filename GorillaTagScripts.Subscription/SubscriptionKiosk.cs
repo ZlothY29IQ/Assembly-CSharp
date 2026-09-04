@@ -427,8 +427,7 @@ public class SubscriptionKiosk : MonoBehaviour, ITouchScreenStation, IGorillaSli
 		ToggleSubscriptionSettingValue(SubscriptionManager.SubscriptionFeatures.IOBT, state);
 		if (GorillaIK.playerIK != null)
 		{
-			GorillaIK.playerIK.ResetIKData();
-			GorillaIK.playerIK.usingUpdatedIK = state;
+			GorillaIK.playerIK.DelayedUpdateIK(state);
 		}
 	}
 

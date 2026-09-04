@@ -321,7 +321,7 @@ public abstract class NetworkSystem : MonoBehaviour
 		}
 		if (GorillaComputer.instance.IsPlayerInVirtualStump())
 		{
-			text = GorillaComputer.instance.VStumpRoomPrepend + text;
+			text = GorillaComputer.instance.VStumpRoomFullPrepend + text;
 		}
 		if (GorillaComputer.instance.CheckAutoBanListForName(text))
 		{
@@ -518,7 +518,14 @@ public abstract class NetworkSystem : MonoBehaviour
 		return GetPlayerPlatform(GetPlayer(playerID));
 	}
 
+	public string GetPlayerMothershipId(int playerID)
+	{
+		return GetPlayerMothershipId(GetPlayer(playerID));
+	}
+
 	public abstract string GetPlayerPlatform(NetPlayer player);
+
+	public abstract string GetPlayerMothershipId(NetPlayer player);
 
 	public void AddVoiceSettings(SO_NetworkVoiceSettings settings)
 	{

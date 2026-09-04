@@ -541,7 +541,7 @@ public class ScheduledEventManager : MonoBehaviour, IGorillaSliceableSimple, IIn
 			return;
 		}
 		double num = (double)stream.ReceiveNext();
-		if (double.IsNaN(num))
+		if (!double.IsFinite(num))
 		{
 			SetStartState(StartKind.Unresolved, default(PhotonTimestamp));
 		}

@@ -37,7 +37,7 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 
 	public enum ElevatorLocation
 	{
-		Stump,
+		Mall,
 		City,
 		GhostReactor,
 		MonkeBlocks,
@@ -45,6 +45,7 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 		VIMExperience2,
 		VIMExperience3,
 		VIMExperience4,
+		GhostEntrance,
 		None
 	}
 
@@ -136,8 +137,8 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 		}
 		_instance = this;
 		currentState = ElevatorSystemState.InLocation;
-		currentLocation = ElevatorLocation.Stump;
-		destination = ElevatorLocation.Stump;
+		currentLocation = ElevatorLocation.Mall;
+		destination = ElevatorLocation.Mall;
 		elevatorByLocation = new Dictionary<ElevatorLocation, GRElevator>();
 		for (int i = 0; i < allElevators.Count; i++)
 		{
@@ -228,7 +229,7 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 		cosmeticsInitialized = true;
 		if (InControlOfElevator())
 		{
-			UpdateElevatorState(ElevatorSystemState.InLocation, ElevatorLocation.Stump);
+			UpdateElevatorState(ElevatorSystemState.InLocation, ElevatorLocation.Mall);
 		}
 	}
 
@@ -574,10 +575,10 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 	{
 		switch (type)
 		{
-		case GRElevator.ButtonType.Stump:
+		case GRElevator.ButtonType.Mall:
 			if (currentState != ElevatorSystemState.WaitingToTeleport)
 			{
-				UpdateElevatorState(ElevatorSystemState.DestinationPressed, ElevatorLocation.Stump);
+				UpdateElevatorState(ElevatorSystemState.DestinationPressed, ElevatorLocation.Mall);
 			}
 			break;
 		case GRElevator.ButtonType.City:
@@ -695,13 +696,13 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 		}
 		_ = currentLocation;
 		int num = (int)stream.ReceiveNext();
-		if (num >= 0 && num <= 8)
+		if (num >= 0 && num <= 9)
 		{
 			currentLocation = (ElevatorLocation)num;
 		}
 		_ = destination;
 		num = (int)stream.ReceiveNext();
-		if (num >= 0 && num <= 8)
+		if (num >= 0 && num <= 9)
 		{
 			destination = (ElevatorLocation)num;
 		}
@@ -743,7 +744,7 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 	[PunRPC]
 	public void RemoteElevatorButtonPress(int elevatorButtonPressed, int elevatorLocation, PhotonMessageInfo info)
 	{
-		if (base.IsMine && !m_RpcSpamChecks.IsSpamming(RPC.RemoteElevatorButtonPress) && elevatorLocation >= 0 && elevatorLocation < 8 && elevatorButtonPressed >= 0 && elevatorButtonPressed < 12)
+		if (base.IsMine && !m_RpcSpamChecks.IsSpamming(RPC.RemoteElevatorButtonPress) && elevatorLocation >= 0 && elevatorLocation < 9 && elevatorButtonPressed >= 0 && elevatorButtonPressed < 13)
 		{
 			ElevatorButtonPressedInternal((GRElevator.ButtonType)elevatorButtonPressed, (ElevatorLocation)elevatorLocation);
 		}
@@ -752,7 +753,7 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 	[PunRPC]
 	public void RemoteActivateTeleport(int elevatorStartLocation, int elevatorDestinationLocation, int lowestActorNumber, PhotonMessageInfo info)
 	{
-		if (info.Sender.IsMasterClient && !m_RpcSpamChecks.IsSpamming(RPC.RemoteActivateTeleport) && elevatorStartLocation >= 0 && elevatorStartLocation < 8 && elevatorDestinationLocation >= 0 && elevatorDestinationLocation < 8 && !waitingForRemoteTeleport)
+		if (info.Sender.IsMasterClient && !m_RpcSpamChecks.IsSpamming(RPC.RemoteActivateTeleport) && elevatorStartLocation >= 0 && elevatorStartLocation < 9 && elevatorDestinationLocation >= 0 && elevatorDestinationLocation < 9 && !waitingForRemoteTeleport)
 		{
 			StartCoroutine(TeleportDelay((ElevatorLocation)elevatorStartLocation, (ElevatorLocation)elevatorDestinationLocation, lowestActorNumber, info.SentServerTime));
 		}

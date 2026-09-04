@@ -437,7 +437,7 @@ public class FriendDisplay : MonoBehaviour
 		_localPlayerCard.SetName(NetworkSystem.Instance.LocalPlayer.NickName.ToUpper());
 		if (PhotonNetwork.InRoom && !string.IsNullOrEmpty(NetworkSystem.Instance.RoomName) && NetworkSystem.Instance.RoomName.Length > 0)
 		{
-			bool flag = NetworkSystem.Instance.RoomName[0] == '@';
+			bool flag = GorillaComputer.instance != null && GorillaComputer.instance.IsVStumpRoomName(NetworkSystem.Instance.RoomName);
 			bool flag2 = !NetworkSystem.Instance.SessionIsPrivate;
 			if (FriendSystem.Instance.LocalPlayerPrivacy == FriendSystem.PlayerPrivacy.Hidden || (FriendSystem.Instance.LocalPlayerPrivacy == FriendSystem.PlayerPrivacy.PublicOnly && !flag2))
 			{

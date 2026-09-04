@@ -34,7 +34,7 @@ public enum GTZone
 	ghostReactorDrill,
 	forestWithCity,
 	GTFC,
-	GTFCWithCity,
+	SilverbackStudios,
 	VIMExperience1,
 	VIMExperience2,
 	VIMExperience3,

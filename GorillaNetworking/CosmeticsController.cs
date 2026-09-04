@@ -1927,8 +1927,11 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		else
 		{
 			CosmeticSlots cosmeticSlots5 = CategoryToNonTransferrableSlot(newItem.itemCategory);
-			int slotIdx2 = (int)cosmeticSlots5;
-			ApplyCosmeticToSet(set, newItem, slotIdx2, cosmeticSlots5, applyToPlayerPrefs, appliedSlots);
+			if (cosmeticSlots5 != CosmeticSlots.Count)
+			{
+				int slotIdx2 = (int)cosmeticSlots5;
+				ApplyCosmeticToSet(set, newItem, slotIdx2, cosmeticSlots5, applyToPlayerPrefs, appliedSlots);
+			}
 		}
 	}
 
@@ -3564,7 +3567,7 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 
 	private void ProcessSteamCallback(MicroTxnAuthorizationResponse_t callBackResponse)
 	{
-		if (SubscriptionKiosk.ProcessingSubscriptionPurchase)
+		if (SubscriptionKiosk.ProcessingSubscriptionPurchase || GeodeAtm.ProcessingGeodePurchase)
 		{
 			return;
 		}

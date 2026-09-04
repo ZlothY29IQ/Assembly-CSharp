@@ -99,7 +99,7 @@ public class RequestableOwnershipGuard : MonoBehaviourPunCallbacks, ISelfValidat
 	public override void OnDisable()
 	{
 		base.OnDisable();
-		RequestableOwnershipGaurdHandler.RemoveViews(netViews, this);
+		RequestableOwnershipGuardHandler.RemoveViews(netViews, this);
 		NetworkSystem.Instance.OnPlayerJoined -= new Action<NetPlayer>(PlayerEnteredRoom);
 		NetworkSystem.Instance.OnPlayerLeft -= new Action<NetPlayer>(PlayerLeftRoom);
 		NetworkSystem.Instance.OnJoinedRoomEvent -= new Action(JoinedRoom);
@@ -122,7 +122,7 @@ public class RequestableOwnershipGuard : MonoBehaviourPunCallbacks, ISelfValidat
 		{
 			return;
 		}
-		RequestableOwnershipGaurdHandler.RegisterViews(netViews, this);
+		RequestableOwnershipGuardHandler.RegisterViews(netViews, this);
 		NetworkSystem.Instance.OnPlayerJoined += new Action<NetPlayer>(PlayerEnteredRoom);
 		NetworkSystem.Instance.OnPlayerLeft += new Action<NetPlayer>(PlayerLeftRoom);
 		NetworkSystem.Instance.OnJoinedRoomEvent += new Action(JoinedRoom);

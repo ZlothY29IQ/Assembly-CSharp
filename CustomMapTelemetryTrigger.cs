@@ -6,17 +6,25 @@ public class CustomMapTelemetryTrigger : MonoBehaviour
 {
 	public void OnTriggerEnter(Collider other)
 	{
-		if (other == GTPlayer.Instance.headCollider && CustomMapTelemetry.IsActive)
+		if (other == GTPlayer.Instance.headCollider)
 		{
-			CustomMapTelemetry.EndMapTracking();
+			CustomMapTelemetry.OnPlayerLeftMap();
+			if (CustomMapTelemetry.IsActive)
+			{
+				CustomMapTelemetry.EndMapTracking();
+			}
 		}
 	}
 
 	public void OnTriggerExit(Collider other)
 	{
-		if (other == GTPlayer.Instance.headCollider && GorillaComputer.instance.IsPlayerInVirtualStump() && !CustomMapTelemetry.IsActive)
+		if (other == GTPlayer.Instance.headCollider && GorillaComputer.instance.IsPlayerInVirtualStump())
 		{
-			CustomMapTelemetry.StartMapTracking();
+			CustomMapTelemetry.OnPlayerEnteredMap();
+			if (!CustomMapTelemetry.IsActive)
+			{
+				CustomMapTelemetry.StartMapTracking();
+			}
 		}
 	}
 }

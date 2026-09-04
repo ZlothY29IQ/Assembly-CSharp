@@ -149,22 +149,20 @@ public class GorillaNetworkJoinTrigger : GorillaTriggerBox
 		return GameMode.ActiveGameMode?.GameModeName() ?? "";
 	}
 
-	public string GetDesiredGameType()
-	{
-		GameModeType result;
-		return GameMode.GameModeZoneMapping.VerifyModeForZone(zone, Enum.TryParse<GameModeType>(GorillaComputer.instance.currentGameMode.Value, ignoreCase: true, out result) ? result : GameModeType.Casual, NetworkSystem.Instance.SessionIsPrivate).ToString();
-	}
-
 	public GameModeType GetDesiredGameModeType()
 	{
 		GameModeType result;
-		return GameMode.GameModeZoneMapping.VerifyModeForZone(zone, Enum.TryParse<GameModeType>(GorillaComputer.instance.currentGameMode.Value, ignoreCase: true, out result) ? result : GameModeType.Casual, NetworkSystem.Instance.SessionIsPrivate);
+		return GameMode.GameModeZoneMapping.VerifyModeForZone((zone != GTZone.none) ? zone : VRRig.LocalRig.zoneEntity.currentZone, Enum.TryParse<GameModeType>(GorillaComputer.instance.currentGameMode.Value, ignoreCase: true, out result) ? result : GameModeType.Casual, NetworkSystem.Instance.SessionIsPrivate);
+	}
+
+	public string GetDesiredGameType()
+	{
+		return GetDesiredGameModeType().ToString();
 	}
 
 	public string GetDesiredGameTypeLocalized()
 	{
-		GameModeType result;
-		return GorillaGameManager.GameModeEnumToName(GameMode.GameModeZoneMapping.VerifyModeForZone(zone, Enum.TryParse<GameModeType>(GorillaComputer.instance.currentGameMode.Value, ignoreCase: true, out result) ? result : GameModeType.Casual, NetworkSystem.Instance.SessionIsPrivate));
+		return GorillaGameManager.GameModeEnumToName(GetDesiredGameModeType());
 	}
 
 	public virtual string GetFullDesiredGameModeString()

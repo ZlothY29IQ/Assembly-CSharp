@@ -144,7 +144,7 @@ public class RigContainer : MonoBehaviour
 		{
 			if (Rig.isOfflineVRRig)
 			{
-				return new PlayerStatsReadonly(GTPlayerStats.Ping, GTPlayerStats.FPS, GTPlayerStats.TargetFPS);
+				return new PlayerStatsReadonly(GTPlayerStats.Ping, GTPlayerStats.FPS, GTPlayerStats.TargetFPS, GTPlayerStats.SystemPropertiesFlags);
 			}
 			return m_playerStats;
 		}

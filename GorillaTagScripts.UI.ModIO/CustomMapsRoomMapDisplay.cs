@@ -31,6 +31,12 @@ public class CustomMapsRoomMapDisplay : MonoBehaviour
 	private string loadingStatusString = "LOADING...";
 
 	[SerializeField]
+	private string downloadingStatusString = "DOWNLOADING";
+
+	[SerializeField]
+	private string installingStatusString = "INSTALLING";
+
+	[SerializeField]
 	private string readyToPlayStatusString = "READY!";
 
 	[SerializeField]
@@ -68,6 +74,8 @@ public class CustomMapsRoomMapDisplay : MonoBehaviour
 		NetworkSystem.Instance.OnMultiplayerStarted -= new Action(OnJoinedRoom);
 		NetworkSystem.Instance.OnReturnedToSinglePlayer -= new Action(OnDisconnectedFromRoom);
 		CustomMapManager.OnRoomMapChanged.RemoveListener(OnRoomMapChanged);
+		CustomMapManager.OnMapLoadStatusChanged.RemoveListener(OnMapLoadProgress);
+		CustomMapManager.OnMapLoadComplete.RemoveListener(OnMapLoadComplete);
 	}
 
 	private void OnJoinedRoom()
@@ -137,10 +145,23 @@ public class CustomMapsRoomMapDisplay : MonoBehaviour
 
 	private void OnMapLoadProgress(MapLoadStatus status, int progress, string message)
 	{
-		if ((uint)(status - 1) <= 1u)
+		switch (status)
 		{
+		case MapLoadStatus.Downloading:
+			roomMapStatusText.text = ((progress > 0) ? (downloadingStatusString + " " + progress + "%") : downloadingStatusString);
+			roomMapStatusText.color = loadingStatusStringColor;
+			break;
+		case MapLoadStatus.Installing:
+			roomMapStatusText.text = ((progress > 0) ? (installingStatusString + " " + progress + "%") : installingStatusString);
+			roomMapStatusText.color = loadingStatusStringColor;
+			break;
+		case MapLoadStatus.Loading:
 			roomMapStatusText.text = loadingStatusString;
 			roomMapStatusText.color = loadingStatusStringColor;
+			break;
+		case MapLoadStatus.Unloading:
+		case MapLoadStatus.Error:
+			break;
 		}
 	}
 }

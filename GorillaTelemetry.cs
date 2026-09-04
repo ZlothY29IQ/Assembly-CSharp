@@ -100,6 +100,36 @@ public static class GorillaTelemetry
 
 		public const string PrivateRoom = "PrivateRoom";
 
+		public const string MapId = "MapId";
+
+		public const string MapSource = "MapSource";
+
+		public const string CustomMapRegistry = "CustomMapRegistry";
+
+		public const string CreatorId = "CreatorId";
+
+		public const string CreatorUsername = "CreatorUsername";
+
+		public const string MapDateLive = "MapDateLive";
+
+		public const string MapDateUpdated = "MapDateUpdated";
+
+		public const string MapTags = "MapTags";
+
+		public const string MapSupportVersion = "MapSupportVersion";
+
+		public const string MapMaxPlayers = "MapMaxPlayers";
+
+		public const string MapHasCustomGameMode = "MapHasCustomGameMode";
+
+		public const string MapGravityZoneCount = "MapGravityZoneCount";
+
+		public const string MapSizeChangerCount = "MapSizeChangerCount";
+
+		public const string MapHandHoldCount = "MapHandHoldCount";
+
+		public const string MapMapperAssetCount = "MapMapperAssetCount";
+
 		public const string game_mode_played_event = "game_mode_played_event";
 
 		public const string game_mode = "game_mode";
@@ -131,6 +161,8 @@ public static class GorillaTelemetry
 
 	private static readonly Dictionary<string, object> gZoneEventArgs;
 
+	private static readonly Dictionary<string, object> gCustomMapZoneEventArgs;
+
 	private static readonly Dictionary<string, object> gNotifEventArgs;
 
 	public static float nextStayTimestamp;
@@ -154,6 +186,8 @@ public static class GorillaTelemetry
 	private static Dictionary<string, object> gCustomMapTrackingMetrics;
 
 	private static Dictionary<string, object> gCustomMapDownloadMetrics;
+
+	private static Dictionary<string, object> gCustomMapRegistryMetrics;
 
 	private static readonly GhostReactorTelemetryData gGhostReactorShiftStartArgs;
 
@@ -196,6 +230,16 @@ public static class GorillaTelemetry
 			["EventType"] = null,
 			["ZoneId"] = null,
 			["SubZoneId"] = null
+		};
+		gCustomMapZoneEventArgs = new Dictionary<string, object>
+		{
+			["User"] = null,
+			["EventType"] = null,
+			["ZoneId"] = null,
+			["SubZoneId"] = null,
+			["IsPrivateRoom"] = false,
+			["MapId"] = null,
+			["MapSource"] = null
 		};
 		gNotifEventArgs = new Dictionary<string, object>
 		{
@@ -277,6 +321,24 @@ public static class GorillaTelemetry
 			["CustomMapName"] = null,
 			["CustomMapModId"] = null,
 			["CustomMapCreator"] = null
+		};
+		gCustomMapRegistryMetrics = new Dictionary<string, object>
+		{
+			["User"] = null,
+			["CustomMapModId"] = null,
+			["CustomMapName"] = null,
+			["CreatorId"] = null,
+			["CreatorUsername"] = null,
+			["MapDateLive"] = null,
+			["MapDateUpdated"] = null,
+			["MapTags"] = null,
+			["MapSupportVersion"] = null,
+			["MapMaxPlayers"] = null,
+			["MapHasCustomGameMode"] = null,
+			["MapGravityZoneCount"] = null,
+			["MapSizeChangerCount"] = null,
+			["MapHandHoldCount"] = null,
+			["MapMapperAssetCount"] = null
 		};
 		gGhostReactorShiftStartArgs = new GhostReactorTelemetryData
 		{
@@ -767,25 +829,60 @@ public static class GorillaTelemetry
 
 	public static void EnqueueZoneEvent(ZoneDef zone, GTZoneEventType zoneEventType)
 	{
-		if (zoneEventType != GTZoneEventType.zone_stay || !(Time.realtimeSinceStartup < nextStayTimestamp))
+		if (zoneEventType == GTZoneEventType.zone_stay && Time.realtimeSinceStartup < nextStayTimestamp)
 		{
-			nextStayTimestamp = Time.realtimeSinceStartup + (float)zone.trackStayIntervalSec;
-			if (IsConnected() && GorillaServer.Instance.CheckIsTZE_Enabled())
-			{
-				string value = PlayFabUserId();
-				string name = zoneEventType.GetName();
-				string name2 = zone.zoneId.GetName();
-				string name3 = zone.subZoneId.GetName();
-				bool sessionIsPrivate = NetworkSystem.Instance.SessionIsPrivate;
-				Dictionary<string, object> dictionary = gZoneEventArgs;
-				dictionary["User"] = value;
-				dictionary["EventType"] = name;
-				dictionary["ZoneId"] = name2;
-				dictionary["SubZoneId"] = name3;
-				dictionary["IsPrivateRoom"] = sessionIsPrivate;
-				EnqueueTelemetryEvent("telemetry_zone_event", dictionary);
-			}
+			return;
 		}
+		nextStayTimestamp = Time.realtimeSinceStartup + (float)zone.trackStayIntervalSec;
+		if (IsConnected() && GorillaServer.Instance.CheckIsTZE_Enabled())
+		{
+			string value = PlayFabUserId();
+			string name = zoneEventType.GetName();
+			string name2 = zone.zoneId.GetName();
+			string name3 = zone.subZoneId.GetName();
+			bool sessionIsPrivate = NetworkSystem.Instance.SessionIsPrivate;
+			bool num = zone.zoneId == GTZone.customMaps;
+			Dictionary<string, object> dictionary = (num ? gCustomMapZoneEventArgs : gZoneEventArgs);
+			dictionary["User"] = value;
+			dictionary["EventType"] = name;
+			dictionary["ZoneId"] = name2;
+			dictionary["SubZoneId"] = name3;
+			dictionary["IsPrivateRoom"] = sessionIsPrivate;
+			if (num)
+			{
+				dictionary["MapId"] = CustomMapTelemetry.CurrentMapIdString;
+				dictionary["MapSource"] = CustomMapTelemetry.CurrentMapSourceString;
+			}
+			EnqueueTelemetryEvent("telemetry_zone_event", dictionary);
+		}
+	}
+
+	public static bool PostCustomMapZoneEvent(GTZoneEventType zoneEventType, long mapId, string mapSource)
+	{
+		if (!IsConnectedToPlayfab())
+		{
+			return false;
+		}
+		string value = PlayFabUserId();
+		if (string.IsNullOrEmpty(value))
+		{
+			return false;
+		}
+		if (!GorillaServer.Instance.CheckIsTZE_Enabled())
+		{
+			return false;
+		}
+		bool sessionIsPrivate = NetworkSystem.Instance.SessionIsPrivate;
+		Dictionary<string, object> dictionary = gCustomMapZoneEventArgs;
+		dictionary["User"] = value;
+		dictionary["EventType"] = zoneEventType.GetName();
+		dictionary["ZoneId"] = GTZone.customMaps.GetName();
+		dictionary["SubZoneId"] = GTSubZone.none.GetName();
+		dictionary["IsPrivateRoom"] = sessionIsPrivate;
+		dictionary["MapId"] = mapId.ToString();
+		dictionary["MapSource"] = mapSource;
+		EnqueueTelemetryEvent("telemetry_zone_event", dictionary);
+		return true;
 	}
 
 	public static void PostGameModeEvent(GTGameModeEventType gameModeEvent, GameModeType gameMode)
@@ -951,7 +1048,7 @@ public static class GorillaTelemetry
 
 	public static void PostCustomMapPerformance(string mapName, long mapModId, int lowestFPS, int lowestDC, int lowestPC, int avgFPS, int avgDC, int avgPC, int highestFPS, int highestDC, int highestPC, int playtime)
 	{
-		if (IsConnected())
+		if (IsConnectedToPlayfab())
 		{
 			Dictionary<string, object> dictionary = gCustomMapPerfArgs;
 			dictionary["CustomMapName"] = mapName;
@@ -972,7 +1069,7 @@ public static class GorillaTelemetry
 
 	public static void PostCustomMapTracking(string mapName, long mapModId, string mapCreatorUsername, int minPlayers, int maxPlayers, int playtime, bool privateRoom)
 	{
-		if (IsConnected())
+		if (IsConnectedToPlayfab())
 		{
 			int num = playtime % 60;
 			int num2 = (playtime - num) / 60;
@@ -995,6 +1092,30 @@ public static class GorillaTelemetry
 
 	public static void PostCustomMapDownloadEvent(string mapName, long mapModId, string mapCreatorUsername)
 	{
+	}
+
+	public static void PostCustomMapRegistryEvent(long mapModId, string mapName, long creatorId, string creatorUsername, DateTime dateLive, DateTime dateUpdated, string[] tags, int mapSupportVersion, int maxPlayers, bool hasCustomGameMode, int gravityZoneCount, int sizeChangerCount, int handHoldCount, int mapperAssetCount)
+	{
+		if (IsConnectedToPlayfab())
+		{
+			Dictionary<string, object> dictionary = gCustomMapRegistryMetrics;
+			dictionary["User"] = PlayFabUserId();
+			dictionary["CustomMapModId"] = mapModId.ToString();
+			dictionary["CustomMapName"] = mapName;
+			dictionary["CreatorId"] = creatorId.ToString();
+			dictionary["CreatorUsername"] = creatorUsername;
+			dictionary["MapDateLive"] = dateLive.ToString("O");
+			dictionary["MapDateUpdated"] = dateUpdated.ToString("O");
+			dictionary["MapTags"] = tags ?? Array.Empty<string>();
+			dictionary["MapSupportVersion"] = mapSupportVersion.ToString();
+			dictionary["MapMaxPlayers"] = maxPlayers.ToString();
+			dictionary["MapHasCustomGameMode"] = hasCustomGameMode.ToString();
+			dictionary["MapGravityZoneCount"] = gravityZoneCount.ToString();
+			dictionary["MapSizeChangerCount"] = sizeChangerCount.ToString();
+			dictionary["MapHandHoldCount"] = handHoldCount.ToString();
+			dictionary["MapMapperAssetCount"] = mapperAssetCount.ToString();
+			EnqueueTelemetryEvent("CustomMapRegistry", dictionary);
+		}
 	}
 
 	public static void GhostReactorShiftStart(string gameId, int initialCores, float timeIntoShift, bool wasPlayerInAtStart, int numPlayers, int floorJoined, string playerRank)

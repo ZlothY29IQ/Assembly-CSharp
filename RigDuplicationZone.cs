@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class RigDuplicationZone : MonoBehaviour
+public class RigDuplicationZone : RigDisplacementZone
 {
 	public delegate void RigDuplicationZoneAction(RigDuplicationZone z);
 
@@ -13,13 +13,7 @@ public class RigDuplicationZone : MonoBehaviour
 	[SerializeField]
 	private RigDuplicationZone seeSwapFromZone;
 
-	private bool playerInZone;
-
-	private Vector3 offsetToOtherZone;
-
 	public string Id => id;
-
-	public bool IsApplyingDisplacement => otherZone.playerInZone;
 
 	public static event RigDuplicationZoneAction OnEnabled;
 
@@ -32,8 +26,9 @@ public class RigDuplicationZone : MonoBehaviour
 		}
 	}
 
-	private void OnDisable()
+	protected override void OnDisable()
 	{
+		base.OnDisable();
 		OnEnabled -= RigDuplicationZone_OnEnabled;
 	}
 
@@ -49,56 +44,28 @@ public class RigDuplicationZone : MonoBehaviour
 	private void SetOtherZone(RigDuplicationZone z)
 	{
 		otherZone = z;
-		offsetToOtherZone = z.transform.position - base.transform.position;
 		if (seeSwapFromZone == null)
 		{
 			seeSwapFromZone = otherZone;
 		}
 	}
 
-	private void OnTriggerEnter(Collider other)
-	{
-		VRRig component = other.GetComponent<VRRig>();
-		if (!(component == null))
-		{
-			if (component.isLocal)
-			{
-				playerInZone = true;
-			}
-			else
-			{
-				component.SetDuplicationZone(this);
-			}
-		}
-	}
-
-	private void OnTriggerExit(Collider other)
-	{
-		VRRig component = other.GetComponent<VRRig>();
-		if (!(component == null))
-		{
-			if (component.isLocal)
-			{
-				playerInZone = false;
-			}
-			else
-			{
-				component.ClearDuplicationZone(this);
-			}
-		}
-	}
-
-	public Vector3 GetVisualOffsetForRigs(Vector3 cachedOffset)
+	public override Vector3 GetDisplacementForRig(VRRig rig, Vector3 undisplacedPosition)
 	{
 		if (seeSwapFromZone == null)
 		{
 			Debug.LogError("RigDuplicationZone doesn't have an other zone!", base.gameObject);
-			return cachedOffset;
+			return Vector3.zero;
 		}
-		if (!seeSwapFromZone.playerInZone)
+		if (seeSwapFromZone.localPlayerInZone)
 		{
-			return cachedOffset;
+			return seeSwapFromZone.transform.TransformPoint(base.transform.InverseTransformPoint(undisplacedPosition)) - undisplacedPosition;
 		}
-		return offsetToOtherZone + cachedOffset;
+		return Vector3.zero;
+	}
+
+	public override bool IsDisplacingRig(VRRig rig)
+	{
+		return otherZone.localPlayerInZone;
 	}
 }

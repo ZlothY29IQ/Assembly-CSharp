@@ -635,7 +635,7 @@ internal class RoomSystem : MonoBehaviour
 		roomGameMode = NetworkSystem.Instance.GameModeString;
 		WasRoomPrivate = NetworkSystem.Instance.SessionIsPrivate;
 		WasRoomSubscription = NetworkSystem.Instance.SessionIsSubscription;
-		IsVStumpRoom = NetworkSystem.Instance.RoomName.StartsWith(GorillaComputer.instance.VStumpRoomPrepend);
+		IsVStumpRoom = GorillaComputer.instance.IsVStumpRoomName(NetworkSystem.Instance.RoomName);
 		InitialJoinTrigger = GorillaComputer.instance.GetJoinTriggerFromFullGameModeString(roomGameMode);
 		if (!WasRoomPrivate)
 		{

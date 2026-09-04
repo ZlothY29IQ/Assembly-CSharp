@@ -36,6 +36,14 @@ public class ModIOTermsOfUse_v2 : LegalAgreements
 		base.enabled = false;
 	}
 
+	private void OnDestroy()
+	{
+		if (modioTermsInstance == this)
+		{
+			modioTermsInstance = null;
+		}
+	}
+
 	public async Task<Error> ShowTerms()
 	{
 		_ = Error.None;

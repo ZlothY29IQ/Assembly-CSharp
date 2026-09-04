@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using GorillaNetworking;
 using KID.Model;
+using Modio;
 using Newtonsoft.Json;
 using PlayFab;
 using UnityEngine;
@@ -633,7 +634,7 @@ public class KIDManager : MonoBehaviour
 									TMPSession item = obj2.Item2;
 									if (_requestCancellationSource.IsCancellationRequested)
 									{
-										goto IL_06bd;
+										goto IL_074a;
 									}
 									newSession = item;
 								}
@@ -642,7 +643,7 @@ public class KIDManager : MonoBehaviour
 									await LegalAgreements.instance.StartLegalAgreements();
 									if (_requestCancellationSource.IsCancellationRequested)
 									{
-										goto IL_06bd;
+										goto IL_074a;
 									}
 								}
 								if (UpdatePermissions(newSession) && CurrentSession != null)
@@ -654,32 +655,40 @@ public class KIDManager : MonoBehaviour
 									if (!_requestCancellationSource.IsCancellationRequested)
 									{
 										UGCPermissionManager.UseKID();
-										await KIDUI_Controller.Instance.StartKIDScreens(_requestCancellationSource.Token);
-										while (!_requestCancellationSource.IsCancellationRequested)
+										Error error = await ModIOManager.ShowTermsOfUseAtGameLoad();
+										if ((bool)error)
 										{
-											await Task.Yield();
-											if (KIDUI_Controller.IsKIDUIActive)
+											Debug.LogError($"[KID::MANAGER] Failed to show Mod.io Terms of Use at game load: {error}");
+										}
+										if (!_requestCancellationSource.IsCancellationRequested)
+										{
+											await KIDUI_Controller.Instance.StartKIDScreens(_requestCancellationSource.Token);
+											while (!_requestCancellationSource.IsCancellationRequested)
 											{
-												continue;
+												await Task.Yield();
+												if (KIDUI_Controller.IsKIDUIActive)
+												{
+													continue;
+												}
+												if (_requestCancellationSource.IsCancellationRequested)
+												{
+													break;
+												}
+												if (CurrentSession == null)
+												{
+													Debug.LogError("[KID::MANAGER] PHASE SEVEN -- FAILURE -- CurrentSession is NULL, should at least have a default session!");
+													Debug.Log($"[KID::MANAGER] Safeties is: [{PlayFabAuthenticator.instance.GetSafety()}");
+													break;
+												}
+												if (!newSessionData.HasConfirmedSetup)
+												{
+													await KIDMessagingController.StartKIDConfirmationScreen(_requestCancellationSource.Token);
+												}
+												PlayerPrefs.SetInt(PreviousStatusPlayerPrefRef, (int)PreviousStatus);
+												PlayerPrefs.Save();
+												InitialisationSuccessful = true;
+												goto end_IL_00b7;
 											}
-											if (_requestCancellationSource.IsCancellationRequested)
-											{
-												break;
-											}
-											if (CurrentSession == null)
-											{
-												Debug.LogError("[KID::MANAGER] PHASE SEVEN -- FAILURE -- CurrentSession is NULL, should at least have a default session!");
-												Debug.Log($"[KID::MANAGER] Safeties is: [{PlayFabAuthenticator.instance.GetSafety()}");
-												break;
-											}
-											if (!newSessionData.HasConfirmedSetup)
-											{
-												await KIDMessagingController.StartKIDConfirmationScreen(_requestCancellationSource.Token);
-											}
-											PlayerPrefs.SetInt(PreviousStatusPlayerPrefRef, (int)PreviousStatus);
-											PlayerPrefs.Save();
-											InitialisationSuccessful = true;
-											goto end_IL_00b2;
 										}
 									}
 								}
@@ -688,10 +697,10 @@ public class KIDManager : MonoBehaviour
 					}
 				}
 			}
-			goto IL_06bd;
-			IL_06bd:
+			goto IL_074a;
+			IL_074a:
 			num = 1;
-			end_IL_00b2:;
+			end_IL_00b7:;
 		}
 		catch (object obj3)
 		{

@@ -22,7 +22,7 @@ public class GRElevator : MonoBehaviour
 	[Serializable]
 	public enum ButtonType
 	{
-		Stump = 1,
+		Mall = 1,
 		City,
 		GhostReactor,
 		Open,
@@ -33,6 +33,7 @@ public class GRElevator : MonoBehaviour
 		VIMExperience2,
 		VIMExperience3,
 		VIMExperience4,
+		GhostEntrance,
 		Count
 	}
 

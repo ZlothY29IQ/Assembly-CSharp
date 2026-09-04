@@ -110,10 +110,10 @@ internal class VirtualStumpSerializer : GorillaSerializer
 		}
 	}
 
-	public void LoadMapSynced(long modId)
+	public void LoadMapSynced(long modId, GTMapLoadSource loadSource = GTMapLoadSource.none)
 	{
 		CustomMapManager.SetRoomMap(modId);
-		CustomMapManager.LoadMap(new ModId(modId));
+		CustomMapManager.LoadMap(new ModId(modId), loadSource);
 		if (NetworkSystem.Instance.InRoom && NetworkSystem.Instance.SessionIsPrivate)
 		{
 			SendRPC("SetRoomMap_RPC", true, modId);

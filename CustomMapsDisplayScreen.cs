@@ -59,6 +59,15 @@ public class CustomMapsDisplayScreen : CustomMapsTerminalScreen
 	private string mapAutoDownloadingString = "DOWNLOADING...";
 
 	[SerializeField]
+	private string mapDownloadingProgressString = "DOWNLOADING:";
+
+	[SerializeField]
+	private string mapInstallingString = "INSTALLING...";
+
+	[SerializeField]
+	private string mapInstallingProgressString = "INSTALLING:";
+
+	[SerializeField]
 	private string mapLoadingString = "LOADING:";
 
 	[SerializeField]
@@ -485,7 +494,20 @@ public class CustomMapsDisplayScreen : CustomMapsTerminalScreen
 		switch (loadStatus)
 		{
 		case MapLoadStatus.Downloading:
-			loadingMapLabelText.text = mapAutoDownloadingString;
+			loadingMapLabelText.text = ((progress > 0) ? (mapDownloadingProgressString + " " + progress + "%") : mapAutoDownloadingString);
+			loadingMapLabelText.gameObject.SetActive(value: true);
+			loadingMapMessageText.gameObject.SetActive(value: false);
+			loadingMapMessageText.text = "";
+			break;
+		case MapLoadStatus.None:
+			if (!mapLoadError)
+			{
+				loadingMapLabelText.gameObject.SetActive(value: false);
+				loadingMapMessageText.gameObject.SetActive(value: false);
+			}
+			break;
+		case MapLoadStatus.Installing:
+			loadingMapLabelText.text = ((progress > 0) ? (mapInstallingProgressString + " " + progress + "%") : mapInstallingString);
 			loadingMapLabelText.gameObject.SetActive(value: true);
 			loadingMapMessageText.gameObject.SetActive(value: false);
 			loadingMapMessageText.text = "";

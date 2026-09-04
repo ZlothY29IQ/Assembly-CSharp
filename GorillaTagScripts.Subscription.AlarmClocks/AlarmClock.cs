@@ -109,6 +109,12 @@ public sealed class AlarmClock : MonoBehaviour
 		}
 	}
 
+	[ContextMenu("Set Alarm Clock")]
+	private void ToggleAlarmClock()
+	{
+		AlarmClockManager.ToggleAlarmClock(this);
+	}
+
 	private void OnActivateCallback()
 	{
 		_alarmClockOff.SetActive(value: false);

@@ -1,3 +1,4 @@
+using GorillaExtensions;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -22,20 +23,23 @@ public class ReparentOnAwakeWithRenderer : MonoBehaviour, IBuildValidation
 
 	private void OnEnable()
 	{
-		base.transform.SetParent(newParent, worldPositionStays: true);
-		if (sortLast)
+		if (newParent.IsNotNull())
 		{
-			base.transform.SetAsLastSibling();
-		}
-		else
-		{
-			base.transform.SetAsFirstSibling();
-		}
-		if (myRenderer != null)
-		{
-			myRenderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
-			myRenderer.lightProbeUsage = LightProbeUsage.Off;
-			myRenderer.probeAnchor = newParent;
+			base.transform.SetParent(newParent, worldPositionStays: true);
+			if (sortLast)
+			{
+				base.transform.SetAsLastSibling();
+			}
+			else
+			{
+				base.transform.SetAsFirstSibling();
+			}
+			if (myRenderer != null)
+			{
+				myRenderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
+				myRenderer.lightProbeUsage = LightProbeUsage.Off;
+				myRenderer.probeAnchor = newParent;
+			}
 		}
 	}
 

@@ -65,6 +65,12 @@ public class GrowingSnowballThrowable : SnowballThrowable
 	[HideInInspector]
 	public static bool twoHandedSnowballGrowing = true;
 
+	private static bool k_useAOE = false;
+
+	public static bool ForceAOEEnabled = false;
+
+	private static readonly List<SnowballKnockbackEnabler> s_KnockSources = new List<SnowballKnockbackEnabler>(3);
+
 	private Queue<AOERangeDebugDraw> aoeRangeDebugDrawQueue = new Queue<AOERangeDebugDraw>();
 
 	private GrowingSnowballThrowable otherHandSnowball;
@@ -75,6 +81,18 @@ public class GrowingSnowballThrowable : SnowballThrowable
 
 	public int MaxSizeLevel => Mathf.Max(snowballSizeLevels.Count - 1, 0);
 
+	public static bool IsAOEEnabled
+	{
+		get
+		{
+			if (!ForceAOEEnabled)
+			{
+				return k_useAOE;
+			}
+			return true;
+		}
+	}
+
 	public float CurrentSnowballRadius
 	{
 		get
@@ -84,6 +102,26 @@ public class GrowingSnowballThrowable : SnowballThrowable
 				return snowballSizeLevels[sizeLevel].snowballScale * modelRadius * base.transform.lossyScale.x;
 			}
 			return modelRadius * base.transform.lossyScale.x;
+		}
+	}
+
+	public static void NotifyEnableKnockbackIntent(SnowballKnockbackEnabler source)
+	{
+		if (source.IsNotNull() && !s_KnockSources.Contains(source))
+		{
+			s_KnockSources.Add(source);
+		}
+		if (s_KnockSources.Count > 0)
+		{
+			k_useAOE = true;
+		}
+	}
+
+	public static void NotifyDisableKnockbackIntent(SnowballKnockbackEnabler source)
+	{
+		if (source.IsNotNull() && s_KnockSources.Remove(source) && s_KnockSources.Count < 1)
+		{
+			k_useAOE = false;
 		}
 	}
 
@@ -402,7 +440,7 @@ public class GrowingSnowballThrowable : SnowballThrowable
 	private SlingshotProjectile SpawnGrowingSnowball(ref Vector3 velocity, float scale)
 	{
 		SlingshotProjectile component = ObjectPools.instance.Instantiate(randomModelSelection ? localModels[randModelIndex].projectilePrefab : projectilePrefab).GetComponent<SlingshotProjectile>();
-		if (snowballSizeLevels.Count > 0 && sizeLevel >= 0 && sizeLevel < snowballSizeLevels.Count)
+		if (IsAOEEnabled && snowballSizeLevels.Count > 0 && sizeLevel >= 0 && sizeLevel < snowballSizeLevels.Count)
 		{
 			float num = scale / snowballSizeLevels[sizeLevel].snowballScale;
 			SlingshotProjectile.AOEKnockbackConfig aoeKnockbackConfig = snowballSizeLevels[sizeLevel].aoeKnockbackConfig;

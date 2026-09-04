@@ -634,6 +634,8 @@ public static class Bindings
 
 		public Vector3 BodyPosition;
 
+		public float ScaleMultiplier;
+
 		public Vector3 Velocity;
 
 		[MarshalAs(UnmanagedType.U1)]
@@ -676,6 +678,7 @@ public static class Bindings
 				}
 				LuauPlayer* ptr = Luau.lua_class_push<LuauPlayer>(L);
 				ptr->PlayerID = item.ActorNumber;
+				ptr->ScaleMultiplier = 1f;
 				ptr->PlayerMaterial = 0;
 				ptr->IsMasterClient = item.IsMasterClient;
 				LuauPlayerList[item.ActorNumber] = (IntPtr)ptr;
@@ -804,7 +807,7 @@ public static class Bindings
 			List<GameEntity> gameEntities = gameEntityManager.GetGameEntities();
 			for (int i = 0; i < gameEntities.Count; i++)
 			{
-				if (gameEntities[i].gameObject.IsNull())
+				if (gameEntities[i].IsNull() || gameEntities[i].gameObject.IsNull())
 				{
 					continue;
 				}
@@ -857,7 +860,7 @@ public static class Bindings
 				List<GameEntity> gameEntities = gameEntityManager.GetGameEntities();
 				for (int i = 0; i < gameEntities.Count; i++)
 				{
-					if (gameEntities[i].gameObject.IsNull())
+					if (gameEntities[i].IsNull() || gameEntities[i].gameObject.IsNull())
 					{
 						continue;
 					}
@@ -1224,9 +1227,9 @@ public static class Bindings
 	public static class Vec3Functions
 	{
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		internal unsafe delegate int New_00004D1C_0024PostfixBurstDelegate(lua_State* L);
+		internal unsafe delegate int New_00004DE0_0024PostfixBurstDelegate(lua_State* L);
 
-		internal static class New_00004D1C_0024BurstDirectCall
+		internal static class New_00004DE0_0024BurstDirectCall
 		{
 			private static IntPtr Pointer;
 
@@ -1235,7 +1238,7 @@ public static class Bindings
 			{
 				if (Pointer == (IntPtr)0)
 				{
-					Pointer = BurstCompiler.CompileFunctionPointer<New_00004D1C_0024PostfixBurstDelegate>(New).Value;
+					Pointer = BurstCompiler.CompileFunctionPointer<New_00004DE0_0024PostfixBurstDelegate>(New).Value;
 				}
 				P_0 = Pointer;
 			}
@@ -1262,9 +1265,9 @@ public static class Bindings
 		}
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		internal unsafe delegate int Add_00004D1D_0024PostfixBurstDelegate(lua_State* L);
+		internal unsafe delegate int Add_00004DE1_0024PostfixBurstDelegate(lua_State* L);
 
-		internal static class Add_00004D1D_0024BurstDirectCall
+		internal static class Add_00004DE1_0024BurstDirectCall
 		{
 			private static IntPtr Pointer;
 
@@ -1273,7 +1276,7 @@ public static class Bindings
 			{
 				if (Pointer == (IntPtr)0)
 				{
-					Pointer = BurstCompiler.CompileFunctionPointer<Add_00004D1D_0024PostfixBurstDelegate>(Add).Value;
+					Pointer = BurstCompiler.CompileFunctionPointer<Add_00004DE1_0024PostfixBurstDelegate>(Add).Value;
 				}
 				P_0 = Pointer;
 			}
@@ -1300,9 +1303,9 @@ public static class Bindings
 		}
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		internal unsafe delegate int Sub_00004D1E_0024PostfixBurstDelegate(lua_State* L);
+		internal unsafe delegate int Sub_00004DE2_0024PostfixBurstDelegate(lua_State* L);
 
-		internal static class Sub_00004D1E_0024BurstDirectCall
+		internal static class Sub_00004DE2_0024BurstDirectCall
 		{
 			private static IntPtr Pointer;
 
@@ -1311,7 +1314,7 @@ public static class Bindings
 			{
 				if (Pointer == (IntPtr)0)
 				{
-					Pointer = BurstCompiler.CompileFunctionPointer<Sub_00004D1E_0024PostfixBurstDelegate>(Sub).Value;
+					Pointer = BurstCompiler.CompileFunctionPointer<Sub_00004DE2_0024PostfixBurstDelegate>(Sub).Value;
 				}
 				P_0 = Pointer;
 			}
@@ -1338,9 +1341,9 @@ public static class Bindings
 		}
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		internal unsafe delegate int Mul_00004D1F_0024PostfixBurstDelegate(lua_State* L);
+		internal unsafe delegate int Mul_00004DE3_0024PostfixBurstDelegate(lua_State* L);
 
-		internal static class Mul_00004D1F_0024BurstDirectCall
+		internal static class Mul_00004DE3_0024BurstDirectCall
 		{
 			private static IntPtr Pointer;
 
@@ -1349,7 +1352,7 @@ public static class Bindings
 			{
 				if (Pointer == (IntPtr)0)
 				{
-					Pointer = BurstCompiler.CompileFunctionPointer<Mul_00004D1F_0024PostfixBurstDelegate>(Mul).Value;
+					Pointer = BurstCompiler.CompileFunctionPointer<Mul_00004DE3_0024PostfixBurstDelegate>(Mul).Value;
 				}
 				P_0 = Pointer;
 			}
@@ -1376,9 +1379,9 @@ public static class Bindings
 		}
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		internal unsafe delegate int Div_00004D20_0024PostfixBurstDelegate(lua_State* L);
+		internal unsafe delegate int Div_00004DE4_0024PostfixBurstDelegate(lua_State* L);
 
-		internal static class Div_00004D20_0024BurstDirectCall
+		internal static class Div_00004DE4_0024BurstDirectCall
 		{
 			private static IntPtr Pointer;
 
@@ -1387,7 +1390,7 @@ public static class Bindings
 			{
 				if (Pointer == (IntPtr)0)
 				{
-					Pointer = BurstCompiler.CompileFunctionPointer<Div_00004D20_0024PostfixBurstDelegate>(Div).Value;
+					Pointer = BurstCompiler.CompileFunctionPointer<Div_00004DE4_0024PostfixBurstDelegate>(Div).Value;
 				}
 				P_0 = Pointer;
 			}
@@ -1414,9 +1417,9 @@ public static class Bindings
 		}
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		internal unsafe delegate int Unm_00004D21_0024PostfixBurstDelegate(lua_State* L);
+		internal unsafe delegate int Unm_00004DE5_0024PostfixBurstDelegate(lua_State* L);
 
-		internal static class Unm_00004D21_0024BurstDirectCall
+		internal static class Unm_00004DE5_0024BurstDirectCall
 		{
 			private static IntPtr Pointer;
 
@@ -1425,7 +1428,7 @@ public static class Bindings
 			{
 				if (Pointer == (IntPtr)0)
 				{
-					Pointer = BurstCompiler.CompileFunctionPointer<Unm_00004D21_0024PostfixBurstDelegate>(Unm).Value;
+					Pointer = BurstCompiler.CompileFunctionPointer<Unm_00004DE5_0024PostfixBurstDelegate>(Unm).Value;
 				}
 				P_0 = Pointer;
 			}
@@ -1452,9 +1455,9 @@ public static class Bindings
 		}
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		internal unsafe delegate int Eq_00004D22_0024PostfixBurstDelegate(lua_State* L);
+		internal unsafe delegate int Eq_00004DE6_0024PostfixBurstDelegate(lua_State* L);
 
-		internal static class Eq_00004D22_0024BurstDirectCall
+		internal static class Eq_00004DE6_0024BurstDirectCall
 		{
 			private static IntPtr Pointer;
 
@@ -1463,7 +1466,7 @@ public static class Bindings
 			{
 				if (Pointer == (IntPtr)0)
 				{
-					Pointer = BurstCompiler.CompileFunctionPointer<Eq_00004D22_0024PostfixBurstDelegate>(Eq).Value;
+					Pointer = BurstCompiler.CompileFunctionPointer<Eq_00004DE6_0024PostfixBurstDelegate>(Eq).Value;
 				}
 				P_0 = Pointer;
 			}
@@ -1490,9 +1493,9 @@ public static class Bindings
 		}
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		internal unsafe delegate int Dot_00004D24_0024PostfixBurstDelegate(lua_State* L);
+		internal unsafe delegate int Dot_00004DE8_0024PostfixBurstDelegate(lua_State* L);
 
-		internal static class Dot_00004D24_0024BurstDirectCall
+		internal static class Dot_00004DE8_0024BurstDirectCall
 		{
 			private static IntPtr Pointer;
 
@@ -1501,7 +1504,7 @@ public static class Bindings
 			{
 				if (Pointer == (IntPtr)0)
 				{
-					Pointer = BurstCompiler.CompileFunctionPointer<Dot_00004D24_0024PostfixBurstDelegate>(Dot).Value;
+					Pointer = BurstCompiler.CompileFunctionPointer<Dot_00004DE8_0024PostfixBurstDelegate>(Dot).Value;
 				}
 				P_0 = Pointer;
 			}
@@ -1528,9 +1531,9 @@ public static class Bindings
 		}
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		internal unsafe delegate int Cross_00004D25_0024PostfixBurstDelegate(lua_State* L);
+		internal unsafe delegate int Cross_00004DE9_0024PostfixBurstDelegate(lua_State* L);
 
-		internal static class Cross_00004D25_0024BurstDirectCall
+		internal static class Cross_00004DE9_0024BurstDirectCall
 		{
 			private static IntPtr Pointer;
 
@@ -1539,7 +1542,7 @@ public static class Bindings
 			{
 				if (Pointer == (IntPtr)0)
 				{
-					Pointer = BurstCompiler.CompileFunctionPointer<Cross_00004D25_0024PostfixBurstDelegate>(Cross).Value;
+					Pointer = BurstCompiler.CompileFunctionPointer<Cross_00004DE9_0024PostfixBurstDelegate>(Cross).Value;
 				}
 				P_0 = Pointer;
 			}
@@ -1566,9 +1569,9 @@ public static class Bindings
 		}
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		internal unsafe delegate int Project_00004D26_0024PostfixBurstDelegate(lua_State* L);
+		internal unsafe delegate int Project_00004DEA_0024PostfixBurstDelegate(lua_State* L);
 
-		internal static class Project_00004D26_0024BurstDirectCall
+		internal static class Project_00004DEA_0024BurstDirectCall
 		{
 			private static IntPtr Pointer;
 
@@ -1577,7 +1580,7 @@ public static class Bindings
 			{
 				if (Pointer == (IntPtr)0)
 				{
-					Pointer = BurstCompiler.CompileFunctionPointer<Project_00004D26_0024PostfixBurstDelegate>(Project).Value;
+					Pointer = BurstCompiler.CompileFunctionPointer<Project_00004DEA_0024PostfixBurstDelegate>(Project).Value;
 				}
 				P_0 = Pointer;
 			}
@@ -1604,9 +1607,9 @@ public static class Bindings
 		}
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		internal unsafe delegate int Length_00004D27_0024PostfixBurstDelegate(lua_State* L);
+		internal unsafe delegate int Length_00004DEB_0024PostfixBurstDelegate(lua_State* L);
 
-		internal static class Length_00004D27_0024BurstDirectCall
+		internal static class Length_00004DEB_0024BurstDirectCall
 		{
 			private static IntPtr Pointer;
 
@@ -1615,7 +1618,7 @@ public static class Bindings
 			{
 				if (Pointer == (IntPtr)0)
 				{
-					Pointer = BurstCompiler.CompileFunctionPointer<Length_00004D27_0024PostfixBurstDelegate>(Length).Value;
+					Pointer = BurstCompiler.CompileFunctionPointer<Length_00004DEB_0024PostfixBurstDelegate>(Length).Value;
 				}
 				P_0 = Pointer;
 			}
@@ -1642,9 +1645,9 @@ public static class Bindings
 		}
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		internal unsafe delegate int Normalize_00004D28_0024PostfixBurstDelegate(lua_State* L);
+		internal unsafe delegate int Normalize_00004DEC_0024PostfixBurstDelegate(lua_State* L);
 
-		internal static class Normalize_00004D28_0024BurstDirectCall
+		internal static class Normalize_00004DEC_0024BurstDirectCall
 		{
 			private static IntPtr Pointer;
 
@@ -1653,7 +1656,7 @@ public static class Bindings
 			{
 				if (Pointer == (IntPtr)0)
 				{
-					Pointer = BurstCompiler.CompileFunctionPointer<Normalize_00004D28_0024PostfixBurstDelegate>(Normalize).Value;
+					Pointer = BurstCompiler.CompileFunctionPointer<Normalize_00004DEC_0024PostfixBurstDelegate>(Normalize).Value;
 				}
 				P_0 = Pointer;
 			}
@@ -1680,9 +1683,9 @@ public static class Bindings
 		}
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		internal unsafe delegate int SafeNormal_00004D29_0024PostfixBurstDelegate(lua_State* L);
+		internal unsafe delegate int SafeNormal_00004DED_0024PostfixBurstDelegate(lua_State* L);
 
-		internal static class SafeNormal_00004D29_0024BurstDirectCall
+		internal static class SafeNormal_00004DED_0024BurstDirectCall
 		{
 			private static IntPtr Pointer;
 
@@ -1691,7 +1694,7 @@ public static class Bindings
 			{
 				if (Pointer == (IntPtr)0)
 				{
-					Pointer = BurstCompiler.CompileFunctionPointer<SafeNormal_00004D29_0024PostfixBurstDelegate>(SafeNormal).Value;
+					Pointer = BurstCompiler.CompileFunctionPointer<SafeNormal_00004DED_0024PostfixBurstDelegate>(SafeNormal).Value;
 				}
 				P_0 = Pointer;
 			}
@@ -1718,9 +1721,9 @@ public static class Bindings
 		}
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		internal unsafe delegate int Distance_00004D2A_0024PostfixBurstDelegate(lua_State* L);
+		internal unsafe delegate int Distance_00004DEE_0024PostfixBurstDelegate(lua_State* L);
 
-		internal static class Distance_00004D2A_0024BurstDirectCall
+		internal static class Distance_00004DEE_0024BurstDirectCall
 		{
 			private static IntPtr Pointer;
 
@@ -1729,7 +1732,7 @@ public static class Bindings
 			{
 				if (Pointer == (IntPtr)0)
 				{
-					Pointer = BurstCompiler.CompileFunctionPointer<Distance_00004D2A_0024PostfixBurstDelegate>(Distance).Value;
+					Pointer = BurstCompiler.CompileFunctionPointer<Distance_00004DEE_0024PostfixBurstDelegate>(Distance).Value;
 				}
 				P_0 = Pointer;
 			}
@@ -1756,9 +1759,9 @@ public static class Bindings
 		}
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		internal unsafe delegate int Lerp_00004D2B_0024PostfixBurstDelegate(lua_State* L);
+		internal unsafe delegate int Lerp_00004DEF_0024PostfixBurstDelegate(lua_State* L);
 
-		internal static class Lerp_00004D2B_0024BurstDirectCall
+		internal static class Lerp_00004DEF_0024BurstDirectCall
 		{
 			private static IntPtr Pointer;
 
@@ -1767,7 +1770,7 @@ public static class Bindings
 			{
 				if (Pointer == (IntPtr)0)
 				{
-					Pointer = BurstCompiler.CompileFunctionPointer<Lerp_00004D2B_0024PostfixBurstDelegate>(Lerp).Value;
+					Pointer = BurstCompiler.CompileFunctionPointer<Lerp_00004DEF_0024PostfixBurstDelegate>(Lerp).Value;
 				}
 				P_0 = Pointer;
 			}
@@ -1794,9 +1797,9 @@ public static class Bindings
 		}
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		internal unsafe delegate int Rotate_00004D2C_0024PostfixBurstDelegate(lua_State* L);
+		internal unsafe delegate int Rotate_00004DF0_0024PostfixBurstDelegate(lua_State* L);
 
-		internal static class Rotate_00004D2C_0024BurstDirectCall
+		internal static class Rotate_00004DF0_0024BurstDirectCall
 		{
 			private static IntPtr Pointer;
 
@@ -1805,7 +1808,7 @@ public static class Bindings
 			{
 				if (Pointer == (IntPtr)0)
 				{
-					Pointer = BurstCompiler.CompileFunctionPointer<Rotate_00004D2C_0024PostfixBurstDelegate>(Rotate).Value;
+					Pointer = BurstCompiler.CompileFunctionPointer<Rotate_00004DF0_0024PostfixBurstDelegate>(Rotate).Value;
 				}
 				P_0 = Pointer;
 			}
@@ -1832,9 +1835,9 @@ public static class Bindings
 		}
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		internal unsafe delegate int ZeroVector_00004D2D_0024PostfixBurstDelegate(lua_State* L);
+		internal unsafe delegate int ZeroVector_00004DF1_0024PostfixBurstDelegate(lua_State* L);
 
-		internal static class ZeroVector_00004D2D_0024BurstDirectCall
+		internal static class ZeroVector_00004DF1_0024BurstDirectCall
 		{
 			private static IntPtr Pointer;
 
@@ -1843,7 +1846,7 @@ public static class Bindings
 			{
 				if (Pointer == (IntPtr)0)
 				{
-					Pointer = BurstCompiler.CompileFunctionPointer<ZeroVector_00004D2D_0024PostfixBurstDelegate>(ZeroVector).Value;
+					Pointer = BurstCompiler.CompileFunctionPointer<ZeroVector_00004DF1_0024PostfixBurstDelegate>(ZeroVector).Value;
 				}
 				P_0 = Pointer;
 			}
@@ -1870,9 +1873,9 @@ public static class Bindings
 		}
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		internal unsafe delegate int OneVector_00004D2E_0024PostfixBurstDelegate(lua_State* L);
+		internal unsafe delegate int OneVector_00004DF2_0024PostfixBurstDelegate(lua_State* L);
 
-		internal static class OneVector_00004D2E_0024BurstDirectCall
+		internal static class OneVector_00004DF2_0024BurstDirectCall
 		{
 			private static IntPtr Pointer;
 
@@ -1881,7 +1884,7 @@ public static class Bindings
 			{
 				if (Pointer == (IntPtr)0)
 				{
-					Pointer = BurstCompiler.CompileFunctionPointer<OneVector_00004D2E_0024PostfixBurstDelegate>(OneVector).Value;
+					Pointer = BurstCompiler.CompileFunctionPointer<OneVector_00004DF2_0024PostfixBurstDelegate>(OneVector).Value;
 				}
 				P_0 = Pointer;
 			}
@@ -1908,9 +1911,9 @@ public static class Bindings
 		}
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		internal unsafe delegate int NearlyEqual_00004D2F_0024PostfixBurstDelegate(lua_State* L);
+		internal unsafe delegate int NearlyEqual_00004DF3_0024PostfixBurstDelegate(lua_State* L);
 
-		internal static class NearlyEqual_00004D2F_0024BurstDirectCall
+		internal static class NearlyEqual_00004DF3_0024BurstDirectCall
 		{
 			private static IntPtr Pointer;
 
@@ -1919,7 +1922,7 @@ public static class Bindings
 			{
 				if (Pointer == (IntPtr)0)
 				{
-					Pointer = BurstCompiler.CompileFunctionPointer<NearlyEqual_00004D2F_0024PostfixBurstDelegate>(NearlyEqual).Value;
+					Pointer = BurstCompiler.CompileFunctionPointer<NearlyEqual_00004DF3_0024PostfixBurstDelegate>(NearlyEqual).Value;
 				}
 				P_0 = Pointer;
 			}
@@ -1949,49 +1952,49 @@ public static class Bindings
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
 		public unsafe static int New(lua_State* L)
 		{
-			return New_00004D1C_0024BurstDirectCall.Invoke(L);
+			return New_00004DE0_0024BurstDirectCall.Invoke(L);
 		}
 
 		[BurstCompile]
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
 		public unsafe static int Add(lua_State* L)
 		{
-			return Add_00004D1D_0024BurstDirectCall.Invoke(L);
+			return Add_00004DE1_0024BurstDirectCall.Invoke(L);
 		}
 
 		[BurstCompile]
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
 		public unsafe static int Sub(lua_State* L)
 		{
-			return Sub_00004D1E_0024BurstDirectCall.Invoke(L);
+			return Sub_00004DE2_0024BurstDirectCall.Invoke(L);
 		}
 
 		[BurstCompile]
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
 		public unsafe static int Mul(lua_State* L)
 		{
-			return Mul_00004D1F_0024BurstDirectCall.Invoke(L);
+			return Mul_00004DE3_0024BurstDirectCall.Invoke(L);
 		}
 
 		[BurstCompile]
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
 		public unsafe static int Div(lua_State* L)
 		{
-			return Div_00004D20_0024BurstDirectCall.Invoke(L);
+			return Div_00004DE4_0024BurstDirectCall.Invoke(L);
 		}
 
 		[BurstCompile]
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
 		public unsafe static int Unm(lua_State* L)
 		{
-			return Unm_00004D21_0024BurstDirectCall.Invoke(L);
+			return Unm_00004DE5_0024BurstDirectCall.Invoke(L);
 		}
 
 		[BurstCompile]
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
 		public unsafe static int Eq(lua_State* L)
 		{
-			return Eq_00004D22_0024BurstDirectCall.Invoke(L);
+			return Eq_00004DE6_0024BurstDirectCall.Invoke(L);
 		}
 
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
@@ -2006,84 +2009,84 @@ public static class Bindings
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
 		public unsafe static int Dot(lua_State* L)
 		{
-			return Dot_00004D24_0024BurstDirectCall.Invoke(L);
+			return Dot_00004DE8_0024BurstDirectCall.Invoke(L);
 		}
 
 		[BurstCompile]
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
 		public unsafe static int Cross(lua_State* L)
 		{
-			return Cross_00004D25_0024BurstDirectCall.Invoke(L);
+			return Cross_00004DE9_0024BurstDirectCall.Invoke(L);
 		}
 
 		[BurstCompile]
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
 		public unsafe static int Project(lua_State* L)
 		{
-			return Project_00004D26_0024BurstDirectCall.Invoke(L);
+			return Project_00004DEA_0024BurstDirectCall.Invoke(L);
 		}
 
 		[BurstCompile]
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
 		public unsafe static int Length(lua_State* L)
 		{
-			return Length_00004D27_0024BurstDirectCall.Invoke(L);
+			return Length_00004DEB_0024BurstDirectCall.Invoke(L);
 		}
 
 		[BurstCompile]
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
 		public unsafe static int Normalize(lua_State* L)
 		{
-			return Normalize_00004D28_0024BurstDirectCall.Invoke(L);
+			return Normalize_00004DEC_0024BurstDirectCall.Invoke(L);
 		}
 
 		[BurstCompile]
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
 		public unsafe static int SafeNormal(lua_State* L)
 		{
-			return SafeNormal_00004D29_0024BurstDirectCall.Invoke(L);
+			return SafeNormal_00004DED_0024BurstDirectCall.Invoke(L);
 		}
 
 		[BurstCompile]
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
 		public unsafe static int Distance(lua_State* L)
 		{
-			return Distance_00004D2A_0024BurstDirectCall.Invoke(L);
+			return Distance_00004DEE_0024BurstDirectCall.Invoke(L);
 		}
 
 		[BurstCompile]
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
 		public unsafe static int Lerp(lua_State* L)
 		{
-			return Lerp_00004D2B_0024BurstDirectCall.Invoke(L);
+			return Lerp_00004DEF_0024BurstDirectCall.Invoke(L);
 		}
 
 		[BurstCompile]
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
 		public unsafe static int Rotate(lua_State* L)
 		{
-			return Rotate_00004D2C_0024BurstDirectCall.Invoke(L);
+			return Rotate_00004DF0_0024BurstDirectCall.Invoke(L);
 		}
 
 		[BurstCompile]
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
 		public unsafe static int ZeroVector(lua_State* L)
 		{
-			return ZeroVector_00004D2D_0024BurstDirectCall.Invoke(L);
+			return ZeroVector_00004DF1_0024BurstDirectCall.Invoke(L);
 		}
 
 		[BurstCompile]
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
 		public unsafe static int OneVector(lua_State* L)
 		{
-			return OneVector_00004D2E_0024BurstDirectCall.Invoke(L);
+			return OneVector_00004DF2_0024BurstDirectCall.Invoke(L);
 		}
 
 		[BurstCompile]
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
 		public unsafe static int NearlyEqual(lua_State* L)
 		{
-			return NearlyEqual_00004D2F_0024BurstDirectCall.Invoke(L);
+			return NearlyEqual_00004DF3_0024BurstDirectCall.Invoke(L);
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2292,9 +2295,9 @@ public static class Bindings
 	public static class QuatFunctions
 	{
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		internal unsafe delegate int New_00004D30_0024PostfixBurstDelegate(lua_State* L);
+		internal unsafe delegate int New_00004DF4_0024PostfixBurstDelegate(lua_State* L);
 
-		internal static class New_00004D30_0024BurstDirectCall
+		internal static class New_00004DF4_0024BurstDirectCall
 		{
 			private static IntPtr Pointer;
 
@@ -2303,7 +2306,7 @@ public static class Bindings
 			{
 				if (Pointer == (IntPtr)0)
 				{
-					Pointer = BurstCompiler.CompileFunctionPointer<New_00004D30_0024PostfixBurstDelegate>(New).Value;
+					Pointer = BurstCompiler.CompileFunctionPointer<New_00004DF4_0024PostfixBurstDelegate>(New).Value;
 				}
 				P_0 = Pointer;
 			}
@@ -2330,9 +2333,9 @@ public static class Bindings
 		}
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		internal unsafe delegate int Mul_00004D31_0024PostfixBurstDelegate(lua_State* L);
+		internal unsafe delegate int Mul_00004DF5_0024PostfixBurstDelegate(lua_State* L);
 
-		internal static class Mul_00004D31_0024BurstDirectCall
+		internal static class Mul_00004DF5_0024BurstDirectCall
 		{
 			private static IntPtr Pointer;
 
@@ -2341,7 +2344,7 @@ public static class Bindings
 			{
 				if (Pointer == (IntPtr)0)
 				{
-					Pointer = BurstCompiler.CompileFunctionPointer<Mul_00004D31_0024PostfixBurstDelegate>(Mul).Value;
+					Pointer = BurstCompiler.CompileFunctionPointer<Mul_00004DF5_0024PostfixBurstDelegate>(Mul).Value;
 				}
 				P_0 = Pointer;
 			}
@@ -2368,9 +2371,9 @@ public static class Bindings
 		}
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		internal unsafe delegate int Eq_00004D32_0024PostfixBurstDelegate(lua_State* L);
+		internal unsafe delegate int Eq_00004DF6_0024PostfixBurstDelegate(lua_State* L);
 
-		internal static class Eq_00004D32_0024BurstDirectCall
+		internal static class Eq_00004DF6_0024BurstDirectCall
 		{
 			private static IntPtr Pointer;
 
@@ -2379,7 +2382,7 @@ public static class Bindings
 			{
 				if (Pointer == (IntPtr)0)
 				{
-					Pointer = BurstCompiler.CompileFunctionPointer<Eq_00004D32_0024PostfixBurstDelegate>(Eq).Value;
+					Pointer = BurstCompiler.CompileFunctionPointer<Eq_00004DF6_0024PostfixBurstDelegate>(Eq).Value;
 				}
 				P_0 = Pointer;
 			}
@@ -2406,9 +2409,9 @@ public static class Bindings
 		}
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		internal unsafe delegate int FromEuler_00004D34_0024PostfixBurstDelegate(lua_State* L);
+		internal unsafe delegate int FromEuler_00004DF8_0024PostfixBurstDelegate(lua_State* L);
 
-		internal static class FromEuler_00004D34_0024BurstDirectCall
+		internal static class FromEuler_00004DF8_0024BurstDirectCall
 		{
 			private static IntPtr Pointer;
 
@@ -2417,7 +2420,7 @@ public static class Bindings
 			{
 				if (Pointer == (IntPtr)0)
 				{
-					Pointer = BurstCompiler.CompileFunctionPointer<FromEuler_00004D34_0024PostfixBurstDelegate>(FromEuler).Value;
+					Pointer = BurstCompiler.CompileFunctionPointer<FromEuler_00004DF8_0024PostfixBurstDelegate>(FromEuler).Value;
 				}
 				P_0 = Pointer;
 			}
@@ -2444,9 +2447,9 @@ public static class Bindings
 		}
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		internal unsafe delegate int FromDirection_00004D35_0024PostfixBurstDelegate(lua_State* L);
+		internal unsafe delegate int FromDirection_00004DF9_0024PostfixBurstDelegate(lua_State* L);
 
-		internal static class FromDirection_00004D35_0024BurstDirectCall
+		internal static class FromDirection_00004DF9_0024BurstDirectCall
 		{
 			private static IntPtr Pointer;
 
@@ -2455,7 +2458,7 @@ public static class Bindings
 			{
 				if (Pointer == (IntPtr)0)
 				{
-					Pointer = BurstCompiler.CompileFunctionPointer<FromDirection_00004D35_0024PostfixBurstDelegate>(FromDirection).Value;
+					Pointer = BurstCompiler.CompileFunctionPointer<FromDirection_00004DF9_0024PostfixBurstDelegate>(FromDirection).Value;
 				}
 				P_0 = Pointer;
 			}
@@ -2482,9 +2485,9 @@ public static class Bindings
 		}
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		internal unsafe delegate int GetUpVector_00004D36_0024PostfixBurstDelegate(lua_State* L);
+		internal unsafe delegate int GetUpVector_00004DFA_0024PostfixBurstDelegate(lua_State* L);
 
-		internal static class GetUpVector_00004D36_0024BurstDirectCall
+		internal static class GetUpVector_00004DFA_0024BurstDirectCall
 		{
 			private static IntPtr Pointer;
 
@@ -2493,7 +2496,7 @@ public static class Bindings
 			{
 				if (Pointer == (IntPtr)0)
 				{
-					Pointer = BurstCompiler.CompileFunctionPointer<GetUpVector_00004D36_0024PostfixBurstDelegate>(GetUpVector).Value;
+					Pointer = BurstCompiler.CompileFunctionPointer<GetUpVector_00004DFA_0024PostfixBurstDelegate>(GetUpVector).Value;
 				}
 				P_0 = Pointer;
 			}
@@ -2520,9 +2523,9 @@ public static class Bindings
 		}
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		internal unsafe delegate int Euler_00004D37_0024PostfixBurstDelegate(lua_State* L);
+		internal unsafe delegate int Euler_00004DFB_0024PostfixBurstDelegate(lua_State* L);
 
-		internal static class Euler_00004D37_0024BurstDirectCall
+		internal static class Euler_00004DFB_0024BurstDirectCall
 		{
 			private static IntPtr Pointer;
 
@@ -2531,7 +2534,7 @@ public static class Bindings
 			{
 				if (Pointer == (IntPtr)0)
 				{
-					Pointer = BurstCompiler.CompileFunctionPointer<Euler_00004D37_0024PostfixBurstDelegate>(Euler).Value;
+					Pointer = BurstCompiler.CompileFunctionPointer<Euler_00004DFB_0024PostfixBurstDelegate>(Euler).Value;
 				}
 				P_0 = Pointer;
 			}
@@ -2561,21 +2564,21 @@ public static class Bindings
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
 		public unsafe static int New(lua_State* L)
 		{
-			return New_00004D30_0024BurstDirectCall.Invoke(L);
+			return New_00004DF4_0024BurstDirectCall.Invoke(L);
 		}
 
 		[BurstCompile]
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
 		public unsafe static int Mul(lua_State* L)
 		{
-			return Mul_00004D31_0024BurstDirectCall.Invoke(L);
+			return Mul_00004DF5_0024BurstDirectCall.Invoke(L);
 		}
 
 		[BurstCompile]
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
 		public unsafe static int Eq(lua_State* L)
 		{
-			return Eq_00004D32_0024BurstDirectCall.Invoke(L);
+			return Eq_00004DF6_0024BurstDirectCall.Invoke(L);
 		}
 
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
@@ -2590,28 +2593,28 @@ public static class Bindings
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
 		public unsafe static int FromEuler(lua_State* L)
 		{
-			return FromEuler_00004D34_0024BurstDirectCall.Invoke(L);
+			return FromEuler_00004DF8_0024BurstDirectCall.Invoke(L);
 		}
 
 		[BurstCompile]
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
 		public unsafe static int FromDirection(lua_State* L)
 		{
-			return FromDirection_00004D35_0024BurstDirectCall.Invoke(L);
+			return FromDirection_00004DF9_0024BurstDirectCall.Invoke(L);
 		}
 
 		[BurstCompile]
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
 		public unsafe static int GetUpVector(lua_State* L)
 		{
-			return GetUpVector_00004D36_0024BurstDirectCall.Invoke(L);
+			return GetUpVector_00004DFA_0024BurstDirectCall.Invoke(L);
 		}
 
 		[BurstCompile]
 		[MonoPInvokeCallback(typeof(lua_CFunction))]
 		public unsafe static int Euler(lua_State* L)
 		{
-			return Euler_00004D37_0024BurstDirectCall.Invoke(L);
+			return Euler_00004DFB_0024BurstDirectCall.Invoke(L);
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2843,6 +2846,65 @@ public static class Bindings
 			return set.SetEquals(hashSet);
 		}
 
+		private unsafe static bool TryPushValue(lua_State* L, JToken value)
+		{
+			if (value is JObject jObject)
+			{
+				if (CompareKeys(jObject, new HashSet<string> { "x", "y", "z" }))
+				{
+					float x = jObject["x"].ToObject<float>();
+					float y = jObject["y"].ToObject<float>();
+					float z = jObject["z"].ToObject<float>();
+					Vector3 vector = new Vector3(x, y, z);
+					*Luau.lua_class_push<Vector3>(L) = vector;
+				}
+				else if (CompareKeys(jObject, new HashSet<string> { "x", "y", "z", "w" }))
+				{
+					float x2 = jObject["x"].ToObject<float>();
+					float y2 = jObject["y"].ToObject<float>();
+					float z2 = jObject["z"].ToObject<float>();
+					float w = jObject["w"].ToObject<float>();
+					Quaternion quaternion = new Quaternion(x2, y2, z2, w);
+					*Luau.lua_class_push<Quaternion>(L) = quaternion;
+				}
+				else
+				{
+					PushTable(L, jObject);
+				}
+				return true;
+			}
+			if (value is JArray jArray)
+			{
+				Luau.lua_createtable(L, jArray.Count, 0);
+				int num = 0;
+				foreach (JToken item in jArray)
+				{
+					if (item != null && TryPushValue(L, item))
+					{
+						Luau.lua_rawseti(L, -2, ++num);
+					}
+				}
+				return true;
+			}
+			if (value is JValue)
+			{
+				switch (value.Type)
+				{
+				case JTokenType.Integer:
+				case JTokenType.Float:
+					Luau.lua_pushnumber(L, value.ToObject<double>());
+					return true;
+				case JTokenType.Boolean:
+					Luau.lua_pushboolean(L, value.ToObject<bool>() ? 1 : 0);
+					return true;
+				case JTokenType.String:
+					Luau.lua_pushstring(L, value.ToString());
+					return true;
+				}
+			}
+			return false;
+		}
+
 		public unsafe static bool PushTable(lua_State* L, JObject table)
 		{
 			Luau.lua_createtable(L, 0, 0);
@@ -2857,57 +2919,14 @@ public static class Bindings
 				{
 					Luau.lua_pushstring(L, item.Key);
 				}
-				if (item.Value is JObject)
+				if (!TryPushValue(L, item.Value))
 				{
-					if (CompareKeys((JObject)item.Value, new HashSet<string> { "x", "y", "z" }))
+					if (num == -1)
 					{
-						JObject obj = item.Value as JObject;
-						float x = obj["x"].ToObject<float>();
-						float y = obj["y"].ToObject<float>();
-						float z = obj["z"].ToObject<float>();
-						Vector3 vector = new Vector3(x, y, z);
-						*Luau.lua_class_push<Vector3>(L) = vector;
-					}
-					else if (CompareKeys((JObject)item.Value, new HashSet<string> { "x", "y", "z", "w" }))
-					{
-						JObject obj2 = item.Value as JObject;
-						float x2 = obj2["x"].ToObject<float>();
-						float y2 = obj2["y"].ToObject<float>();
-						float z2 = obj2["z"].ToObject<float>();
-						float w = obj2["w"].ToObject<float>();
-						Quaternion quaternion = new Quaternion(x2, y2, z2, w);
-						*Luau.lua_class_push<Quaternion>(L) = quaternion;
-					}
-					else
-					{
-						PushTable(L, (JObject)item.Value);
+						Luau.lua_pop(L, 1);
 					}
 				}
-				else if (item.Value is JValue)
-				{
-					JTokenType type = item.Value.Type;
-					if (type == JTokenType.Integer)
-					{
-						Luau.lua_pushnumber(L, item.Value.ToObject<int>());
-					}
-					else if (type == JTokenType.Boolean)
-					{
-						Luau.lua_pushboolean(L, item.Value.ToObject<bool>() ? 1 : 0);
-					}
-					else if (type == JTokenType.Float)
-					{
-						Luau.lua_pushnumber(L, item.Value.ToObject<double>());
-					}
-					else
-					{
-						if (type != JTokenType.String)
-						{
-							continue;
-						}
-						Luau.lua_pushstring(L, item.Value.ToString());
-					}
-				}
-				if (num == -1)
+				else if (num == -1)
 				{
 					Luau.lua_rawset(L, -3);
 				}
@@ -3440,6 +3459,868 @@ public static class Bindings
 		}
 	}
 
+	[BurstCompile]
+	public struct MInventoryItem
+	{
+		public FixedString512Bytes Name;
+
+		public int Quantity;
+
+		public FixedString512Bytes InGameId;
+
+		public FixedString512Bytes DisplayName;
+
+		public FixedString512Bytes DisplayDescription;
+
+		public FixedString512Bytes ID;
+	}
+
+	[BurstCompile]
+	public struct MOnlineError
+	{
+		public FixedString512Bytes Name;
+
+		public FixedString512Bytes Message;
+
+		public FixedString64Bytes ErrorCode;
+
+		public int HttpCode;
+	}
+
+	[BurstCompile]
+	public static class OnlineFunctions
+	{
+		private class CachedInventoryItem
+		{
+			public string Name;
+
+			public int Quantity;
+
+			public string InGameId;
+
+			public string DisplayName;
+
+			public string DisplayDescription;
+
+			public string ID;
+		}
+
+		private struct CachedOfferDelta
+		{
+			public string Name;
+
+			public int Change;
+
+			public string DisplayName;
+
+			public string DisplayDescription;
+		}
+
+		private class CachedOffer
+		{
+			public string OfferId;
+
+			public int DisplayIndex;
+
+			public bool PurchaseAllowed;
+
+			public string DisplayName;
+
+			public string DisplayDescription;
+
+			public List<CachedOfferDelta> Credits = new List<CachedOfferDelta>();
+
+			public List<CachedOfferDelta> Debits = new List<CachedOfferDelta>();
+		}
+
+		private struct BackendCallState
+		{
+			public bool InFlight;
+
+			public float LastCallTime;
+		}
+
+		private static Dictionary<string, CachedInventoryItem> CachedInventory = null;
+
+		private static string VStumpMothershipOfferDisplayId = "";
+
+		private static Dictionary<string, CachedOffer> CachedStore = null;
+
+		private static bool _consentInFlight = false;
+
+		private const float BackendFunctionCooldownSeconds = 5f;
+
+		private const float BackendFunctionInFlightTimeoutSeconds = 30f;
+
+		private static readonly Dictionary<string, BackendCallState> BackendCallStates = new Dictionary<string, BackendCallState>();
+
+		private unsafe static void DispatchOnlineError(lua_State* L, int errorCallbackRID, LuauScriptRunner runner, string name, string message, string errorCode, int httpCode)
+		{
+			Luau.lua_getref(L, errorCallbackRID);
+			if (Luau.lua_type(L, -1) == 7)
+			{
+				MOnlineError* intPtr = Luau.lua_class_push<MOnlineError>(L);
+				FixedStringMethods.CopyFromTruncated(ref intPtr->Name, name);
+				FixedStringMethods.CopyFromTruncated(ref intPtr->Message, message);
+				FixedStringMethods.CopyFromTruncated(ref intPtr->ErrorCode, errorCode);
+				intPtr->HttpCode = httpCode;
+				int num = Luau.lua_pcall(L, 1, 0, 0);
+				if (num != 0)
+				{
+					if (runner != null)
+					{
+						if (LuauScriptRunner.ErrorCheck(L, num))
+						{
+							runner.ShouldTick = false;
+							return;
+						}
+					}
+					else
+					{
+						sbyte* value = Luau.lua_tostring(L, -1);
+						LuauHud.Instance.LuauLog(new string(value));
+						Luau.lua_pop(L, 1);
+					}
+				}
+			}
+			else
+			{
+				Luau.lua_pop(L, 1);
+			}
+			Luau.lua_unref(L, errorCallbackRID);
+		}
+
+		[MonoPInvokeCallback(typeof(lua_CFunction))]
+		public unsafe static int GetLocalPlayerInventory(lua_State* L)
+		{
+			if (Luau.lua_type(L, 1) != 7)
+			{
+				Luau.luaL_errorL(L, "getInventory expects a callback function");
+				return 0;
+			}
+			if (Luau.lua_type(L, 2) != 7)
+			{
+				Luau.luaL_errorL(L, "getInventory expects an error callback function");
+				return 0;
+			}
+			bool flag = RateLimitBackendFunction(delegate
+			{
+				int callbackRID = Luau.lua_ref(L, 1);
+				int errorCallbackRID = Luau.lua_ref(L, 2);
+				bool userInventory = MothershipClientApiUnity.GetUserInventory(delegate(MothershipGetInventoryResponse Response)
+				{
+					ClearBackendFunctionInFlight("GetInventory");
+					LuauScriptRunner luauScriptRunner = FindAliveScriptRunner(L);
+					if (luauScriptRunner != null)
+					{
+						CachedInventory = new Dictionary<string, CachedInventoryItem>();
+						Luau.lua_getref(L, callbackRID);
+						if (Luau.lua_type(L, -1) == 7)
+						{
+							foreach (KeyValuePair<string, MothershipPlayerInventorySummary> result in Response.Results)
+							{
+								foreach (MothershipInventoryItemSummary entitlement in result.Value.entitlements)
+								{
+									if (CachedInventory.ContainsKey(entitlement.entitlement_id))
+									{
+										CachedInventory[entitlement.entitlement_id].Quantity += entitlement.quantity;
+									}
+									else
+									{
+										CachedInventory.Add(entitlement.entitlement_id, new CachedInventoryItem
+										{
+											DisplayDescription = entitlement.display_description,
+											DisplayName = entitlement.display_name,
+											ID = entitlement.entitlement_id,
+											InGameId = entitlement.in_game_id,
+											Name = entitlement.name,
+											Quantity = entitlement.quantity
+										});
+									}
+								}
+							}
+							Luau.lua_createtable(L, 0, 0);
+							int num = 0;
+							foreach (KeyValuePair<string, CachedInventoryItem> item in CachedInventory)
+							{
+								if (item.Value.InGameId.Contains(CustomMapLoader.LoadedMapModId.ToString()) || item.Value.InGameId.Equals("geodes", StringComparison.OrdinalIgnoreCase))
+								{
+									MInventoryItem* intPtr = Luau.lua_class_push<MInventoryItem>(L);
+									FixedStringMethods.CopyFromTruncated(ref intPtr->InGameId, item.Value.InGameId);
+									intPtr->Quantity = item.Value.Quantity;
+									FixedStringMethods.CopyFromTruncated(ref intPtr->Name, item.Value.Name);
+									FixedStringMethods.CopyFromTruncated(ref intPtr->DisplayDescription, item.Value.DisplayDescription);
+									FixedStringMethods.CopyFromTruncated(ref intPtr->DisplayName, item.Value.DisplayName);
+									FixedStringMethods.CopyFromTruncated(ref intPtr->ID, item.Value.ID);
+									Luau.lua_rawseti(L, -2, ++num);
+								}
+							}
+							int status = Luau.lua_pcall(L, 1, 0, 0);
+							if (LuauScriptRunner.ErrorCheck(L, status))
+							{
+								luauScriptRunner.ShouldTick = false;
+								return;
+							}
+						}
+						else
+						{
+							Luau.lua_pop(L, 1);
+						}
+						Luau.lua_unref(L, callbackRID);
+						Luau.lua_unref(L, errorCallbackRID);
+					}
+				}, delegate(MothershipError Error, int code)
+				{
+					ClearBackendFunctionInFlight("GetInventory");
+					LuauScriptRunner luauScriptRunner = FindAliveScriptRunner(L);
+					if (luauScriptRunner != null)
+					{
+						Luau.lua_unref(L, callbackRID);
+						Luau.lua_getref(L, errorCallbackRID);
+						if (Luau.lua_type(L, -1) == 7)
+						{
+							MOnlineError* intPtr = Luau.lua_class_push<MOnlineError>(L);
+							FixedStringMethods.CopyFromTruncated(ref intPtr->Name, Error.Name);
+							FixedStringMethods.CopyFromTruncated(ref intPtr->Message, Error.Message);
+							FixedStringMethods.CopyFromTruncated(ref intPtr->ErrorCode, Error.MothershipErrorCode);
+							intPtr->HttpCode = code;
+							int status = Luau.lua_pcall(L, 1, 0, 0);
+							if (LuauScriptRunner.ErrorCheck(L, status))
+							{
+								luauScriptRunner.ShouldTick = false;
+								return;
+							}
+						}
+						else
+						{
+							Luau.lua_pop(L, 1);
+						}
+						Luau.lua_unref(L, errorCallbackRID);
+					}
+				});
+				if (!userInventory)
+				{
+					Luau.lua_unref(L, callbackRID);
+					Luau.lua_unref(L, errorCallbackRID);
+				}
+				return userInventory;
+			}, "GetInventory");
+			Luau.lua_pushboolean(L, flag ? 1 : 0);
+			return 1;
+		}
+
+		[MonoPInvokeCallback(typeof(lua_CFunction))]
+		public unsafe static int GetInventoryForPlayer(lua_State* L)
+		{
+			Debug.Log("In get inventory for player");
+			if (Luau.lua_type(L, 1) != 3)
+			{
+				Luau.luaL_errorL(L, "getInventoryForPlayer expects a number as the first argument");
+				return 0;
+			}
+			if (Luau.lua_type(L, 2) != 7)
+			{
+				Luau.luaL_errorL(L, "getInventoryForPlayer expects a callback function");
+				return 0;
+			}
+			if (Luau.lua_type(L, 3) != 7)
+			{
+				Luau.luaL_errorL(L, "getInventoryForPlayer expects an error callback function");
+				return 0;
+			}
+			Debug.Log("Past get inventory for player param validation");
+			bool flag = RateLimitBackendFunction(delegate
+			{
+				int playerID = (int)Luau.luaL_checknumber(L, 1);
+				int callbackRID = Luau.lua_ref(L, 2);
+				int errorCallbackRID = Luau.lua_ref(L, 3);
+				string playerMothershipId = NetworkSystem.Instance.GetPlayerMothershipId(playerID);
+				Debug.Log("Target Mothership ID " + playerMothershipId);
+				if (!playerMothershipId.IsNullOrEmpty())
+				{
+					bool userInventory = MothershipClientApiUnity.GetUserInventory(playerMothershipId, delegate(MothershipGetMergedInventoryResponse Response)
+					{
+						Debug.Log("In get user inventory success callback");
+						ClearBackendFunctionInFlight("GetInventoryForUser");
+						LuauScriptRunner luauScriptRunner2 = FindAliveScriptRunner(L);
+						if (luauScriptRunner2 != null)
+						{
+							Luau.lua_getref(L, callbackRID);
+							if (Luau.lua_type(L, -1) == 7)
+							{
+								Luau.lua_createtable(L, 0, 0);
+								int num = 0;
+								foreach (MothershipInventoryItemSummary result in Response.Results)
+								{
+									if (result.in_game_id.Contains(CustomMapLoader.LoadedMapModId.ToString()) || result.in_game_id.Equals("geodes", StringComparison.OrdinalIgnoreCase))
+									{
+										MInventoryItem* intPtr2 = Luau.lua_class_push<MInventoryItem>(L);
+										FixedStringMethods.CopyFromTruncated(ref intPtr2->InGameId, result.in_game_id);
+										intPtr2->Quantity = result.quantity;
+										FixedStringMethods.CopyFromTruncated(ref intPtr2->Name, result.name);
+										FixedStringMethods.CopyFromTruncated(ref intPtr2->DisplayDescription, result.display_description);
+										FixedStringMethods.CopyFromTruncated(ref intPtr2->DisplayName, result.display_name);
+										FixedStringMethods.CopyFromTruncated(ref intPtr2->ID, result.entitlement_id);
+										Luau.lua_rawseti(L, -2, ++num);
+									}
+								}
+								Debug.Log("In get user inventory success callback, calling back lua now");
+								int status2 = Luau.lua_pcall(L, 1, 0, 0);
+								if (LuauScriptRunner.ErrorCheck(L, status2))
+								{
+									luauScriptRunner2.ShouldTick = false;
+									return;
+								}
+							}
+							else
+							{
+								Luau.lua_pop(L, 1);
+							}
+							Luau.lua_unref(L, callbackRID);
+							Luau.lua_unref(L, errorCallbackRID);
+						}
+					}, delegate(MothershipError Error, int code)
+					{
+						ClearBackendFunctionInFlight("GetInventoryForUser");
+						LuauScriptRunner luauScriptRunner2 = FindAliveScriptRunner(L);
+						if (luauScriptRunner2 != null)
+						{
+							Luau.lua_unref(L, callbackRID);
+							Luau.lua_getref(L, errorCallbackRID);
+							if (Luau.lua_type(L, -1) == 7)
+							{
+								MOnlineError* intPtr2 = Luau.lua_class_push<MOnlineError>(L);
+								FixedStringMethods.CopyFromTruncated(ref intPtr2->Name, Error.Name);
+								FixedStringMethods.CopyFromTruncated(ref intPtr2->Message, Error.Message);
+								FixedStringMethods.CopyFromTruncated(ref intPtr2->ErrorCode, Error.MothershipErrorCode);
+								intPtr2->HttpCode = code;
+								int status2 = Luau.lua_pcall(L, 1, 0, 0);
+								if (LuauScriptRunner.ErrorCheck(L, status2))
+								{
+									luauScriptRunner2.ShouldTick = false;
+									return;
+								}
+							}
+							else
+							{
+								Luau.lua_pop(L, 1);
+							}
+							Luau.lua_unref(L, errorCallbackRID);
+						}
+					});
+					if (!userInventory)
+					{
+						Luau.lua_unref(L, callbackRID);
+						Luau.lua_unref(L, errorCallbackRID);
+					}
+					return userInventory;
+				}
+				ClearBackendFunctionInFlight("GetInventoryForUser");
+				LuauScriptRunner luauScriptRunner = FindAliveScriptRunner(L);
+				Luau.lua_unref(L, callbackRID);
+				if (luauScriptRunner == null)
+				{
+					Luau.lua_unref(L, errorCallbackRID);
+					return false;
+				}
+				Luau.lua_getref(L, errorCallbackRID);
+				if (Luau.lua_type(L, -1) == 7)
+				{
+					MOnlineError* intPtr = Luau.lua_class_push<MOnlineError>(L);
+					FixedStringMethods.CopyFromTruncated(ref intPtr->Name, "No Mothership Player found for that actor ID");
+					FixedStringMethods.CopyFromTruncated(ref intPtr->Message, "Is that actor ID in this room?");
+					FixedStringMethods.CopyFromTruncated(ref intPtr->ErrorCode, "99999");
+					intPtr->HttpCode = 0;
+					int status = Luau.lua_pcall(L, 1, 0, 0);
+					if (LuauScriptRunner.ErrorCheck(L, status))
+					{
+						luauScriptRunner.ShouldTick = false;
+						return false;
+					}
+				}
+				Luau.lua_unref(L, errorCallbackRID);
+				return false;
+			}, "GetInventoryForUser");
+			Luau.lua_pushboolean(L, flag ? 1 : 0);
+			return 1;
+		}
+
+		private unsafe static LuauScriptRunner FindAliveScriptRunner(lua_State* L)
+		{
+			foreach (LuauScriptRunner scriptRunner in LuauScriptRunner.ScriptRunners)
+			{
+				if (scriptRunner.L == L)
+				{
+					return scriptRunner.ShouldTick ? scriptRunner : null;
+				}
+			}
+			return null;
+		}
+
+		public static void ResetOnlineFunctionsState()
+		{
+			VStumpMothershipOfferDisplayId = "";
+			CachedStore = null;
+			CachedInventory = null;
+			_consentInFlight = false;
+		}
+
+		[MonoPInvokeCallback(typeof(lua_CFunction))]
+		public unsafe static int LoadStorefront(lua_State* L)
+		{
+			if (Luau.lua_type(L, 1) != 7)
+			{
+				Luau.luaL_errorL(L, "getStore expects a callback function");
+				return 0;
+			}
+			if (Luau.lua_type(L, 2) != 7)
+			{
+				Luau.luaL_errorL(L, "getStore expects an error callback function");
+				return 0;
+			}
+			bool flag = RateLimitBackendFunction(delegate
+			{
+				int callbackRID = Luau.lua_ref(L, 1);
+				int errorCallbackRID = Luau.lua_ref(L, 2);
+				bool storefront = MothershipClientApiUnity.GetStorefront(new string[0], delegate(MothershipGetStorefrontResponse Response)
+				{
+					ClearBackendFunctionInFlight("GetStore");
+					LuauScriptRunner luauScriptRunner = FindAliveScriptRunner(L);
+					if (luauScriptRunner != null)
+					{
+						CachedStore = new Dictionary<string, CachedOffer>();
+						Luau.lua_getref(L, callbackRID);
+						if (Luau.lua_type(L, -1) == 7)
+						{
+							JObject jObject = new JObject();
+							foreach (KeyValuePair<string, MothershipBoundOfferDisplay> result in Response.Results)
+							{
+								JArray jArray = new JArray();
+								if (!result.Key.Equals("vstump", StringComparison.OrdinalIgnoreCase))
+								{
+									Debug.Log("Skipping offer display " + result.Key + " because it wasn't vstump");
+								}
+								else
+								{
+									if (VStumpMothershipOfferDisplayId.IsNullOrEmpty())
+									{
+										VStumpMothershipOfferDisplayId = result.Value.offer_display_id;
+									}
+									foreach (MothershipNormalizedOffer offer in result.Value.offers)
+									{
+										CachedOffer cachedOffer = new CachedOffer
+										{
+											OfferId = offer.OfferId,
+											DisplayIndex = offer.DisplayIndex,
+											PurchaseAllowed = offer.PurchaseAllowed,
+											DisplayName = offer.DisplayName,
+											DisplayDescription = offer.DisplayDescription
+										};
+										foreach (KeyValuePair<string, MothershipEntitlementDeltaSummary> personalCredit in offer.PersonalCredits)
+										{
+											cachedOffer.Credits.Add(new CachedOfferDelta
+											{
+												Name = personalCredit.Value.name,
+												Change = personalCredit.Value.change,
+												DisplayDescription = personalCredit.Value.display_description,
+												DisplayName = personalCredit.Value.display_name
+											});
+										}
+										foreach (KeyValuePair<string, MothershipEntitlementDeltaSummary> personalDebit in offer.PersonalDebits)
+										{
+											cachedOffer.Debits.Add(new CachedOfferDelta
+											{
+												Name = personalDebit.Value.name,
+												Change = personalDebit.Value.change,
+												DisplayDescription = personalDebit.Value.display_description,
+												DisplayName = personalDebit.Value.display_name
+											});
+										}
+										CachedStore[offer.OfferId] = cachedOffer;
+										if (offer.OfferName.Contains(CustomMapLoader.LoadedMapModId.ToString()))
+										{
+											JObject jObject2 = new JObject
+											{
+												{ "name", offer.OfferName },
+												{ "displayIndex", offer.DisplayIndex },
+												{ "purchasable", offer.PurchaseAllowed },
+												{
+													"displayId",
+													result.Value.offer_display_id
+												},
+												{ "id", offer.OfferId },
+												{ "displayName", offer.DisplayName },
+												{ "displayDescription", offer.DisplayDescription }
+											};
+											JObject jObject3 = new JObject();
+											foreach (KeyValuePair<string, MothershipEntitlementDeltaSummary> personalCredit2 in offer.PersonalCredits)
+											{
+												jObject3.Add(personalCredit2.Key, new JObject
+												{
+													{
+														"inGameId",
+														personalCredit2.Value.in_game_id
+													},
+													{
+														"change",
+														personalCredit2.Value.change
+													},
+													{
+														"displayName",
+														personalCredit2.Value.display_name
+													},
+													{
+														"displayDescription",
+														personalCredit2.Value.display_description
+													}
+												});
+											}
+											jObject2.Add("credits", jObject3);
+											JObject jObject4 = new JObject();
+											foreach (KeyValuePair<string, MothershipEntitlementDeltaSummary> personalDebit2 in offer.PersonalDebits)
+											{
+												jObject4.Add(personalDebit2.Key, new JObject
+												{
+													{
+														"inGameId",
+														personalDebit2.Value.in_game_id
+													},
+													{
+														"change",
+														personalDebit2.Value.change
+													},
+													{
+														"displayName",
+														personalDebit2.Value.display_name
+													},
+													{
+														"displayDescription",
+														personalDebit2.Value.display_description
+													}
+												});
+											}
+											jObject2.Add("debits", jObject4);
+											jArray.Add(jObject2);
+										}
+									}
+									jObject.Add(result.Key, jArray);
+								}
+							}
+							JSON.PushTable(L, jObject);
+							int status = Luau.lua_pcall(L, 1, 0, 0);
+							if (LuauScriptRunner.ErrorCheck(L, status))
+							{
+								luauScriptRunner.ShouldTick = false;
+								return;
+							}
+						}
+						else
+						{
+							Luau.lua_pop(L, 1);
+						}
+						Luau.lua_unref(L, callbackRID);
+						Luau.lua_unref(L, errorCallbackRID);
+					}
+				}, delegate(MothershipError Error, int StatusCode)
+				{
+					ClearBackendFunctionInFlight("GetStore");
+					LuauScriptRunner luauScriptRunner = FindAliveScriptRunner(L);
+					if (luauScriptRunner != null)
+					{
+						Luau.lua_unref(L, callbackRID);
+						Luau.lua_getref(L, errorCallbackRID);
+						if (Luau.lua_type(L, -1) == 7)
+						{
+							MOnlineError* intPtr = Luau.lua_class_push<MOnlineError>(L);
+							FixedStringMethods.CopyFromTruncated(ref intPtr->Name, Error.Name);
+							FixedStringMethods.CopyFromTruncated(ref intPtr->Message, Error.Message);
+							FixedStringMethods.CopyFromTruncated(ref intPtr->ErrorCode, Error.MothershipErrorCode);
+							intPtr->HttpCode = StatusCode;
+							int status = Luau.lua_pcall(L, 1, 0, 0);
+							if (LuauScriptRunner.ErrorCheck(L, status))
+							{
+								luauScriptRunner.ShouldTick = false;
+								return;
+							}
+						}
+						else
+						{
+							Luau.lua_pop(L, 1);
+						}
+						Luau.lua_unref(L, errorCallbackRID);
+					}
+				});
+				if (!storefront)
+				{
+					Luau.lua_unref(L, callbackRID);
+					Luau.lua_unref(L, errorCallbackRID);
+				}
+				return storefront;
+			}, "GetStore");
+			Luau.lua_pushboolean(L, flag ? 1 : 0);
+			return 1;
+		}
+
+		[MonoPInvokeCallback(typeof(lua_CFunction))]
+		public unsafe static int TryPurchase(lua_State* L)
+		{
+			if (Luau.lua_type(L, 1) != 5)
+			{
+				Luau.luaL_errorL(L, "tryPurchase expects a string offer id first parameter");
+				return 0;
+			}
+			if (Luau.lua_type(L, 2) != 7)
+			{
+				Luau.luaL_errorL(L, "tryPurchase expects a callback function second parameter");
+				return 0;
+			}
+			if (Luau.lua_type(L, 3) != 7)
+			{
+				Luau.luaL_errorL(L, "tryPurchase expects an error callback function third parameter");
+				return 0;
+			}
+			string offerId = Marshal.PtrToStringAnsi((IntPtr)Luau.luaL_checkstring(L, 1));
+			int callbackRID = Luau.lua_ref(L, 2);
+			int errorCallbackRID = Luau.lua_ref(L, 3);
+			if (VStumpMothershipOfferDisplayId.IsNullOrEmpty() || CachedStore == null)
+			{
+				Debug.LogError("Need to fetch store before purchase");
+				Luau.lua_unref(L, callbackRID);
+				DispatchOnlineError(L, errorCallbackRID, null, "StoreFetchRequired", "You must fetch the store before attempting a purchase", "0", 0);
+				return 0;
+			}
+			if (!CachedStore.ContainsKey(offerId))
+			{
+				Debug.LogError("Tried to purchase an offer not in the store cache");
+				Luau.lua_unref(L, callbackRID);
+				DispatchOnlineError(L, errorCallbackRID, null, "StoreOfferMismatch", "Tried to purchase an offer not in the store cache, try re-fetching the store and look at the script.", "0", 0);
+				return 0;
+			}
+			if (_consentInFlight)
+			{
+				Debug.LogError("Must close other consent ui before invoking a new consent UI");
+				Luau.lua_unref(L, callbackRID);
+				DispatchOnlineError(L, errorCallbackRID, null, "OtherOperationInProgress", "Only 1 consent operation is allowed at a time. Make sure that you're not spamming", "0", 0);
+				return 0;
+			}
+			_consentInFlight = true;
+			CachedOffer offerToPurchase = CachedStore[offerId];
+			List<ConsentScreen.ConsentCost> list = new List<ConsentScreen.ConsentCost>(offerToPurchase.Debits.Count);
+			foreach (CachedOfferDelta debit in offerToPurchase.Debits)
+			{
+				int currentBalance = 0;
+				bool hasBalance = false;
+				if (CachedInventory != null)
+				{
+					foreach (CachedInventoryItem value in CachedInventory.Values)
+					{
+						if (value.Name == debit.Name)
+						{
+							currentBalance = value.Quantity;
+							hasBalance = true;
+							break;
+						}
+					}
+				}
+				list.Add(new ConsentScreen.ConsentCost
+				{
+					DisplayName = debit.DisplayName,
+					Amount = Mathf.Abs(debit.Change),
+					CurrentBalance = currentBalance,
+					HasBalance = hasBalance
+				});
+			}
+			ConsentScreen.StartConsentFlow(offerToPurchase.DisplayName, list, delegate(bool Consented, Action<string> AsyncWorkComplete)
+			{
+				if (!Consented)
+				{
+					_consentInFlight = false;
+					AsyncWorkComplete("");
+					Debug.LogError("Consent Denied");
+					LuauScriptRunner luauScriptRunner = FindAliveScriptRunner(L);
+					if (luauScriptRunner != null)
+					{
+						Luau.lua_unref(L, callbackRID);
+						DispatchOnlineError(L, errorCallbackRID, luauScriptRunner, "ConsentDenied", "The player did not consent to this purchase. They can re-open the UI and try again.", "0", 0);
+					}
+				}
+				else
+				{
+					MothershipClientApiUnity.PurchaseOffer(VStumpMothershipOfferDisplayId, offerId, offerToPurchase.DisplayIndex, delegate(MothershipPurchaseOfferResponse Response)
+					{
+						_consentInFlight = false;
+						CachedInventory = null;
+						AsyncWorkComplete("Purchase Completed!");
+						LuauScriptRunner luauScriptRunner2 = FindAliveScriptRunner(L);
+						if (luauScriptRunner2 != null)
+						{
+							Luau.lua_unref(L, errorCallbackRID);
+							Luau.lua_getref(L, callbackRID);
+							if (Luau.lua_type(L, -1) == 7)
+							{
+								Luau.lua_createtable(L, 0, 0);
+								int num = 0;
+								foreach (KeyValuePair<string, MothershipEntitlementUpdate> change in Response.Changes)
+								{
+									MInventoryItem* intPtr = Luau.lua_class_push<MInventoryItem>(L);
+									FixedStringMethods.CopyFromTruncated(ref intPtr->InGameId, change.Value.in_game_id);
+									intPtr->Quantity = change.Value.quantity;
+									FixedStringMethods.CopyFromTruncated(ref intPtr->Name, change.Value.name);
+									FixedStringMethods.CopyFromTruncated(ref intPtr->DisplayDescription, change.Value.display_description);
+									FixedStringMethods.CopyFromTruncated(ref intPtr->DisplayName, change.Value.display_name);
+									FixedStringMethods.CopyFromTruncated(ref intPtr->ID, change.Value.entitlement_id);
+									Luau.lua_rawseti(L, -2, ++num);
+								}
+								int status = Luau.lua_pcall(L, 1, 0, 0);
+								if (LuauScriptRunner.ErrorCheck(L, status))
+								{
+									luauScriptRunner2.ShouldTick = false;
+									return;
+								}
+							}
+							else
+							{
+								Luau.lua_pop(L, 1);
+							}
+							Luau.lua_unref(L, callbackRID);
+						}
+					}, delegate(MothershipError Error, int StatusCode)
+					{
+						_consentInFlight = false;
+						Debug.LogError(Error.Name + ": " + Error.Message + " " + Error.MothershipErrorCode);
+						AsyncWorkComplete("Purchase Failed: " + Error.MothershipErrorCode + ": " + Error.Message);
+						LuauScriptRunner luauScriptRunner2 = FindAliveScriptRunner(L);
+						if (luauScriptRunner2 != null)
+						{
+							Luau.lua_unref(L, callbackRID);
+							DispatchOnlineError(L, errorCallbackRID, luauScriptRunner2, Error.Name, Error.Message, Error.MothershipErrorCode, StatusCode);
+						}
+					});
+				}
+			});
+			return 0;
+		}
+
+		[MonoPInvokeCallback(typeof(lua_CFunction))]
+		public unsafe static int TryConsume(lua_State* L)
+		{
+			if (Luau.lua_type(L, 1) != 5)
+			{
+				Luau.luaL_errorL(L, "tryConsume expects a string entitlement id first parameter");
+				return 0;
+			}
+			if (Luau.lua_type(L, 2) != 7)
+			{
+				Luau.luaL_errorL(L, "tryConsume expects a callback function second parameter");
+				return 0;
+			}
+			if (Luau.lua_type(L, 3) != 7)
+			{
+				Luau.luaL_errorL(L, "tryConsume expects an error callback function third parameter");
+				return 0;
+			}
+			string entitlementId = Marshal.PtrToStringAnsi((IntPtr)Luau.luaL_checkstring(L, 1));
+			int callbackRID = Luau.lua_ref(L, 2);
+			int errorCallbackRID = Luau.lua_ref(L, 3);
+			if (CachedInventory == null || !CachedInventory.ContainsKey(entitlementId) || CachedInventory[entitlementId].Quantity < 1)
+			{
+				Debug.LogError("Need to fetch inventory before consumption, and this player must have this entitlement in their inventory");
+				Luau.lua_unref(L, callbackRID);
+				DispatchOnlineError(L, errorCallbackRID, null, "InventoryFetchRequired", "Need to fetch inventory before consumption, and this player must have this entitlement in their inventory", "0", 0);
+				return 0;
+			}
+			MothershipClientApiUnity.ConsumeConsumable(entitlementId, delegate(MothershipConsumeConsumableResponse Response)
+			{
+				LuauScriptRunner luauScriptRunner = FindAliveScriptRunner(L);
+				if (luauScriptRunner != null)
+				{
+					Luau.lua_unref(L, errorCallbackRID);
+					Luau.lua_getref(L, callbackRID);
+					if (Luau.lua_type(L, -1) == 7)
+					{
+						MInventoryItem* intPtr = Luau.lua_class_push<MInventoryItem>(L);
+						FixedStringMethods.CopyFromTruncated(ref intPtr->InGameId, Response.Entitlement.inGameId);
+						intPtr->Quantity = Response.NewQuantity;
+						FixedStringMethods.CopyFromTruncated(ref intPtr->Name, Response.Entitlement.name);
+						FixedStringMethods.CopyFromTruncated(ref intPtr->DisplayDescription, Response.Entitlement.display_description);
+						FixedStringMethods.CopyFromTruncated(ref intPtr->DisplayName, Response.Entitlement.display_name);
+						FixedStringMethods.CopyFromTruncated(ref intPtr->ID, Response.Entitlement.entitlementId);
+						if (CachedInventory != null && CachedInventory.ContainsKey(entitlementId))
+						{
+							CachedInventory[entitlementId].Quantity--;
+						}
+						int status = Luau.lua_pcall(L, 1, 0, 0);
+						if (LuauScriptRunner.ErrorCheck(L, status))
+						{
+							luauScriptRunner.ShouldTick = false;
+							return;
+						}
+					}
+					else
+					{
+						Luau.lua_pop(L, 1);
+					}
+					Luau.lua_unref(L, callbackRID);
+				}
+			}, delegate(MothershipError Error, int StatusCode)
+			{
+				Debug.LogError(Error.Name + ": " + Error.Message + " " + Error.MothershipErrorCode);
+				LuauScriptRunner luauScriptRunner = FindAliveScriptRunner(L);
+				if (luauScriptRunner != null)
+				{
+					Luau.lua_unref(L, callbackRID);
+					DispatchOnlineError(L, errorCallbackRID, luauScriptRunner, Error.Name, Error.Message, Error.MothershipErrorCode, StatusCode);
+				}
+			});
+			return 0;
+		}
+
+		private static bool RateLimitBackendFunction(Func<bool> Action, string Key)
+		{
+			if (!CustomMapLoader.LoadedMapModId.IsValid())
+			{
+				Debug.LogError("Tried to call an online function with an invalid map id");
+				return false;
+			}
+			if (CustomMapLoader.LoadedMapModId._id == 9999999999L)
+			{
+				Debug.LogError("Tried to call an online function with a map id that indicates this map is sideloaded or otherwise local");
+				return false;
+			}
+			float realtimeSinceStartup = Time.realtimeSinceStartup;
+			if (BackendCallStates.TryGetValue(Key, out var value))
+			{
+				if (value.InFlight && realtimeSinceStartup - value.LastCallTime < 30f)
+				{
+					return false;
+				}
+				if (realtimeSinceStartup - value.LastCallTime < 5f)
+				{
+					return false;
+				}
+			}
+			bool flag = Action();
+			if (flag)
+			{
+				BackendCallStates[Key] = new BackendCallState
+				{
+					InFlight = flag,
+					LastCallTime = realtimeSinceStartup
+				};
+			}
+			return flag;
+		}
+
+		private static void ClearBackendFunctionInFlight(string Key)
+		{
+			if (BackendCallStates.TryGetValue(Key, out var value))
+			{
+				value.InFlight = false;
+				BackendCallStates[Key] = value;
+			}
+		}
+	}
+
 	public static Dictionary<GameObject, IntPtr> LuauGameObjectList = new Dictionary<GameObject, IntPtr>();
 
 	public static List<KeyValuePair<GameObject, IntPtr>> LuauGameObjectDepthList = new List<KeyValuePair<GameObject, IntPtr>>();
@@ -3596,6 +4477,7 @@ public static class Bindings
 			.AddField("rightHandRotation", "RightHandRotation")
 			.AddField("isInVStump", "IsInVStump")
 			.AddField("isEntityAuthority", "IsEntityAuthority")
+			.AddField("scaleMultiplier", "ScaleMultiplier")
 			.AddStaticFunction("getPlayerByID", PlayerFunctions.GetPlayerByID)
 			.Build(L, global: true));
 	}
@@ -3628,6 +4510,38 @@ public static class Bindings
 			.AddStaticFunction("getHoldingActorNumberByLuauID", GrabbableEntityFunctions.GetHoldingActorNumberByLuauID)
 			.AddStaticFunction("spawnGrabbableEntity", GrabbableEntityFunctions.SpawnGrabbableEntity)
 			.Build(L, global: true));
+	}
+
+	public unsafe static void InventoryItemBuilder(lua_State* L)
+	{
+		LuauVm.ClassBuilders.Append(new LuauClassBuilder<MInventoryItem>("InventoryItem").AddField("name", "Name").AddField("quantity", "Quantity").AddField("inGameId", "InGameId")
+			.AddField("displayName", "DisplayName")
+			.AddField("displayDescription", "DisplayDescription")
+			.AddField("id", "ID")
+			.Build(L, global: true));
+	}
+
+	public unsafe static void OnlineErrorBuilder(lua_State* L)
+	{
+		LuauVm.ClassBuilders.Append(new LuauClassBuilder<MOnlineError>("OnlineError").AddField("name", "Name").AddField("message", "Message").AddField("errorCode", "ErrorCode")
+			.AddField("httpCode", "HttpCode")
+			.Build(L, global: true));
+	}
+
+	public unsafe static void OnlineFunctionsBuilder(lua_State* L)
+	{
+		Luau.lua_createtable(L, 0, 4);
+		Luau.lua_pushcfunction(L, OnlineFunctions.GetLocalPlayerInventory, "getLocalPlayerInventory");
+		Luau.lua_setfield(L, -2, "getLocalPlayerInventory");
+		Luau.lua_pushcfunction(L, OnlineFunctions.GetInventoryForPlayer, "getInventoryForPlayer");
+		Luau.lua_setfield(L, -2, "getInventoryForPlayer");
+		Luau.lua_pushcfunction(L, OnlineFunctions.LoadStorefront, "getStore");
+		Luau.lua_setfield(L, -2, "getStore");
+		Luau.lua_pushcfunction(L, OnlineFunctions.TryPurchase, "tryPurchase");
+		Luau.lua_setfield(L, -2, "tryPurchase");
+		Luau.lua_pushcfunction(L, OnlineFunctions.TryConsume, "tryConsume");
+		Luau.lua_setfield(L, -2, "tryConsume");
+		Luau.lua_setglobal(L, "OnlineFunctions");
 	}
 
 	[MonoPInvokeCallback(typeof(lua_CFunction))]

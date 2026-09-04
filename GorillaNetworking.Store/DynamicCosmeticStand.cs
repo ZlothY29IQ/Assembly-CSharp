@@ -72,6 +72,8 @@ public class DynamicCosmeticStand : MonoBehaviour, iFlagForBaking
 
 	private int searchIndex;
 
+	private WaitForSeconds wait;
+
 	public string thisCosmeticName
 	{
 		get
@@ -201,16 +203,43 @@ public class DynamicCosmeticStand : MonoBehaviour, iFlagForBaking
 	{
 		if (!(CosmeticsController.instance == null) && CosmeticsController.instance.allCosmetics != null)
 		{
-			thisCosmeticItem = CosmeticsController.instance.allCosmetics.Find((CosmeticsController.CosmeticItem x) => thisCosmeticName == x.displayName || thisCosmeticName == x.overrideDisplayName || thisCosmeticName == x.itemName);
-			if (slotPriceText != null)
+			AssignCosmeticItem();
+			SetSlotPriceText();
+			if (thisCosmeticItem.cost == 0)
 			{
-				slotPriceText.text = thisCosmeticItem.itemCategory.ToString().ToUpper() + " " + thisCosmeticItem.cost;
-			}
-			if (slotPriceTextTMP != null)
-			{
-				slotPriceTextTMP.text = thisCosmeticItem.itemCategory.ToString().ToUpper() + " " + thisCosmeticItem.cost;
+				StartCoroutine(SetStandPriceCoroutine());
 			}
 			RefreshPurchaseGate();
+		}
+	}
+
+	private IEnumerator SetStandPriceCoroutine()
+	{
+		float startTime = Time.time;
+		yield return new WaitForSeconds(UnityEngine.Random.Range(1f, 5f));
+		wait = new WaitForSeconds(2.5f);
+		while (thisCosmeticItem.cost == 0)
+		{
+			yield return wait;
+			if (Time.time - startTime > 60f)
+			{
+				yield break;
+			}
+			AssignCosmeticItem();
+		}
+		SetSlotPriceText();
+	}
+
+	private void AssignCosmeticItem()
+	{
+		thisCosmeticItem = CosmeticsController.instance.allCosmetics.Find((CosmeticsController.CosmeticItem x) => thisCosmeticName == x.displayName || thisCosmeticName == x.overrideDisplayName || thisCosmeticName == x.itemName);
+	}
+
+	private void SetSlotPriceText()
+	{
+		if (slotPriceTextTMP != null)
+		{
+			slotPriceTextTMP.text = thisCosmeticItem.itemCategory.ToString().ToUpper() + " " + thisCosmeticItem.cost;
 		}
 	}
 

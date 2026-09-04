@@ -39,6 +39,10 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 	[SerializeField]
 	private GameObject[] rootObjectsToDeactivateAfterTeleport;
 
+	[Tooltip("Objects visually hidden (renderers only, so their behaviour keeps running) while in a Featured map (A/B), and shown again on exit / when in the Custom lobby.")]
+	[SerializeField]
+	private List<GameObject> featuredMapDisabledObjects;
+
 	[SerializeField]
 	private GorillaFriendCollider virtualStumpPlayerDetector;
 
@@ -73,6 +77,20 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 
 	private static string preVStumpGamemode = "";
 
+	private static bool activateSkipTeleport;
+
+	private static bool activateDeferZoneToNode;
+
+	private static bool activateHasAutoLoadOverride;
+
+	private static ModId activateAutoLoadModIdOverride = ModId.Null;
+
+	private static bool activateIsActive;
+
+	private static VirtualStumpActivateMode activateCurrentMode;
+
+	private static ModId pendingRoomChangeReloadModId = ModId.Null;
+
 	private static bool customMapDefaultZoneShaderSettingsInitialized;
 
 	private static ZoneShaderSettings loadedCustomMapDefaultZoneShaderSettings;
@@ -85,6 +103,8 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 
 	private static ModId loadingMapId = ModId.Null;
 
+	private static GTMapLoadSource pendingMapLoadSource = GTMapLoadSource.none;
+
 	private static bool unloadInProgress = false;
 
 	private static ModId unloadingMapId = ModId.Null;
@@ -96,6 +116,18 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 	private static bool waitingForModInstall = false;
 
 	private static ModId waitingForModInstallId = ModId.Null;
+
+	private static MapLoadStatus currentLoadStatus = MapLoadStatus.None;
+
+	private static int currentLoadProgress = 0;
+
+	private static string currentLoadMessage = "";
+
+	private static MapLoadStatus lastBroadcastFileStatus = MapLoadStatus.None;
+
+	private static int lastBroadcastFilePercent = -1;
+
+	private static ModId trackedDownloadMapId = ModId.Null;
 
 	private static bool preTeleportInPrivateRoom = false;
 
@@ -135,6 +167,18 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 
 	public static UnityEvent OnMapUnloadComplete = new UnityEvent();
 
+	private const ModChangeType ModFileProgressChanges = ModChangeType.DownloadProgress | ModChangeType.FileState;
+
+	private const string PreparingMessage = "PREPARING MAP";
+
+	private const string DownloadQueuedMessage = "WAITING FOR DOWNLOAD";
+
+	private const string DownloadingMessage = "DOWNLOADING MAP FILES";
+
+	private const string InstallQueuedMessage = "WAITING TO INSTALL";
+
+	private const string InstallingMessage = "INSTALLING MAP FILES";
+
 	public static bool WaitingForRoomJoin => waitingForRoomJoin;
 
 	public static bool WaitingForDisconnect => waitingForDisconnect;
@@ -142,6 +186,16 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 	public static long LoadingMapId => loadingMapId;
 
 	public static long UnloadingMapId => unloadingMapId;
+
+	public static MapLoadStatus CurrentLoadStatus => currentLoadStatus;
+
+	public static int CurrentLoadProgress => currentLoadProgress;
+
+	public static string CurrentLoadMessage => currentLoadMessage;
+
+	public static VirtualStumpActivateMode CurrentActivateMode => activateCurrentMode;
+
+	public static ModId FeaturedLockedMapId => activateAutoLoadModIdOverride;
 
 	public bool BuildValidationCheck()
 	{
@@ -176,6 +230,8 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 		CMSSerializer.OnTriggerHistoryProcessedForScene.AddListener(OnSceneTriggerHistoryProcessed);
 		ModIOManager.OnModManagementEvent.RemoveListener(HandleModManagementEvent);
 		ModIOManager.OnModManagementEvent.AddListener(HandleModManagementEvent);
+		Mod.RemoveChangeListener(ModChangeType.DownloadProgress | ModChangeType.FileState, HandleModFileProgress);
+		Mod.AddChangeListener(ModChangeType.DownloadProgress | ModChangeType.FileState, HandleModFileProgress);
 		RoomSystem.JoinedRoomEvent -= new Action(OnJoinedRoom);
 		RoomSystem.JoinedRoomEvent += new Action(OnJoinedRoom);
 		NetworkSystem.Instance.OnReturnedToSinglePlayer -= new Action(OnDisconnected);
@@ -188,6 +244,7 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 		UGCPermissionManager.UnsubscribeFromUGCDisabled(OnUGCDisabled);
 		CMSSerializer.OnTriggerHistoryProcessedForScene.RemoveListener(OnSceneTriggerHistoryProcessed);
 		ModIOManager.OnModManagementEvent.RemoveListener(HandleModManagementEvent);
+		Mod.RemoveChangeListener(ModChangeType.DownloadProgress | ModChangeType.FileState, HandleModFileProgress);
 		RoomSystem.JoinedRoomEvent -= new Action(OnJoinedRoom);
 		NetworkSystem.Instance.OnReturnedToSinglePlayer -= new Action(OnDisconnected);
 	}
@@ -229,8 +286,110 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 		UGCPermissionManager.UnsubscribeFromUGCDisabled(OnUGCDisabled);
 		CMSSerializer.OnTriggerHistoryProcessedForScene.RemoveListener(OnSceneTriggerHistoryProcessed);
 		ModIOManager.OnModManagementEvent.RemoveListener(HandleModManagementEvent);
+		Mod.RemoveChangeListener(ModChangeType.DownloadProgress | ModChangeType.FileState, HandleModFileProgress);
 		RoomSystem.JoinedRoomEvent -= new Action(OnJoinedRoom);
 		NetworkSystem.Instance.OnReturnedToSinglePlayer -= new Action(OnDisconnected);
+	}
+
+	public static void TrackMapDownload(ModId modId)
+	{
+		ResetModFileProgressTracking();
+		trackedDownloadMapId = modId;
+		BroadcastMapLoadProgress(MapLoadStatus.Downloading, 0, "WAITING FOR DOWNLOAD");
+	}
+
+	public static void StopTrackingMapDownload()
+	{
+		trackedDownloadMapId = ModId.Null;
+		if (!loadInProgress)
+		{
+			ResetModFileProgressTracking();
+			BroadcastMapLoadProgress(MapLoadStatus.None, 0, "");
+		}
+	}
+
+	private static bool IsPlayerWaitingOnMap(ModId modId)
+	{
+		if (loadInProgress && loadingMapId == modId)
+		{
+			return true;
+		}
+		if (trackedDownloadMapId != ModId.Null)
+		{
+			return trackedDownloadMapId == modId;
+		}
+		return false;
+	}
+
+	private static void HandleModFileProgress(Mod mod, ModChangeType changeType)
+	{
+		if (mod != null && mod.File != null && IsPlayerWaitingOnMap(mod.Id))
+		{
+			BroadcastModFileState(mod);
+		}
+	}
+
+	private static void BroadcastModFileState(Mod mod)
+	{
+		if (mod?.File == null)
+		{
+			return;
+		}
+		switch (mod.File.State)
+		{
+		case ModFileState.None:
+		case ModFileState.Queued:
+			BroadcastModFileProgress(MapLoadStatus.Downloading, 0, "WAITING FOR DOWNLOAD");
+			break;
+		case ModFileState.Downloading:
+			BroadcastModFileProgress(MapLoadStatus.Downloading, GetFileStatePercent(mod), "DOWNLOADING MAP FILES");
+			break;
+		case ModFileState.Downloaded:
+			BroadcastModFileProgress(MapLoadStatus.Installing, 0, "WAITING TO INSTALL");
+			break;
+		case ModFileState.Installing:
+		case ModFileState.Updating:
+			BroadcastModFileProgress(MapLoadStatus.Installing, GetFileStatePercent(mod), "INSTALLING MAP FILES");
+			break;
+		case ModFileState.Installed:
+			if (!loadInProgress)
+			{
+				trackedDownloadMapId = ModId.Null;
+				BroadcastModFileProgress(MapLoadStatus.None, 0, "");
+			}
+			break;
+		case ModFileState.FileOperationFailed:
+			trackedDownloadMapId = ModId.Null;
+			if (!loadInProgress)
+			{
+				BroadcastModFileProgress(MapLoadStatus.Error, 0, mod.File.FileStateErrorCause.GetMessage() ?? "MAP DOWNLOAD FAILED");
+			}
+			break;
+		case ModFileState.Uninstalling:
+			break;
+		}
+	}
+
+	private static int GetFileStatePercent(Mod mod)
+	{
+		return Mathf.Clamp(Mathf.RoundToInt(mod.File.FileStateProgress * 100f), 0, 100);
+	}
+
+	private static void ResetModFileProgressTracking()
+	{
+		lastBroadcastFileStatus = MapLoadStatus.None;
+		lastBroadcastFilePercent = -1;
+		trackedDownloadMapId = ModId.Null;
+	}
+
+	private static void BroadcastModFileProgress(MapLoadStatus status, int percent, string message)
+	{
+		if (status != lastBroadcastFileStatus || percent != lastBroadcastFilePercent)
+		{
+			lastBroadcastFileStatus = status;
+			lastBroadcastFilePercent = percent;
+			BroadcastMapLoadProgress(status, percent, message);
+		}
 	}
 
 	private void HandleModManagementEvent(Mod mod, Modfile modfile, ModInstallationManagement.OperationType jobType, ModInstallationManagement.OperationPhase jobPhase)
@@ -289,16 +448,187 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 
 	internal static void TeleportToVirtualStump(VirtualStumpTeleporter fromTeleporter, Action<bool> callback)
 	{
-		if (!UGCPermissionManager.IsUGCDisabled)
+		if (!UGCPermissionManager.HasNoMapAccess)
 		{
 			if (!hasInstance || fromTeleporter == null)
 			{
 				callback?.Invoke(obj: false);
 				return;
 			}
+			activateSkipTeleport = false;
+			activateDeferZoneToNode = false;
+			activateHasAutoLoadOverride = false;
+			activateIsActive = false;
 			instance.gameObject.SetActive(value: true);
 			instance.StartCoroutine(Internal_TeleportToVirtualStump(fromTeleporter, callback));
 		}
+	}
+
+	public static async void Activate(VirtualStumpActivateMode mode, bool hasEntryTeleportNode = true)
+	{
+		if (UGCPermissionManager.HasNoMapAccess || !hasInstance || activateIsActive)
+		{
+			return;
+		}
+		activateIsActive = true;
+		activateCurrentMode = mode;
+		SetFeaturedMapObjectsHidden(IsInFeaturedMode());
+		if (GorillaComputer.hasInstance)
+		{
+			GorillaComputer.instance.SetVStumpRoomModePrefix(GetActivateRoomModePrefix());
+		}
+		ModId autoLoadModId = ModId.Null;
+		if (mode != VirtualStumpActivateMode.Custom)
+		{
+			int index = ((mode != VirtualStumpActivateMode.FeatureA) ? 1 : 0);
+			var (error, list) = await ModIOManager.GetFeaturedMaps();
+			if ((bool)error || list == null || index >= list.Count)
+			{
+				GTDev.LogWarning("[CustomMapManager::Activate] Could not resolve featured map index " + $"{index} for {mode}; opening the stump without an auto-load.");
+			}
+			else
+			{
+				autoLoadModId = list[index].Id;
+			}
+		}
+		if (!hasInstance)
+		{
+			activateIsActive = false;
+			return;
+		}
+		if (instance.defaultTeleporter.IsNull())
+		{
+			GTDev.LogError("[CustomMapManager::Activate] Default Teleporter is not set; cannot activate.");
+			activateIsActive = false;
+			return;
+		}
+		activateSkipTeleport = true;
+		activateDeferZoneToNode = hasEntryTeleportNode;
+		activateHasAutoLoadOverride = true;
+		activateAutoLoadModIdOverride = autoLoadModId;
+		instance.gameObject.SetActive(value: true);
+		instance.StartCoroutine(Internal_TeleportToVirtualStump(instance.defaultTeleporter, null));
+	}
+
+	public static void Deactivate()
+	{
+		if (hasInstance && GorillaComputer.hasInstance && GorillaComputer.instance.IsPlayerInVirtualStump())
+		{
+			activateIsActive = false;
+			activateSkipTeleport = true;
+			ExitVirtualStump(null);
+		}
+	}
+
+	public static bool IsInFeaturedMode()
+	{
+		if (activateCurrentMode != VirtualStumpActivateMode.FeatureA)
+		{
+			return activateCurrentMode == VirtualStumpActivateMode.FeatureB;
+		}
+		return true;
+	}
+
+	public static bool IsFeaturedMapLocked()
+	{
+		if (activateIsActive && IsInFeaturedMode())
+		{
+			return activateAutoLoadModIdOverride != ModId.Null;
+		}
+		return false;
+	}
+
+	private static void SetFeaturedMapObjectsHidden(bool hidden)
+	{
+		if (!hasInstance || instance.featuredMapDisabledObjects == null)
+		{
+			return;
+		}
+		foreach (GameObject featuredMapDisabledObject in instance.featuredMapDisabledObjects)
+		{
+			if (featuredMapDisabledObject == null)
+			{
+				continue;
+			}
+			Renderer[] componentsInChildren = featuredMapDisabledObject.GetComponentsInChildren<Renderer>(includeInactive: true);
+			foreach (Renderer renderer in componentsInChildren)
+			{
+				if (renderer != null)
+				{
+					renderer.forceRenderingOff = hidden;
+				}
+			}
+			Collider[] componentsInChildren2 = featuredMapDisabledObject.GetComponentsInChildren<Collider>(includeInactive: true);
+			foreach (Collider collider in componentsInChildren2)
+			{
+				if (collider != null)
+				{
+					collider.enabled = !hidden;
+				}
+			}
+		}
+	}
+
+	public static void PrepareFeaturedMapReloadOnRoomChange()
+	{
+		pendingRoomChangeReloadModId = GetRoomMapId();
+	}
+
+	public static void EnterVirtualStumpZone()
+	{
+		if (!hasInstance)
+		{
+			return;
+		}
+		if (VRRig.LocalRig.IsNotNull() && VRRig.LocalRig.zoneEntity.IsNotNull())
+		{
+			VRRig.LocalRig.zoneEntity.DisableZoneChanges();
+		}
+		ZoneManagement.SetActiveZone(GTZone.customMaps);
+		GameObject[] array = instance.rootObjectsToDeactivateAfterTeleport;
+		foreach (GameObject gameObject in array)
+		{
+			if (gameObject != null && gameObject.gameObject != null)
+			{
+				gameObject.gameObject.SetActive(value: false);
+			}
+		}
+		if (instance.virtualStumpZoneShaderSettings.IsNotNull())
+		{
+			instance.virtualStumpZoneShaderSettings.BecomeActiveInstance();
+		}
+		else
+		{
+			ZoneShaderSettings.ActivateDefaultSettings();
+		}
+	}
+
+	public void OnEnteredVirtualStumpZone()
+	{
+		EnterVirtualStumpZone();
+	}
+
+	private static string GetActivateRoomModePrefix()
+	{
+		return activateCurrentMode switch
+		{
+			VirtualStumpActivateMode.FeatureA => "A", 
+			VirtualStumpActivateMode.FeatureB => "B", 
+			_ => "C", 
+		};
+	}
+
+	private static ModId GetEffectiveAutoLoadModId()
+	{
+		if (activateHasAutoLoadOverride)
+		{
+			return activateAutoLoadModIdOverride;
+		}
+		if (!lastUsedTeleporter.IsNotNull())
+		{
+			return ModId.Null;
+		}
+		return lastUsedTeleporter.GetAutoLoadMapModId();
 	}
 
 	private static IEnumerator Internal_TeleportToVirtualStump(VirtualStumpTeleporter fromTeleporter, Action<bool> callback)
@@ -310,8 +640,11 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 			GorillaComputer.instance.SetGameModeWithoutButton(lastUsedTeleporter.GetAutoLoadGamemode().ToString());
 		}
 		GTDev.Log("[CustomMapManager::TeleportToVirtualStump] Teleporting to Virtual Stump...");
-		PrivateUIRoom.ForceStartOverlay(PrivateUIRoom.OverlaySource.CustomMap);
-		GorillaTagger.Instance.overrideNotInFocus = true;
+		if (!activateSkipTeleport)
+		{
+			PrivateUIRoom.ForceStartOverlay(PrivateUIRoom.OverlaySource.CustomMap);
+			GorillaTagger.Instance.overrideNotInFocus = true;
+		}
 		GreyZoneManager greyZoneManager = GreyZoneManager.Instance;
 		if (greyZoneManager != null)
 		{
@@ -321,34 +654,23 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 		{
 			int index = UnityEngine.Random.Range(0, instance.virtualStumpTeleportLocations.Count);
 			Transform randTeleportTarget = instance.virtualStumpTeleportLocations[index];
-			instance.EnableTeleportHUD(enteringVirtualStump: true);
-			lastUsedTeleporter.PlayTeleportEffects(forLocalPlayer: true, toVStump: true, instance.localTeleportSFXSource, sendRPC: true);
+			if (!activateSkipTeleport)
+			{
+				instance.EnableTeleportHUD(enteringVirtualStump: true);
+				lastUsedTeleporter.PlayTeleportEffects(forLocalPlayer: true, toVStump: true, instance.localTeleportSFXSource, sendRPC: true);
+			}
 			yield return new WaitForSeconds(0.75f);
 			CosmeticsController.instance.ClearCheckoutAndCart(sendEvent: false);
 			instance.virtualStumpToggleableRoot.SetActive(value: true);
-			GTPlayer.Instance.TeleportTo(randTeleportTarget, matchDestinationRotation: true, maintainVelocity: false);
+			if (!activateSkipTeleport)
+			{
+				GTPlayer.Instance.TeleportTo(randTeleportTarget, matchDestinationRotation: true, maintainVelocity: false);
+			}
 			GorillaComputer.instance.SetInVirtualStump(inVirtualStump: true);
 			yield return null;
-			if (VRRig.LocalRig.IsNotNull() && VRRig.LocalRig.zoneEntity.IsNotNull())
+			if (!activateDeferZoneToNode)
 			{
-				VRRig.LocalRig.zoneEntity.DisableZoneChanges();
-			}
-			ZoneManagement.SetActiveZone(GTZone.customMaps);
-			GameObject[] array = instance.rootObjectsToDeactivateAfterTeleport;
-			foreach (GameObject gameObject in array)
-			{
-				if (gameObject != null)
-				{
-					gameObject.gameObject.SetActive(value: false);
-				}
-			}
-			if (hasInstance && instance.virtualStumpZoneShaderSettings.IsNotNull())
-			{
-				instance.virtualStumpZoneShaderSettings.BecomeActiveInstance();
-			}
-			else
-			{
-				ZoneShaderSettings.ActivateDefaultSettings();
+				EnterVirtualStumpZone();
 			}
 			instance.ghostReactorManager.reactor.EnableGhostReactorForVirtualStump();
 			currentTeleportCallback = callback;
@@ -360,7 +682,7 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 				{
 					preTeleportInPrivateRoom = true;
 					waitingForRoomJoin = true;
-					pendingNewPrivateRoomName = GorillaComputer.instance.VStumpRoomPrepend + NetworkSystem.Instance.RoomName;
+					pendingNewPrivateRoomName = GetActivateRoomModePrefix() + GorillaComputer.instance.VStumpRoomPrepend + NetworkSystem.Instance.RoomName;
 				}
 				GTDev.Log("[CustomMapManager::TeleportToVirtualStump] Returning to singleplayer...");
 				waitingForLoginDisconnect = true;
@@ -449,9 +771,15 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 			delayedTryAutoLoadCoroutine = null;
 		}
 		instance.dayNightManager.RequestRepopulateLightmaps();
-		PrivateUIRoom.ForceStartOverlay(PrivateUIRoom.OverlaySource.CustomMap);
-		GorillaTagger.Instance.overrideNotInFocus = true;
-		instance.EnableTeleportHUD(enteringVirtualStump: false);
+		if (!activateSkipTeleport)
+		{
+			PrivateUIRoom.ForceStartOverlay(PrivateUIRoom.OverlaySource.CustomMap);
+			GorillaTagger.Instance.overrideNotInFocus = true;
+		}
+		if (!activateSkipTeleport)
+		{
+			instance.EnableTeleportHUD(enteringVirtualStump: false);
+		}
 		currentTeleportCallback = callback;
 		exitVirtualStumpPending = true;
 		if (!UnloadMap(returnToSinglePlayerIfInPublic: false))
@@ -495,17 +823,25 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 				instance.defaultReviveStation.RevivePlayer(component);
 			}
 		}
-		ZoneManagement.SetActiveZone(lastUsedTeleporter.GetZone());
+		if (!activateSkipTeleport)
+		{
+			ZoneManagement.SetActiveZone(lastUsedTeleporter.GetZone());
+		}
 		if (VRRig.LocalRig.IsNotNull() && VRRig.LocalRig.zoneEntity.IsNotNull())
 		{
 			VRRig.LocalRig.zoneEntity.EnableZoneChanges();
 		}
 		GorillaComputer.instance.SetInVirtualStump(inVirtualStump: false);
-		GTPlayer.Instance.TeleportTo(lastUsedTeleporter.GetReturnTransform(), matchDestinationRotation: true, maintainVelocity: false);
+		activateIsActive = false;
+		SetFeaturedMapObjectsHidden(hidden: false);
+		if (!activateSkipTeleport)
+		{
+			GTPlayer.Instance.TeleportTo(lastUsedTeleporter.GetReturnTransform(), matchDestinationRotation: true, maintainVelocity: false);
+		}
 		instance.virtualStumpToggleableRoot.SetActive(value: false);
 		ZoneShaderSettings.ActivateDefaultSettings();
 		VRRig.LocalRig.EnableVStumpReturnWatch(on: false);
-		GTPlayer.Instance.SetHoverAllowed(allowed: false, force: true);
+		GTPlayer.Instance.ForceHoverDisallowed();
 		exitVirtualStumpPending = false;
 		if (delayedEndTeleportCoroutine != null)
 		{
@@ -515,7 +851,7 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 		if (preTeleportInPrivateRoom)
 		{
 			waitingForRoomJoin = true;
-			pendingNewPrivateRoomName = pendingNewPrivateRoomName.RemoveAll(GorillaComputer.instance.VStumpRoomPrepend);
+			pendingNewPrivateRoomName = GorillaComputer.instance.StripVStumpRoomPrefix(pendingNewPrivateRoomName);
 			PhotonNetworkController.Instance.AttemptToJoinSpecificRoomWithCallback(pendingNewPrivateRoomName, JoinType.Solo, OnJoinSpecificRoomResult);
 		}
 		else if (NetworkSystem.Instance.InRoom)
@@ -523,7 +859,7 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 			if (NetworkSystem.Instance.SessionIsPrivate)
 			{
 				waitingForRoomJoin = true;
-				pendingNewPrivateRoomName = NetworkSystem.Instance.RoomName.RemoveAll(GorillaComputer.instance.VStumpRoomPrepend);
+				pendingNewPrivateRoomName = GorillaComputer.instance.StripVStumpRoomPrefix(NetworkSystem.Instance.RoomName);
 				PhotonNetworkController.Instance.AttemptToJoinSpecificRoomWithCallback(pendingNewPrivateRoomName, JoinType.Solo, OnJoinSpecificRoomResult);
 			}
 			else if (lastUsedTeleporter.GetExitVStumpJoinTrigger() != null)
@@ -718,19 +1054,28 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 			GTDev.Log("[CustomMapManager::EndTeleport] Player is not in VStump, disabling VStump_Lobby GameObject");
 			instance.gameObject.SetActive(value: false);
 		}
-		if (!teleportSuccessful || !GorillaComputer.instance.IsPlayerInVirtualStump() || !(lastUsedTeleporter.GetAutoLoadMapModId() != ModId.Null))
+		if (teleportSuccessful && GorillaComputer.instance.IsPlayerInVirtualStump())
+		{
+			TryAutoLoadMap();
+		}
+	}
+
+	private static void TryAutoLoadMap()
+	{
+		ModId effectiveAutoLoadModId = GetEffectiveAutoLoadModId();
+		if (effectiveAutoLoadModId == ModId.Null)
 		{
 			return;
 		}
 		bool flag = false;
 		if (waitingForRoomJoin)
 		{
-			GTDev.Log("[CustomMapManager::EndTeleport] Still waiting for room join, delaying auto-load...");
+			GTDev.Log("[CustomMapManager::TryAutoLoadMap] Still waiting for room join, delaying auto-load...");
 			flag = true;
 		}
 		else if (NetworkSystem.Instance.InRoom && !NetworkSystem.Instance.IsMasterClient && VirtualStumpSerializer.IsWaitingForRoomInit())
 		{
-			GTDev.Log("[CustomMapManager::EndTeleport] Still waiting for room init, delaying auto-load...");
+			GTDev.Log("[CustomMapManager::TryAutoLoadMap] Still waiting for room init, delaying auto-load...");
 			flag = true;
 		}
 		if (flag)
@@ -738,16 +1083,26 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 			delayedTryAutoLoadCoroutine = instance.StartCoroutine(DelayedTryAutoLoad());
 			return;
 		}
-		GTDev.Log("[CustomMapManager::EndTeleport] Attempting auto-load...");
+		GTDev.Log("[CustomMapManager::TryAutoLoadMap] Attempting auto-load...");
+		GTMapLoadSource autoLoadSource = GetAutoLoadSource();
 		if (!NetworkSystem.Instance.InRoom || (NetworkSystem.Instance.InRoom && NetworkSystem.Instance.IsMasterClient))
 		{
-			SetRoomMap(lastUsedTeleporter.GetAutoLoadMapModId());
-			LoadMap(lastUsedTeleporter.GetAutoLoadMapModId());
+			SetRoomMap(effectiveAutoLoadModId);
+			LoadMap(effectiveAutoLoadModId, autoLoadSource);
 		}
-		else if (GetRoomMapId() == lastUsedTeleporter.GetAutoLoadMapModId())
+		else if (GetRoomMapId() == effectiveAutoLoadModId)
 		{
-			LoadMap(lastUsedTeleporter.GetAutoLoadMapModId());
+			LoadMap(effectiveAutoLoadModId, autoLoadSource);
 		}
+	}
+
+	private static GTMapLoadSource GetAutoLoadSource()
+	{
+		if (!activateHasAutoLoadOverride)
+		{
+			return GTMapLoadSource.teleporter;
+		}
+		return GTMapLoadSource.featured_hallway;
 	}
 
 	private static IEnumerator DelayedEndTeleport()
@@ -764,20 +1119,36 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 			yield return new WaitForSeconds(0.1f);
 		}
 		GTDev.Log("[CustomMapManager::DelayedTryAutoLoad] Room Init finished, attempting auto-load...");
+		ModId effectiveAutoLoadModId = GetEffectiveAutoLoadModId();
+		GTMapLoadSource autoLoadSource = GetAutoLoadSource();
 		if (!NetworkSystem.Instance.InRoom || (NetworkSystem.Instance.InRoom && NetworkSystem.Instance.IsMasterClient))
 		{
-			SetRoomMap(lastUsedTeleporter.GetAutoLoadMapModId());
-			LoadMap(lastUsedTeleporter.GetAutoLoadMapModId());
+			SetRoomMap(effectiveAutoLoadModId);
+			LoadMap(effectiveAutoLoadModId, autoLoadSource);
 		}
-		else if (GetRoomMapId() == lastUsedTeleporter.GetAutoLoadMapModId())
+		else if (GetRoomMapId() == effectiveAutoLoadModId)
 		{
-			LoadMap(lastUsedTeleporter.GetAutoLoadMapModId());
+			LoadMap(effectiveAutoLoadModId, autoLoadSource);
 		}
 	}
 
 	private void OnJoinedRoom()
 	{
-		if (hasInstance && waitingForRoomJoin)
+		if (!hasInstance)
+		{
+			return;
+		}
+		if (pendingRoomChangeReloadModId != ModId.Null)
+		{
+			ModId modId = pendingRoomChangeReloadModId;
+			pendingRoomChangeReloadModId = ModId.Null;
+			if (!NetworkSystem.Instance.InRoom || NetworkSystem.Instance.IsMasterClient)
+			{
+				SetRoomMap(modId);
+				LoadMap(modId, GTMapLoadSource.room_reload);
+			}
+		}
+		if (waitingForRoomJoin)
 		{
 			waitingForRoomJoin = false;
 			GTDev.Log("[CustomMapManager::OnJoinedRoom] Ending teleport...");
@@ -849,6 +1220,10 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 	private static void OnMapUnloadCompleted()
 	{
 		unloadInProgress = false;
+		currentLoadStatus = MapLoadStatus.None;
+		currentLoadProgress = 0;
+		currentLoadMessage = "";
+		ResetModFileProgressTracking();
 		OnMapUnloadComplete.Invoke();
 		currentRoomMapModId = ModId.Null;
 		currentRoomMapApproved = false;
@@ -859,10 +1234,15 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 		}
 	}
 
-	public static async Task LoadMap(ModId modId)
+	public static async Task LoadMap(ModId modId, GTMapLoadSource loadSource = GTMapLoadSource.none)
 	{
 		if (!hasInstance || loadInProgress)
 		{
+			return;
+		}
+		if (IsFeaturedMapLocked() && modId != FeaturedLockedMapId)
+		{
+			GTDev.LogWarning($"[CustomMapManager::LoadMap] Blocked map change to {modId} - Featured lobby " + $"is locked to {FeaturedLockedMapId}.");
 			return;
 		}
 		if (abortModLoadIds.Contains(modId))
@@ -875,9 +1255,12 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 		}
 		loadInProgress = true;
 		loadingMapId = modId;
+		pendingMapLoadSource = loadSource;
 		waitingForModDownload = false;
 		waitingForModInstall = false;
 		waitingForModInstallId = ModId.Null;
+		ResetModFileProgressTracking();
+		BroadcastMapLoadProgress(MapLoadStatus.Loading, 0, "PREPARING MAP");
 		_ = Error.None;
 		var (error, mod) = await ModIOManager.GetMod(modId);
 		if ((bool)error)
@@ -889,6 +1272,11 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 		{
 			loadInProgress = false;
 			loadingMapId = ModId.Null;
+		}
+		else if (UGCPermissionManager.FeaturedMapsOnly && !ModIOManager.IsFeaturedMap(mod))
+		{
+			GTDev.Log("[CustomMapManager::LoadMap] Blocked loading non-featured map " + modId.ToString() + " ");
+			HandleMapLoadFailed("THIS MAP IS NOT AVAILABLE FOR YOUR ACCOUNT");
 		}
 		else if (abortModLoadIds.Contains(modId))
 		{
@@ -910,6 +1298,7 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 				waitingForModDownload = true;
 				waitingForModInstall = true;
 				waitingForModInstallId = mod.Id;
+				BroadcastMapLoadProgress(MapLoadStatus.Downloading, 0, "WAITING FOR DOWNLOAD");
 				bool flag = await ModIOManager.DownloadMod(modId);
 				if (abortModLoadIds.Contains(modId))
 				{
@@ -926,11 +1315,13 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 			case ModFileState.Updating:
 				waitingForModDownload = true;
 				waitingForModInstallId = modId;
+				BroadcastModFileState(mod);
 				break;
 			case ModFileState.Downloaded:
 			case ModFileState.Installing:
 				waitingForModInstall = true;
 				waitingForModInstallId = modId;
+				BroadcastModFileState(mod);
 				break;
 			case ModFileState.Installed:
 				instance.LoadInstalledMap(mod);
@@ -948,13 +1339,14 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 	{
 		waitingForModInstall = false;
 		waitingForModInstallId = ModId.Null;
+		CustomMapTelemetry.SetLoadingMapInfo(installedMod, pendingMapLoadSource);
 		if (installedMod.File.State != ModFileState.Installed)
 		{
 			Debug.LogError("[CustomMapManager::LoadInstalledMap] Requested map is not installed!");
 			HandleMapLoadFailed("MAP IS NOT INSTALLED");
 			return;
 		}
-		if (ModIOManager.ValidateInstalledMod(installedMod))
+		if (ModIOManager.ValidateInstalledMod(installedMod) && !string.IsNullOrEmpty(installedMod.File.InstallLocation))
 		{
 			try
 			{
@@ -981,6 +1373,8 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 		waitingForModDownload = true;
 		waitingForModInstall = true;
 		waitingForModInstallId = installedMod.Id;
+		ResetModFileProgressTracking();
+		BroadcastMapLoadProgress(MapLoadStatus.Downloading, 0, "WAITING FOR DOWNLOAD");
 		bool flag = await ModIOManager.DownloadMod(installedMod.Id);
 		if (abortModLoadIds.Contains(installedMod.Id))
 		{
@@ -995,6 +1389,14 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 
 	private static void OnMapLoadProgress(MapLoadStatus loadStatus, int progress, string message)
 	{
+		BroadcastMapLoadProgress(loadStatus, progress, message);
+	}
+
+	private static void BroadcastMapLoadProgress(MapLoadStatus loadStatus, int progress, string message)
+	{
+		currentLoadStatus = loadStatus;
+		currentLoadProgress = progress;
+		currentLoadMessage = message ?? "";
 		OnMapLoadStatusChanged.Invoke(loadStatus, progress, message);
 	}
 
@@ -1005,8 +1407,13 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 		waitingForModDownload = false;
 		waitingForModInstall = false;
 		waitingForModInstallId = ModId.Null;
+		currentLoadStatus = MapLoadStatus.None;
+		currentLoadProgress = 0;
+		currentLoadMessage = "";
+		ResetModFileProgressTracking();
 		if (success)
 		{
+			CustomMapTelemetry.OnMapLoadCompleted();
 			CustomMapLoader.OpenDoorToMap();
 			if (!CustomMapLoader.GetLuauGamemodeScript().IsNullOrEmpty())
 			{
@@ -1026,7 +1433,10 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 		loadingMapId = ModId.Null;
 		waitingForModInstall = false;
 		waitingForModInstallId = ModId.Null;
-		OnMapLoadStatusChanged.Invoke(MapLoadStatus.Error, 0, message ?? "UNKNOWN ERROR");
+		pendingMapLoadSource = GTMapLoadSource.none;
+		CustomMapTelemetry.ClearLoadingMapInfo();
+		ResetModFileProgressTracking();
+		BroadcastMapLoadProgress(MapLoadStatus.Error, 0, message ?? "UNKNOWN ERROR");
 		OnMapLoadComplete.Invoke(arg0: false);
 	}
 
@@ -1082,6 +1492,11 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 	{
 		if (hasInstance && modId != currentRoomMapModId._id)
 		{
+			if (IsFeaturedMapLocked() && modId != FeaturedLockedMapId._id)
+			{
+				GTDev.LogWarning($"[CustomMapManager::SetRoomMap] Blocked room-map change to {modId} - Featured " + $"lobby is locked to {FeaturedLockedMapId}.");
+				return;
+			}
 			currentRoomMapModId = new ModId(modId);
 			currentRoomMapApproved = false;
 			OnRoomMapChanged.Invoke(currentRoomMapModId);
@@ -1090,7 +1505,7 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 
 	public static void ClearRoomMap()
 	{
-		if (hasInstance && !currentRoomMapModId.Equals(ModId.Null))
+		if (hasInstance && !currentRoomMapModId.Equals(ModId.Null) && !IsFeaturedMapLocked())
 		{
 			currentRoomMapModId = ModId.Null;
 			currentRoomMapApproved = false;
@@ -1111,7 +1526,7 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 	{
 		currentRoomMapApproved = true;
 		CMSSerializer.ResetSyncedMapObjects();
-		LoadMap(currentRoomMapModId);
+		LoadMap(currentRoomMapModId, GTMapLoadSource.room_sync);
 	}
 
 	public static void RequestEnableTeleportHUD(bool enteringVirtualStump)

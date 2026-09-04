@@ -8,18 +8,18 @@ using GorillaExtensions;
 using Photon.Pun;
 using Photon.Realtime;
 
-internal class RequestableOwnershipGaurdHandler : IPunOwnershipCallbacks, IInRoomCallbacks, INetworkRunnerCallbacks, IPublicFacingInterface
+internal class RequestableOwnershipGuardHandler : IPunOwnershipCallbacks, IInRoomCallbacks, INetworkRunnerCallbacks, IPublicFacingInterface
 {
 	private static HashSet<NetworkView> gaurdedViews;
 
-	private static readonly RequestableOwnershipGaurdHandler callbackInstance;
+	private static readonly RequestableOwnershipGuardHandler callbackInstance;
 
 	private static Dictionary<NetworkView, RequestableOwnershipGuard> guardingLookup;
 
-	static RequestableOwnershipGaurdHandler()
+	static RequestableOwnershipGuardHandler()
 	{
 		gaurdedViews = new HashSet<NetworkView>();
-		callbackInstance = new RequestableOwnershipGaurdHandler();
+		callbackInstance = new RequestableOwnershipGuardHandler();
 		guardingLookup = new Dictionary<NetworkView, RequestableOwnershipGuard>();
 		PhotonNetwork.AddCallbackTarget(callbackInstance);
 	}

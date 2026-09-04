@@ -18,5 +18,9 @@ public enum GroupJoinZoneB
 	VIMExperience3 = 0x1000,
 	VIMExperience4 = 0x2000,
 	SpaceMap = 0x4000,
-	SpaceMapTunnel = 0x8000
+	SpaceMapTunnel = 0x8000,
+	Mall = 0x10000,
+	SilverbackStudios = 0x20000,
+	SilverbackEntrance = 0x40000,
+	MonkeBlocksEntrance = 0x80000
 }

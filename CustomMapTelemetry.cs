@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using Modio.Mods;
 using Unity.Profiling;
 using UnityEngine;
 
@@ -8,11 +9,21 @@ public class CustomMapTelemetry : MonoBehaviour
 	[OnEnterPlay_SetNull]
 	private static volatile CustomMapTelemetry instance;
 
-	private static string mapName;
+	private static string mapName = "NULL";
 
 	private static long mapModId;
 
-	private static string mapCreatorUsername;
+	private static string mapCreatorUsername = "NULL";
+
+	private static Mod currentMapMod;
+
+	private static GTMapLoadSource currentMapSource = GTMapLoadSource.none;
+
+	private static bool playerInMap;
+
+	private static long enteredMapId;
+
+	private static string enteredMapSource;
 
 	private static bool metricsCaptureStarted;
 
@@ -72,6 +83,20 @@ public class CustomMapTelemetry : MonoBehaviour
 		}
 	}
 
+	public static string CurrentMapIdString
+	{
+		get
+		{
+			if (!CustomMapLoader.IsMapLoaded())
+			{
+				return string.Empty;
+			}
+			return CustomMapLoader.LoadedMapModId._id.ToString();
+		}
+	}
+
+	public static string CurrentMapSourceString => currentMapSource.GetName();
+
 	private void Awake()
 	{
 		if (instance == null)
@@ -81,6 +106,78 @@ public class CustomMapTelemetry : MonoBehaviour
 		else if (instance != this)
 		{
 			UnityEngine.Object.Destroy(base.gameObject);
+		}
+	}
+
+	public static void SetLoadingMapInfo(Mod mod, GTMapLoadSource source)
+	{
+		currentMapMod = mod;
+		currentMapSource = source;
+	}
+
+	public static void ClearLoadingMapInfo()
+	{
+		if (currentMapMod == null || !CustomMapLoader.IsMapLoaded(currentMapMod.Id))
+		{
+			currentMapMod = null;
+			currentMapSource = GTMapLoadSource.none;
+		}
+	}
+
+	public static void OnMapLoadCompleted()
+	{
+		if (currentMapMod == null || !CustomMapLoader.IsMapLoaded())
+		{
+			return;
+		}
+		long id = CustomMapLoader.LoadedMapModId._id;
+		if (id == 999999999 || currentMapMod.Id._id != id)
+		{
+			return;
+		}
+		string[] array;
+		if (currentMapMod.Tags != null)
+		{
+			array = new string[currentMapMod.Tags.Length];
+			for (int i = 0; i < currentMapMod.Tags.Length; i++)
+			{
+				array[i] = currentMapMod.Tags[i]?.ApiName ?? "";
+			}
+		}
+		else
+		{
+			array = Array.Empty<string>();
+		}
+		GorillaTelemetry.PostCustomMapRegistryEvent(id, currentMapMod.Name, currentMapMod.Creator?.UserId ?? 0, currentMapMod.Creator?.Username ?? "", currentMapMod.DateLive, currentMapMod.DateUpdated, array, CustomMapLoader.LoadedMapSupportVersion, CustomMapLoader.GetRoomSizeForCurrentlyLoadedMap(), !string.IsNullOrEmpty(CustomMapLoader.GetLuauGamemodeScript()), CustomMapLoader.LoadedMapGravityZoneCount, CustomMapLoader.LoadedMapSizeChangerCount, CustomMapLoader.LoadedMapHandHoldCount, CustomMapLoader.LoadedMapMapperAssetCount);
+	}
+
+	public static void OnMapUnloaded()
+	{
+		OnPlayerLeftMap();
+		ClearLoadingMapInfo();
+	}
+
+	public static void OnPlayerEnteredMap()
+	{
+		if (!playerInMap && CustomMapLoader.IsMapLoaded())
+		{
+			long id = CustomMapLoader.LoadedMapModId._id;
+			string mapSource = currentMapSource.GetName();
+			if (GorillaTelemetry.PostCustomMapZoneEvent(GTZoneEventType.zone_enter, id, mapSource))
+			{
+				playerInMap = true;
+				enteredMapId = id;
+				enteredMapSource = mapSource;
+			}
+		}
+	}
+
+	public static void OnPlayerLeftMap()
+	{
+		if (playerInMap)
+		{
+			playerInMap = false;
+			GorillaTelemetry.PostCustomMapZoneEvent(GTZoneEventType.zone_exit, enteredMapId, enteredMapSource);
 		}
 	}
 
@@ -98,23 +195,52 @@ public class CustomMapTelemetry : MonoBehaviour
 
 	public static void StartMapTracking()
 	{
+		if (metricsCaptureStarted || perfCaptureStarted)
+		{
+			return;
+		}
+		mapEnterTime = Time.realtimeSinceStartup;
+		float value = UnityEngine.Random.value;
+		if (value <= 0.01f)
+		{
+			StartMetricsCapture();
+		}
+		else if (value >= 0.99f)
+		{
+			StartPerfCapture();
+		}
 		if (!metricsCaptureStarted && !perfCaptureStarted)
 		{
-			mapEnterTime = Time.realtimeSinceStartup;
-			float value = UnityEngine.Random.value;
-			if (value <= 0.01f)
-			{
-				StartMetricsCapture();
-			}
-			else if (value >= 0.99f)
-			{
-				StartPerfCapture();
-			}
-			if (!metricsCaptureStarted)
-			{
-				_ = perfCaptureStarted;
-			}
+			return;
 		}
+		int num;
+		string text;
+		if (CustomMapLoader.IsMapLoaded())
+		{
+			mapModId = CustomMapLoader.LoadedMapModId._id;
+			if (currentMapMod != null && currentMapMod.Id._id == mapModId)
+			{
+				num = ((!string.IsNullOrEmpty(currentMapMod.Name)) ? 1 : 0);
+				if (num != 0)
+				{
+					text = currentMapMod.Name;
+					goto IL_00b0;
+				}
+			}
+			else
+			{
+				num = 0;
+			}
+			text = mapModId.ToString();
+			goto IL_00b0;
+		}
+		mapName = "NULL";
+		mapCreatorUsername = "NULL";
+		mapModId = 0L;
+		return;
+		IL_00b0:
+		mapName = text;
+		mapCreatorUsername = ((num == 0) ? "NULL" : (currentMapMod.Creator?.Username ?? "NULL"));
 	}
 
 	public static void EndMapTracking()

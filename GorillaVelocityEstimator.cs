@@ -45,6 +45,8 @@ public class GorillaVelocityEstimator : MonoBehaviour
 		{
 			history[i] = default(VelocityHistorySample);
 		}
+		linearVelocity = Vector3.zero;
+		angularVelocity = Vector3.zero;
 		lastPos = base.transform.position;
 		lastRotation = base.transform.rotation;
 		GorillaVelocityEstimatorManager.Register(this);

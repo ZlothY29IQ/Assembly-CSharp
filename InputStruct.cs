@@ -4,8 +4,8 @@ using Fusion;
 using UnityEngine;
 
 [Serializable]
-[StructLayout(LayoutKind.Explicit, Size = 176)]
-[NetworkStructWeaved(44)]
+[StructLayout(LayoutKind.Explicit, Size = 180)]
+[NetworkStructWeaved(45)]
 public struct InputStruct : INetworkStruct
 {
 	[FieldOffset(0)]
@@ -106,4 +106,7 @@ public struct InputStruct : INetworkStruct
 
 	[FieldOffset(168)]
 	public long packedGTPlayerStats;
+
+	[FieldOffset(176)]
+	public int gtPlayerStatsFlags;
 }

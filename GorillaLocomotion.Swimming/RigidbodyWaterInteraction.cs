@@ -82,7 +82,13 @@ public class RigidbodyWaterInteraction : MonoBehaviour
 			activeWaterCurrents.Clear();
 			for (int i = 0; i < overlappingWaterVolumes.Count; i++)
 			{
-				if (overlappingWaterVolumes[i].GetSurfaceQueryForPoint(vector, out var result))
+				WaterVolume.SurfaceQuery result;
+				if (overlappingWaterVolumes[i] == null)
+				{
+					overlappingWaterVolumes.RemoveAt(i);
+					i--;
+				}
+				else if (overlappingWaterVolumes[i].GetSurfaceQueryForPoint(vector, out result))
 				{
 					float num2 = Vector3.Dot(result.surfacePoint - vector, result.surfaceNormal);
 					if (num2 > num)

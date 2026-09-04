@@ -98,6 +98,10 @@ public static class VoxelExtensions
 			Vector3 vector5 = _verts[_tris[triangleIndex * 3 + 2]];
 			Vector3 position = ((!((vector2 - vector3).sqrMagnitude < (vector2 - vector4).sqrMagnitude)) ? (((vector2 - vector4).sqrMagnitude < (vector2 - vector5).sqrMagnitude) ? vector4 : vector5) : (((vector2 - vector3).sqrMagnitude < (vector2 - vector5).sqrMagnitude) ? vector3 : vector5));
 			position = (_lastVertex = meshCollider.transform.TransformPoint(position));
+			if ((hit.point - position).sqrMagnitude > world.Scale * 1.6f)
+			{
+				position = (_lastVertex = hit.point);
+			}
 			if (_showDebug)
 			{
 				Debug.Log($"Closest vertex to {vector}: {position}");
@@ -126,7 +130,7 @@ public static class VoxelExtensions
 		{
 			Debug.DrawLine(Camera.main.transform.position, vector, Color.white, 20f);
 		}
-		int3 v = vector.ToInt3();
+		int3 v = vector.RoundToInt();
 		if (_showDebug)
 		{
 			Debug.DrawLine(Camera.main.transform.position, v.ToVector3(), Color.yellow, 20f);
@@ -165,7 +169,7 @@ public static class VoxelExtensions
 		{
 			Debug.DrawLine(Camera.main.transform.position, end, Color.white, 20f);
 		}
-		int3 v = end.ToInt3();
+		int3 v = end.RoundToInt();
 		if (_showDebug)
 		{
 			Debug.DrawLine(Camera.main.transform.position, v.ToVector3(), Color.yellow, 20f);
@@ -185,8 +189,11 @@ public static class VoxelExtensions
 		}
 	}
 
-	public static int[] PerformLocalMiningOperation(this VoxelWorld world, Vector3 hitPoint, Vector3 hitNormal, VoxelOperation op, bool immediate = true)
+	public static int[] PerformLocalMiningOperation(this VoxelWorld world, VoxelManager.VoxelMineOperation mineOp, bool immediate = true)
 	{
+		VoxelOperation op = mineOp.op;
+		Vector3 worldPosition = world.GetWorldPosition(mineOp.localHitPoint);
+		Vector3 hitNormal = mineOp.hitNormal;
 		_lastBounds = world.GetBounds(op.origin, op.radius);
 		_opMaterialSet = world.MaterialSet;
 		_op = op;
@@ -198,7 +205,7 @@ public static class VoxelExtensions
 			world.SetVoxelDataCustom(_lastBounds, MineAt, immediate);
 			if (_opTotalMined > 0)
 			{
-				world.MaterialSet.PlayDigFX(hitPoint, hitNormal, _opMined);
+				VoxelEvents.HandleResourceMined(world, worldPosition, hitNormal, _opMined);
 			}
 			break;
 		case OperationType.Add:

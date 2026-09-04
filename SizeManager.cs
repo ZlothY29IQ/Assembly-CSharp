@@ -152,19 +152,23 @@ public class SizeManager : MonoBehaviour
 	public void InvokeFixedUpdate()
 	{
 		float num = 1f;
+		if (GorillaGameManager.instance is CustomGameMode customGameMode)
+		{
+			num = customGameMode.GetRigScale(targetRig);
+		}
 		SizeChanger sizeChanger = ControllingChanger(targetRig.transform);
 		switch (myType)
 		{
 		case SizeChangerType.LocalOnline:
-			num = ScaleFromChanger(sizeChanger, targetRig.transform, Time.fixedDeltaTime);
+			num *= ScaleFromChanger(sizeChanger, targetRig.transform, Time.fixedDeltaTime);
 			targetRig.ScaleMultiplier = ((num == 1f) ? SizeOverTime(num, 0.33f, Time.fixedDeltaTime) : num);
 			break;
 		case SizeChangerType.OtherOnline:
-			num = ScaleFromChanger(sizeChanger, targetRig.transform, Time.fixedDeltaTime);
+			num *= ScaleFromChanger(sizeChanger, targetRig.transform, Time.fixedDeltaTime);
 			targetRig.ScaleMultiplier = ((num == 1f) ? SizeOverTime(num, 0.33f, Time.fixedDeltaTime) : num);
 			break;
 		case SizeChangerType.LocalOffline:
-			num = ScaleFromChanger(sizeChanger, mainCameraTransform, Time.fixedDeltaTime);
+			num *= ScaleFromChanger(sizeChanger, mainCameraTransform, Time.fixedDeltaTime);
 			targetPlayer.SetScaleMultiplier((num == 1f) ? SizeOverTime(num, 0.33f, Time.fixedDeltaTime) : num);
 			break;
 		}

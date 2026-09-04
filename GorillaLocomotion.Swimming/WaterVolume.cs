@@ -122,15 +122,18 @@ public class WaterVolume : BaseGuidedRefTargetMono, ITickSystemTick
 			float num2 = float.MaxValue;
 			for (int i = 0; i < volumeColliders.Count; i++)
 			{
-				float y = volumeColliders[i].bounds.max.y;
-				float y2 = volumeColliders[i].bounds.min.y;
-				if (y > num)
+				if (!(volumeColliders[i] == null))
 				{
-					num = y;
-				}
-				if (y2 < num2)
-				{
-					num2 = y2;
+					float y = volumeColliders[i].bounds.max.y;
+					float y2 = volumeColliders[i].bounds.min.y;
+					if (y > num)
+					{
+						num = y;
+					}
+					if (y2 < num2)
+					{
+						num2 = y2;
+					}
 				}
 			}
 			volumeMaxHeight = num;
@@ -142,18 +145,21 @@ public class WaterVolume : BaseGuidedRefTargetMono, ITickSystemTick
 		float num4 = float.MaxValue;
 		for (int j = 0; j < volumeColliders.Count; j++)
 		{
-			Bounds bounds = volumeColliders[j].bounds;
-			float num5 = Vector3.Dot(bounds.center, vector);
-			float num6 = Vector3.Dot(bounds.extents, rhs);
-			float num7 = num5 + num6;
-			float num8 = num5 - num6;
-			if (num7 > num3)
+			if (!(volumeColliders[j] == null))
 			{
-				num3 = num7;
-			}
-			if (num8 < num4)
-			{
-				num4 = num8;
+				Bounds bounds = volumeColliders[j].bounds;
+				float num5 = Vector3.Dot(bounds.center, vector);
+				float num6 = Vector3.Dot(bounds.extents, rhs);
+				float num7 = num5 + num6;
+				float num8 = num5 - num6;
+				if (num7 > num3)
+				{
+					num3 = num7;
+				}
+				if (num8 < num4)
+				{
+					num4 = num8;
+				}
 			}
 		}
 		float num9 = Vector3.Dot(point, vector);
@@ -167,6 +173,10 @@ public class WaterVolume : BaseGuidedRefTargetMono, ITickSystemTick
 		float num13 = 0f;
 		for (int k = 0; k < surfaceColliders.Count; k++)
 		{
+			if (surfaceColliders[k] == null)
+			{
+				continue;
+			}
 			bool flag3 = surfaceColliders[k].enabled;
 			surfaceColliders[k].enabled = true;
 			if (surfaceColliders[k].Raycast(ray, out var hitInfo, num10))
@@ -326,15 +336,18 @@ public class WaterVolume : BaseGuidedRefTargetMono, ITickSystemTick
 		float num2 = float.MaxValue;
 		for (int i = 0; i < volumeColliders.Count; i++)
 		{
-			float y = volumeColliders[i].bounds.max.y;
-			float y2 = volumeColliders[i].bounds.min.y;
-			if (y > num)
+			if (!(volumeColliders[i] == null))
 			{
-				num = y;
-			}
-			if (y2 < num2)
-			{
-				num2 = y2;
+				float y = volumeColliders[i].bounds.max.y;
+				float y2 = volumeColliders[i].bounds.min.y;
+				if (y > num)
+				{
+					num = y;
+				}
+				if (y2 < num2)
+				{
+					num2 = y2;
+				}
 			}
 		}
 		volumeMaxHeight = num;

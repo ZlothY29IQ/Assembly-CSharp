@@ -119,7 +119,7 @@ public class UnderwaterCameraEffect : MonoBehaviour
 		Vector3 position = targetCamera.transform.position;
 		for (int i = 0; i < player.HeadOverlappingWaterVolumes.Count; i++)
 		{
-			if (!player.HeadOverlappingWaterVolumes[i].GetSurfaceQueryForPoint(position, out var result))
+			if (player.HeadOverlappingWaterVolumes[i] == null || !player.HeadOverlappingWaterVolumes[i].GetSurfaceQueryForPoint(position, out var result))
 			{
 				continue;
 			}
