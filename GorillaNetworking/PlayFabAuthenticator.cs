@@ -332,7 +332,7 @@ public class PlayFabAuthenticator : MonoBehaviour
 		}
 		else
 		{
-			StartCoroutine(DisplayGeneralFailureMessageOnGorillaComputerAfter1Frame());
+			StartCoroutine(DisplayGeneralFailureMessageOnGorillaComputerAfter1FrameDiffernetError());
 		}
 	}
 
@@ -361,6 +361,21 @@ public class PlayFabAuthenticator : MonoBehaviour
 		else
 		{
 			Debug.LogError("PlayFabAuthenticator: gorillaComputer is null, so could not set GeneralFailureMessage notifying user that the steam account could not be authenticated.", this);
+		}
+	}
+
+	private IEnumerator DisplayGeneralFailureMessageOnGorillaComputerAfter1FrameDiffernetError()
+	{
+		yield return null;
+		if (gorillaComputer != null)
+		{
+			gorillaComputer.GeneralFailureMessage("UNABLE TO AUTHENTICATE YOUR STEAM ACCOUNT! STEAM MANAGER NEVER INITIAZLIZED");
+			gorillaComputer.screenText.Set("UNABLE TO AUTHENTICATE YOUR STEAM ACCOUNT! STEAM MANAGER NEVER INITIAZLIZED");
+			Debug.Log("Couldn't authenticate steam account");
+		}
+		else
+		{
+			Debug.LogError("UNABLE TO AUTHENTICATE YOUR STEAM ACCOUNT! STEAM MANAGER NEVER INITIAZLIZED", this);
 		}
 	}
 

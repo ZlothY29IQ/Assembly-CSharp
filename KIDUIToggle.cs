@@ -103,6 +103,8 @@ public class KIDUIToggle : Slider
 
 	private Coroutine _animationCoroutine;
 
+	private ControllerBehaviour controllerBehaviour;
+
 	private bool inside;
 
 	private static bool _triggeredThisFrame = false;
@@ -117,6 +119,19 @@ public class KIDUIToggle : Slider
 	{
 		base.Awake();
 		SetupToggleComponent();
+		controllerBehaviour = GetComponentInChildren<ControllerBehaviour>();
+		if (controllerBehaviour == null)
+		{
+			Debug.LogError("[KID::UI_BUTTON] Could not find [ControllerBehaviour] in children, trying to create a new one.");
+			if (_cbUXSettings == null)
+			{
+				Debug.LogError("[KID::UI_BUTTON] [_cbUXSettings] has not been set but trying to create a new [ControllerBehaviour] reference.");
+			}
+			else
+			{
+				controllerBehaviour = ControllerBehaviour.CreateNewControllerBehaviour(base.gameObject, _cbUXSettings);
+			}
+		}
 	}
 
 	protected override void Start()
@@ -129,7 +144,7 @@ public class KIDUIToggle : Slider
 	{
 		base.OnEnable();
 		base.interactable = false;
-		if ((bool)ControllerBehaviour.Instance)
+		if ((bool)controllerBehaviour)
 		{
 			ControllerBehaviour.Instance.OnAction += PostUpdate;
 		}
@@ -324,7 +339,7 @@ public class KIDUIToggle : Slider
 
 	protected new void OnDisable()
 	{
-		if ((bool)ControllerBehaviour.Instance)
+		if ((bool)controllerBehaviour)
 		{
 			ControllerBehaviour.Instance.OnAction -= PostUpdate;
 		}

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using GorillaTagScripts;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -23,6 +24,8 @@ public class StoreBundle
 
 	private string _price = defaultPrice;
 
+	private string _gtfcPrice;
+
 	private string _bundleName = "";
 
 	public string purchaseButtonText = "";
@@ -41,6 +44,34 @@ public class StoreBundle
 	public NexusCreatorCode nexusCreatorCode => _storeBundleDataReference.creatorCode;
 
 	public string price => _price;
+
+	public string gtfcPrice => _gtfcPrice;
+
+	public bool HasGTFCPrice => !string.IsNullOrEmpty(gtfcPrice);
+
+	public bool HasPrice
+	{
+		get
+		{
+			if (!string.IsNullOrEmpty(price))
+			{
+				return price != defaultPrice;
+			}
+			return false;
+		}
+	}
+
+	public string EffectivePrice
+	{
+		get
+		{
+			if (!HasGTFCPrice || !SubscriptionManager.IsLocalSubscribed())
+			{
+				return _price;
+			}
+			return _gtfcPrice;
+		}
+	}
 
 	public string bundleName
 	{
@@ -69,18 +100,6 @@ public class StoreBundle
 		}
 	}
 
-	public bool HasPrice
-	{
-		get
-		{
-			if (!string.IsNullOrEmpty(price))
-			{
-				return price != defaultPrice;
-			}
-			return false;
-		}
-	}
-
 	public string bundleDescriptionText => _storeBundleDataReference.bundleDescriptionText;
 
 	public StoreBundle()
@@ -94,6 +113,16 @@ public class StoreBundle
 		isOwned = false;
 		bundleStands = new List<BundleStand>();
 		_storeBundleDataReference = data;
+	}
+
+	public void OnEnable()
+	{
+		SubscriptionManager.OnSubscriptionData = (Action)Delegate.Combine(SubscriptionManager.OnSubscriptionData, new Action(UpdatePurchaseButtonText));
+	}
+
+	public void OnDisable()
+	{
+		SubscriptionManager.OnSubscriptionData = (Action)Delegate.Remove(SubscriptionManager.OnSubscriptionData, new Action(UpdatePurchaseButtonText));
 	}
 
 	public void InitializebundleStands()
@@ -114,17 +143,72 @@ public class StoreBundle
 	{
 		if (!string.IsNullOrEmpty(bundlePrice))
 		{
-			_price = (decimal.TryParse(bundlePrice, out var _) ? (defaultCurrencySymbol + bundlePrice) : bundlePrice);
+			_price = WithCurrencySymbol(bundlePrice);
 		}
 		UpdatePurchaseButtonText();
 	}
 
+	public void TryUpdateGtfcPrice(uint bundlePrice)
+	{
+		TryUpdateGtfcPrice(((decimal)bundlePrice / 100m).ToString());
+	}
+
+	public void TryUpdateGtfcPrice(string bundlePrice = null)
+	{
+		if (!string.IsNullOrEmpty(bundlePrice))
+		{
+			_gtfcPrice = WithCurrencySymbol(bundlePrice);
+		}
+		UpdatePurchaseButtonText();
+	}
+
+	private static string WithCurrencySymbol(string bundlePrice)
+	{
+		if (!decimal.TryParse(bundlePrice, out var _))
+		{
+			return bundlePrice;
+		}
+		return defaultCurrencySymbol + bundlePrice;
+	}
+
 	public void UpdatePurchaseButtonText()
 	{
-		purchaseButtonText = string.Format(purchaseButtonStringFormat, bundleName, price);
+		string text;
+		string text2;
+		if (HasGTFCPrice)
+		{
+			if (SubscriptionManager.IsLocalSubscribed())
+			{
+				text = string.Format(purchaseButtonStringFormat, bundleName, gtfcPrice);
+				text2 = "REG: " + price;
+			}
+			else
+			{
+				text = string.Format(purchaseButtonStringFormat, bundleName, price);
+				text2 = "VIM: " + gtfcPrice;
+			}
+		}
+		else
+		{
+			text = string.Format(purchaseButtonStringFormat, bundleName, EffectivePrice);
+			text2 = null;
+		}
 		foreach (BundleStand bundleStand in bundleStands)
 		{
-			bundleStand.UpdatePurchaseButtonText(purchaseButtonText);
+			bundleStand.UpdatePurchaseButtonText(text);
+			GameObject[] gtfcObjects = bundleStand.GtfcObjects;
+			foreach (GameObject gameObject in gtfcObjects)
+			{
+				if ((bool)gameObject)
+				{
+					gameObject.SetActive(HasGTFCPrice);
+				}
+			}
+			bundleStand.GtfcPriceLabel.gameObject.SetActive(HasGTFCPrice);
+			if (HasGTFCPrice)
+			{
+				bundleStand.GtfcPriceLabel.SetText(text2);
+			}
 		}
 	}
 

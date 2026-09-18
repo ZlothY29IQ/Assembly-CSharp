@@ -1456,6 +1456,7 @@ public class GTPlayer : MonoBehaviour
 		GorillaTagger.Instance.offlineVRRig.transform.position = lastPosition;
 		GorillaTagger.Instance.offlineVRRig.leftHandLink.BreakLink();
 		GorillaTagger.Instance.offlineVRRig.rightHandLink.BreakLink();
+		GorillaTagger.Instance.offlineVRRig.FlagJustTeleported();
 		ForceRigidBodySync();
 	}
 
@@ -1502,6 +1503,7 @@ public class GTPlayer : MonoBehaviour
 		GorillaTagger.Instance.offlineVRRig.transform.position = position;
 		GorillaTagger.Instance.offlineVRRig.leftHandLink.BreakLink();
 		GorillaTagger.Instance.offlineVRRig.rightHandLink.BreakLink();
+		GorillaTagger.Instance.offlineVRRig.FlagJustTeleported();
 		ForceRigidBodySync();
 	}
 

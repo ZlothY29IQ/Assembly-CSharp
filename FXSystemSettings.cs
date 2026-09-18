@@ -18,7 +18,7 @@ public class FXSystemSettings : ScriptableObject
 	public bool forLocalRig;
 
 	[NonSerialized]
-	public CallLimitType<CallLimiter>[] callSettings = new CallLimitType<CallLimiter>[26];
+	public CallLimitType<CallLimiter>[] callSettings = new CallLimitType<CallLimiter>[27];
 
 	public void Awake()
 	{
@@ -31,7 +31,7 @@ public class FXSystemSettings : ScriptableObject
 		{
 			fXType = callLimits[i].Key;
 			num3 = (int)fXType;
-			if (num3 < 0 || num3 >= 26)
+			if (num3 < 0 || num3 >= 27)
 			{
 				string text = "NO_PATH_AT_RUNTIME";
 				Debug.LogError("FXSystemSettings: (this should never happen) `callLimits.Key` is out of bounds of `callSettings`! Path=\"" + text + "\"", this);

@@ -13,6 +13,24 @@ namespace GorillaNetworking;
 
 public class GorillaServer : MonoBehaviour, ISerializationCallbackReceiver
 {
+	[Serializable]
+	public class ReconcileBundleRewardsResponse
+	{
+		public bool success { get; set; }
+
+		public string errorMessage { get; set; }
+
+		public int? reconciledBundleCount { get; set; }
+
+		public List<string> grantedBundles { get; set; }
+	}
+
+	[Serializable]
+	public class ClaimItemResponse
+	{
+		public bool granted { get; set; }
+	}
+
 	public static volatile GorillaServer Instance;
 
 	public string FeatureFlagsTitleDataKey = "DeployFeatureFlags";
@@ -86,7 +104,7 @@ public class GorillaServer : MonoBehaviour, ISerializationCallbackReceiver
 		}, successCallback, errorCallback);
 	}
 
-	public void ReconcileBundleRewards(Action<string> successCallback, Action<string> errorCallback)
+	public void ReconcileBundleRewards(Action<ReconcileBundleRewardsResponse> successCallback, Action<string> errorCallback)
 	{
 		successCallback = DebugWrapCb(successCallback, "ReconcileBundleRewards result");
 		errorCallback = DebugWrapCb(errorCallback, "ReconcileBundleRewards error");
@@ -100,7 +118,7 @@ public class GorillaServer : MonoBehaviour, ISerializationCallbackReceiver
 		}
 	}
 
-	private IEnumerator SendReconcileBundleRewards(Action<string> successCallback, Action<string> errorCallback)
+	private IEnumerator SendReconcileBundleRewards(Action<ReconcileBundleRewardsResponse> successCallback, Action<string> errorCallback)
 	{
 		string s = JsonConvert.SerializeObject(new
 		{
@@ -118,10 +136,62 @@ public class GorillaServer : MonoBehaviour, ISerializationCallbackReceiver
 		if (www.result != UnityWebRequest.Result.Success)
 		{
 			errorCallback($"{www.responseCode}: {www.downloadHandler.text}");
+			yield break;
+		}
+		ReconcileBundleRewardsResponse reconcileBundleRewardsResponse = JsonConvert.DeserializeObject<ReconcileBundleRewardsResponse>(www.downloadHandler.text);
+		if (reconcileBundleRewardsResponse == null)
+		{
+			errorCallback($"{www.responseCode}: {www.downloadHandler.text}");
 		}
 		else
 		{
-			successCallback(www.downloadHandler.text);
+			successCallback(reconcileBundleRewardsResponse);
+		}
+	}
+
+	public void ClaimItem(string playFabItemId, Action<ClaimItemResponse> successCallback, Action<string> errorCallback)
+	{
+		successCallback = DebugWrapCb(successCallback, "ClaimItem result");
+		errorCallback = DebugWrapCb(errorCallback, "ClaimItem error");
+		if (!MothershipClientContext.IsClientLoggedIn())
+		{
+			errorCallback("Not logged in to Mothership");
+		}
+		else
+		{
+			StartCoroutine(SendClaimItem(playFabItemId, successCallback, errorCallback));
+		}
+	}
+
+	private IEnumerator SendClaimItem(string playFabItemId, Action<ClaimItemResponse> successCallback, Action<string> errorCallback)
+	{
+		string s = JsonConvert.SerializeObject(new
+		{
+			mothershipId = MothershipClientContext.MothershipId,
+			mothershipToken = MothershipClientContext.Token,
+			mothershipEnvId = MothershipClientApiUnity.EnvironmentId,
+			mothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
+			playFabItemId = playFabItemId
+		});
+		using UnityWebRequest www = new UnityWebRequest(PlayFabAuthenticatorSettings.IapApiBaseUrl + "/api/ClaimItem", "POST");
+		www.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(s));
+		www.downloadHandler = new DownloadHandlerBuffer();
+		www.SetRequestHeader("Content-Type", "application/json");
+		www.timeout = 15;
+		yield return www.SendWebRequest();
+		if (www.result != UnityWebRequest.Result.Success)
+		{
+			errorCallback($"{www.responseCode}: {www.downloadHandler.text}");
+			yield break;
+		}
+		ClaimItemResponse claimItemResponse = JsonConvert.DeserializeObject<ClaimItemResponse>(www.downloadHandler.text);
+		if (claimItemResponse == null)
+		{
+			errorCallback($"{www.responseCode}: {www.downloadHandler.text}");
+		}
+		else
+		{
+			successCallback(claimItemResponse);
 		}
 	}
 
@@ -408,5 +478,10 @@ public class GorillaServer : MonoBehaviour, ISerializationCallbackReceiver
 	public bool CheckRoomControlsEnabledForAnyone()
 	{
 		return featureFlags.IsEnabledForAnyone("2026-05-RoomControlsEnabled");
+	}
+
+	public bool CheckAlarmClocksEnabled()
+	{
+		return featureFlags.IsEnabled("2026-09-AlarmClocksEnabled");
 	}
 }

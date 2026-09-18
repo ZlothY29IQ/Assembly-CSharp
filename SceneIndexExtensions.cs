@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -26,6 +27,16 @@ public static class SceneIndexExtensions
 	public static SceneIndex GetSceneIndex(this Component cmp)
 	{
 		return (SceneIndex)cmp.gameObject.scene.buildIndex;
+	}
+
+	public static string GetSceneName(this SceneIndex sceneIndex)
+	{
+		string scenePathByBuildIndex = SceneUtility.GetScenePathByBuildIndex((int)sceneIndex);
+		if (!string.IsNullOrEmpty(scenePathByBuildIndex))
+		{
+			return Path.GetFileNameWithoutExtension(scenePathByBuildIndex);
+		}
+		return sceneIndex.ToString();
 	}
 
 	public static void AddCallbackOnSceneLoad(this SceneIndex scene, Action callback)

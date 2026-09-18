@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using GorillaNetworking;
 using GorillaNetworking.ScheduledEvents;
+using Newtonsoft.Json;
 using PlayFab;
 using TMPro;
 using UnityEngine;
@@ -15,7 +16,9 @@ public class SimpleCountdown : ObservableBehavior
 		TitleData,
 		FixedDate,
 		TimeSync,
-		ScheduledEvent
+		ScheduledEvent,
+		EventStart,
+		EventEnd
 	}
 
 	private enum DisplayFormat
@@ -37,6 +40,9 @@ public class SimpleCountdown : ObservableBehavior
 	private string titleDataKey;
 
 	[SerializeField]
+	private string titleDataObjectID;
+
+	[SerializeField]
 	private string date;
 
 	[SerializeField]
@@ -46,6 +52,8 @@ public class SimpleCountdown : ObservableBehavior
 	private Vector2 hourRange = new Vector2(float.MinValue, float.MaxValue);
 
 	private DateTime dt;
+
+	private TitleDataActivation.TitleDataObjectActivationData activationData;
 
 	private TextMeshPro tmp;
 
@@ -58,23 +66,102 @@ public class SimpleCountdown : ObservableBehavior
 		tmp = GetComponent<TextMeshPro>();
 		switch (mode)
 		{
+		default:
+			return;
 		case Mode.TitleData:
 			while (PlayFabTitleDataCache.Instance == null)
 			{
 				await Task.Yield();
 			}
 			PlayFabTitleDataCache.Instance.GetTitleData(titleDataKey, onTD, onTDError);
-			break;
+			return;
 		case Mode.FixedDate:
 			ParseDateTime();
-			break;
+			return;
 		case Mode.TimeSync:
 			if (GorillaComputer.instance != null)
 			{
 				DateTime serverTime = GorillaComputer.instance.GetServerTime();
 				dt = timeSyncRule.GetPrevious(serverTime);
 			}
+			return;
+		case Mode.EventStart:
+		case Mode.EventEnd:
 			break;
+		case Mode.ScheduledEvent:
+			return;
+		}
+		while (PlayFabTitleDataCache.Instance == null || !TitleDataActivation.UpdatedReferenceDateFromTitleData)
+		{
+			await Task.Yield();
+		}
+		PlayFabTitleDataCache.Instance.GetTitleData(titleDataKey, onEventTD, onEventTDError);
+	}
+
+	private void onEventTD(string s)
+	{
+		TitleDataActivation.TitleDataActivationData titleDataActivationData;
+		try
+		{
+			titleDataActivationData = JsonConvert.DeserializeObject<TitleDataActivation.TitleDataActivationData>(s);
+		}
+		catch (Exception ex)
+		{
+			Debug.LogError("SimpleCountdown :: onEventTD ::" + ex.Message + " string was " + s);
+			return;
+		}
+		int num = 0;
+		while (titleDataActivationData != null && titleDataActivationData.Data != null && num < titleDataActivationData.Data.Length)
+		{
+			if (titleDataActivationData.Data[num].TitleDataObjectID == titleDataObjectID)
+			{
+				activationData = titleDataActivationData.Data[num];
+				break;
+			}
+			num++;
+		}
+	}
+
+	private void onEventTDError(PlayFabError error)
+	{
+		Debug.LogError("SimpleCountdown component on " + base.name + " failed to get '" + titleDataKey + "' from title data :: " + error.ErrorMessage);
+	}
+
+	private DateTime GetEventWindowDateTime(DateTime now)
+	{
+		if (activationData == null)
+		{
+			return now;
+		}
+		bool found = false;
+		DateTime target = DateTime.MinValue;
+		TitleDataActivation.AbsoluteDateTimeWindow[] absoluteDateTimeWindow = activationData.AbsoluteDateTimeWindow;
+		int num = 0;
+		while (absoluteDateTimeWindow != null && num < absoluteDateTimeWindow.Length)
+		{
+			ConsiderTime((mode == Mode.EventStart) ? absoluteDateTimeWindow[num].StartDate : absoluteDateTimeWindow[num].EndDate, now, ref found, ref target);
+			num++;
+		}
+		TitleDataActivation.RelativeDateTimeWindow[] relativeDateTimeWindow = activationData.RelativeDateTimeWindow;
+		int num2 = 0;
+		while (relativeDateTimeWindow != null && num2 < relativeDateTimeWindow.Length)
+		{
+			ConsiderTime((mode == Mode.EventStart) ? relativeDateTimeWindow[num2].StartDate : relativeDateTimeWindow[num2].EndDate, now, ref found, ref target);
+			num2++;
+		}
+		if (!found)
+		{
+			return now;
+		}
+		return target;
+	}
+
+	private static void ConsiderTime(DateTime candidate, DateTime now, ref bool found, ref DateTime target)
+	{
+		if (!(candidate <= now) && (!found || !(candidate >= target)))
+		{
+			found = true;
+			target = candidate;
 		}
 	}
 
@@ -123,6 +210,10 @@ public class SimpleCountdown : ObservableBehavior
 			{
 				double value = ((ScheduledEventManager.Instance != null && ScheduledEventManager.Instance.SecondsUntilEventStart > 0.0) ? ScheduledEventManager.Instance.SecondsUntilEventStart : 0.0);
 				dt = serverTime.AddSeconds(value);
+			}
+			else if (mode == Mode.EventStart || mode == Mode.EventEnd)
+			{
+				dt = GetEventWindowDateTime(serverTime);
 			}
 			timeSpan = dt - serverTime;
 		}

@@ -124,11 +124,13 @@ public class PersistLog : MonoBehaviour
 		plog = msg + strace;
 	}
 
+	[HideInCallstack]
 	public static void Log(string msg)
 	{
 		Log(LogType.Log, msg);
 	}
 
+	[HideInCallstack]
 	public static void Log(LogType type, string msg)
 	{
 		msg = $"T+{Time.realtimeSinceStartupAsDouble} >[DEV MSG]> {msg}\n\n";

@@ -628,6 +628,8 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	private bool IsInvisibleToLocalPlayer;
 
+	private const int justTeleported_BIT = 256;
+
 	private const int remoteUseReplacementVoice_BIT = 512;
 
 	private const int grabbedRope_BIT = 1024;
@@ -712,6 +714,15 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	[NonSerialized]
 	public bool portalShenanigansBit;
+
+	private const int JUST_TELEPORTED_SEND_COUNT = 3;
+
+	private const float JUST_TELEPORTED_MIN_DISTANCE = 1f;
+
+	[NonSerialized]
+	public int justTeleportedSendsRemaining;
+
+	private bool snapNextRigUpdate;
 
 	private bool pendingCosmeticUpdate = true;
 
@@ -1451,8 +1462,11 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 				voiceAudio.volume = num2.Value;
 			}
 		}
+		bool num6 = snapNextRigUpdate;
+		snapNextRigUpdate = false;
+		bool num7 = !num6 && Time.time > timeSpawned + doNotLerpConstant;
 		jobPos = base.transform.position;
-		if (Time.time > timeSpawned + doNotLerpConstant)
+		if (num7)
 		{
 			jobPos = Vector3.Lerp(base.transform.position, SanitizeVector3(syncPos), lerpValueBody * 0.66f);
 			if ((bool)currentRopeSwing && (bool)currentRopeSwingTarget)
@@ -1531,7 +1545,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 				jobPos += localOverrideGrabbingHand.TransformPoint(grabbedRopeOffset) - transform3.position;
 			}
 		}
-		if (Time.time > timeSpawned + doNotLerpConstant)
+		if (num7)
 		{
 			jobRotation = Quaternion.Lerp(base.transform.rotation, SanitizeQuaternion(syncRotation), lerpValueBody);
 		}
@@ -1540,9 +1554,10 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 			jobRotation = SanitizeQuaternion(syncRotation);
 		}
 		head.syncPos = base.transform.rotation * -headBodyOffset * scaleFactor;
-		head.MapOther(lerpValueBody);
-		rightHand.MapOther(lerpValueBody);
-		leftHand.MapOther(lerpValueBody);
+		float lerpValue = (num6 ? 1f : lerpValueBody);
+		head.MapOther(lerpValue);
+		rightHand.MapOther(lerpValue);
+		leftHand.MapOther(lerpValue);
 		rightIndex.MapOtherFinger((float)(handSync % 10) / 10f, lerpValueFingers);
 		rightMiddle.MapOtherFinger((float)(handSync % 100) / 100f, lerpValueFingers);
 		rightThumb.MapOtherFinger((float)(handSync % 1000) / 1000f, lerpValueFingers);
@@ -1921,8 +1936,12 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		bool flag = leftHandLink.IsLinkActive() || rightHandLink.IsLinkActive();
 		GorillaGameManager activeGameMode = GorillaGameModes.GameMode.ActiveGameMode;
 		bool flag2 = (object)activeGameMode != null && activeGameMode.GameType() == GameModeType.PropHunt;
-		int packedFields = 0 + (remoteUseReplacementVoice ? 512 : 0) + ((grabbedRopeIndex != -1) ? 1024 : 0) + (grabbedRopeIsPhotonView ? 2048 : 0) + (flag ? 4096 : 0) + (hoverboardVisual.IsHeld ? 8192 : 0) + (hoverboardVisual.IsLeftHanded ? 16384 : 0) + ((mountedMovingSurfaceId != -1) ? 32768 : 0) + (flag2 ? 65536 : 0) + (propHuntHandFollower.IsLeftHand ? 131072 : 0) + (leftHandLink.CanBeGrabbed() ? 262144 : 0) + (rightHandLink.CanBeGrabbed() ? 524288 : 0) + (leftHandLink.IsTentacleGrab ? 1048576 : 0) + (rightHandLink.IsTentacleGrab ? 2097152 : 0) + (ShowGoldNameTag ? 4194304 : 0) + (portalShenanigansBit ? 8388608 : 0) + (num << 24);
+		int packedFields = 0 + ((justTeleportedSendsRemaining > 0) ? 256 : 0) + (remoteUseReplacementVoice ? 512 : 0) + ((grabbedRopeIndex != -1) ? 1024 : 0) + (grabbedRopeIsPhotonView ? 2048 : 0) + (flag ? 4096 : 0) + (hoverboardVisual.IsHeld ? 8192 : 0) + (hoverboardVisual.IsLeftHanded ? 16384 : 0) + ((mountedMovingSurfaceId != -1) ? 32768 : 0) + (flag2 ? 65536 : 0) + (propHuntHandFollower.IsLeftHand ? 131072 : 0) + (leftHandLink.CanBeGrabbed() ? 262144 : 0) + (rightHandLink.CanBeGrabbed() ? 524288 : 0) + (leftHandLink.IsTentacleGrab ? 1048576 : 0) + (rightHandLink.IsTentacleGrab ? 2097152 : 0) + (ShowGoldNameTag ? 4194304 : 0) + (portalShenanigansBit ? 8388608 : 0) + (num << 24);
 		result.packedFields = packedFields;
+		if (justTeleportedSendsRemaining > 0)
+		{
+			justTeleportedSendsRemaining--;
+		}
 		result.packedCompetitiveData = PackCompetitiveData();
 		if (grabbedRopeIndex != -1)
 		{
@@ -1981,12 +2000,21 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		BitPackUtils.UnpackHandPosRotFromNetwork(data.leftHandLong, out tempVec, out tempQuat);
 		leftHand.syncPos = tempVec;
 		leftHand.syncRotation.SetValueSafe(in tempQuat);
+		Vector3 vector = syncPos;
 		syncPos = BitPackUtils.UnpackWorldPosFromNetwork(data.position);
 		handSync = data.handPosition;
 		syncRotation.SetValueSafe(BitPackUtils.UnpackQuaternionFromNetwork(data.rotation));
 		int packedFields = data.packedFields;
 		remoteUseReplacementVoice = (packedFields & 0x200) != 0;
 		portalShenanigansBit = (packedFields & 0x800000) != 0;
+		if ((packedFields & 0x100) != 0 && (syncPos - vector).IsLongerThan(1f))
+		{
+			snapNextRigUpdate = true;
+			netSyncPos.ClearPredictedMotion();
+			leftHand.netSyncPos.ClearPredictedMotion();
+			rightHand.netSyncPos.ClearPredictedMotion();
+			velocityHistoryList.Clear();
+		}
 		if ((packedFields & 0x400000) != 0 && SubscriptionManager.GetSubscriptionDetails(this).active)
 		{
 			playerText1.color = SubscriptionManager.SUBSCRIBER_NAME_COLOR;
@@ -3691,6 +3719,8 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 			inTryOnRoom = false;
 			inTempCosmSpace = false;
 			timeSpawned = 0f;
+			justTeleportedSendsRemaining = 0;
+			snapNextRigUpdate = false;
 			setMatIndex = 0;
 			currentCosmeticTries = 0;
 			velocityHistoryList.Clear();
@@ -4162,6 +4192,11 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 			return SpeakingLoudness > replacementVoiceLoudnessThreshold;
 		}
 		return false;
+	}
+
+	public void FlagJustTeleported()
+	{
+		justTeleportedSendsRemaining = 3;
 	}
 
 	public void SetDisplacementZone(RigDisplacementZone displacementZone)

@@ -20,4 +20,8 @@ internal struct BundleData
 	public string[] mothershipTransactionIds;
 
 	public MothershipProgressionNodeRef[] progressionNodes;
+
+	public string playFabItemNameGTFC;
+
+	public string skuNameGTFC;
 }

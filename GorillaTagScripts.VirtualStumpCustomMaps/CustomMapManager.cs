@@ -472,6 +472,8 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 		}
 		activateIsActive = true;
 		activateCurrentMode = mode;
+		instance.gameObject.SetActive(value: true);
+		instance.virtualStumpToggleableRoot.SetActive(value: true);
 		SetFeaturedMapObjectsHidden(IsInFeaturedMode());
 		if (GorillaComputer.hasInstance)
 		{
@@ -500,6 +502,7 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 		{
 			GTDev.LogError("[CustomMapManager::Activate] Default Teleporter is not set; cannot activate.");
 			activateIsActive = false;
+			instance.virtualStumpToggleableRoot.SetActive(value: false);
 			return;
 		}
 		activateSkipTeleport = true;
@@ -517,6 +520,14 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 			activateIsActive = false;
 			activateSkipTeleport = true;
 			ExitVirtualStump(null);
+		}
+	}
+
+	public static void DisconnectFromRoomAndDisableTeleport()
+	{
+		if (NetworkSystem.Instance.InRoom)
+		{
+			NetworkSystem.Instance.ReturnToSinglePlayer();
 		}
 	}
 

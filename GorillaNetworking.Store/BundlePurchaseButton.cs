@@ -109,11 +109,11 @@ public class BundlePurchaseButton : GorillaPressableButton, IGorillaSliceableSim
 		}
 	}
 
-	public void UpdatePurchaseButtonText(string purchaseText)
+	public void UpdatePurchaseButtonText(string text)
 	{
 		if (!bError)
 		{
-			offText = purchaseText;
+			offText = text;
 			UpdateColor();
 		}
 	}

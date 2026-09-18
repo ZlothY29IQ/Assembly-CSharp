@@ -96,7 +96,7 @@ public class LegalAgreements : MonoBehaviour
 			return;
 		}
 		float num = Time.deltaTime * scrollSpeed;
-		if (ControllerBehaviour.Instance.IsUpStick || ControllerBehaviour.Instance.IsDownStick)
+		if (ControllerBehaviour.Instance != null && (ControllerBehaviour.Instance.IsUpStick || ControllerBehaviour.Instance.IsDownStick))
 		{
 			if (ControllerBehaviour.Instance.IsDownStick)
 			{

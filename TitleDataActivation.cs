@@ -93,6 +93,12 @@ public class TitleDataActivation : MonoBehaviour, IGorillaSliceableSimple
 		[SerializeField]
 		private string endDateTime;
 
+		[JsonIgnore]
+		public DateTime StartDate => dtStart;
+
+		[JsonIgnore]
+		public DateTime EndDate => dtEnd;
+
 		public string StartDateTime
 		{
 			get
@@ -142,6 +148,12 @@ public class TitleDataActivation : MonoBehaviour, IGorillaSliceableSimple
 
 		[SerializeField]
 		private RelativeDateTime endDateTime;
+
+		[JsonIgnore]
+		public DateTime StartDate => dtStart;
+
+		[JsonIgnore]
+		public DateTime EndDate => dtEnd;
 
 		public RelativeDateTime StartDateTime
 		{

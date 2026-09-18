@@ -46,6 +46,8 @@ public class KIDUIHoldableButton : MonoBehaviour, IPointerDownHandler, IEventSys
 
 	private float _elapsedTime;
 
+	private ControllerBehaviour controllerBehaviour;
+
 	private bool inside;
 
 	private bool _isHoldingMouse;
@@ -71,7 +73,7 @@ public class KIDUIHoldableButton : MonoBehaviour, IPointerDownHandler, IEventSys
 	private void OnEnable()
 	{
 		_holdProgressFill.rectTransform.localScale = new Vector3(0f, 1f, 1f);
-		if ((bool)ControllerBehaviour.Instance)
+		if ((bool)controllerBehaviour)
 		{
 			ControllerBehaviour.Instance.OnAction += PostUpdate;
 		}
@@ -211,7 +213,7 @@ public class KIDUIHoldableButton : MonoBehaviour, IPointerDownHandler, IEventSys
 
 	protected void OnDisable()
 	{
-		if ((bool)ControllerBehaviour.Instance)
+		if ((bool)controllerBehaviour)
 		{
 			ControllerBehaviour.Instance.OnAction -= PostUpdate;
 		}

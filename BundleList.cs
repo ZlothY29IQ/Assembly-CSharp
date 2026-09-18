@@ -79,6 +79,23 @@ internal class BundleList
 		return false;
 	}
 
+	public bool TryGetBundle(string idOrSku, out BundleData bundle)
+	{
+		if (data != null && !string.IsNullOrEmpty(idOrSku))
+		{
+			for (int i = 0; i < data.Length; i++)
+			{
+				if (data[i].playFabItemName == idOrSku || data[i].playFabItemNameGTFC == idOrSku || data[i].skuNameGTFC == idOrSku)
+				{
+					bundle = data[i];
+					return true;
+				}
+			}
+		}
+		bundle = default(BundleData);
+		return false;
+	}
+
 	public BundleData ActiveBundle()
 	{
 		return data[activeBundleIdx];

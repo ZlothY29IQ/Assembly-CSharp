@@ -195,6 +195,8 @@ internal class RoomSystem : MonoBehaviour
 
 		public const byte MONKE_BIZ_STATION__POINTS_REDEEMED = 13;
 
+		public const byte GENERAL_FX = 14;
+
 		public const byte VOX_REQ_WORLD = 100;
 
 		public const byte VOX_REQ_OPERATION = 101;
@@ -315,6 +317,8 @@ internal class RoomSystem : MonoBehaviour
 
 	private static Timer disconnectTimer;
 
+	private static StaticArrayBag<object> s_reusableArrayPool;
+
 	[OnExitPlay_Clear]
 	internal static readonly Dictionary<byte, Action<object[], PhotonMessageInfoWrapped>> netEventCallbacks;
 
@@ -332,6 +336,8 @@ internal class RoomSystem : MonoBehaviour
 	private static CallLimiter playerLaunchedCallLimiter;
 
 	private static CallLimiter hitPlayerCallLimiter;
+
+	private static Dictionary<int, RoomSystemEffect> s_effects;
 
 	private static object[] statusSendData;
 
@@ -764,6 +770,7 @@ internal class RoomSystem : MonoBehaviour
 		PlayerLeftEvent = new DelegateListProcessor<NetPlayer>();
 		PlayersChangedEvent = new DelegateListProcessor();
 		disconnectTimer = new Timer();
+		s_reusableArrayPool = new StaticArrayBag<object>();
 		netEventCallbacks = new Dictionary<byte, Action<object[], PhotonMessageInfoWrapped>>(20);
 		sendEventData = new object[3];
 		groupJoinSendData = new object[2];
@@ -771,6 +778,7 @@ internal class RoomSystem : MonoBehaviour
 		reportHitSendData = new object[3];
 		playerLaunchedCallLimiter = new CallLimiter(3, 15f);
 		hitPlayerCallLimiter = new CallLimiter(10, 2f);
+		s_effects = new Dictionary<int, RoomSystemEffect>(2);
 		statusSendData = new object[1];
 		soundSendData = new object[3];
 		sendSoundDataOther = new object[4];
@@ -797,6 +805,7 @@ internal class RoomSystem : MonoBehaviour
 		netEventCallbacks[9] = DeserializePlayerHit;
 		netEventCallbacks[12] = DeserializeLavaSync;
 		netEventCallbacks[13] = DeserializeMonkePointsRedeemed;
+		netEventCallbacks[14] = DeserializeEffect;
 		soundEffectCallback = OnPlaySoundEffect;
 		statusEffectCallback = OnStatusEffect;
 		VoxelManager.RegisterNetEventCallbacks();
@@ -1249,6 +1258,42 @@ internal class RoomSystem : MonoBehaviour
 		if (player != null && VRRigCache.Instance.TryGetVrrig(player, out var playerRig2))
 		{
 			playerRig2.Rig.DisableHitWithKnockBack();
+		}
+	}
+
+	public static void AddEffect(RoomSystemEffect effect)
+	{
+		if (effect != null && !(effect.ID == -1) && !effect.Registered)
+		{
+			s_effects.Add(effect.ID, effect);
+			effect.Registered = true;
+		}
+	}
+
+	public static void RemoveEffect(RoomSystemEffect effect)
+	{
+		if (effect != null && !(effect.ID == -1) && effect.Registered)
+		{
+			s_effects.Remove(effect.ID);
+			effect.Registered = false;
+		}
+	}
+
+	internal static void PlayEffect(RoomSystemEffect effect)
+	{
+		if (effect != null && !(effect.ID == -1))
+		{
+			object[] staticArray = s_reusableArrayPool.GetStaticArray(1);
+			staticArray[0] = (int)effect.ID;
+			SendEvent(14, staticArray, in NetworkSystemRaiseEvent.neoOthers, reliable: false);
+		}
+	}
+
+	internal static void DeserializeEffect(object[] data, PhotonMessageInfoWrapped info)
+	{
+		if (data != null && data.Length == 1 && data[0] is int key && VRRigCache.Instance.TryGetVrrig(info.Sender, out var playerRig) && s_effects.TryGetValue(key, out var value))
+		{
+			value.PlayNetworkedEffect(playerRig, info);
 		}
 	}
 

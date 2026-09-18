@@ -104,6 +104,8 @@ public class KIDUIButton : Button, IPointerEnterHandler, IEventSystemHandler, IP
 	[SerializeField]
 	private UXSettings _cbUXSettings;
 
+	private ControllerBehaviour controllerBehaviour;
+
 	private bool inside;
 
 	private static bool _triggeredThisFrame = false;
@@ -162,7 +164,7 @@ public class KIDUIButton : Button, IPointerEnterHandler, IEventSystemHandler, IP
 	protected override void OnDisable()
 	{
 		FixStuckPressedState();
-		if ((bool)ControllerBehaviour.Instance)
+		if ((bool)controllerBehaviour)
 		{
 			ControllerBehaviour.Instance.OnAction -= PostUpdate;
 		}

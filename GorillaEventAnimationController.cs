@@ -55,6 +55,12 @@ public class GorillaEventAnimationController : MonoBehaviour
 	[HideInInspector]
 	private List<AnimToGEAKeyframeData> bakedAnimKeyframeData;
 
+	[SerializeField]
+	private bool enableSuspensionHandling = true;
+
+	[SerializeField]
+	private bool autoIncrementClipOnLateStart = true;
+
 	private float suspended;
 
 	private void Awake()
@@ -101,11 +107,20 @@ public class GorillaEventAnimationController : MonoBehaviour
 		{
 			currentClip = clips[animationClipIndex];
 			currentClip.legacy = true;
-			while (lateStart > 0f && currentClip.length < lateStart && animationClipIndex < clips.Count - 1)
+			if (autoIncrementClipOnLateStart)
 			{
-				lateStart -= currentClip.length;
-				currentClip = clips[++animationClipIndex];
-				currentClip.legacy = true;
+				while (lateStart > 0f && currentClip.length < lateStart && animationClipIndex < clips.Count - 1)
+				{
+					lateStart -= currentClip.length;
+					currentClip = clips[++animationClipIndex];
+					currentClip.legacy = true;
+				}
+			}
+			if (lateStart > currentClip.length)
+			{
+				lateStart = 0f;
+				playAnimation = false;
+				return;
 			}
 			controllingAnimation.Play(currentClip.name);
 			animationState = controllingAnimation[currentClip.name];
@@ -194,7 +209,10 @@ public class GorillaEventAnimationController : MonoBehaviour
 	{
 		if (playAnimation)
 		{
-			suspended = Time.time;
+			if (enableSuspensionHandling)
+			{
+				suspended = Time.time;
+			}
 			playAnimation = false;
 			if (controllingAnimation.isPlaying)
 			{

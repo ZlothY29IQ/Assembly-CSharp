@@ -28,6 +28,11 @@ internal class NetworkVector3
 		return _currentSyncTarget + vector;
 	}
 
+	public void ClearPredictedMotion()
+	{
+		distanceTraveled = Vector3.zero;
+	}
+
 	public void Reset()
 	{
 		_currentSyncTarget = Vector3.zero;

@@ -116,7 +116,11 @@ public class NetworkSystemPUN : NetworkSystem
 		get
 		{
 			PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("gameMode", out var value);
-			return value?.ToString();
+			if (value != null)
+			{
+				return value.ToString();
+			}
+			return string.Empty;
 		}
 	}
 
@@ -160,7 +164,7 @@ public class NetworkSystemPUN : NetworkSystem
 		NetworkSystem.reusableSB.AppendFormat("Room: '{0}' ", (currentRoom.Name.Length < 20) ? currentRoom.Name : currentRoom.Name.Remove(20));
 		NetworkSystem.reusableSB.AppendFormat("{0},{1} {3}/{2} players.", currentRoom.IsVisible ? "visible" : "hidden", currentRoom.IsOpen ? "open" : "closed", currentRoom.MaxPlayers, currentRoom.PlayerCount);
 		NetworkSystem.reusableSB.Append("\ncustomProps: {");
-		NetworkSystem.reusableSB.AppendFormat("joinedGameMode={0}, ", (RoomSystem.RoomGameMode.Length < 50) ? RoomSystem.RoomGameMode : RoomSystem.RoomGameMode.Remove(50));
+		NetworkSystem.reusableSB.AppendFormat("joinedGameMode={0}, ", string.IsNullOrWhiteSpace(RoomSystem.RoomGameMode) ? "null" : ((RoomSystem.RoomGameMode.Length < 50) ? RoomSystem.RoomGameMode : RoomSystem.RoomGameMode.Remove(50)));
 		IDictionary customProperties = currentRoom.CustomProperties;
 		AppendStringFromDict(customProperties, "gameMode", 50, NetworkSystem.reusableSB);
 		NetworkSystem.reusableSB.Append(", ");

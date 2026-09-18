@@ -1,7 +1,5 @@
-using System;
 using UnityEngine;
 
-[Obsolete("Use ControllerInputPoller instead", false)]
 public class ControllerBehaviour : MonoBehaviour, IBuildValidation
 {
 	public delegate void OnActionEvent();
@@ -198,7 +196,7 @@ public class ControllerBehaviour : MonoBehaviour, IBuildValidation
 		if (Instance != null)
 		{
 			Debug.LogError("[CONTROLLER_BEHAVIOUR] Trying to create new singleton but one already exists", base.gameObject);
-			UnityEngine.Object.DestroyImmediate(this);
+			Object.DestroyImmediate(this);
 		}
 		else
 		{

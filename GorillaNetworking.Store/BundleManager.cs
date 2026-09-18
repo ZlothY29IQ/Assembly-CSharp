@@ -353,6 +353,14 @@ public class BundleManager : MonoBehaviour
 		}
 	}
 
+	public void UpdateGtfcBundlePrice(string productSku, string productFormattedPrice)
+	{
+		if (CosmeticsController.instance.TryGetBundleMapping(productSku, out var bundleMapping) && bundleMapping.skuNameGTFC == productSku && storeBundlesById.TryGetValue(bundleMapping.playFabItemName, out var value))
+		{
+			value.TryUpdateGtfcPrice(productFormattedPrice);
+		}
+	}
+
 	public void CheckForNoPriceBundlesAndDefaultPrice()
 	{
 		foreach (var (_, storeBundle2) in storeBundlesBySKU)

@@ -26,5 +26,6 @@ public enum FXType
 	GroupJoin,
 	EnvironmentProximityReactor,
 	BroadcastCosmeticSignal,
+	RedeemCelebration,
 	Length
 }

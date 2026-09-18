@@ -57,10 +57,13 @@ public class StoreUpdater : MonoBehaviour
 	public void Initialize()
 	{
 		FindAllCosmeticItemPrefabs();
-		OVRManager.HMDMounted += HandleHMDMounted;
-		OVRManager.HMDUnmounted += HandleHMDUnmounted;
-		OVRManager.HMDLost += HandleHMDUnmounted;
-		OVRManager.HMDAcquired += HandleHMDMounted;
+		if (OVRManager.instance != null)
+		{
+			OVRManager.HMDMounted += HandleHMDMounted;
+			OVRManager.HMDUnmounted += HandleHMDUnmounted;
+			OVRManager.HMDLost += HandleHMDUnmounted;
+			OVRManager.HMDAcquired += HandleHMDMounted;
+		}
 		if (bLoadFromJSON)
 		{
 			GetEventsFromTitleData();
@@ -69,10 +72,13 @@ public class StoreUpdater : MonoBehaviour
 
 	public void OnDestroy()
 	{
-		OVRManager.HMDMounted -= HandleHMDMounted;
-		OVRManager.HMDUnmounted -= HandleHMDUnmounted;
-		OVRManager.HMDLost -= HandleHMDUnmounted;
-		OVRManager.HMDAcquired -= HandleHMDMounted;
+		if (OVRManager.instance != null)
+		{
+			OVRManager.HMDMounted -= HandleHMDMounted;
+			OVRManager.HMDUnmounted -= HandleHMDUnmounted;
+			OVRManager.HMDLost -= HandleHMDUnmounted;
+			OVRManager.HMDAcquired -= HandleHMDMounted;
+		}
 	}
 
 	private void HandleHMDUnmounted()

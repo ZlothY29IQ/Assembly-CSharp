@@ -449,7 +449,10 @@ public class GorillaTagger : MonoBehaviour, IGuidedRefReceiverMono, IGuidedRefMo
 		gorillaTagColliderLayerMask = UnityLayer.GorillaTagCollider.ToLayerMask();
 		rigidbody = GetComponent<Rigidbody>();
 		cacheHandTapVolume = handTapVolume;
-		OVRManager.foveatedRenderingLevel = OVRManager.FoveatedRenderingLevel.Medium;
+		if (OVRManager.instance != null)
+		{
+			OVRManager.foveatedRenderingLevel = OVRManager.FoveatedRenderingLevel.Medium;
+		}
 		_leftHandDown = new DebouncedBool(_framesForHandTrigger);
 		_rightHandDown = new DebouncedBool(_framesForHandTrigger);
 		ClearFramerateTracker();

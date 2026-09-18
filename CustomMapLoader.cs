@@ -1917,11 +1917,11 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 			}
 			gameObject5.transform.SetParent(instance.compositeTryOnArea.transform, worldPositionStays: true);
 			gameObject5.transform.localScale = Vector3.one;
+			customMapATM = gameObject5;
 			ATM_UI componentInChildren = gameObject5.GetComponentInChildren<ATM_UI>();
 			if (componentInChildren.IsNotNull() && ATM_Manager.instance.IsNotNull())
 			{
 				componentInChildren.SetCustomMapScene(placeholderGameObject.scene);
-				customMapATM = gameObject5;
 				ATM_Manager.instance.AddATM(componentInChildren, null);
 				if (!component.defaultCreatorCode.IsNullOrEmpty())
 				{
