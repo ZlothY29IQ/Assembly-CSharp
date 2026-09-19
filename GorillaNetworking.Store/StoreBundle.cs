@@ -8,7 +8,7 @@ using UnityEngine.Serialization;
 namespace GorillaNetworking.Store;
 
 [Serializable]
-public class StoreBundle
+public class StoreBundle : IDisposable
 {
 	private static readonly string defaultPrice = "$--.--";
 
@@ -106,6 +106,7 @@ public class StoreBundle
 	{
 		isOwned = false;
 		bundleStands = new List<BundleStand>();
+		SubscriptionManager.OnLocalSubscriptionData = (Action)Delegate.Combine(SubscriptionManager.OnLocalSubscriptionData, new Action(UpdatePurchaseButtonText));
 	}
 
 	public StoreBundle(StoreBundleData data)
@@ -113,16 +114,12 @@ public class StoreBundle
 		isOwned = false;
 		bundleStands = new List<BundleStand>();
 		_storeBundleDataReference = data;
+		SubscriptionManager.OnLocalSubscriptionData = (Action)Delegate.Combine(SubscriptionManager.OnLocalSubscriptionData, new Action(UpdatePurchaseButtonText));
 	}
 
-	public void OnEnable()
+	public void Dispose()
 	{
-		SubscriptionManager.OnSubscriptionData = (Action)Delegate.Combine(SubscriptionManager.OnSubscriptionData, new Action(UpdatePurchaseButtonText));
-	}
-
-	public void OnDisable()
-	{
-		SubscriptionManager.OnSubscriptionData = (Action)Delegate.Remove(SubscriptionManager.OnSubscriptionData, new Action(UpdatePurchaseButtonText));
+		SubscriptionManager.OnLocalSubscriptionData = (Action)Delegate.Remove(SubscriptionManager.OnLocalSubscriptionData, new Action(UpdatePurchaseButtonText));
 	}
 
 	public void InitializebundleStands()
@@ -204,10 +201,13 @@ public class StoreBundle
 					gameObject.SetActive(HasGTFCPrice);
 				}
 			}
-			bundleStand.GtfcPriceLabel.gameObject.SetActive(HasGTFCPrice);
-			if (HasGTFCPrice)
+			if (bundleStand.GtfcPriceLabel != null)
 			{
-				bundleStand.GtfcPriceLabel.SetText(text2);
+				bundleStand.GtfcPriceLabel.gameObject.SetActive(HasGTFCPrice);
+				if (HasGTFCPrice)
+				{
+					bundleStand.GtfcPriceLabel.SetText(text2);
+				}
 			}
 		}
 	}

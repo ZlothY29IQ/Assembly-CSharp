@@ -64,7 +64,7 @@ public class FreeCosmeticKiosk : MonoBehaviourPun
 
 	private void OnDisable()
 	{
-		SubscriptionManager.OnSubscriptionData = (Action)Delegate.Remove(SubscriptionManager.OnSubscriptionData, new Action(UpdateState));
+		SubscriptionManager.OnLocalSubscriptionData = (Action)Delegate.Remove(SubscriptionManager.OnLocalSubscriptionData, new Action(UpdateState));
 		CosmeticsController instance = CosmeticsController.instance;
 		instance.OnCosmeticsUpdated = (Action)Delegate.Remove(instance.OnCosmeticsUpdated, new Action(UpdateState));
 	}
@@ -75,7 +75,7 @@ public class FreeCosmeticKiosk : MonoBehaviourPun
 		{
 			yield return null;
 		}
-		SubscriptionManager.OnSubscriptionData = (Action)Delegate.Combine(SubscriptionManager.OnSubscriptionData, new Action(UpdateState));
+		SubscriptionManager.OnLocalSubscriptionData = (Action)Delegate.Combine(SubscriptionManager.OnLocalSubscriptionData, new Action(UpdateState));
 		CosmeticsController instance = CosmeticsController.instance;
 		instance.OnCosmeticsUpdated = (Action)Delegate.Combine(instance.OnCosmeticsUpdated, new Action(UpdateState));
 		if (!CosmeticsController.instance.allCosmeticsDict.TryGetValue(_playfabId, out _cosmeticItem))
