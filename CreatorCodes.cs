@@ -164,18 +164,32 @@ public static class CreatorCodes
 
 	private static void LoadData()
 	{
-		string text = PlayerPrefs.GetString("CreatorCodes_Store", string.Empty);
-		if (text.Length == 0)
+		try
 		{
-			return;
-		}
-		data = JsonConvert.DeserializeObject<CreatorCodesData>(text);
-		foreach (string key in data.currentCreatorCode.Keys)
-		{
-			if (data.codeFirstUsedTime.ContainsKey(key) && DateTime.UtcNow.Subtract(data.codeFirstUsedTime[key]).Days > 14)
+			string text = PlayerPrefs.GetString("CreatorCodes_Store", string.Empty);
+			if (text.Length == 0)
 			{
-				data.currentCreatorCode[key] = string.Empty;
+				return;
 			}
+			data = JsonConvert.DeserializeObject<CreatorCodesData>(text);
+			List<string> list = new List<string>();
+			foreach (string key in data.currentCreatorCode.Keys)
+			{
+				if (data.codeFirstUsedTime.ContainsKey(key) && DateTime.UtcNow.Subtract(data.codeFirstUsedTime[key]).Days > 14)
+				{
+					list.Add(key);
+				}
+			}
+			for (int i = 0; i < list.Count; i++)
+			{
+				data.currentCreatorCode.Remove(list[i]);
+			}
+		}
+		catch (Exception exception)
+		{
+			Debug.LogError("issue parsing creator code playerprefs: ");
+			Debug.LogException(exception);
+			data = new CreatorCodesData();
 		}
 	}
 }
