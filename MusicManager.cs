@@ -9,6 +9,8 @@ public class MusicManager : MonoBehaviour
 
 	private HashSet<MusicSource> activeSources = new HashSet<MusicSource>();
 
+	public bool Locked { get; private set; }
+
 	private void Awake()
 	{
 		if (Instance == null)
@@ -26,6 +28,7 @@ public class MusicManager : MonoBehaviour
 		if (!activeSources.Contains(musicSource))
 		{
 			activeSources.Add(musicSource);
+			musicSource.Lock(Locked);
 		}
 	}
 
@@ -35,6 +38,7 @@ public class MusicManager : MonoBehaviour
 		{
 			activeSources.Remove(musicSource);
 			musicSource.UnsetVolumeOverride();
+			musicSource.Lock(v: false);
 		}
 	}
 
@@ -76,9 +80,9 @@ public class MusicManager : MonoBehaviour
 			foreach (MusicSource activeSource in activeSources)
 			{
 				float num = activeSource.DefaultVolume / duration;
-				float volumeOverride = Mathf.MoveTowards(activeSource.AudioSource.volume, activeSource.DefaultVolume, num * deltaTime);
+				float volumeOverride = Mathf.MoveTowards(activeSource.volume, activeSource.DefaultVolume, num * deltaTime);
 				activeSource.SetVolumeOverride(volumeOverride);
-				if (activeSource.AudioSource.volume != activeSource.DefaultVolume)
+				if (activeSource.volume != activeSource.DefaultVolume)
 				{
 					complete = false;
 				}
@@ -100,9 +104,9 @@ public class MusicManager : MonoBehaviour
 			float deltaTime = Time.deltaTime;
 			foreach (MusicSource activeSource in activeSources)
 			{
-				float volumeOverride = Mathf.MoveTowards(maxDelta: activeSource.DefaultVolume / duration * deltaTime, current: activeSource.AudioSource.volume, target: 0f);
+				float volumeOverride = Mathf.MoveTowards(maxDelta: activeSource.DefaultVolume / duration * deltaTime, current: activeSource.volume, target: 0f);
 				activeSource.SetVolumeOverride(volumeOverride);
-				if (activeSource.AudioSource.volume != 0f)
+				if (activeSource.volume != 0f)
 				{
 					complete = false;
 				}
@@ -126,11 +130,20 @@ public class MusicManager : MonoBehaviour
 		foreach (MusicSource activeSource in Instance.activeSources)
 		{
 			activeSource.UnsetVolumeOverride();
-			activeSource.AudioSource.Stop();
+			activeSource.Stop();
 			if (clip != null)
 			{
-				activeSource.AudioSource.PlayOneShot(clip);
+				activeSource.PlayOneShot(clip);
 			}
+		}
+	}
+
+	public static void LockMusic(bool v)
+	{
+		foreach (MusicSource activeSource in Instance.activeSources)
+		{
+			Instance.Locked = v;
+			activeSource.Lock(v);
 		}
 	}
 }

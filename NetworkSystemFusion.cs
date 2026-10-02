@@ -129,19 +129,6 @@ public class NetworkSystemFusion : NetworkSystem
 		}
 	}
 
-	public override bool SessionIsSubscription
-	{
-		get
-		{
-			NetworkRunner networkRunner = runner;
-			if ((object)networkRunner == null)
-			{
-				return false;
-			}
-			return networkRunner.SessionInfo?.MaxPlayers > 10;
-		}
-	}
-
 	public override int LocalPlayerID => runner.LocalPlayer.PlayerId;
 
 	public override string CurrentPhotonBackend => "Fusion";

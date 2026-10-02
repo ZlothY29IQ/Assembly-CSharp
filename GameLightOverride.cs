@@ -9,6 +9,6 @@ public class GameLightOverride : MonoBehaviour
 
 	private void OnDisable()
 	{
-		GameLightingManager.instance.SetMaxLights(20);
+		GameLightingManager.instance.SetMaxLights(50);
 	}
 }

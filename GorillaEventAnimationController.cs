@@ -6,6 +6,21 @@ using UnityEngine;
 public class GorillaEventAnimationController : MonoBehaviour
 {
 	[Serializable]
+	public struct GTAnimationClip
+	{
+		public enum OnFinalFrame
+		{
+			Stop,
+			Repeat,
+			NextClip
+		}
+
+		public AnimationClip clip;
+
+		public OnFinalFrame onFinalFrame;
+	}
+
+	[Serializable]
 	public struct AnimToGEAKeyframeData
 	{
 		public AnimationClip clip;
@@ -43,7 +58,7 @@ public class GorillaEventAnimationController : MonoBehaviour
 
 	public int animationClipIndex;
 
-	public List<AnimationClip> clips;
+	public List<GTAnimationClip> clips;
 
 	private AnimationClip currentClip;
 
@@ -103,29 +118,47 @@ public class GorillaEventAnimationController : MonoBehaviour
 		{
 			controllingAnimation.enabled = true;
 		}
-		if (currentClip != clips[animationClipIndex] || animationState == null || !controllingAnimation.isPlaying)
+		if (lateStart > 0f || (currentClip != clips[animationClipIndex].clip && !controllingAnimation.isPlaying))
 		{
-			currentClip = clips[animationClipIndex];
+			currentClip = clips[animationClipIndex].clip;
 			currentClip.legacy = true;
 			if (autoIncrementClipOnLateStart)
 			{
 				while (lateStart > 0f && currentClip.length < lateStart && animationClipIndex < clips.Count - 1)
 				{
 					lateStart -= currentClip.length;
-					currentClip = clips[++animationClipIndex];
+					currentClip = clips[++animationClipIndex].clip;
 					currentClip.legacy = true;
 				}
-			}
-			if (lateStart > currentClip.length)
-			{
-				lateStart = 0f;
-				playAnimation = false;
-				return;
 			}
 			controllingAnimation.Play(currentClip.name);
 			animationState = controllingAnimation[currentClip.name];
 			animationState.time = Math.Min(lateStart, currentClip.length);
 			lateStart = 0f;
+		}
+		if (animationState == null)
+		{
+			switch (clips[animationClipIndex].onFinalFrame)
+			{
+			case GTAnimationClip.OnFinalFrame.Stop:
+				playAnimation = false;
+				return;
+			case GTAnimationClip.OnFinalFrame.NextClip:
+				if (animationClipIndex < clips.Count - 1)
+				{
+					currentClip = clips[++animationClipIndex].clip;
+					currentClip.legacy = true;
+				}
+				controllingAnimation.Play(currentClip.name);
+				animationState = controllingAnimation[currentClip.name];
+				animationState.time = 0f;
+				break;
+			case GTAnimationClip.OnFinalFrame.Repeat:
+				controllingAnimation.Play(currentClip.name);
+				animationState = controllingAnimation[currentClip.name];
+				animationState.time = 0f;
+				break;
+			}
 		}
 		float time = animationState.time;
 		if (!bakedAnimationData.ContainsKey(currentClip))

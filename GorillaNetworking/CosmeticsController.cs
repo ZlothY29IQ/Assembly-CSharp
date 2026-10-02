@@ -921,6 +921,8 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 	{
 		public string sku;
 
+		public long grantTime;
+
 		public string mothershipId;
 
 		public string mothershipToken;

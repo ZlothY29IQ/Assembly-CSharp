@@ -12,7 +12,6 @@ public abstract class RigDisplacementZone : MonoBehaviour
 			component.SetDisplacementZone(this);
 			if (component.isLocal)
 			{
-				Debug.Log($"## Enter Displacement Zone {this} {other}");
 				localPlayerInZone = true;
 			}
 		}
@@ -26,7 +25,6 @@ public abstract class RigDisplacementZone : MonoBehaviour
 			component.ClearDisplacementZone(this);
 			if (component.isLocal)
 			{
-				Debug.Log($"## Exit Displacement Zone {this} {other}");
 				localPlayerInZone = false;
 			}
 		}

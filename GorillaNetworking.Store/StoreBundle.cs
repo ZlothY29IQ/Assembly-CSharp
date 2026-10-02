@@ -156,6 +156,7 @@ public class StoreBundle : IDisposable
 		{
 			_gtfcPrice = WithCurrencySymbol(bundlePrice);
 		}
+		ToggleGTFCPriceObjects();
 		UpdatePurchaseButtonText();
 	}
 
@@ -166,6 +167,22 @@ public class StoreBundle : IDisposable
 			return bundlePrice;
 		}
 		return defaultCurrencySymbol + bundlePrice;
+	}
+
+	private void ToggleGTFCPriceObjects()
+	{
+		bool hasGTFCPrice = HasGTFCPrice;
+		foreach (BundleStand bundleStand in bundleStands)
+		{
+			GameObject[] gtfcObjects = bundleStand.GtfcObjects;
+			foreach (GameObject gameObject in gtfcObjects)
+			{
+				if ((bool)gameObject)
+				{
+					gameObject.SetActive(hasGTFCPrice);
+				}
+			}
+		}
 	}
 
 	public void UpdatePurchaseButtonText()
@@ -193,21 +210,9 @@ public class StoreBundle : IDisposable
 		foreach (BundleStand bundleStand in bundleStands)
 		{
 			bundleStand.UpdatePurchaseButtonText(text);
-			GameObject[] gtfcObjects = bundleStand.GtfcObjects;
-			foreach (GameObject gameObject in gtfcObjects)
+			if ((bool)bundleStand.GtfcPriceLabel && HasGTFCPrice)
 			{
-				if ((bool)gameObject)
-				{
-					gameObject.SetActive(HasGTFCPrice);
-				}
-			}
-			if (bundleStand.GtfcPriceLabel != null)
-			{
-				bundleStand.GtfcPriceLabel.gameObject.SetActive(HasGTFCPrice);
-				if (HasGTFCPrice)
-				{
-					bundleStand.GtfcPriceLabel.SetText(text2);
-				}
+				bundleStand.GtfcPriceLabel.SetText(text2);
 			}
 		}
 	}

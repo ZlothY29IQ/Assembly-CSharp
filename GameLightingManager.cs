@@ -42,9 +42,9 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 	[OnEnterPlay_SetNull]
 	public static volatile GameLightingManager instance;
 
-	public const int MAX_VERTEX_LIGHTS = 50;
+	public const int MAX_VERTEX_LIGHTS = 100;
 
-	public const int USE_MAX_VERTEX_LIGHTS = 20;
+	public const int USE_MAX_VERTEX_LIGHTS = 50;
 
 	public const int MAX_UPDATE_LIGHTS_PER_FRAME = 10;
 
@@ -86,6 +86,28 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 
 	private GraphicsBuffer lightDataBufferLegacy;
 
+	private const int GRID_CELL_CAPACITY = 10;
+
+	private const int GRID_MAX_DIM = 16;
+
+	private const int GRID_MIN_DIM = 4;
+
+	private const float GLOBAL_LIGHT_RADIUS_THRESHOLD = 20f;
+
+	private const float GLOBAL_LIGHT_RADIUS_THRESHOLD_SQR = 400f;
+
+	private GraphicsBuffer gridCountsBuffer;
+
+	private GraphicsBuffer gridIndicesBuffer;
+
+	private uint[] gridCounts;
+
+	private uint[] gridIndices;
+
+	private float[] gridDistancesSqr;
+
+	private int activeGlobalLightCount;
+
 	private bool skipNextSlice;
 
 	private bool immediateSort;
@@ -98,6 +120,20 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 	private Light _GR_NearsightedDimLight;
 
 	private static readonly int _shaderPropId_GameLight_UseMaxLights = Shader.PropertyToID("_GT_GameLight_UseMaxLights");
+
+	private static readonly int _shaderPropId_GameLight_GlobalLightCount = Shader.PropertyToID("_GT_GameLight_GlobalLightCount");
+
+	private static readonly int _shaderPropId_LightGridCounts = Shader.PropertyToID("_GT_LightGridCounts");
+
+	private static readonly int _shaderPropId_LightGridIndices = Shader.PropertyToID("_GT_LightGridIndices");
+
+	private static readonly int _shaderPropId_LightGrid_Origin = Shader.PropertyToID("_GT_LightGrid_Origin");
+
+	private static readonly int _shaderPropId_LightGrid_InvCellSize = Shader.PropertyToID("_GT_LightGrid_InvCellSize");
+
+	private static readonly int _shaderPropId_LightGrid_Dims = Shader.PropertyToID("_GT_LightGrid_Dims");
+
+	private static readonly int _shaderPropId_LightGrid_CellCapacity = Shader.PropertyToID("_GT_LightGrid_CellCapacity");
 
 	private static readonly int _shaderPropId_DesaturateAndTint_TintColor = Shader.PropertyToID("_GT_DesaturateAndTint_TintColor");
 
@@ -129,16 +165,25 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 		gameLights = new List<GameLight>(512);
 		sortKeys = new float[512];
 		sortValues = new GameLight[512];
-		lightDataBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 50, UnsafeUtility.SizeOf<LightDataPacked>());
-		lightData = new NativeArray<LightDataPacked>(50, Allocator.Persistent);
-		lightDataBufferLegacy = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 50, UnsafeUtility.SizeOf<LightDataLegacy>());
-		lightDataLegacy = new NativeArray<LightDataLegacy>(50, Allocator.Persistent);
+		lightDataBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 100, UnsafeUtility.SizeOf<LightDataPacked>());
+		lightData = new NativeArray<LightDataPacked>(100, Allocator.Persistent);
+		lightDataBufferLegacy = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 100, UnsafeUtility.SizeOf<LightDataLegacy>());
+		lightDataLegacy = new NativeArray<LightDataLegacy>(100, Allocator.Persistent);
+		int num = 4096;
+		gridCounts = new uint[num];
+		gridIndices = new uint[num * 10];
+		gridDistancesSqr = new float[num * 10];
+		gridCountsBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, num, 4);
+		gridIndicesBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, num * 10, 4);
+		Shader.SetGlobalBuffer(_shaderPropId_LightGridCounts, gridCountsBuffer);
+		Shader.SetGlobalBuffer(_shaderPropId_LightGridIndices, gridIndicesBuffer);
+		Shader.SetGlobalInteger(_shaderPropId_LightGrid_CellCapacity, 10);
 		nextLightUpdate = 0;
 		ClearGameLights();
 		SetDesaturateAndTintEnabled(enable: false, Color.black);
 		SetAmbientLightDynamic(Color.black);
 		SetCustomDynamicLightingEnabled(enable: false);
-		SetMaxLights(20);
+		SetMaxLights(50);
 		StartCoroutine(Preheat());
 	}
 
@@ -166,6 +211,8 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 		{
 			lightDataLegacy.Dispose();
 		}
+		gridCountsBuffer?.Dispose();
+		gridIndicesBuffer?.Dispose();
 	}
 
 	public new void OnEnable()
@@ -228,7 +275,7 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 
 	public void SetMaxLights(int maxLights)
 	{
-		maxLights = Mathf.Min(maxLights, 50);
+		maxLights = Mathf.Min(maxLights, 100);
 		maxUseTestLights = maxLights;
 		Shader.SetGlobalInteger(_shaderPropId_GameLight_UseMaxLights, maxLights);
 	}
@@ -256,6 +303,11 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 		int count = gameLights.Count;
 		if (count <= maxUseTestLights)
 		{
+			if (customVertexLightingEnabled)
+			{
+				int globalCount = PartitionGlobalLightsToFront(count);
+				BuildAndUploadLightGrid(globalCount, count);
+			}
 			return;
 		}
 		if (mainCameraTransform == null)
@@ -269,6 +321,7 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 			sortKeys = new float[num];
 			sortValues = new GameLight[num];
 		}
+		int num2 = 0;
 		for (int i = 0; i < count; i++)
 		{
 			GameLight gameLight = gameLights[i];
@@ -276,11 +329,16 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 			{
 				sortKeys[i] = float.MaxValue;
 			}
+			else if (IsGlobalLight(gameLight))
+			{
+				sortKeys[i] = float.MinValue;
+				num2++;
+			}
 			else
 			{
-				float num2 = Mathf.Clamp(gameLight.cachedColorAndIntensity.x + gameLight.cachedColorAndIntensity.y + gameLight.cachedColorAndIntensity.z, 0.01f, 6f);
+				float num3 = Mathf.Clamp(gameLight.cachedColorAndIntensity.x + gameLight.cachedColorAndIntensity.y + gameLight.cachedColorAndIntensity.z, 0.01f, 6f);
 				Vector3 vector = position - gameLight.cachedPosition;
-				sortKeys[i] = (vector.x * vector.x + vector.y * vector.y + vector.z * vector.z) / num2;
+				sortKeys[i] = (vector.x * vector.x + vector.y * vector.y + vector.z * vector.z) / num3;
 			}
 			sortValues[i] = gameLight;
 		}
@@ -289,6 +347,41 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 		{
 			gameLights[j] = sortValues[j];
 		}
+		if (customVertexLightingEnabled)
+		{
+			int num4 = Mathf.Min(count, maxUseTestLights);
+			BuildAndUploadLightGrid(Mathf.Min(num2, num4), num4);
+		}
+	}
+
+	private static float ComputeInfluenceRadiusSqr(GameLight gl)
+	{
+		float num = ((gl.applyRange && gl.light.range > 0f) ? (0.005f / gl.light.range) : 0.005f);
+		return 1f / num;
+	}
+
+	private static bool IsGlobalLight(GameLight gl)
+	{
+		return ComputeInfluenceRadiusSqr(gl) >= 400f;
+	}
+
+	private int PartitionGlobalLightsToFront(int count)
+	{
+		int num = 0;
+		for (int i = 0; i < count; i++)
+		{
+			GameLight gameLight = gameLights[i];
+			if (gameLight != null && gameLight.light != null && IsGlobalLight(gameLight))
+			{
+				if (i != num)
+				{
+					gameLights[i] = gameLights[num];
+					gameLights[num] = gameLight;
+				}
+				num++;
+			}
+		}
+		return num;
 	}
 
 	public override void Tick()
@@ -346,6 +439,119 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 				gameLight.cachedColorAndIntensity = (float)gameLight.intensityMult * gameLight.light.intensity * (gameLight.negativeLight ? (-1f) : 1f) * gameLight.light.color;
 			}
 		}
+	}
+
+	private void BuildAndUploadLightGrid(int globalCount, int activeCount)
+	{
+		if (gridCountsBuffer == null)
+		{
+			return;
+		}
+		activeGlobalLightCount = Mathf.Clamp(globalCount, 0, Mathf.Max(activeCount, 0));
+		int num = activeGlobalLightCount;
+		Vector3 vector = Vector3.zero;
+		Vector3 vector2 = Vector3.zero;
+		bool flag = false;
+		float num2 = 0f;
+		for (int i = num; i < activeCount; i++)
+		{
+			GameLight gameLight = gameLights[i];
+			if (!(gameLight == null) && !(gameLight.light == null))
+			{
+				Vector3 cachedPosition = gameLight.cachedPosition;
+				if (!flag)
+				{
+					vector = cachedPosition;
+					vector2 = cachedPosition;
+					flag = true;
+				}
+				else
+				{
+					vector = Vector3.Min(vector, cachedPosition);
+					vector2 = Vector3.Max(vector2, cachedPosition);
+				}
+				float num3 = ComputeInfluenceRadiusSqr(gameLight);
+				if (num3 > num2)
+				{
+					num2 = num3;
+				}
+			}
+		}
+		float num4 = Mathf.Sqrt(num2);
+		Vector3 vector3 = new Vector3(num4, num4, num4);
+		vector -= vector3;
+		vector2 += vector3;
+		Vector3 vector4 = vector2 - vector;
+		float num5 = Mathf.Max(vector4.x, Mathf.Max(vector4.y, vector4.z));
+		float a = Mathf.Max(num4, num5 / 16f);
+		a = Mathf.Max(a, 0.0001f);
+		float num6 = 1f / a;
+		int num7 = (flag ? Mathf.Clamp(Mathf.CeilToInt(vector4.x * num6), 1, 16) : 4);
+		int num8 = (flag ? Mathf.Clamp(Mathf.CeilToInt(vector4.y * num6), 1, 16) : 4);
+		int num9 = (flag ? Mathf.Clamp(Mathf.CeilToInt(vector4.z * num6), 1, 16) : 4);
+		int num10 = num7 * num8 * num9;
+		Array.Clear(gridCounts, 0, num10);
+		if (flag)
+		{
+			for (int j = num; j < activeCount; j++)
+			{
+				GameLight gameLight2 = gameLights[j];
+				if (gameLight2 == null || gameLight2.light == null)
+				{
+					continue;
+				}
+				Vector3 cachedPosition2 = gameLight2.cachedPosition;
+				float num11 = Mathf.Sqrt(ComputeInfluenceRadiusSqr(gameLight2));
+				int num12 = Mathf.Clamp(Mathf.FloorToInt((cachedPosition2.x - num11 - vector.x) * num6), 0, num7 - 1);
+				int num13 = Mathf.Clamp(Mathf.FloorToInt((cachedPosition2.x + num11 - vector.x) * num6), 0, num7 - 1);
+				int num14 = Mathf.Clamp(Mathf.FloorToInt((cachedPosition2.y - num11 - vector.y) * num6), 0, num8 - 1);
+				int num15 = Mathf.Clamp(Mathf.FloorToInt((cachedPosition2.y + num11 - vector.y) * num6), 0, num8 - 1);
+				int num16 = Mathf.Clamp(Mathf.FloorToInt((cachedPosition2.z - num11 - vector.z) * num6), 0, num9 - 1);
+				int num17 = Mathf.Clamp(Mathf.FloorToInt((cachedPosition2.z + num11 - vector.z) * num6), 0, num9 - 1);
+				for (int k = num16; k <= num17; k++)
+				{
+					for (int l = num14; l <= num15; l++)
+					{
+						for (int m = num12; m <= num13; m++)
+						{
+							int num18 = m + num7 * (l + num8 * k);
+							int num19 = num18 * 10;
+							Vector3 vector5 = new Vector3(vector.x + ((float)m + 0.5f) * a, vector.y + ((float)l + 0.5f) * a, vector.z + ((float)k + 0.5f) * a);
+							float sqrMagnitude = (cachedPosition2 - vector5).sqrMagnitude;
+							uint num20 = gridCounts[num18];
+							if (num20 < 10)
+							{
+								gridIndices[num19 + (int)num20] = (uint)j;
+								gridDistancesSqr[num19 + (int)num20] = sqrMagnitude;
+								gridCounts[num18] = num20 + 1;
+								continue;
+							}
+							int num21 = -1;
+							float num22 = sqrMagnitude;
+							for (int n = 0; n < 10; n++)
+							{
+								if (gridDistancesSqr[num19 + n] > num22)
+								{
+									num22 = gridDistancesSqr[num19 + n];
+									num21 = n;
+								}
+							}
+							if (num21 >= 0)
+							{
+								gridIndices[num19 + num21] = (uint)j;
+								gridDistancesSqr[num19 + num21] = sqrMagnitude;
+							}
+						}
+					}
+				}
+			}
+		}
+		gridCountsBuffer.SetData(gridCounts, 0, 0, num10);
+		gridIndicesBuffer.SetData(gridIndices, 0, 0, num10 * 10);
+		Shader.SetGlobalVector(_shaderPropId_LightGrid_Origin, new Vector4(vector.x, vector.y, vector.z, 0f));
+		Shader.SetGlobalFloat(_shaderPropId_LightGrid_InvCellSize, num6);
+		Shader.SetGlobalVector(_shaderPropId_LightGrid_Dims, new Vector4(num7, num8, num9, 0f));
+		Shader.SetGlobalInteger(_shaderPropId_GameLight_GlobalLightCount, activeGlobalLightCount);
 	}
 
 	public void CacheLightDataForNonCloseLights(int numLightsToUpdateCache)
@@ -431,7 +637,7 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 		if (CustomMapLoader.IsMapLoaded())
 		{
 			int count = gameLights.Count;
-			if (count < 50)
+			if (count < 100)
 			{
 				lightDataLegacy[count] = default(LightDataLegacy);
 			}
@@ -446,7 +652,7 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 		}
 		if (lightDataBuffer != null)
 		{
-			for (int i = 0; i < 50; i++)
+			for (int i = 0; i < 100; i++)
 			{
 				ResetLight(i);
 			}

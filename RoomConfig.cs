@@ -20,6 +20,8 @@ public class RoomConfig
 
 	public ExitGames.Client.Photon.Hashtable CustomProps = new ExitGames.Client.Photon.Hashtable();
 
+	public bool FanClub;
+
 	public ExitGames.Client.Photon.Hashtable SearchFilter;
 
 	public bool createIfMissing;

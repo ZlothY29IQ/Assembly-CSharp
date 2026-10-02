@@ -193,8 +193,13 @@ public class GorillaPlayerScoreboardLine : MonoBehaviour
 
 	public void UpdateLine()
 	{
-		if (linePlayer == null)
+		if (linePlayer == null || rigContainer.IsNull() || playerVRRig.IsNull())
 		{
+			return;
+		}
+		if (playerVRRig.creator == null)
+		{
+			Debug.LogError("GorillaPlayerScoreboardLine: Rig.Creator is null");
 			return;
 		}
 		if (playerNameVisible != playerVRRig.playerNameVisible)
@@ -205,10 +210,6 @@ public class GorillaPlayerScoreboardLine : MonoBehaviour
 			{
 				CustomMapModeSelector.RefreshHostName();
 			}
-		}
-		if (rigContainer == null)
-		{
-			return;
 		}
 		if (Time.time > initTime + emptyRigCooldown)
 		{

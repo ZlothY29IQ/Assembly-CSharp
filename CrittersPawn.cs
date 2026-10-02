@@ -396,6 +396,7 @@ public class CrittersPawn : CrittersActor, IEyeScannable
 		lastImpulseTime = (PhotonNetwork.InRoom ? PhotonNetwork.Time : ((double)Time.time));
 		lastImpulseTime += GetAdditiveJumpDelay();
 		lastImpulseQuaternion = base.transform.rotation;
+		rb.rotation = base.transform.rotation;
 		rB.linearVelocity = lastImpulseVelocity;
 		rb.angularVelocity = Vector3.zero;
 	}
@@ -861,6 +862,7 @@ public class CrittersPawn : CrittersActor, IEyeScannable
 						return;
 					}
 					base.transform.forward = (eatingTarget.food.transform.position - base.transform.position).X_Z().normalized;
+					rb.rotation = base.transform.rotation;
 					SetState(CreatureState.Eating);
 					debugStateIndicator.material.color = debugColorEating;
 				}

@@ -6,15 +6,15 @@ public class StumpReturnRouter : MonoBehaviour
 {
 	[Tooltip("Where the return node drops the player back into the Custom hallway.")]
 	[SerializeField]
-	private Transform customDestination;
+	private XSceneRef customDestination;
 
 	[Tooltip("Where the return node drops the player back into the Feature A hallway.")]
 	[SerializeField]
-	private Transform featureADestination;
+	private XSceneRef featureADestination;
 
 	[Tooltip("Where the return node drops the player back into the Feature B hallway.")]
 	[SerializeField]
-	private Transform featureBDestination;
+	private XSceneRef featureBDestination;
 
 	private TeleportNode node;
 
@@ -30,26 +30,25 @@ public class StumpReturnRouter : MonoBehaviour
 	private void Update()
 	{
 		VirtualStumpActivateMode currentActivateMode = CustomMapManager.CurrentActivateMode;
-		if (!hasApplied || currentActivateMode != appliedMode)
+		if ((!hasApplied || currentActivateMode != appliedMode) && GetDestination(currentActivateMode).TryResolve(out Transform result))
 		{
 			appliedMode = currentActivateMode;
 			hasApplied = true;
-			Transform destination = GetDestination(currentActivateMode);
-			if (destination == null)
+			if (result == null)
 			{
 				Debug.LogWarning($"[StumpReturnRouter] No return destination assigned for mode {currentActivateMode}; the " + "return node will fall back to its serialized teleportToRef.", this);
 			}
-			Debug.LogWarning($"[StumpReturnRouter] on node '{node.gameObject.name}': mode={currentActivateMode} -> destination=" + ((destination != null) ? destination.name : "NULL"));
-			node.SetDestinationOverride(destination);
+			Debug.LogWarning($"[StumpReturnRouter] on node '{node.gameObject.name}': mode={currentActivateMode} -> destination=" + ((result != null) ? result.name : "NULL"));
+			node.SetDestinationOverride(result);
 		}
 	}
 
 	public void OnReturnedToHallway()
 	{
-		CustomMapManager.Deactivate();
+		CustomMapManager.ExitVStump();
 	}
 
-	private Transform GetDestination(VirtualStumpActivateMode mode)
+	private XSceneRef GetDestination(VirtualStumpActivateMode mode)
 	{
 		return mode switch
 		{

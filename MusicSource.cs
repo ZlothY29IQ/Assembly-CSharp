@@ -13,11 +13,61 @@ public class MusicSource : MonoBehaviour
 
 	private float? volumeOverride;
 
-	public AudioSource AudioSource => audioSource;
+	private bool locked;
+
+	public float volume
+	{
+		get
+		{
+			return audioSource.volume;
+		}
+		set
+		{
+			audioSource.volume = value;
+		}
+	}
+
+	public bool mute
+	{
+		get
+		{
+			return audioSource.mute;
+		}
+		set
+		{
+			audioSource.mute = value;
+		}
+	}
+
+	public AudioClip clip
+	{
+		get
+		{
+			return audioSource.clip;
+		}
+		set
+		{
+			audioSource.clip = value;
+		}
+	}
+
+	public float time
+	{
+		get
+		{
+			return audioSource.time;
+		}
+		set
+		{
+			audioSource.time = value;
+		}
+	}
 
 	public float DefaultVolume => defaultVolume;
 
 	public bool VolumeOverridden => volumeOverride.HasValue;
+
+	public bool isPlaying => audioSource.isPlaying;
 
 	private void Awake()
 	{
@@ -29,6 +79,7 @@ public class MusicSource : MonoBehaviour
 		{
 			defaultVolume = audioSource.volume;
 		}
+		audioSource.volume = (defaultVolume = Mathf.Max(0.05f, defaultVolume));
 	}
 
 	private void OnEnable()
@@ -57,5 +108,35 @@ public class MusicSource : MonoBehaviour
 	{
 		volumeOverride = null;
 		audioSource.volume = defaultVolume;
+	}
+
+	internal void Lock(bool v)
+	{
+		if (v)
+		{
+			audioSource.Stop();
+		}
+		locked = v;
+	}
+
+	internal void Stop()
+	{
+		audioSource.Stop();
+	}
+
+	internal void PlayOneShot(AudioClip clip)
+	{
+		if (!locked && !(audioSource.volume <= 0f))
+		{
+			audioSource.PlayOneShot(clip, 1f / audioSource.volume);
+		}
+	}
+
+	internal void GTPlay()
+	{
+		if (!locked)
+		{
+			audioSource.GTPlay();
+		}
 	}
 }

@@ -11,4 +11,9 @@ public class MusicManagerEventTargets : MonoBehaviour
 	{
 		MusicManager.StopAllMusic(clip);
 	}
+
+	public void Lock(bool v)
+	{
+		MusicManager.LockMusic(v);
+	}
 }

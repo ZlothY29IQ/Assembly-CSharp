@@ -8,8 +8,8 @@ public class CustomMapEjectButton : GorillaPressableButton
 {
 	public enum EjectType
 	{
-		EjectFromVirtualStump,
-		ReturnToVirtualStump
+		EjectFromBrowsRoom,
+		ReturnToBrowsRoom
 	}
 
 	[SerializeField]
@@ -41,7 +41,7 @@ public class CustomMapEjectButton : GorillaPressableButton
 		if (!processing)
 		{
 			processing = true;
-			CustomMapManager.ReturnToVirtualStump();
+			CustomMapManager.ReturnToBrowseRoom();
 			processing = false;
 		}
 	}

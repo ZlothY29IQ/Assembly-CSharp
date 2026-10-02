@@ -571,4 +571,9 @@ public class ScheduledEventManager : MonoBehaviour, IGorillaSliceableSimple, IIn
 			RefreshPhase();
 		}
 	}
+
+	internal void AddMinutes(int m)
+	{
+		scheduledStart = scheduledStart.AddSeconds(m * -60);
+	}
 }

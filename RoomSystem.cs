@@ -10,6 +10,7 @@ using GorillaNetworking;
 using GorillaTag;
 using GorillaTag.Cosmetics;
 using GorillaTagScripts;
+using GorillaTagScripts.VirtualStumpCustomMaps;
 using Photon.Pun;
 using Photon.Realtime;
 using TagEffects;
@@ -832,14 +833,6 @@ internal class RoomSystem : MonoBehaviour
 		{
 			return 10;
 		}
-		if (IsVStumpRoom)
-		{
-			if (m_roomSizeOnJoin >= 10)
-			{
-				return 10;
-			}
-			return m_roomSizeOnJoin;
-		}
 		NetPlayer lowestActorNumberPlayer = GetLowestActorNumberPlayer();
 		if (lowestActorNumberPlayer == null || !VRRigCache.Instance.TryGetVrrig(lowestActorNumberPlayer, out var playerRig))
 		{
@@ -876,6 +869,18 @@ internal class RoomSystem : MonoBehaviour
 			}
 			b = (byte)__roomSettings.GetRoomCount(zone, GameMode.CurrentGameModeType, privateRoom: false, WasRoomSubscription);
 		}
+		if (IsVStumpRoom || IsLocalPlayerInVirtualStump())
+		{
+			b = Math.Min(b, IsVStumpRoom ? GetVStumpMapTierCap() : GetVStumpPublicMapSize());
+			if (IsVStumpRoom && m_roomSizeOnJoin > 0)
+			{
+				b = Math.Min(b, m_roomSizeOnJoin);
+			}
+			if (PhotonNetwork.CurrentRoom != null && PhotonNetwork.CurrentRoom.PlayerCount > b)
+			{
+				b = PhotonNetwork.CurrentRoom.PlayerCount;
+			}
+		}
 		if (b >= 20)
 		{
 			return 20;
@@ -887,29 +892,37 @@ internal class RoomSystem : MonoBehaviour
 	{
 		if (UseRoomSizeOverride)
 		{
-			return RoomSizeOverride;
+			return Math.Min(RoomSizeOverride, GetVStumpCreateCap());
 		}
-		return (byte)__roomSettings.GetRoomCount(zone, mode, privateRoom, sub);
+		return GetRoomSizeFromSettings(zone, mode, privateRoom, sub);
+	}
+
+	public static byte GetRoomSizeFromSettings(GTZone zone, GameModeType mode, bool privateRoom, bool sub)
+	{
+		byte b = (byte)__roomSettings.GetRoomCount(zone, mode, privateRoom, sub);
+		if (IsLocalPlayerInVirtualStump())
+		{
+			if (b == 0)
+			{
+				b = 10;
+			}
+			b = Math.Min(b, GetVStumpMapTierCap());
+		}
+		return b;
 	}
 
 	public static void OverrideRoomSize(byte size)
 	{
+		byte vStumpCreateCap = GetVStumpCreateCap();
 		if (size < 1)
 		{
 			size = 1;
 		}
-		else if (size > 10)
+		else if (size > vStumpCreateCap)
 		{
-			size = 10;
+			size = vStumpCreateCap;
 		}
-		if (size == 10)
-		{
-			UseRoomSizeOverride = false;
-		}
-		else
-		{
-			UseRoomSizeOverride = true;
-		}
+		UseRoomSizeOverride = true;
 		RoomSizeOverride = size;
 	}
 
@@ -917,15 +930,197 @@ internal class RoomSystem : MonoBehaviour
 	{
 		if (UseRoomSizeOverride)
 		{
-			return RoomSizeOverride;
+			return Math.Min(RoomSizeOverride, GetVStumpCreateCap());
 		}
-		return 10;
+		return GetVStumpDefaultCreateSize();
 	}
 
 	public static void ClearOverridenRoomSize()
 	{
 		UseRoomSizeOverride = false;
 		RoomSizeOverride = 10;
+	}
+
+	private static bool IsLocalPlayerInVirtualStump()
+	{
+		if (GorillaComputer.hasInstance)
+		{
+			return GorillaComputer.instance.IsPlayerInVirtualStump();
+		}
+		return false;
+	}
+
+	public static byte GetVStumpPublicMapSize()
+	{
+		return (byte)Math.Clamp((int)CustomMapLoader.GetRoomSizeForCurrentlyLoadedMap(), 1, 20);
+	}
+
+	public static bool DoesLoadedMapAllowLargeRooms()
+	{
+		return CustomMapLoader.GetRoomSizeForCurrentlyLoadedMap() >= 20;
+	}
+
+	public static byte GetVStumpMapTierCap()
+	{
+		if (!DoesLoadedMapAllowLargeRooms())
+		{
+			return 10;
+		}
+		return 20;
+	}
+
+	private static GameModeType GetVStumpGameModeForSizing()
+	{
+		if (GameMode.CurrentGameModeType != GameModeType.None)
+		{
+			return GameMode.CurrentGameModeType;
+		}
+		if (GorillaComputer.hasInstance && Enum.TryParse<GameModeType>(GorillaComputer.instance.currentGameMode.Value, ignoreCase: true, out var result))
+		{
+			return result;
+		}
+		return GameModeType.None;
+	}
+
+	public static byte GetVStumpDefaultCreateSize()
+	{
+		return GetRoomSizeFromSettings(GTZone.customMaps, GetVStumpGameModeForSizing(), privateRoom: true, SubscriptionManager.IsLocalSubscribed());
+	}
+
+	public static byte GetVStumpCreateCap()
+	{
+		return GetVStumpDefaultCreateSize();
+	}
+
+	public static bool CanLocalPlayerHaveLargeVStumpRoom(out string disallowedReason)
+	{
+		disallowedReason = "";
+		if ((byte)__roomSettings.GetRoomCount(GTZone.customMaps, GetVStumpGameModeForSizing(), privateRoom: true, sub: true) <= 10)
+		{
+			disallowedReason = "NOT AVAILABLE IN THIS GAME MODE";
+			return false;
+		}
+		if (!SubscriptionManager.IsLocalSubscribed())
+		{
+			disallowedReason = "REQUIRES A SUBSCRIPTION";
+			return false;
+		}
+		if (!DoesLoadedMapAllowLargeRooms())
+		{
+			disallowedReason = "NOT ALLOWED BY THIS MAP";
+			return false;
+		}
+		return true;
+	}
+
+	public static byte GetVStumpSmallRoomSize()
+	{
+		return (byte)__roomSettings.GetRoomCount(GTZone.customMaps, GetVStumpGameModeForSizing(), privateRoom: true, sub: false);
+	}
+
+	public static bool IsLocalPlayerVStumpRoomHost()
+	{
+		NetPlayer lowestActorNumberPlayer = GetLowestActorNumberPlayer();
+		if (lowestActorNumberPlayer != null && lowestActorNumberPlayer.IsLocal)
+		{
+			return NetworkSystem.Instance.IsMasterClient;
+		}
+		return false;
+	}
+
+	public static bool CanSetVStumpRoomSize(byte size, out string disallowedReason)
+	{
+		disallowedReason = "";
+		if (!joinedRoom || PhotonNetwork.CurrentRoom == null || !NetworkSystem.Instance.InRoom)
+		{
+			disallowedReason = "NOT IN A ROOM";
+			return false;
+		}
+		if (!IsVStumpRoom || !NetworkSystem.Instance.SessionIsPrivate)
+		{
+			disallowedReason = "PRIVATE ROOMS ONLY";
+			return false;
+		}
+		if (!IsLocalPlayerVStumpRoomHost())
+		{
+			disallowedReason = "ROOM HOST ONLY";
+			return false;
+		}
+		if (CustomMapManager.IsLoading() || CustomMapManager.IsUnloading())
+		{
+			disallowedReason = "MAP LOADING";
+			return false;
+		}
+		if (size < 1)
+		{
+			disallowedReason = "INVALID SIZE";
+			return false;
+		}
+		if (size > GetVStumpSmallRoomSize() && !SubscriptionManager.IsLocalSubscribed())
+		{
+			disallowedReason = "REQUIRES SUBSCRIPTION";
+			return false;
+		}
+		if (size > GetVStumpSmallRoomSize() && !DoesLoadedMapAllowLargeRooms())
+		{
+			disallowedReason = "MAP DOES NOT ALLOW 20 PLAYERS";
+			return false;
+		}
+		if (size < PhotonNetwork.CurrentRoom.PlayerCount)
+		{
+			disallowedReason = "TOO MANY PLAYERS IN ROOM";
+			return false;
+		}
+		return true;
+	}
+
+	public static bool TrySetVStumpRoomSize(byte size)
+	{
+		if (!CanSetVStumpRoomSize(size, out var disallowedReason))
+		{
+			Debug.Log($"[RoomSystem::TrySetVStumpRoomSize] Refused size {size}: {disallowedReason}");
+			return false;
+		}
+		m_roomSizeOnJoin = size;
+		if (PhotonNetwork.CurrentRoom.MaxPlayers != size)
+		{
+			PhotonNetwork.CurrentRoom.MaxPlayers = size;
+			Debug.Log($"[RoomSystem::TrySetVStumpRoomSize] Room size set to {size}");
+		}
+		return true;
+	}
+
+	public static void OnVStumpRoomSizePropertyChanged(byte newSize, bool senderIsHost)
+	{
+		if (joinedRoom && IsVStumpRoom && WasRoomPrivate && senderIsHost && newSize >= 1)
+		{
+			byte roomSizeOnJoin = m_roomSizeOnJoin;
+			m_roomSizeOnJoin = newSize;
+			if (GetCurrentRoomExpectedSize() != newSize)
+			{
+				m_roomSizeOnJoin = roomSizeOnJoin;
+			}
+		}
+	}
+
+	public static void ClampVStumpRoomToMapCap()
+	{
+		if (!joinedRoom || !IsVStumpRoom || PhotonNetwork.CurrentRoom == null || !IsLocalPlayerVStumpRoomHost() || !NetworkSystem.Instance.SessionIsPrivate)
+		{
+			return;
+		}
+		byte vStumpMapTierCap = GetVStumpMapTierCap();
+		byte maxPlayers = PhotonNetwork.CurrentRoom.MaxPlayers;
+		if (maxPlayers > vStumpMapTierCap)
+		{
+			byte b = Math.Max(vStumpMapTierCap, PhotonNetwork.CurrentRoom.PlayerCount);
+			if (b < maxPlayers)
+			{
+				Debug.Log($"[RoomSystem::ClampVStumpRoomToMapCap] Map does not allow 20 player rooms, shrinking room from {maxPlayers} to {b}");
+				m_roomSizeOnJoin = b;
+				PhotonNetwork.CurrentRoom.MaxPlayers = b;
+			}
+		}
 	}
 
 	public static void MakeRoomMultiplayer(byte roomSize)
@@ -1017,7 +1212,11 @@ internal class RoomSystem : MonoBehaviour
 		string shufflerStr = (string)shuffleData[0];
 		string newKeyStr = (string)shuffleData[1];
 		bool flag = KIDManager.HasPermissionToUseFeature(EKIDFeatures.Groups);
-		if (GorillaComputer.instance.friendJoinCollider.playerIDsCurrentlyTouching.Contains(NetworkSystem.Instance.LocalPlayer.UserId))
+		List<GorillaFriendCollider.TouchingPlayerInfo> playerIDsCurrentlyTouching = GorillaComputer.instance.friendJoinCollider.playerIDsCurrentlyTouching;
+		string localId = NetworkSystem.Instance.LocalPlayer.UserId;
+		string senderId = info.Sender.UserId;
+		float time = Time.time;
+		if (playerIDsCurrentlyTouching.FindIndex((GorillaFriendCollider.TouchingPlayerInfo pInfo) => pInfo.UserID == localId && time - pInfo.EnteredTime > 4f) > -1 && playerIDsCurrentlyTouching.FindIndex((GorillaFriendCollider.TouchingPlayerInfo pInfo) => pInfo.UserID == senderId && time - pInfo.EnteredTime > 4f) > -1)
 		{
 			if (flag && WasRoomPrivate)
 			{

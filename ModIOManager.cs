@@ -885,6 +885,33 @@ public class ModIOManager : MonoBehaviour, ISteamCredentialProvider, IOculusCred
 		return await Mod.GetMods(searchFilter);
 	}
 
+	public static async Task<(Error error, GamePlacement[] placements)> GetGamePlacements(bool forceRefresh = false)
+	{
+		if (!hasInstance)
+		{
+			return (error: new Error(ErrorCode.NOT_INITIALIZED), placements: null);
+		}
+		Error error = await Initialize();
+		if ((bool)error)
+		{
+			return (error: error, placements: null);
+		}
+		return await GamePlacement.GetGamePlacements(forceRefresh);
+	}
+
+	public static async Task<(Error error, ModioPage<Mod> modsPage)> GetPlacementMods(GamePlacement placement, ModSearchFilter baseFilter, bool forceRefresh = false)
+	{
+		if (!hasInstance)
+		{
+			return (error: new Error(ErrorCode.NOT_INITIALIZED), modsPage: null);
+		}
+		if (placement == null)
+		{
+			return (error: new Error(ErrorCode.BAD_PARAMETER, "Placement is null"), modsPage: null);
+		}
+		return await Mod.GetMods((baseFilter != null) ? placement.ApplyTo(baseFilter.GetModsFilter()) : placement.CreateModsFilter(), forceRefresh);
+	}
+
 	private static void ModIOUserChanged(User currentUser)
 	{
 		ModioLog.Verbose?.Log("[ModIOManager::ModIOUserChanged] CurrentUser: " + ((currentUser == null) ? "NULL" : currentUser.Profile.Username));

@@ -46,6 +46,13 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		public Action<string> onSceneUnloadedCallback;
 	}
 
+	public enum LoadResult
+	{
+		Succeeded,
+		Aborted,
+		Failed
+	}
+
 	[SerializeField]
 	private NexusGroupId defaultNexusGroupId;
 
@@ -59,17 +66,13 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 
 	public CustomMapAccessDoor accessDoor;
 
+	public CustomMapAccessDoor tunnelDoor;
+
 	[FormerlySerializedAs("networkTrigger")]
 	public GameObject publicJoinTrigger;
 
 	[SerializeField]
-	private BetterDayNightManager dayNightManager;
-
-	[SerializeField]
 	private GhostReactorManager ghostReactorManager;
-
-	[SerializeField]
-	private GameObject placeholderParent;
 
 	[SerializeField]
 	private GliderHoldable[] leafGliders;
@@ -165,6 +168,12 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 	private static bool isUnloading;
 
 	private static bool runningAsyncLoad = false;
+
+	private static AsyncOperation pendingSceneActivation;
+
+	private static bool awaitingPlayerEntry = false;
+
+	private static bool forceSceneActivation = false;
 
 	private static long attemptedLoadID = 0L;
 
@@ -424,6 +433,9 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		isLoading = false;
 		isUnloading = false;
 		runningAsyncLoad = false;
+		pendingSceneActivation = null;
+		awaitingPlayerEntry = false;
+		forceSceneActivation = false;
 		attemptedLoadID = 0L;
 		attemptedSceneToLoad = null;
 		shouldAbortMapLoading = false;
@@ -509,6 +521,10 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		{
 			publicJoinTrigger.SetActive(value: false);
 		}
+		if (accessDoor != null)
+		{
+			accessDoor.CloseDoor();
+		}
 	}
 
 	public static void Initialize(Action<MapLoadStatus, int, string> onLoadProgress, Action<bool> onLoadFinished, Action<string> onSceneLoaded, Action<string> onSceneUnloaded)
@@ -553,10 +569,42 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		return false;
 	}
 
-	private static IEnumerator LoadAssetBundle(long mapModID, string packageInfoFilePath, Action<bool, bool> OnLoadComplete)
+	public static bool OpenTunnelDoor()
+	{
+		if (!hasInstance)
+		{
+			return false;
+		}
+		if (instance.tunnelDoor != null)
+		{
+			instance.tunnelDoor.OpenDoor();
+			return true;
+		}
+		return false;
+	}
+
+	public static bool CloseTunnelDoor()
+	{
+		if (!hasInstance)
+		{
+			return false;
+		}
+		if (instance.tunnelDoor != null)
+		{
+			instance.tunnelDoor.CloseDoor();
+			return true;
+		}
+		return false;
+	}
+
+	private static IEnumerator LoadAssetBundle(long mapModID, string packageInfoFilePath, Action<LoadResult> OnLoadComplete)
 	{
 		isLoading = true;
 		errorEncounteredDuringLoad = false;
+		cachedExceptionMessage = "";
+		forceSceneActivation = false;
+		awaitingPlayerEntry = false;
+		pendingSceneActivation = null;
 		attemptedLoadID = mapModID;
 		refreshReviveStations = false;
 		gravityZoneCount = 0;
@@ -575,13 +623,13 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		{
 			Debug.LogError($"[CML.LoadAssetBundle] GetPackageInfo Exception: {ex}");
 			mapLoadProgressCallback?.Invoke(MapLoadStatus.Error, 0, ex.ToString());
-			OnLoadComplete(arg1: false, arg2: false);
+			OnLoadComplete(LoadResult.Failed);
 			yield break;
 		}
 		if (loadedMapPackageInfo == null)
 		{
 			mapLoadProgressCallback?.Invoke(MapLoadStatus.Error, 0, "FAILED TO READ FILE AT " + packageInfoFilePath);
-			OnLoadComplete(arg1: false, arg2: false);
+			OnLoadComplete(LoadResult.Failed);
 			yield break;
 		}
 		LoadInitialSceneNames();
@@ -594,20 +642,20 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		if (shouldAbortMapLoading || shouldAbortSceneLoad)
 		{
 			yield return AbortSceneLoad(-1);
-			OnLoadComplete(arg1: false, arg2: true);
+			OnLoadComplete(LoadResult.Aborted);
 			yield break;
 		}
 		if (mapBundle == null)
 		{
 			mapLoadProgressCallback?.Invoke(MapLoadStatus.Error, 0, "CUSTOM MAP ASSET BUNDLE FAILED TO LOAD");
-			OnLoadComplete(arg1: false, arg2: false);
+			OnLoadComplete(LoadResult.Failed);
 			yield break;
 		}
 		if (!mapBundle.isStreamedSceneAssetBundle)
 		{
 			mapBundle.Unload(unloadAllLoadedObjects: true);
 			mapLoadProgressCallback?.Invoke(MapLoadStatus.Error, 0, "AssetBundle does not contain a Unity Scene file");
-			OnLoadComplete(arg1: false, arg2: false);
+			OnLoadComplete(LoadResult.Failed);
 			yield break;
 		}
 		mapLoadProgressCallback?.Invoke(MapLoadStatus.Loading, 10, "MAP ASSET BUNDLE LOADED");
@@ -616,7 +664,7 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		{
 			mapBundle.Unload(unloadAllLoadedObjects: true);
 			mapLoadProgressCallback?.Invoke(MapLoadStatus.Error, 0, "AssetBundle does not contain a Unity Scene file");
-			OnLoadComplete(arg1: false, arg2: false);
+			OnLoadComplete(LoadResult.Failed);
 			yield break;
 		}
 		string[] array = assetBundleSceneFilePaths;
@@ -626,11 +674,11 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 			{
 				mapBundle.Unload(unloadAllLoadedObjects: true);
 				mapLoadProgressCallback?.Invoke(MapLoadStatus.Error, 0, "Map name is " + text + " this is an invalid name");
-				OnLoadComplete(arg1: false, arg2: false);
+				OnLoadComplete(LoadResult.Failed);
 				yield break;
 			}
 		}
-		OnLoadComplete(arg1: true, arg2: false);
+		OnLoadComplete(LoadResult.Succeeded);
 	}
 
 	private static void LoadInitialSceneNames()
@@ -649,9 +697,9 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		}
 	}
 
-	private static void OnAssetBundleLoaded(bool loadSucceeded, bool loadAborted)
+	private static void OnAssetBundleLoaded(LoadResult loadResult)
 	{
-		if (loadAborted || !loadSucceeded)
+		if (loadResult == LoadResult.Aborted || loadResult != LoadResult.Succeeded)
 		{
 			return;
 		}
@@ -702,7 +750,8 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 					arg = "MAP ASSET BUNDLE CONTAINS MULTIPLE SCENES, BUT NONE ARE SET AS INITIAL SCENE.";
 				}
 				mapLoadProgressCallback?.Invoke(MapLoadStatus.Error, 0, arg);
-				OnInitialLoadComplete(loadSucceeded: false, loadAborted: true);
+				OnInitialLoadComplete(LoadResult.Aborted);
+				return;
 			}
 		}
 		instance.StartCoroutine(LoadInitialScenesCoroutine(initialSceneIndexes.ToArray()));
@@ -724,119 +773,119 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 			bool isLastScene = i == sceneIndexes.Length - 1;
 			bool stopLoading = false;
 			bool initialLoadAborted = false;
-			yield return LoadSceneFromAssetBundle(sceneIndexes[i], delegate(bool loadSucceeded, bool loadAborted, string loadedSceneName)
+			yield return LoadSceneFromAssetBundle(sceneIndexes[i], delegate(LoadResult result, string loadedSceneName)
 			{
-				if (!loadSucceeded || loadAborted)
+				if (result != LoadResult.Succeeded)
 				{
 					GTDev.Log("[CustomMapLoader::LoadInitialScenesCoroutine] failed to load scene at index " + $"\"{sceneIndexes[i]}\", aborting initial load...");
 					stopLoading = true;
-					initialLoadAborted = loadAborted;
+					initialLoadAborted = result == LoadResult.Aborted;
 				}
 				else if (isLastScene)
 				{
-					OnInitialLoadComplete(loadSucceeded: true, loadAborted: false);
+					OnInitialLoadComplete(result);
 				}
 			}, useProgressCallback: true, num, endingProgress);
 			if (stopLoading || shouldAbortMapLoading)
 			{
-				OnInitialLoadComplete(loadSucceeded: false, initialLoadAborted);
+				OnInitialLoadComplete(initialLoadAborted ? LoadResult.Aborted : LoadResult.Failed);
 				break;
 			}
 		}
 	}
 
-	private static void OnInitialLoadComplete(bool loadSucceeded, bool loadAborted)
+	private static void OnInitialLoadComplete(LoadResult result)
 	{
-		if (loadAborted || !loadSucceeded)
+		switch (result)
 		{
-			if (!loadAborted)
+		case LoadResult.Failed:
+			instance.StartCoroutine(AbortMapLoad());
+			break;
+		default:
+			mapLoadFinishedCallback?.Invoke(obj: false);
+			break;
+		case LoadResult.Succeeded:
+			if (loadedMapPackageInfo != null && loadedMapPackageInfo.customMapSupportVersion >= 3)
 			{
-				instance.StartCoroutine(AbortMapLoad());
-			}
-			else
-			{
-				mapLoadFinishedCallback?.Invoke(obj: false);
-			}
-			return;
-		}
-		if (loadedMapPackageInfo != null && loadedMapPackageInfo.customMapSupportVersion >= 3)
-		{
-			maxPlayersForMap = (byte)System.Math.Clamp(loadedMapPackageInfo.maxPlayers, 1, 20);
-			if (loadedMapPackageInfo.customMapSupportVersion >= 5)
-			{
-				CustomMapModeSelector.SetAvailableGameModes(loadedMapPackageInfo.availableGameModes, loadedMapPackageInfo.defaultGameMode);
-				if (RoomSystem.JoinedRoom && NetworkSystem.Instance.LocalPlayer.IsMasterClient && NetworkSystem.Instance.SessionIsPrivate)
+				maxPlayersForMap = (byte)System.Math.Clamp(loadedMapPackageInfo.maxPlayers, 1, 20);
+				if (loadedMapPackageInfo.customMapSupportVersion >= 5)
 				{
-					if (GameMode.ActiveGameMode.IsNull())
+					CustomMapModeSelector.SetAvailableGameModes(loadedMapPackageInfo.availableGameModes, loadedMapPackageInfo.defaultGameMode);
+					if (RoomSystem.JoinedRoom && NetworkSystem.Instance.LocalPlayer.IsMasterClient && NetworkSystem.Instance.SessionIsPrivate)
 					{
-						GameModeType defaultGameMode = (GameModeType)loadedMapPackageInfo.defaultGameMode;
-						GameMode.ChangeGameMode(defaultGameMode.ToString());
-					}
-					else if (GameMode.ActiveGameMode.GameType() != (GameModeType)loadedMapPackageInfo.defaultGameMode)
-					{
-						GameModeType defaultGameMode = (GameModeType)loadedMapPackageInfo.defaultGameMode;
-						GameMode.ChangeGameMode(defaultGameMode.ToString());
+						if (GameMode.ActiveGameMode.IsNull())
+						{
+							GameModeType defaultGameMode = (GameModeType)loadedMapPackageInfo.defaultGameMode;
+							GameMode.ChangeGameMode(defaultGameMode.ToString());
+						}
+						else if (GameMode.ActiveGameMode.GameType() != (GameModeType)loadedMapPackageInfo.defaultGameMode)
+						{
+							GameModeType defaultGameMode = (GameModeType)loadedMapPackageInfo.defaultGameMode;
+							GameMode.ChangeGameMode(defaultGameMode.ToString());
+						}
 					}
 				}
-			}
-			else
-			{
-				List<int> list = new List<int>();
-				foreach (GameModeType availableModesForOldMap in instance.availableModesForOldMaps)
+				else
 				{
-					list.Add((int)availableModesForOldMap);
-				}
-				GameModeType gameModeType = instance.defaultGameModeForNonCustomOldMaps;
-				if (!loadedMapPackageInfo.customGamemodeScript.IsNullOrEmpty())
-				{
-					gameModeType = GameModeType.Custom;
-					list.Add(7);
-				}
-				CustomMapModeSelector.SetAvailableGameModes(list.ToArray(), (int)gameModeType);
-				if (RoomSystem.JoinedRoom && NetworkSystem.Instance.LocalPlayer.IsMasterClient && NetworkSystem.Instance.SessionIsPrivate)
-				{
-					if (GameMode.ActiveGameMode.IsNull())
+					List<int> list = new List<int>();
+					foreach (GameModeType availableModesForOldMap in instance.availableModesForOldMaps)
 					{
-						GameMode.ChangeGameMode(gameModeType.ToString());
+						list.Add((int)availableModesForOldMap);
 					}
-					else if (GameMode.ActiveGameMode.GameType() != gameModeType)
+					GameModeType gameModeType = instance.defaultGameModeForNonCustomOldMaps;
+					if (!loadedMapPackageInfo.customGamemodeScript.IsNullOrEmpty())
 					{
-						GameMode.ChangeGameMode(gameModeType.ToString());
+						gameModeType = GameModeType.Custom;
+						list.Add(7);
+					}
+					CustomMapModeSelector.SetAvailableGameModes(list.ToArray(), (int)gameModeType);
+					if (RoomSystem.JoinedRoom && NetworkSystem.Instance.LocalPlayer.IsMasterClient && NetworkSystem.Instance.SessionIsPrivate)
+					{
+						if (GameMode.ActiveGameMode.IsNull())
+						{
+							GameMode.ChangeGameMode(gameModeType.ToString());
+						}
+						else if (GameMode.ActiveGameMode.GameType() != gameModeType)
+						{
+							GameMode.ChangeGameMode(gameModeType.ToString());
+						}
 					}
 				}
+				cachedLuauScript = loadedMapPackageInfo.customGamemodeScript;
+				devModeEnabled = loadedMapPackageInfo.devMode;
+				disableHoldingHandsAllModes = loadedMapPackageInfo.disableHoldingHandsAllModes;
+				disableHoldingHandsCustomMode = loadedMapPackageInfo.disableHoldingHandsCustomMode;
+				Color ambientLightDynamic = new Color(loadedMapPackageInfo.uberShaderAmbientDynamicLight_R, loadedMapPackageInfo.uberShaderAmbientDynamicLight_G, loadedMapPackageInfo.uberShaderAmbientDynamicLight_B, loadedMapPackageInfo.uberShaderAmbientDynamicLight_A);
+				if (loadedMapPackageInfo.useUberShaderDynamicLighting)
+				{
+					SetZoneDynamicLighting(enable: true);
+					GameLightingManager.instance.SetAmbientLightDynamic(ambientLightDynamic);
+				}
+				VirtualStumpReturnWatch.SetWatchProperties(loadedMapPackageInfo.GetReturnToVStumpWatchProps());
 			}
-			cachedLuauScript = loadedMapPackageInfo.customGamemodeScript;
-			devModeEnabled = loadedMapPackageInfo.devMode;
-			disableHoldingHandsAllModes = loadedMapPackageInfo.disableHoldingHandsAllModes;
-			disableHoldingHandsCustomMode = loadedMapPackageInfo.disableHoldingHandsCustomMode;
-			Color ambientLightDynamic = new Color(loadedMapPackageInfo.uberShaderAmbientDynamicLight_R, loadedMapPackageInfo.uberShaderAmbientDynamicLight_G, loadedMapPackageInfo.uberShaderAmbientDynamicLight_B, loadedMapPackageInfo.uberShaderAmbientDynamicLight_A);
-			if (loadedMapPackageInfo.useUberShaderDynamicLighting)
+			isLoading = false;
+			CanLoadEntities = true;
+			GorillaNetworkJoinTrigger.EnableTriggerJoins();
+			RoomSystem.ClampVStumpRoomToMapCap();
+			mapLoadProgressCallback?.Invoke(MapLoadStatus.Loading, 100, "LOAD COMPLETE");
+			if (instance.publicJoinTrigger != null)
 			{
-				SetZoneDynamicLighting(enable: true);
-				GameLightingManager.instance.SetAmbientLightDynamic(ambientLightDynamic);
+				instance.publicJoinTrigger.SetActive(value: true);
 			}
-			VirtualStumpReturnWatch.SetWatchProperties(loadedMapPackageInfo.GetReturnToVStumpWatchProps());
+			foreach (string loadedSceneName in loadedSceneNames)
+			{
+				sceneLoadedCallback?.Invoke(loadedSceneName);
+			}
+			mapLoadFinishedCallback?.Invoke(obj: true);
+			break;
 		}
-		isLoading = false;
-		CanLoadEntities = true;
-		GorillaNetworkJoinTrigger.EnableTriggerJoins();
-		mapLoadProgressCallback?.Invoke(MapLoadStatus.Loading, 100, "LOAD COMPLETE");
-		if (instance.publicJoinTrigger != null)
-		{
-			instance.publicJoinTrigger.SetActive(value: true);
-		}
-		foreach (string loadedSceneName in loadedSceneNames)
-		{
-			sceneLoadedCallback?.Invoke(loadedSceneName);
-		}
-		mapLoadFinishedCallback?.Invoke(obj: true);
 	}
 
-	private static IEnumerator LoadScenesCoroutine(int[] sceneIndexes, Action<bool, bool, List<string>> loadCompleteCallback = null)
+	private static IEnumerator LoadScenesCoroutine(int[] sceneIndexes, Action<LoadResult, List<string>> loadCompleteCallback = null)
 	{
 		if (sceneIndexes.IsNullOrEmpty())
 		{
-			loadCompleteCallback?.Invoke(arg1: false, arg2: false, null);
+			loadCompleteCallback?.Invoke(LoadResult.Failed, null);
 			yield break;
 		}
 		isLoading = true;
@@ -851,9 +900,9 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 			}
 			bool shouldAbortLoad = false;
 			bool isLastScene = i == sceneIndexes.Length - 1;
-			yield return LoadSceneFromAssetBundle(sceneIndexes[i], delegate(bool loadSucceeded, bool loadAborted, string loadedSceneName)
+			yield return LoadSceneFromAssetBundle(sceneIndexes[i], delegate(LoadResult result, string loadedSceneName)
 			{
-				if (!loadSucceeded || loadAborted)
+				if (result != LoadResult.Succeeded)
 				{
 					successfullyLoadedAllScenes = false;
 				}
@@ -862,26 +911,47 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 					sceneLoadedCallback?.Invoke(loadedSceneName);
 					successfullyLoadedSceneNames.Add(loadedSceneName);
 				}
-				if (loadAborted)
+				if (result == LoadResult.Aborted)
 				{
 					shouldAbortLoad = true;
 				}
 				else if (isLastScene)
 				{
-					loadCompleteCallback?.Invoke(successfullyLoadedAllScenes, arg2: false, successfullyLoadedSceneNames);
+					loadCompleteCallback?.Invoke((!successfullyLoadedAllScenes) ? LoadResult.Failed : LoadResult.Succeeded, successfullyLoadedSceneNames);
 				}
 			});
 			if (shouldAbortLoad)
 			{
 				isLoading = false;
-				loadCompleteCallback?.Invoke(arg1: false, arg2: true, successfullyLoadedSceneNames);
+				loadCompleteCallback?.Invoke(LoadResult.Aborted, successfullyLoadedSceneNames);
 				break;
 			}
 		}
 		isLoading = false;
 	}
 
-	private static IEnumerator LoadSceneFromAssetBundle(int sceneIndex, Action<bool, bool, string> OnLoadComplete, bool useProgressCallback = false, int startingProgress = 10, int endingProgress = 90)
+	private static bool ShouldActivateLoadedScene()
+	{
+		if (forceSceneActivation || shouldAbortSceneLoad || shouldAbortMapLoading)
+		{
+			return true;
+		}
+		return ZoneManagement.IsInZone(GTZone.customMaps);
+	}
+
+	private static void ForcePendingSceneActivation()
+	{
+		if (pendingSceneActivation != null || awaitingPlayerEntry)
+		{
+			forceSceneActivation = true;
+			if (pendingSceneActivation != null)
+			{
+				pendingSceneActivation.allowSceneActivation = true;
+			}
+		}
+	}
+
+	private static IEnumerator LoadSceneFromAssetBundle(int sceneIndex, Action<LoadResult, string> OnLoadComplete, bool useProgressCallback = false, int startingProgress = 10, int endingProgress = 90)
 	{
 		int progressAmount = endingProgress - startingProgress;
 		int currentProgress = startingProgress;
@@ -894,11 +964,12 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		if (shouldAbortSceneLoad)
 		{
 			yield return AbortSceneLoad(sceneIndex);
-			OnLoadComplete(arg1: false, arg2: true, "");
+			OnLoadComplete(LoadResult.Aborted, "");
 			yield break;
 		}
 		runningAsyncLoad = true;
-		if (useProgressCallback)
+		bool reportPhaseA = useProgressCallback && !ShouldActivateLoadedScene();
+		if (useProgressCallback && !reportPhaseA)
 		{
 			int arg = startingProgress + Mathf.RoundToInt((float)progressAmount * 0.02f);
 			mapLoadProgressCallback?.Invoke(MapLoadStatus.Loading, arg, "LOADING MAP SCENE");
@@ -906,12 +977,42 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		attemptedSceneToLoad = assetBundleSceneFilePaths[sceneIndex];
 		string sceneName = GetSceneNameFromFilePath(attemptedSceneToLoad);
 		ZoneManagement.AddSceneToForceStayLoaded(sceneName);
-		yield return SceneManager.LoadSceneAsync(attemptedSceneToLoad, parameters);
+		AsyncOperation sceneLoad = SceneManager.LoadSceneAsync(attemptedSceneToLoad, parameters);
+		sceneLoad.allowSceneActivation = false;
+		pendingSceneActivation = sceneLoad;
+		while (sceneLoad.progress < 0.9f)
+		{
+			if (reportPhaseA)
+			{
+				int arg2 = 10 + Mathf.Clamp(Mathf.RoundToInt(sceneLoad.progress / 0.9f * 90f), 0, 90);
+				mapLoadProgressCallback?.Invoke(MapLoadStatus.Loading, arg2, "LOADING MAP SCENE");
+			}
+			yield return null;
+		}
 		runningAsyncLoad = false;
+		awaitingPlayerEntry = true;
+		if (reportPhaseA)
+		{
+			mapLoadProgressCallback?.Invoke(MapLoadStatus.Loading, 100, "READY TO ENTER");
+			if (instance.publicJoinTrigger != null)
+			{
+				instance.publicJoinTrigger.SetActive(value: true);
+			}
+		}
+		while (!ShouldActivateLoadedScene())
+		{
+			yield return null;
+		}
+		awaitingPlayerEntry = false;
+		runningAsyncLoad = true;
+		sceneLoad.allowSceneActivation = true;
+		yield return sceneLoad;
+		runningAsyncLoad = false;
+		pendingSceneActivation = null;
 		if (shouldAbortSceneLoad)
 		{
 			yield return AbortSceneLoad(sceneIndex);
-			OnLoadComplete(arg1: false, arg2: true, "");
+			OnLoadComplete(LoadResult.Aborted, "");
 			yield break;
 		}
 		if (useProgressCallback)
@@ -952,7 +1053,7 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 			{
 				mapLoadProgressCallback?.Invoke(MapLoadStatus.Error, 0, "SCENE \"" + sceneName + "\" DOES NOT CONTAIN A MAP DESCRIPTOR ON ONE OF ITS ROOT GAME OBJECTS.");
 			}
-			OnLoadComplete(arg1: false, arg2: false, "");
+			OnLoadComplete(LoadResult.Failed, "");
 			yield break;
 		}
 		GameObject gameObject = mapDescriptor.gameObject;
@@ -963,7 +1064,7 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 			{
 				mapLoadProgressCallback?.Invoke(MapLoadStatus.Error, 0, "MAP DESCRIPTOR GAME OBJECT ON SCENE \"" + sceneName + "\" HAS UNAPPROVED COMPONENTS ON IT");
 			}
-			OnLoadComplete(arg1: false, arg2: false, "");
+			OnLoadComplete(LoadResult.Failed, "");
 			yield break;
 		}
 		if (loadedMapPackageInfo.customMapSupportVersion < 4)
@@ -1002,7 +1103,7 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		if (shouldAbortSceneLoad)
 		{
 			yield return AbortSceneLoad(sceneIndex);
-			OnLoadComplete(arg1: false, arg2: true, "");
+			OnLoadComplete(LoadResult.Aborted, "");
 			if (cachedExceptionMessage.Length > 0 && useProgressCallback)
 			{
 				mapLoadProgressCallback?.Invoke(MapLoadStatus.Error, 0, cachedExceptionMessage);
@@ -1011,7 +1112,7 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		}
 		if (errorEncounteredDuringLoad)
 		{
-			OnLoadComplete(arg1: false, arg2: false, "");
+			OnLoadComplete(LoadResult.Failed, "");
 			if (cachedExceptionMessage.Length > 0 && useProgressCallback)
 			{
 				mapLoadProgressCallback?.Invoke(MapLoadStatus.Error, 0, cachedExceptionMessage);
@@ -1029,7 +1130,7 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		{
 			instance.ghostReactorManager.reactor.RefreshReviveStations(searchScene: true);
 		}
-		OnLoadComplete(arg1: true, arg2: false, sceneName);
+		OnLoadComplete(LoadResult.Succeeded, sceneName);
 	}
 
 	private static void SanitizeObjectRecursive(GameObject rootObject, GameObject mapRoot)
@@ -1120,24 +1221,124 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		GameObject gameObject = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
 		gameObject.transform.position = instance.virtualStumpMesh.transform.position + vector;
 		gameObject.transform.localScale = localScale;
-		Collider[] array = Physics.OverlapSphere(gameObject.transform.position, radius);
-		if (array == null || array.Length == 0)
-		{
-			UnityEngine.Object.Destroy(gameObject);
-			return;
-		}
 		MeshCollider meshCollider = gameObject.AddComponent<MeshCollider>();
 		meshCollider.convex = true;
-		Collider[] array2 = array;
-		foreach (Collider collider in array2)
+		Bounds bounds = gameObject.GetComponent<Renderer>().bounds;
+		HashSet<GameObject> hashSet = new HashSet<GameObject>();
+		Collider[] array = Physics.OverlapSphere(gameObject.transform.position, radius);
+		foreach (Collider collider in array)
 		{
-			if (!(collider == null) && !(collider.gameObject == gameObject) && !(collider.gameObject.scene.name != sceneName) && Physics.ComputePenetration(meshCollider, gameObject.transform.position, gameObject.transform.rotation, collider, collider.transform.position, collider.transform.rotation, out var _, out var _) && !collider.isTrigger)
+			if (!(collider == null) && !(collider.gameObject == gameObject) && !(collider.gameObject.scene.name != sceneName) && !collider.isTrigger && Physics.ComputePenetration(meshCollider, gameObject.transform.position, gameObject.transform.rotation, collider, collider.transform.position, collider.transform.rotation, out var _, out var _))
 			{
-				Debug.Log("[CustomMapLoader::ResolveVirtualStumpColliderOverlaps] Gameobject " + collider.name + " has a collider overlapping with the virtual stump. Collider will be removed");
-				UnityEngine.Object.Destroy(collider);
+				hashSet.Add(collider.gameObject);
+			}
+		}
+		Scene sceneByName = SceneManager.GetSceneByName(sceneName);
+		if (sceneByName.IsValid())
+		{
+			GameObject[] rootGameObjects = sceneByName.GetRootGameObjects();
+			for (int i = 0; i < rootGameObjects.Length; i++)
+			{
+				Renderer[] componentsInChildren = rootGameObjects[i].GetComponentsInChildren<Renderer>(includeInactive: true);
+				foreach (Renderer renderer in componentsInChildren)
+				{
+					if (!(renderer == null) && !hashSet.Contains(renderer.gameObject) && RendererOverlapsVirtualStump(renderer, meshCollider, bounds))
+					{
+						hashSet.Add(renderer.gameObject);
+					}
+				}
+			}
+		}
+		foreach (GameObject item in hashSet)
+		{
+			if (IsInteractiveMapObject(item, bounds))
+			{
+				continue;
+			}
+			Debug.Log("[CustomMapLoader::ResolveVirtualStumpColliderOverlaps] Gameobject " + item.name + " is overlapping with the virtual stump. Its colliders and renderers will be removed");
+			array = item.GetComponents<Collider>();
+			foreach (Collider collider2 in array)
+			{
+				if (!collider2.isTrigger)
+				{
+					UnityEngine.Object.Destroy(collider2);
+				}
+			}
+			Renderer[] componentsInChildren = item.GetComponents<Renderer>();
+			for (int i = 0; i < componentsInChildren.Length; i++)
+			{
+				UnityEngine.Object.Destroy(componentsInChildren[i]);
 			}
 		}
 		UnityEngine.Object.Destroy(gameObject);
+	}
+
+	private static bool IsInteractiveMapObject(GameObject gameObject, Bounds stumpBounds)
+	{
+		int num = UnityLayer.GorillaTrigger.ToLayerIndex();
+		int num2 = UnityLayer.GorillaInteractable.ToLayerIndex();
+		for (Transform parent = gameObject.transform; parent != null; parent = parent.parent)
+		{
+			Collider[] components = parent.GetComponents<Collider>();
+			Collider[] array;
+			if (parent != gameObject.transform)
+			{
+				bool flag = false;
+				array = components;
+				foreach (Collider collider in array)
+				{
+					if (collider != null && collider.bounds.Intersects(stumpBounds))
+					{
+						flag = true;
+						break;
+					}
+				}
+				if (!flag)
+				{
+					continue;
+				}
+			}
+			if (parent.gameObject.layer == num || parent.gameObject.layer == num2)
+			{
+				return true;
+			}
+			if (parent.GetComponent<CMSTrigger>().IsNotNull() || parent.GetComponent<CMSLoadingZone>().IsNotNull())
+			{
+				return true;
+			}
+			array = components;
+			foreach (Collider collider2 in array)
+			{
+				if (collider2 != null && collider2.isTrigger)
+				{
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	private static bool RendererOverlapsVirtualStump(Renderer renderer, MeshCollider stumpCollider, Bounds stumpBounds)
+	{
+		Bounds bounds = renderer.bounds;
+		if (!bounds.Intersects(stumpBounds))
+		{
+			return false;
+		}
+		if (renderer is MeshRenderer && renderer.TryGetComponent<MeshFilter>(out var component) && component.sharedMesh != null && component.sharedMesh.isReadable)
+		{
+			GameObject gameObject = new GameObject("VirtualStumpOverlapProbe");
+			gameObject.transform.SetPositionAndRotation(renderer.transform.position, renderer.transform.rotation);
+			gameObject.transform.localScale = renderer.transform.lossyScale;
+			MeshCollider meshCollider = gameObject.AddComponent<MeshCollider>();
+			meshCollider.sharedMesh = component.sharedMesh;
+			Vector3 direction;
+			float distance;
+			bool result = Physics.ComputePenetration(stumpCollider, stumpCollider.transform.position, stumpCollider.transform.rotation, meshCollider, gameObject.transform.position, gameObject.transform.rotation, out direction, out distance);
+			UnityEngine.Object.DestroyImmediate(gameObject);
+			return result;
+		}
+		return !bounds.Contains(stumpBounds.min) || !bounds.Contains(stumpBounds.max);
 	}
 
 	private static IEnumerator FinalizeSceneLoad(MapDescriptor sceneDescriptor, bool useProgressCallback = false, int startingProgress = 50, int endingProgress = 90)
@@ -2385,9 +2586,9 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		}
 		if (!loadScenes.IsNullOrEmpty())
 		{
-			yield return LoadScenesCoroutine(loadScenes, delegate(bool successfullyLoadedAllScenes, bool loadAborted, List<string> successfullyLoadedSceneNames)
+			yield return LoadScenesCoroutine(loadScenes, delegate(LoadResult result, List<string> successfullyLoadedSceneNames)
 			{
-				if (loadAborted)
+				if (result == LoadResult.Aborted)
 				{
 					queuedLoadZoneRequests.Clear();
 				}
@@ -2525,6 +2726,11 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		}
 		shouldAbortMapLoading = false;
 		shouldAbortSceneLoad = false;
+		forceSceneActivation = false;
+		awaitingPlayerEntry = false;
+		pendingSceneActivation = null;
+		errorEncounteredDuringLoad = false;
+		cachedExceptionMessage = "";
 		isUnloading = false;
 		if (unloadMapCallback != null)
 		{
@@ -2570,7 +2776,8 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 			Debug.LogError($"[CustomMapLoader::UnloadSceneCoroutine] SceneIndex of {sceneIndex} is invalid! " + $"The currently loaded AssetBundle contains {assetBundleSceneFilePaths.Length} scenes.");
 			yield break;
 		}
-		while (runningAsyncLoad)
+		ForcePendingSceneActivation();
+		while (awaitingPlayerEntry || runningAsyncLoad)
 		{
 			yield return null;
 		}
@@ -2588,7 +2795,7 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 			}
 		}
 		Scene sceneByName = SceneManager.GetSceneByName(text);
-		if (!sceneByName.IsValid())
+		if (!sceneByName.IsValid() || !sceneByName.isLoaded)
 		{
 			yield break;
 		}
@@ -2698,17 +2905,32 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 
 	private static void CleanupPlaceholders()
 	{
+		if (instance.leafGliders == null)
+		{
+			return;
+		}
+		int num = 0;
 		for (int i = 0; i < instance.leafGliders.Length; i++)
 		{
-			instance.leafGliders[i].CustomMapUnload();
-			instance.leafGliders[i].enabled = false;
-			instance.leafGliders[i].transform.GetChild(0).gameObject.SetActive(value: false);
+			GliderHoldable gliderHoldable = instance.leafGliders[i];
+			if (gliderHoldable.IsNull())
+			{
+				num++;
+				continue;
+			}
+			gliderHoldable.CustomMapUnload();
+			gliderHoldable.enabled = false;
+			gliderHoldable.transform.GetChild(0).gameObject.SetActive(value: false);
+		}
+		if (num > 0)
+		{
+			Debug.LogError($"[CustomMapLoader::CleanupPlaceholders] {num} of " + $"{instance.leafGliders.Length} Leaf Gliders are unassigned on the CustomMapLoader; " + "those gliders will stay enabled after a custom map unloads.", instance);
 		}
 	}
 
 	private static IEnumerator ResetLightmaps()
 	{
-		instance.dayNightManager.RequestRepopulateLightmaps();
+		BetterDayNightManager.instance.RequestRepopulateLightmaps();
 		LoadSceneParameters parameters = new LoadSceneParameters
 		{
 			loadSceneMode = LoadSceneMode.Additive,

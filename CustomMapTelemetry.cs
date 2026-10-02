@@ -97,6 +97,18 @@ public class CustomMapTelemetry : MonoBehaviour
 
 	public static string CurrentMapSourceString => currentMapSource.GetName();
 
+	public static string CurrentMapCreatorIdString
+	{
+		get
+		{
+			if (currentMapMod?.Creator == null || !CustomMapLoader.IsMapLoaded(currentMapMod.Id))
+			{
+				return string.Empty;
+			}
+			return currentMapMod.Creator.UserId.ToString();
+		}
+	}
+
 	private void Awake()
 	{
 		if (instance == null)

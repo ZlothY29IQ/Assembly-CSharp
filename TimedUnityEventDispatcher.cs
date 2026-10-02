@@ -28,6 +28,9 @@ public class TimedUnityEventDispatcher : MonoBehaviour, IGorillaSliceableSimple
 	private class TimedUnityEventDispatcherNode : IComparable<TimedUnityEventDispatcherNode>
 	{
 		[SerializeField]
+		private bool dispatchOnInitialize;
+
+		[SerializeField]
 		private int subphase;
 
 		[SerializeField]
@@ -47,6 +50,8 @@ public class TimedUnityEventDispatcher : MonoBehaviour, IGorillaSliceableSimple
 
 		[SerializeField]
 		private UnityEvent<float> persistantPayload;
+
+		public bool DispatchOnInitialize => dispatchOnInitialize;
 
 		public int SubphaseOrder => subphase;
 
@@ -75,12 +80,12 @@ public class TimedUnityEventDispatcher : MonoBehaviour, IGorillaSliceableSimple
 			Activate(late);
 		}
 
-		public void Activate()
+		private void Activate()
 		{
 			Activate(0f);
 		}
 
-		private void Activate(float late)
+		public void Activate(float late)
 		{
 			if (late < 1f)
 			{
@@ -129,6 +134,13 @@ public class TimedUnityEventDispatcher : MonoBehaviour, IGorillaSliceableSimple
 			return;
 		}
 		readyState = ReadyState.Initializing;
+		for (int i = 0; i < nodes.Length; i++)
+		{
+			if (nodes[i].DispatchOnInitialize)
+			{
+				nodes[i].Activate(0f);
+			}
+		}
 		switch (mode)
 		{
 		case TimedUnityEventDispatcherMode.FIXED:
@@ -144,10 +156,13 @@ public class TimedUnityEventDispatcher : MonoBehaviour, IGorillaSliceableSimple
 		case TimedUnityEventDispatcherMode.SCHEDULED_EVENT:
 		{
 			nodeList.Clear();
-			for (int i = 0; i < nodes.Length; i++)
+			for (int j = 0; j < nodes.Length; j++)
 			{
-				nodes[i].Initialize();
-				nodeList.Add(nodes[i]);
+				nodes[j].Initialize();
+				if (!nodes[j].DispatchOnInitialize)
+				{
+					nodeList.Add(nodes[j]);
+				}
 			}
 			nodeList.Sort();
 			activeNodeIndex = 0;
@@ -181,8 +196,11 @@ public class TimedUnityEventDispatcher : MonoBehaviour, IGorillaSliceableSimple
 		nodeList.Clear();
 		for (int i = 0; i < nodes.Length; i++)
 		{
-			nodes[i].Initialize(d);
-			nodeList.Add(nodes[i]);
+			if (!nodes[i].DispatchOnInitialize)
+			{
+				nodes[i].Initialize(d);
+				nodeList.Add(nodes[i]);
+			}
 		}
 		nodeList.Sort();
 		activeNodeIndex = 0;
@@ -248,9 +266,10 @@ public class TimedUnityEventDispatcher : MonoBehaviour, IGorillaSliceableSimple
 			if (activeNodeIndex < nodeList.Count)
 			{
 				TimedUnityEventDispatcherNode timedUnityEventDispatcherNode2 = nodeList[activeNodeIndex];
-				if (timedUnityEventDispatcherNode2.SubphaseOrder == num && timedUnityEventDispatcherNode2.ActivationDelay <= DateTime.Now - instance.EventSubphaseStartTime)
+				double totalSeconds = (DateTime.Now - instance.EventSubphaseStartTime).TotalSeconds;
+				if (timedUnityEventDispatcherNode2.SubphaseOrder == num && totalSeconds >= 0.0)
 				{
-					timedUnityEventDispatcherNode2.Activate();
+					timedUnityEventDispatcherNode2.Activate((float)totalSeconds);
 					activeNodeIndex++;
 				}
 			}

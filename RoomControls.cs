@@ -43,11 +43,16 @@ public static class RoomControls
 
 	private const byte UnmutePlayerEventCode = 103;
 
+	private const string RoomControlsEligibleRoomPropertyKey = "roomControlsEligible";
+
 	private const string RoomControlsEnabledRoomPropertyKey = "roomControlsEnabled";
 
 	private const string BlockedPlayersRoomPropertyKey = "blockedUsers";
 
 	private const string MutedPlayersRoomPropertyKey = "mutedUsers";
+
+	[OnEnterPlay_Set(false)]
+	private static bool roomControlsEligible = false;
 
 	[OnEnterPlay_Set(false)]
 	private static bool roomControlsEnabled = false;
@@ -77,6 +82,8 @@ public static class RoomControls
 		Receivers = ReceiverGroup.MasterClient
 	};
 
+	public static bool RoomControlsEligible => roomControlsEligible;
+
 	public static bool RoomControlsEnabled => roomControlsEnabled;
 
 	public static IReadOnlyDictionary<string, long> BlockedPlayers => blockedPlayers;
@@ -88,16 +95,14 @@ public static class RoomControls
 	{
 		RoomSystem.JoinedRoomEvent += (Action)delegate
 		{
-			if (RoomSystem.WasRoomSubscription)
-			{
-				PhotonNetwork.AddCallbackTarget(punCallbacks);
-				ApplyRoomProperties(PhotonNetwork.CurrentRoom.CustomProperties);
-				OnRoomStateLoaded.InvokeSafe();
-			}
+			PhotonNetwork.AddCallbackTarget(punCallbacks);
+			ApplyRoomProperties(PhotonNetwork.CurrentRoom.CustomProperties);
+			OnRoomStateLoaded.InvokeSafe();
 		};
 		RoomSystem.LeftRoomEvent += (Action)delegate
 		{
 			PhotonNetwork.RemoveCallbackTarget(punCallbacks);
+			roomControlsEligible = false;
 			roomControlsEnabled = false;
 			blockedPlayers.Clear();
 			mutedPlayers.Clear();
@@ -114,17 +119,21 @@ public static class RoomControls
 	{
 		if (IsRoomControlsTrusted())
 		{
-			if (properties.TryGetValue("roomControlsEnabled", out var value))
+			if (properties.TryGetValue("roomControlsEligible", out var value))
 			{
-				roomControlsEnabled = value is bool && (bool)value;
+				roomControlsEligible = value is bool && (bool)value;
 			}
-			if (properties.TryGetValue("blockedUsers", out var value2))
+			if (properties.TryGetValue("roomControlsEnabled", out var value2))
 			{
-				ApplyRoomProperty(value2 as ExitGames.Client.Photon.Hashtable, blockedPlayers);
+				roomControlsEnabled = value2 is bool && (bool)value2;
 			}
-			if (properties.TryGetValue("mutedUsers", out var value3))
+			if (properties.TryGetValue("blockedUsers", out var value3))
 			{
-				ApplyRoomProperty(value3 as ExitGames.Client.Photon.Hashtable, mutedPlayers);
+				ApplyRoomProperty(value3 as ExitGames.Client.Photon.Hashtable, blockedPlayers);
+			}
+			if (properties.TryGetValue("mutedUsers", out var value4))
+			{
+				ApplyRoomProperty(value4 as ExitGames.Client.Photon.Hashtable, mutedPlayers);
 			}
 		}
 	}
@@ -211,14 +220,9 @@ public static class RoomControls
 			cannotReason = "The local player is not the master client";
 			return false;
 		}
-		if (PhotonNetwork.CurrentRoom.IsVisible)
+		if (!roomControlsEligible)
 		{
-			cannotReason = "The room is not a private room";
-			return false;
-		}
-		if (!RoomSystem.WasRoomSubscription)
-		{
-			cannotReason = "The room was not a subscription room";
+			cannotReason = "The room is not eligible for room controls";
 			return false;
 		}
 		if (!SubscriptionManager.IsLocalSubscribed())

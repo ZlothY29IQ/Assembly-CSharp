@@ -1,3 +1,4 @@
+using System;
 using GorillaGameModes;
 
 namespace GorillaNetworking;
@@ -18,6 +19,6 @@ public class CustomMapNetworkJoinTrigger : GorillaNetworkJoinTrigger
 
 	public override byte GetRoomSize(bool subscribed)
 	{
-		return CustomMapLoader.GetRoomSizeForCurrentlyLoadedMap();
+		return Math.Min(RoomSystem.GetRoomSizeFromSettings(zone, GetDesiredGameModeType(), privateRoom: false, subscribed), RoomSystem.GetVStumpPublicMapSize());
 	}
 }

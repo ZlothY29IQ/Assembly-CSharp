@@ -25,6 +25,9 @@ public class TeleportNode : GorillaTriggerBox
 	private bool subsOnly;
 
 	[SerializeField]
+	private UnityEvent beforeTeleport;
+
+	[SerializeField]
 	private UnityEvent onTeleport;
 
 	private float teleportTime;
@@ -78,18 +81,20 @@ public class TeleportNode : GorillaTriggerBox
 		}
 		Quaternion quaternion = Quaternion.Inverse(result.rotation) * instance.transform.rotation;
 		Quaternion rotation = result2.rotation * quaternion;
-		StartCoroutine(DelayedTeleport(instance, position, rotation));
+		Quaternion rotationDelta = result2.rotation * Quaternion.Inverse(result.rotation);
+		StartCoroutine(DelayedTeleport(instance, position, rotation, rotationDelta));
 		teleportTime = Time.time;
 	}
 
-	private IEnumerator DelayedTeleport(GTPlayer p, Vector3 position, Quaternion rotation)
+	private IEnumerator DelayedTeleport(GTPlayer p, Vector3 position, Quaternion rotation, Quaternion rotationDelta)
 	{
+		beforeTeleport?.Invoke();
 		yield return null;
 		p.TeleportTo(position, rotation, keepVelocity, !seamless);
 		if (teleportToZone != GTZone.none)
 		{
 			ZoneManagement.SetActiveZone(teleportToZone);
 		}
-		onTeleport.Invoke();
+		onTeleport?.Invoke();
 	}
 }

@@ -6,6 +6,7 @@ using Oculus.Platform.Models;
 using Steamworks;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 
 public class GeodeAtm : MonoBehaviour
 {
@@ -35,6 +36,9 @@ public class GeodeAtm : MonoBehaviour
 	private const string PURCHASE_META_ERROR_KEY = "GEODE_ATM_PURCHASE_META_ERROR";
 
 	public static bool ProcessingGeodePurchase;
+
+	[SerializeField]
+	private UnityEvent OnGeodePurchaseComplete;
 
 	[SerializeField]
 	private List<TextMeshPro> StatusTexts;
@@ -162,6 +166,10 @@ public class GeodeAtm : MonoBehaviour
 			fetchedGeodes = false;
 			purchaseInFlight = false;
 			RefreshGeodeBalance();
+			if (OnGeodePurchaseComplete != null)
+			{
+				OnGeodePurchaseComplete.Invoke();
+			}
 		}, delegate(MothershipError Error, int Status)
 		{
 			ProcessingGeodePurchase = false;
@@ -189,6 +197,10 @@ public class GeodeAtm : MonoBehaviour
 		{
 			fetchedGeodes = false;
 			RefreshGeodeBalance();
+			if (OnGeodePurchaseComplete != null)
+			{
+				OnGeodePurchaseComplete.Invoke();
+			}
 		}, delegate(MothershipError Error, int StatusCode)
 		{
 			fetchedGeodes = false;

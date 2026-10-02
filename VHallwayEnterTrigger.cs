@@ -2,8 +2,12 @@ using GorillaLocomotion;
 using GorillaTagScripts.VirtualStumpCustomMaps;
 using UnityEngine;
 
-public class VStumpDeactivateTrigger : MonoBehaviour
+public class VHallwayEnterTrigger : MonoBehaviour
 {
+	[Tooltip("Which hallway this is: FeatureA -> featured map 0, FeatureB -> featured map 1, Custom -> open the stump with no auto-load.")]
+	[SerializeField]
+	private VirtualStumpActivateMode mode = VirtualStumpActivateMode.FeatureA;
+
 	private bool armed = true;
 
 	public void OnTriggerEnter(Collider other)
@@ -11,7 +15,7 @@ public class VStumpDeactivateTrigger : MonoBehaviour
 		if (armed && !(other != GTPlayer.Instance.headCollider))
 		{
 			armed = false;
-			CustomMapManager.Deactivate();
+			CustomMapManager.EnterVHallway(mode);
 		}
 	}
 

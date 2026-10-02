@@ -5,7 +5,7 @@ using GorillaTag;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-public class SynchedMusicController : MonoBehaviour, IGorillaSliceableSimple
+public class SynchedMusicController : MonoBehaviour, IGorillaSliceableSimple, IBuildValidation
 {
 	[Serializable]
 	public struct SyncedSongInfo
@@ -25,6 +25,8 @@ public class SynchedMusicController : MonoBehaviour, IGorillaSliceableSimple
 
 		[Tooltip("The audio sources that should play the audio clip.")]
 		public AudioSource[] audioSources;
+
+		public MusicSource[] musicSources;
 	}
 
 	public enum AudioSourcePickMode
@@ -65,7 +67,11 @@ public class SynchedMusicController : MonoBehaviour, IGorillaSliceableSimple
 
 	public AudioSource audioSource;
 
+	private MusicSource musicSource;
+
 	public AudioSource[] audioSourceArray;
+
+	private MusicSource[] musicSourceArray;
 
 	public AudioClip[] songsArray;
 
@@ -99,6 +105,38 @@ public class SynchedMusicController : MonoBehaviour, IGorillaSliceableSimple
 
 	private const int kPlaylistLength = 256;
 
+	private void Awake()
+	{
+		if (!audioSource.TryGetComponent<MusicSource>(out musicSource))
+		{
+			UnityEngine.Object.Destroy(base.gameObject);
+		}
+		musicSourceArray = new MusicSource[audioSourceArray.Length];
+		for (int i = 0; i < audioSourceArray.Length; i++)
+		{
+			if (!audioSourceArray[i].TryGetComponent<MusicSource>(out musicSourceArray[i]))
+			{
+				UnityEngine.Object.Destroy(base.gameObject);
+				return;
+			}
+		}
+		for (int j = 0; j < syncedSongs.Length; j++)
+		{
+			for (int k = 0; k < syncedSongs[j].songLayers.Length; k++)
+			{
+				syncedSongs[j].songLayers[k].musicSources = new MusicSource[syncedSongs[j].songLayers[k].audioSources.Length];
+				for (int l = 0; l < syncedSongs[j].songLayers[k].audioSources.Length; l++)
+				{
+					if (!syncedSongs[j].songLayers[k].audioSources[l].TryGetComponent<MusicSource>(out syncedSongs[j].songLayers[k].musicSources[l]))
+					{
+						UnityEngine.Object.Destroy(base.gameObject);
+						return;
+					}
+				}
+			}
+		}
+	}
+
 	private void Start()
 	{
 		if (usingNewSyncedSongsCode)
@@ -107,24 +145,24 @@ public class SynchedMusicController : MonoBehaviour, IGorillaSliceableSimple
 			return;
 		}
 		totalLoopTime = 0L;
-		AudioSource[] array = audioSourceArray;
+		MusicSource[] array = musicSourceArray;
 		for (int i = 0; i < array.Length; i++)
 		{
 			array[i].mute = PlayerPrefs.GetInt(locationName + "Muted", 0) != 0;
 		}
-		audioSource.mute = PlayerPrefs.GetInt(locationName + "Muted", 0) != 0;
-		muteButton.isOn = audioSource.mute;
+		musicSource.mute = PlayerPrefs.GetInt(locationName + "Muted", 0) != 0;
+		muteButton.isOn = musicSource.mute;
 		muteButton.UpdateColor();
 		for (int j = 0; j < muteButtons.Length; j++)
 		{
-			muteButtons[j].isOn = audioSource.mute;
+			muteButtons[j].isOn = musicSource.mute;
 			muteButtons[j].UpdateColor();
 		}
 		randomNumberGenerator = new System.Random(mySeed);
 		GenerateSongStartRandomTimes();
 		if (twoLayer)
 		{
-			array = audioSourceArray;
+			array = musicSourceArray;
 			for (int i = 0; i < array.Length; i++)
 			{
 				array[i].clip.LoadAudioData();
@@ -144,23 +182,23 @@ public class SynchedMusicController : MonoBehaviour, IGorillaSliceableSimple
 			{
 				return;
 			}
-			isPlayingCurrently = audioSource.isPlaying;
+			isPlayingCurrently = musicSource.isPlaying;
 			if (testPlay)
 			{
 				testPlay = false;
 				if (usingMultipleSources && usingMultipleSongs)
 				{
-					audioSource = audioSourceArray[UnityEngine.Random.Range(0, audioSourceArray.Length)];
-					audioSource.clip = songsArray[UnityEngine.Random.Range(0, songsArray.Length)];
-					audioSource.time = 0f;
+					musicSource = musicSourceArray[UnityEngine.Random.Range(0, musicSourceArray.Length)];
+					musicSource.clip = songsArray[UnityEngine.Random.Range(0, songsArray.Length)];
+					musicSource.time = 0f;
 				}
 				if (twoLayer)
 				{
 					StartPlayingSongs(0L, 0L);
 				}
-				else if (audioSource.volume != 0f)
+				else if (musicSource.volume != 0f)
 				{
-					audioSource.GTPlay();
+					musicSource.GTPlay();
 				}
 			}
 			if (GorillaComputer.instance == null)
@@ -168,7 +206,7 @@ public class SynchedMusicController : MonoBehaviour, IGorillaSliceableSimple
 				return;
 			}
 			currentTime = (GorillaComputer.instance.startupMillis + (long)(Time.realtimeSinceStartup * 1000f)) % totalLoopTime;
-			if (audioSource.isPlaying)
+			if (musicSource.isPlaying)
 			{
 				return;
 			}
@@ -176,7 +214,7 @@ public class SynchedMusicController : MonoBehaviour, IGorillaSliceableSimple
 			{
 				if (twoLayer)
 				{
-					if (songStartTimes[lastPlayIndex] + (long)(audioSource.clip.length * 1000f) > currentTime)
+					if (songStartTimes[lastPlayIndex] + (long)(musicSource.clip.length * 1000f) > currentTime)
 					{
 						StartPlayingSongs(songStartTimes[lastPlayIndex], currentTime);
 					}
@@ -185,10 +223,10 @@ public class SynchedMusicController : MonoBehaviour, IGorillaSliceableSimple
 				{
 					if (songStartTimes[lastPlayIndex] + (long)(songsArray[audioClipsForPlaying[lastPlayIndex]].length * 1000f) > currentTime)
 					{
-						StartPlayingSong(songStartTimes[lastPlayIndex], currentTime, songsArray[audioClipsForPlaying[lastPlayIndex]], audioSourceArray[audioSourcesForPlaying[lastPlayIndex]]);
+						StartPlayingSong(songStartTimes[lastPlayIndex], currentTime, songsArray[audioClipsForPlaying[lastPlayIndex]], musicSourceArray[audioSourcesForPlaying[lastPlayIndex]]);
 					}
 				}
-				else if (songStartTimes[lastPlayIndex] + (long)(audioSource.clip.length * 1000f) > currentTime)
+				else if (songStartTimes[lastPlayIndex] + (long)(musicSource.clip.length * 1000f) > currentTime)
 				{
 					StartPlayingSong(songStartTimes[lastPlayIndex], currentTime);
 				}
@@ -207,29 +245,29 @@ public class SynchedMusicController : MonoBehaviour, IGorillaSliceableSimple
 
 	private void StartPlayingSong(long timeStarted, long currentTime)
 	{
-		if (audioSource.volume != 0f)
+		if (musicSource.volume != 0f)
 		{
-			audioSource.GTPlay();
+			musicSource.GTPlay();
 		}
-		audioSource.time = (float)(currentTime - timeStarted) / 1000f;
+		musicSource.time = (float)(currentTime - timeStarted) / 1000f;
 	}
 
 	private void StartPlayingSongs(long timeStarted, long currentTime)
 	{
-		AudioSource[] array = audioSourceArray;
-		foreach (AudioSource audioSource in array)
+		MusicSource[] array = musicSourceArray;
+		foreach (MusicSource musicSource in array)
 		{
-			if (audioSource.volume != 0f)
+			if (musicSource.volume != 0f)
 			{
-				audioSource.GTPlay();
+				musicSource.GTPlay();
 			}
-			audioSource.time = (float)(currentTime - timeStarted) / 1000f;
+			musicSource.time = (float)(currentTime - timeStarted) / 1000f;
 		}
 	}
 
-	private void StartPlayingSong(long timeStarted, long currentTime, AudioClip clipToPlay, AudioSource sourceToPlay)
+	private void StartPlayingSong(long timeStarted, long currentTime, AudioClip clipToPlay, MusicSource sourceToPlay)
 	{
-		audioSource = sourceToPlay;
+		musicSource = sourceToPlay;
 		sourceToPlay.clip = clipToPlay;
 		if (sourceToPlay.isActiveAndEnabled && sourceToPlay.volume != 0f)
 		{
@@ -252,7 +290,7 @@ public class SynchedMusicController : MonoBehaviour, IGorillaSliceableSimple
 		{
 			for (int j = 0; j < audioSourcesForPlaying.Length; j++)
 			{
-				audioSourcesForPlaying[j] = randomNumberGenerator.Next(audioSourceArray.Length);
+				audioSourcesForPlaying[j] = randomNumberGenerator.Next(musicSourceArray.Length);
 			}
 		}
 		if (usingMultipleSongs)
@@ -266,21 +304,21 @@ public class SynchedMusicController : MonoBehaviour, IGorillaSliceableSimple
 		{
 			totalLoopTime = songStartTimes[songStartTimes.Length - 1] + (long)(songsArray[audioClipsForPlaying[audioClipsForPlaying.Length - 1]].length * 1000f);
 		}
-		else if (audioSource.clip != null)
+		else if (musicSource.clip != null)
 		{
-			totalLoopTime = songStartTimes[songStartTimes.Length - 1] + (long)(audioSource.clip.length * 1000f);
+			totalLoopTime = songStartTimes[songStartTimes.Length - 1] + (long)(musicSource.clip.length * 1000f);
 		}
 	}
 
 	public void MuteAudio(GorillaPressableButton pressedButton)
 	{
-		AudioSource[] array;
-		if (audioSource.mute)
+		MusicSource[] array;
+		if (musicSource.mute)
 		{
 			PlayerPrefs.SetInt(locationName + "Muted", 0);
 			PlayerPrefs.Save();
-			audioSource.mute = false;
-			array = audioSourceArray;
+			musicSource.mute = false;
+			array = musicSourceArray;
 			for (int i = 0; i < array.Length; i++)
 			{
 				array[i].mute = false;
@@ -299,8 +337,8 @@ public class SynchedMusicController : MonoBehaviour, IGorillaSliceableSimple
 		}
 		PlayerPrefs.SetInt(locationName + "Muted", 1);
 		PlayerPrefs.Save();
-		audioSource.mute = true;
-		array = audioSourceArray;
+		musicSource.mute = true;
+		array = musicSourceArray;
 		for (int i = 0; i < array.Length; i++)
 		{
 			array[i].mute = true;
@@ -325,9 +363,9 @@ public class SynchedMusicController : MonoBehaviour, IGorillaSliceableSimple
 			Debug.LogError("Disabling SynchedMusicController on \"" + base.name + "\" due to invalid setup: " + text + " Path: " + base.transform.GetPathQ(), this);
 			base.enabled = false;
 		}
-		if (usingMultipleSources && this.audioSource == null)
+		if (usingMultipleSources && this.musicSource == null)
 		{
-			this.audioSource = audioSourceArray[0];
+			this.musicSource = musicSourceArray[0];
 		}
 		totalLoopTime = 0L;
 		bool mute = PlayerPrefs.GetInt(locationName + "Muted", 0) != 0;
@@ -335,16 +373,16 @@ public class SynchedMusicController : MonoBehaviour, IGorillaSliceableSimple
 		{
 			muteButton = muteButtons[0];
 		}
-		if (this.audioSource != null)
+		if (this.musicSource != null)
 		{
-			this.audioSource.mute = mute;
-			muteButton.isOn = this.audioSource.mute;
+			this.musicSource.mute = mute;
+			muteButton.isOn = this.musicSource.mute;
 		}
-		AudioSource[] array = audioSourceArray;
-		foreach (AudioSource audioSource in array)
+		MusicSource[] array = musicSourceArray;
+		foreach (MusicSource musicSource in array)
 		{
-			audioSource.mute = mute;
-			muteButton.isOn = audioSource.mute || muteButton.isOn;
+			musicSource.mute = mute;
+			muteButton.isOn = musicSource.mute || muteButton.isOn;
 		}
 		for (int j = 0; j < muteButtons.Length; j++)
 		{
@@ -386,9 +424,9 @@ public class SynchedMusicController : MonoBehaviour, IGorillaSliceableSimple
 
 	private void StopAllAudioSources()
 	{
-		for (int i = 0; i < audioSourceArray.Length; i++)
+		for (int i = 0; i < musicSourceArray.Length; i++)
 		{
-			audioSourceArray[i].Stop();
+			musicSourceArray[i].Stop();
 		}
 	}
 
@@ -445,26 +483,26 @@ public class SynchedMusicController : MonoBehaviour, IGorillaSliceableSimple
 			SyncedSongLayerInfo syncedSongLayerInfo = syncedSongInfo.songLayers[j];
 			if (syncedSongLayerInfo.audioSourcePickMode == AudioSourcePickMode.All)
 			{
-				AudioSource[] array = audioSourceArray;
-				foreach (AudioSource audioSource in array)
+				MusicSource[] array = musicSourceArray;
+				foreach (MusicSource musicSource in array)
 				{
-					audioSource.clip = syncedSongLayerInfo.audioClip;
-					if (audioSource.volume > 0f)
+					musicSource.clip = syncedSongLayerInfo.audioClip;
+					if (musicSource.volume > 0f)
 					{
-						audioSource.GTPlay();
+						musicSource.GTPlay();
 					}
-					audioSource.time = num5;
+					musicSource.time = num5;
 				}
 			}
 			else if (syncedSongLayerInfo.audioSourcePickMode == AudioSourcePickMode.Shuffle)
 			{
-				AudioSource audioSource2 = audioSourceArray[audioSourcesForPlaying[lastPlayIndex]];
-				audioSource2.clip = syncedSongLayerInfo.audioClip;
-				if (audioSource2.volume > 0f)
+				MusicSource musicSource2 = musicSourceArray[audioSourcesForPlaying[lastPlayIndex]];
+				musicSource2.clip = syncedSongLayerInfo.audioClip;
+				if (musicSource2.volume > 0f)
 				{
-					audioSource2.GTPlay();
+					musicSource2.GTPlay();
 				}
-				audioSource2.time = num5;
+				musicSource2.time = num5;
 			}
 			else
 			{
@@ -472,15 +510,15 @@ public class SynchedMusicController : MonoBehaviour, IGorillaSliceableSimple
 				{
 					continue;
 				}
-				AudioSource[] array = syncedSongLayerInfo.audioSources;
-				foreach (AudioSource audioSource3 in array)
+				MusicSource[] array = syncedSongLayerInfo.musicSources;
+				foreach (MusicSource musicSource3 in array)
 				{
-					audioSource3.clip = syncedSongLayerInfo.audioClip;
-					if (audioSource3.volume > 0f)
+					musicSource3.clip = syncedSongLayerInfo.audioClip;
+					if (musicSource3.volume > 0f)
 					{
-						audioSource3.GTPlay();
+						musicSource3.GTPlay();
 					}
-					audioSource3.time = num5;
+					musicSource3.time = num5;
 				}
 			}
 		}
@@ -516,14 +554,14 @@ public class SynchedMusicController : MonoBehaviour, IGorillaSliceableSimple
 				}
 				if (syncedSongLayerInfo.audioSourcePickMode == AudioSourcePickMode.Specific)
 				{
-					if (syncedSongLayerInfo.audioSources == null || syncedSongLayerInfo.audioSources.Length == 0)
+					if (syncedSongLayerInfo.musicSources == null || syncedSongLayerInfo.musicSources.Length == 0)
 					{
 						return $"Song {i}'s song layer {j} has audioSourcePickMode set to {syncedSongLayerInfo.audioSourcePickMode} " + "but layer's audioSources array is empty or null.";
 					}
 				}
-				else if (audioSourceArray == null || audioSourceArray.Length == 0)
+				else if (musicSourceArray == null || musicSourceArray.Length == 0)
 				{
-					return string.Format("{0} is null or empty, while Song {1}'s song layer {2} has ", "audioSourceArray", i, j) + $"audioSourcePickMode set to {syncedSongLayerInfo.audioSourcePickMode}, which uses the " + "component's audioSourceArray.";
+					return string.Format("{0} is null or empty, while Song {1}'s song layer {2} has ", "musicSourceArray", i, j) + $"audioSourcePickMode set to {syncedSongLayerInfo.audioSourcePickMode}, which uses the " + "component's musicSourceArray.";
 				}
 			}
 		}
@@ -561,7 +599,7 @@ public class SynchedMusicController : MonoBehaviour, IGorillaSliceableSimple
 		{
 			for (int l = 0; l < audioSourcesForPlaying.Length; l++)
 			{
-				audioSourcesForPlaying[l] = randomNumberGenerator.Next(audioSourceArray.Length);
+				audioSourcesForPlaying[l] = randomNumberGenerator.Next(musicSourceArray.Length);
 			}
 		}
 		audioClipsForPlaying = new int[256];
@@ -579,5 +617,39 @@ public class SynchedMusicController : MonoBehaviour, IGorillaSliceableSimple
 		long num = (long)syncedSongs[audioClipsForPlaying[^1]].songLayers[0].audioClip.length * 1000;
 		long num2 = songStartTimes[^1];
 		totalLoopTime = num + num2;
+	}
+
+	bool IBuildValidation.BuildValidationCheck()
+	{
+		if (audioSource != null && !audioSource.TryGetComponent<MusicSource>(out musicSource))
+		{
+			Debug.LogError("SynchedMusicController on " + base.gameObject.GetFullPath() + " is using audiosources without musicSource components. That's bad.");
+			return false;
+		}
+		musicSourceArray = new MusicSource[audioSourceArray.Length];
+		for (int i = 0; i < audioSourceArray.Length; i++)
+		{
+			if (!audioSourceArray[i].TryGetComponent<MusicSource>(out musicSourceArray[i]))
+			{
+				Debug.LogError("SynchedMusicController on " + base.gameObject.GetFullPath() + " is using audiosources without musicSource components. That's bad.");
+				return false;
+			}
+		}
+		for (int j = 0; j < syncedSongs.Length; j++)
+		{
+			for (int k = 0; k < syncedSongs[j].songLayers.Length; k++)
+			{
+				syncedSongs[j].songLayers[k].musicSources = new MusicSource[syncedSongs[j].songLayers[k].audioSources.Length];
+				for (int l = 0; l < syncedSongs[j].songLayers[k].audioSources.Length; l++)
+				{
+					if (!syncedSongs[j].songLayers[k].audioSources[l].TryGetComponent<MusicSource>(out syncedSongs[j].songLayers[k].musicSources[l]))
+					{
+						Debug.LogError("SynchedMusicController on " + base.gameObject.GetFullPath() + " is using audiosources without musicSource components. That's bad.");
+						return false;
+					}
+				}
+			}
+		}
+		return true;
 	}
 }

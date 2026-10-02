@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using GorillaExtensions;
 using GorillaNetworking;
 using Modio.Mods;
@@ -41,6 +42,38 @@ public static class PlayerCountHelper
 		}
 	}
 
+	public static Task<(bool success, Dictionary<string, ulong> counts)> GetPlayerCountsAsync(IReadOnlyCollection<string> modIds)
+	{
+		TaskCompletionSource<(bool, Dictionary<string, ulong>)> completion = new TaskCompletionSource<(bool, Dictionary<string, ulong>)>();
+		GorillaServer instance = GorillaServer.Instance;
+		if ((object)instance == null)
+		{
+			completion.SetResult((false, new Dictionary<string, ulong>()));
+			return completion.Task;
+		}
+		ReturnVstumpMapStatsRequest request = new ReturnVstumpMapStatsRequest
+		{
+			mapIds = modIds.ToList()
+		};
+		try
+		{
+			instance.ReturnVstumpMapStats(request, delegate(ExecuteFunctionResult executeFunctionResult)
+			{
+				completion.TrySetResult((true, UnpackCounts(executeFunctionResult)));
+			}, delegate(PlayFabError error)
+			{
+				DefaultErrorCallback(error);
+				completion.TrySetResult((false, new Dictionary<string, ulong>()));
+			});
+		}
+		catch (Exception ex)
+		{
+			Debug.Log("Error fetching player counts: " + ex.Message);
+			completion.TrySetResult((false, new Dictionary<string, ulong>()));
+		}
+		return completion.Task;
+	}
+
 	private static void GetPlayerCountInternal(string modId, Action<ulong> successCallback, Action<PlayFabError>? errorCallback = null)
 	{
 		GorillaServer instance = GorillaServer.Instance;
@@ -67,11 +100,32 @@ public static class PlayerCountHelper
 
 	private static void UnpackSuccessBatched(ExecuteFunctionResult result, IDictionary<Mod, Action<string>> modsAndCallbacks)
 	{
-		if (!(result.FunctionResult is JsonObject obj) || !obj.TryGetValue<JsonObject>("Maps", out JsonObject t) || t == null)
+		Dictionary<string, ulong> dictionary = UnpackCounts(result);
+		foreach (KeyValuePair<Mod, Action<string>> modsAndCallback in modsAndCallbacks)
 		{
-			return;
+			if (dictionary.TryGetValue(modsAndCallback.Key.Id.ToString(), out var value))
+			{
+				string obj = FormatPlayerCount(value);
+				modsAndCallback.Value(obj);
+			}
 		}
+	}
+
+	private static Dictionary<string, ulong> UnpackCounts(ExecuteFunctionResult result)
+	{
 		Dictionary<string, ulong> dictionary = new Dictionary<string, ulong>();
+		if (!(result.FunctionResult is JsonObject obj))
+		{
+			return dictionary;
+		}
+		if (!obj.TryGetValue<JsonObject>("Maps", out JsonObject t))
+		{
+			return dictionary;
+		}
+		if (t == null)
+		{
+			return dictionary;
+		}
 		foreach (string key in t.Keys)
 		{
 			if (t.TryGetValue<JsonObject>(key, out JsonObject t2) && t2 != null && t2.TryGetValue<ulong>("PlayerCount", out var t3))
@@ -79,14 +133,7 @@ public static class PlayerCountHelper
 				dictionary[key] = t3;
 			}
 		}
-		foreach (KeyValuePair<Mod, Action<string>> modsAndCallback in modsAndCallbacks)
-		{
-			if (dictionary.TryGetValue(modsAndCallback.Key.Id.ToString(), out var value))
-			{
-				string obj2 = FormatPlayerCount(value);
-				modsAndCallback.Value(obj2);
-			}
-		}
+		return dictionary;
 	}
 
 	private static void DefaultErrorCallback(PlayFabError error)
@@ -94,7 +141,7 @@ public static class PlayerCountHelper
 		Debug.Log("Error fetching player count: " + error.ErrorMessage);
 	}
 
-	private static string FormatPlayerCount(ulong count)
+	public static string FormatPlayerCount(ulong count)
 	{
 		if (count < 1000)
 		{

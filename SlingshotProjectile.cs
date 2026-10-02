@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using GorillaExtensions;
 using GorillaGameModes;
 using GorillaLocomotion;
@@ -201,6 +202,12 @@ public class SlingshotProjectile : MonoBehaviour
 
 	public void Deactivate()
 	{
+		StartCoroutine(DeactivateCoroutine());
+	}
+
+	private IEnumerator DeactivateCoroutine()
+	{
+		yield return null;
 		base.transform.localScale = Vector3.one * initialScale;
 		projectileRigidbody.useGravity = true;
 		if ((bool)forceComponent)

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using GorillaGameModes;
+using GorillaNetworking.ScheduledEvents;
 using GorillaTagScripts;
 using GorillaTagScripts.VirtualStumpCustomMaps;
 using KID.Model;
@@ -192,6 +193,8 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 	private const string CURRENT_NAME_KEY = "CURRENT_NAME";
 
 	private const string NEW_NAME_KEY = "NEW_NAME";
+
+	private const string NAME_CHECK_RATE_LIMITED_KEY = "NAME_CHECK_RATE_LIMITED";
 
 	private const string TURN_SCREEN_KEY = "TURN_SCREEN";
 
@@ -720,6 +723,8 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 
 	private string[] anywhereTwoWeek;
 
+	private bool nameCheckRateLimited;
+
 	private RedemptionResult redemptionResult;
 
 	private string redemptionCode = "";
@@ -905,6 +910,10 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 	public void AddSeverTime(int m)
 	{
 		startupTime = startupTime.AddMinutes(m);
+		if (ScheduledEventManager.Instance != null)
+		{
+			ScheduledEventManager.Instance.AddMinutes(m);
+		}
 	}
 
 	private static bool IsValidVStumpModePrefix(char c)
@@ -954,7 +963,12 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 		{
 			return roomName;
 		}
-		return roomName.Substring(1);
+		return roomName[0] switch
+		{
+			'A' => "WEST" + roomName.Substring(1), 
+			'B' => "EAST" + roomName.Substring(1), 
+			_ => roomName.Substring(1), 
+		};
 	}
 
 	private void Awake()
@@ -1472,6 +1486,7 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 
 	public void PressButton(GorillaKeyboardBindings buttonPressed)
 	{
+		nameCheckRateLimited = false;
 		if (currentState == ComputerState.Startup)
 		{
 			ProcessStartupState(buttonPressed);
@@ -1635,7 +1650,7 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 			{
 				return;
 			}
-			PhotonNetworkController.Instance.FriendIDList = new List<string>(chosenFriendJoinCollider.playerIDsCurrentlyTouching);
+			PhotonNetworkController.Instance.SetFriendIDList(chosenFriendJoinCollider.playerIDsCurrentlyTouching);
 			foreach (string friendID in networkController.FriendIDList)
 			{
 				Debug.Log("Friend ID:" + friendID);
@@ -2962,6 +2977,10 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 				LocalisationManager.TryGetKeyForCurrentLocale("TROOP_SCREEN_JOIN_TROOP", out result, text);
 				screenText.Append(result.TrailingSpace());
 				screenText.Append(troopToJoin);
+				if (nameCheckRateLimited)
+				{
+					NameCheckRateLimitedMessage();
+				}
 			}
 		}
 		else if (permissionDataByFeature.ManagedBy == Permission.ManagedByEnum.PROHIBITED || permissionDataByFeature2.ManagedBy == Permission.ManagedByEnum.PROHIBITED)
@@ -3029,6 +3048,10 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 				LocalisationManager.TryGetKeyForCurrentLocale("NEW_NAME", out result, defaultResult);
 				screenText.Append(result.TrailingSpace());
 				screenText.Append(currentName);
+				if (nameCheckRateLimited)
+				{
+					NameCheckRateLimitedMessage();
+				}
 			}
 			defaultResult = "PRESS OPTION 1 TO TOGGLE NAMETAGS.\nCURRENTLY NAMETAGS ARE: ";
 			LocalisationManager.TryGetKeyForCurrentLocale("NAME_SCREEN_TOGGLE_NAMETAGS", out result, defaultResult);
@@ -3162,7 +3185,11 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 			LocalisationManager.TryGetKeyForCurrentLocale("ROOM_TO_JOIN", out result, text);
 			screenText.Append(result.TrailingSpace());
 			screenText.Append(GetVStumpRoomDisplayName(roomToJoin));
-			if (roomFull)
+			if (nameCheckRateLimited)
+			{
+				NameCheckRateLimitedMessage();
+			}
+			else if (roomFull)
 			{
 				text = "\n\nROOM FULL. JOIN ROOM FAILED.";
 				LocalisationManager.TryGetKeyForCurrentLocale("ROOM_FULL", out result, text);
@@ -3241,6 +3268,13 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 		string defaultResult = "NOT AVAILABLE IN RANKED PLAY";
 		LocalisationManager.TryGetKeyForCurrentLocale("LIMITED_ONLINE_FUNC", out var result, defaultResult);
 		screenText.Set(result);
+	}
+
+	private void NameCheckRateLimitedMessage()
+	{
+		string defaultResult = "\n\nTOO MANY NAME CHECKS!\nWAIT A MINUTE AND TRY AGAIN.";
+		LocalisationManager.TryGetKeyForCurrentLocale("NAME_CHECK_RATE_LIMITED", out var result, defaultResult);
+		screenText.Append(result);
 	}
 
 	private void UpdateGameModeText()
@@ -3421,11 +3455,21 @@ public class GorillaComputer : MonoBehaviour, IGorillaSliceableSimple
 
 	private void OnErrorNameCheck(PlayFabError error)
 	{
+		nameCheckRateLimited = IsNameCheckRateLimited(error);
 		if (currentState == ComputerState.Loading)
 		{
 			PopState();
 		}
 		OnErrorShared(error);
+	}
+
+	private static bool IsNameCheckRateLimited(PlayFabError error)
+	{
+		if (error.ErrorMessage != null)
+		{
+			return error.ErrorMessage.Contains("HTTP status TooManyRequests");
+		}
+		return false;
 	}
 
 	public bool CheckAutoBanListForName(string nameToCheck)

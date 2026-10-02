@@ -521,7 +521,7 @@ public sealed class CustomGameMode : GorillaGameManager
 		Bindings.OnlineFunctionsBuilder(L);
 		Bindings.RoomStateBuilder(L);
 		Bindings.Components.Build(L);
-		Luau.lua_createtable(L, 10, 0);
+		Luau.lua_createtable(L, 20, 0);
 		Luau.lua_setglobal(L, "Players");
 		Luau.lua_createtable(L, GT_CustomMapSupportRuntime.Constants.aiAgentLimit, 0);
 		Luau.lua_setglobal(L, "AIAgents");

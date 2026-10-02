@@ -344,6 +344,11 @@ public class GTPlayer : MonoBehaviour
 			handPosition = finalPositionThisFrame;
 			handVelocityTracker = velocityTracker;
 		}
+
+		public void SetMaxArmLength(float length)
+		{
+			maxArmLength = length;
+		}
 	}
 
 	private enum MovingSurfaceContactPoint
@@ -1013,6 +1018,20 @@ public class GTPlayer : MonoBehaviour
 	public ref readonly HandState RightHandRef => ref rightHand;
 
 	public Rigidbody playerRigidBody { get; private set; }
+
+	public float MaxArmLengthAllowed
+	{
+		get
+		{
+			return maxArmLength;
+		}
+		set
+		{
+			maxArmLength = value;
+			leftHand.SetMaxArmLength(value);
+			rightHand.SetMaxArmLength(value);
+		}
+	}
 
 	public Vector3 LastPosition => lastPosition;
 
@@ -2380,7 +2399,10 @@ public class GTPlayer : MonoBehaviour
 		}
 		lastHeadPosition = headCollider.transform.position;
 		areBothTouching = (!leftHand.isColliding && !leftHand.wasColliding) || (!rightHand.isColliding && !rightHand.wasColliding);
-		TakeMyHand_ProcessMovement();
+		if (!disableMovement)
+		{
+			TakeMyHand_ProcessMovement();
+		}
 		HandleTentacleMovement();
 		anyHandIsColliding = false;
 		anyHandIsSliding = false;

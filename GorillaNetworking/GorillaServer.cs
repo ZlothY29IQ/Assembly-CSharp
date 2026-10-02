@@ -484,4 +484,9 @@ public class GorillaServer : MonoBehaviour, ISerializationCallbackReceiver
 	{
 		return featureFlags.IsEnabled("2026-09-AlarmClocksEnabled");
 	}
+
+	public bool CheckMostPlayersFrontPageRowEnabled()
+	{
+		return featureFlags.IsEnabled("2026-09-MostPlayersFrontPageRow");
+	}
 }

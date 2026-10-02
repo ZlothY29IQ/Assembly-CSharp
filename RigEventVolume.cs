@@ -118,6 +118,12 @@ public class RigEventVolume : MonoBehaviour
 		{
 			NetworkSystem.Instance.OnPlayerLeft -= new Action<NetPlayer>(OnNetLeft);
 		}
+		RigEventVolumeTrigger[] array = new RigEventVolumeTrigger[gameObjects.Count];
+		gameObjects.Keys.CopyTo(array, 0);
+		for (int i = 0; i < array.Length; i++)
+		{
+			HandleRigExit(array[i], array[i].Rig);
+		}
 	}
 
 	private void OnNetJoined(NetPlayer np)

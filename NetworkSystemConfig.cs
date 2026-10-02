@@ -9,13 +9,13 @@ public struct NetworkSystemConfig
 
 	private static string gameVersionType = "live1";
 
-	public static string prependCode = "PrependVIMWeeK548796";
+	public static string prependCode = "prependboneyard1470987";
 
 	public static int majorVersion = 1;
 
 	public static int minorVersion = 1;
 
-	public static int minorVersion2 = 146;
+	public static int minorVersion2 = 147;
 
 	public static string AppVersion => prependCode + "." + AppVersionStripped;
 

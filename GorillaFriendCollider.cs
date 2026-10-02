@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using GTMathUtil;
 using GorillaNetworking;
@@ -6,7 +7,42 @@ using UnityEngine;
 
 public class GorillaFriendCollider : MonoBehaviour, IGorillaSliceableSimple
 {
-	public List<string> playerIDsCurrentlyTouching = new List<string>();
+	[Serializable]
+	public struct TouchingPlayerInfo : IEquatable<TouchingPlayerInfo>
+	{
+		public string UserID { get; private set; }
+
+		public float EnteredTime { get; private set; }
+
+		public TouchingPlayerInfo(string userid, float enteredTime)
+		{
+			EnteredTime = enteredTime;
+			UserID = userid;
+		}
+
+		bool IEquatable<TouchingPlayerInfo>.Equals(TouchingPlayerInfo other)
+		{
+			if (!string.IsNullOrEmpty(UserID) && !string.IsNullOrEmpty(other.UserID))
+			{
+				return UserID == other.UserID;
+			}
+			return false;
+		}
+
+		public static implicit operator TouchingPlayerInfo(string userid)
+		{
+			return new TouchingPlayerInfo(userid, 0f);
+		}
+
+		public static implicit operator string(TouchingPlayerInfo playerInfo)
+		{
+			return playerInfo.UserID;
+		}
+	}
+
+	public List<TouchingPlayerInfo> playerIDsCurrentlyTouching = new List<TouchingPlayerInfo>(20);
+
+	private List<TouchingPlayerInfo> m_prevPlayerIDsCurrentlyTouching = new List<TouchingPlayerInfo>(20);
 
 	private CapsuleCollider thisCapsule;
 
@@ -98,25 +134,32 @@ public class GorillaFriendCollider : MonoBehaviour, IGorillaSliceableSimple
 	public void RefreshPlayersWithinBounds()
 	{
 		int count = playerIDsCurrentlyTouching.Count;
+		List<TouchingPlayerInfo> prevPlayerIDsCurrentlyTouching = m_prevPlayerIDsCurrentlyTouching;
+		List<TouchingPlayerInfo> prevPlayerIDsCurrentlyTouching2 = playerIDsCurrentlyTouching;
+		playerIDsCurrentlyTouching = prevPlayerIDsCurrentlyTouching;
+		m_prevPlayerIDsCurrentlyTouching = prevPlayerIDsCurrentlyTouching2;
 		playerIDsCurrentlyTouching.Clear();
-		NetPlayer localPlayer = NetworkSystem.Instance.LocalPlayer;
-		if (localPlayer == null)
-		{
-			return;
-		}
+		int num = -1;
 		bool flag = thisBox != null;
 		bool flag2 = thisCapsule != null;
 		for (int i = 0; i < playerRigs.Count; i++)
 		{
-			float y = playerRigs[i].bodyTransform.transform.position.y;
-			if ((!applyCapsuleYLimits || (y >= capsuleColliderYLimits.x && y <= capsuleColliderYLimits.y)) && ((flag && WithinBounds.PointWithinBoxColliderBounds(playerRigs[i].rigContainer.SpeakerHead.position, thisBox)) || (!flag && flag2 && WithinBounds.PointWithinCapsuleColliderBounds(playerRigs[i].rigContainer.SpeakerHead.position, thisCapsule))))
+			VRRig vRRig = playerRigs[i];
+			string userid = vRRig.creator.UserId;
+			float y = vRRig.bodyTransform.transform.position.y;
+			if ((!applyCapsuleYLimits || (y >= capsuleColliderYLimits.x && y <= capsuleColliderYLimits.y)) && ((flag && WithinBounds.PointWithinBoxColliderBounds(vRRig.rigContainer.SpeakerHead.position, thisBox)) || (!flag && flag2 && WithinBounds.PointWithinCapsuleColliderBounds(vRRig.rigContainer.SpeakerHead.position, thisCapsule))))
 			{
-				playerIDsCurrentlyTouching.Add(playerRigs[i].isLocal ? localPlayer.UserId : playerRigs[i].creator.UserId);
+				if (vRRig.isLocal)
+				{
+					num = playerIDsCurrentlyTouching.Count;
+				}
+				int num2 = m_prevPlayerIDsCurrentlyTouching.FindIndex((TouchingPlayerInfo info) => info.UserID == userid);
+				playerIDsCurrentlyTouching.Add((num2 > -1) ? m_prevPlayerIDsCurrentlyTouching[num2] : new TouchingPlayerInfo(userid, Time.time));
 			}
 		}
 		if (NetworkSystem.Instance.InRoom)
 		{
-			if (playerIDsCurrentlyTouching.Contains(localPlayer.UserId) && GorillaComputer.instance.friendJoinCollider != this)
+			if (num > -1 && GorillaComputer.instance.friendJoinCollider != this)
 			{
 				GorillaComputer.instance.allowedMapsToJoin = myAllowedMapsToJoin;
 				GorillaComputer.instance.friendJoinCollider = this;

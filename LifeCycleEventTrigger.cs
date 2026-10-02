@@ -18,6 +18,16 @@ public class LifeCycleEventTrigger : MonoBehaviour
 	[SerializeField]
 	private UnityEvent _onDestroy;
 
+	private string AwakeGroupTitle => $"Awake ({_onAwake.GetPersistentEventCount()})";
+
+	private string StartGroupTitle => $"Start ({_onStart.GetPersistentEventCount()})";
+
+	private string EnableGroupTitle => $"Enable ({_onEnable.GetPersistentEventCount()})";
+
+	private string DisableGroupTitle => $"Disable ({_onDisable.GetPersistentEventCount()})";
+
+	private string DestroyGroupTitle => $"Destroy ({_onDestroy.GetPersistentEventCount()})";
+
 	private void Awake()
 	{
 		_onAwake?.Invoke();

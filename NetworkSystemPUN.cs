@@ -139,7 +139,7 @@ public class NetworkSystemPUN : NetworkSystem
 		}
 	}
 
-	public override bool SessionIsSubscription => PhotonNetwork.CurrentRoom?.MaxPlayers > 10;
+	public override bool SessionIsSubscription => IsSessionSubscription();
 
 	public override int LocalPlayerID => PhotonNetwork.LocalPlayer.ActorNumber;
 
@@ -484,8 +484,8 @@ public class NetworkSystemPUN : NetworkSystem
 		if (internalState != InternalState.Searching_Joined)
 		{
 			internalState = InternalState.Searching_Creating;
-			string text = "";
-			if (opts.MaxPlayers == 20 && opts.isPublic)
+			string text = string.Empty;
+			if (opts.FanClub && opts.isPublic)
 			{
 				text = ":GTFC";
 			}
@@ -1129,6 +1129,10 @@ public class NetworkSystemPUN : NetworkSystem
 				punNetPlayer.InitPlayer(PhotonNetwork.LocalPlayer);
 			}
 			netPlayerCache.Add(punNetPlayer);
+			if (string.IsNullOrEmpty(punNetPlayer.Platform) || string.IsNullOrEmpty(punNetPlayer.MothershipId))
+			{
+				punNetPlayer.SetLocalPlayerMothershipAndPlatform(GetMyPlatform(), MothershipClientContext.MothershipId);
+			}
 		}
 		else
 		{
@@ -1376,5 +1380,27 @@ public class NetworkSystemPUN : NetworkSystem
 			authenticationValues.SetAuthPostData(dictionary);
 			SetAuthenticationValues(authenticationValues);
 		}
+	}
+
+	private bool IsSessionSubscription()
+	{
+		if (!InRoom || base.LocalPlayer.IsMasterClient)
+		{
+			return SubscriptionManager.IsLocalSubscribed();
+		}
+		if (MasterClient is PunNetPlayer { PlayerRef: not null } punNetPlayer)
+		{
+			if (punNetPlayer.PlayerRef.CustomProperties["gtfcExpirationTime"] is long seconds)
+			{
+				DateTime utcDateTime = DateTimeOffset.FromUnixTimeSeconds(seconds).UtcDateTime;
+				if (GorillaComputer.instance == null)
+				{
+					return SubscriptionManager.IsLocalSubscribed();
+				}
+				return DateTime.Compare(GorillaComputer.instance.GetServerTime(), utcDateTime) < 0;
+			}
+			return SubscriptionManager.IsPlayerSubscribed(MasterClient);
+		}
+		return false;
 	}
 }

@@ -1,4 +1,5 @@
 using System;
+using ExitGames.Client.Photon;
 using Photon.Pun;
 using Photon.Realtime;
 
@@ -12,6 +13,10 @@ public class PunNetPlayer : NetPlayer
 	public override int ActorNumber => PlayerRef?.ActorNumber ?? (-1);
 
 	public override string UserId => PlayerRef.UserId;
+
+	public override string MothershipId { get; protected set; } = string.Empty;
+
+	public override string Platform { get; protected set; } = string.Empty;
 
 	public override bool IsMasterClient => PlayerRef.IsMasterClient;
 
@@ -28,6 +33,9 @@ public class PunNetPlayer : NetPlayer
 	public void InitPlayer(Player playerRef)
 	{
 		PlayerRef = playerRef;
+		Hashtable customProperties = playerRef.CustomProperties;
+		MothershipId = (customProperties["mothershipId"] as string) ?? string.Empty;
+		Platform = (customProperties["platform"] as string) ?? string.Empty;
 	}
 
 	public override bool Equals(NetPlayer myPlayer, NetPlayer other)

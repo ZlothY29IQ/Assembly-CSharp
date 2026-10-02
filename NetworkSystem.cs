@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Fusion;
 using GorillaNetworking;
 using GorillaTag;
+using GorillaTagScripts;
 using Photon.Realtime;
 using Photon.Voice.Unity;
 using PlayFab;
@@ -123,7 +124,17 @@ public abstract class NetworkSystem : MonoBehaviour
 
 	public abstract bool SessionIsPrivate { get; }
 
-	public abstract bool SessionIsSubscription { get; }
+	public virtual bool SessionIsSubscription
+	{
+		get
+		{
+			if (MasterClient == null)
+			{
+				return SubscriptionManager.IsLocalSubscribed();
+			}
+			return SubscriptionManager.IsPlayerSubscribed(MasterClient);
+		}
+	}
 
 	public abstract int LocalPlayerID { get; }
 

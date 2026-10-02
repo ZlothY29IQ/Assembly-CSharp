@@ -130,6 +130,22 @@ public static class GorillaTelemetry
 
 		public const string MapMapperAssetCount = "MapMapperAssetCount";
 
+		public const string geode_spend = "geode_spend";
+
+		public const string SessionId = "SessionId";
+
+		public const string AmountSpent = "AmountSpent";
+
+		public const string BalanceBefore = "BalanceBefore";
+
+		public const string BalanceAfter = "BalanceAfter";
+
+		public const string OfferId = "OfferId";
+
+		public const string ItemId = "ItemId";
+
+		public const string MapLocation = "MapLocation";
+
 		public const string game_mode_played_event = "game_mode_played_event";
 
 		public const string game_mode = "game_mode";
@@ -188,6 +204,8 @@ public static class GorillaTelemetry
 	private static Dictionary<string, object> gCustomMapDownloadMetrics;
 
 	private static Dictionary<string, object> gCustomMapRegistryMetrics;
+
+	private static readonly Dictionary<string, object> gGeodeSpendArgs;
 
 	private static readonly GhostReactorTelemetryData gGhostReactorShiftStartArgs;
 
@@ -339,6 +357,19 @@ public static class GorillaTelemetry
 			["MapSizeChangerCount"] = null,
 			["MapHandHoldCount"] = null,
 			["MapMapperAssetCount"] = null
+		};
+		gGeodeSpendArgs = new Dictionary<string, object>
+		{
+			["User"] = null,
+			["SessionId"] = null,
+			["AmountSpent"] = null,
+			["BalanceBefore"] = null,
+			["BalanceAfter"] = null,
+			["OfferId"] = null,
+			["ItemId"] = null,
+			["MapLocation"] = null,
+			["CreatorId"] = null,
+			["IsPrivateRoom"] = false
 		};
 		gGhostReactorShiftStartArgs = new GhostReactorTelemetryData
 		{
@@ -1115,6 +1146,36 @@ public static class GorillaTelemetry
 			dictionary["MapHandHoldCount"] = handHoldCount.ToString();
 			dictionary["MapMapperAssetCount"] = mapperAssetCount.ToString();
 			EnqueueTelemetryEvent("CustomMapRegistry", dictionary);
+		}
+	}
+
+	public static void PostGeodeSpendEvent(string offerId, string itemId, int amountSpent, int balanceBefore, int balanceAfter)
+	{
+		if (!IsConnectedToPlayfab())
+		{
+			return;
+		}
+		string value = PlayFabUserId();
+		if (!string.IsNullOrEmpty(value))
+		{
+			string value2 = CustomMapTelemetry.CurrentMapIdString;
+			if (string.IsNullOrEmpty(value2))
+			{
+				ZoneEntityBSP zoneEntityBSP = ((GorillaTagger.Instance != null && GorillaTagger.Instance.offlineVRRig != null) ? GorillaTagger.Instance.offlineVRRig.zoneEntity : null);
+				value2 = ((zoneEntityBSP != null) ? zoneEntityBSP.currentZone.GetName() : GTZone.none.GetName());
+			}
+			Dictionary<string, object> dictionary = gGeodeSpendArgs;
+			dictionary["User"] = value;
+			dictionary["SessionId"] = MothershipClientApiUnity.SessionId;
+			dictionary["AmountSpent"] = amountSpent.ToString();
+			dictionary["BalanceBefore"] = balanceBefore.ToString();
+			dictionary["BalanceAfter"] = balanceAfter.ToString();
+			dictionary["OfferId"] = offerId ?? "";
+			dictionary["ItemId"] = itemId ?? "";
+			dictionary["MapLocation"] = value2;
+			dictionary["CreatorId"] = CustomMapTelemetry.CurrentMapCreatorIdString;
+			dictionary["IsPrivateRoom"] = NetworkSystem.Instance.SessionIsPrivate;
+			EnqueueTelemetryEvent("geode_spend", dictionary);
 		}
 	}
 

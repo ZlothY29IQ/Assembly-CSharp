@@ -441,7 +441,7 @@ public class SubscriptionManager : MonoBehaviour
 		{
 			OnSubscriptionData();
 		}
-		if (NetworkSystem.Instance.AllNetPlayers.Length > PERF_CHANGE_ROOMSIZE)
+		if (NetworkSystem.Instance.AllNetPlayers.Length > PERF_CHANGE_ROOMSIZE && PhotonNetwork.SendRate != 20)
 		{
 			GorillaTagger.Instance.ToggleForcedPerformanceRefresh();
 			PhotonNetwork.SendRate = 20;
@@ -488,7 +488,7 @@ public class SubscriptionManager : MonoBehaviour
 			subData.Remove(pl);
 		}
 		NetPlayer[] allNetPlayers = NetworkSystem.Instance.AllNetPlayers;
-		if (allNetPlayers.Length <= PERF_CHANGE_ROOMSIZE)
+		if (allNetPlayers.Length <= PERF_CHANGE_ROOMSIZE && PhotonNetwork.SendRate != DEFAULT_SEND_RATE)
 		{
 			GorillaTagger.Instance.ToggleDefaultPerformanceRefresh();
 			PhotonNetwork.SendRate = DEFAULT_SEND_RATE;

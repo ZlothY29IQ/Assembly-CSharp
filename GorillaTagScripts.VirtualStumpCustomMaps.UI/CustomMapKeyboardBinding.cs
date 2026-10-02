@@ -72,5 +72,16 @@ public enum CustomMapKeyboardBinding
 	tile6,
 	tile7,
 	tile8,
-	tile9
+	tile9,
+	tile10,
+	tile11,
+	tile12,
+	browse,
+	row1Left,
+	row1Right,
+	row2Left,
+	row2Right,
+	row3Left,
+	row3Right,
+	featured
 }

@@ -68,6 +68,24 @@ public class VirtualStumpOptionsTerminal : MonoBehaviour, IWssAuthPrompter
 	private string roomSizeLabelString = "MAX PLAYERS: ";
 
 	[SerializeField]
+	private string currentRoomSizeLabelString = "CURRENT ROOM: ";
+
+	[SerializeField]
+	private string roomSizeHostString = "YOU ARE THE ROOM HOST, CHANGES APPLY TO THIS ROOM.";
+
+	[SerializeField]
+	private string roomSizeNotHostString = "ONLY THE ROOM HOST CAN RESIZE THIS ROOM.";
+
+	[SerializeField]
+	private string roomSizeApplyFailedString = "COULD NOT CHANGE ROOM SIZE";
+
+	[SerializeField]
+	private string largeRoomsLabelString = "20 PLAYER ROOMS: ";
+
+	[SerializeField]
+	private string largeRoomsAvailableString = "AVAILABLE";
+
+	[SerializeField]
 	private GameObject OKButton;
 
 	[SerializeField]
@@ -79,6 +97,8 @@ public class VirtualStumpOptionsTerminal : MonoBehaviour, IWssAuthPrompter
 	[SerializeField]
 	private List<GameObject> buttonsToShow_ROOMSIZE = new List<GameObject>();
 
+	private string roomSizeStatusString = "";
+
 	private bool processingAccountLink;
 
 	private string cachedLinkURL = "";
@@ -88,6 +108,10 @@ public class VirtualStumpOptionsTerminal : MonoBehaviour, IWssAuthPrompter
 	private string cachedError;
 
 	private ETerminalState currentState;
+
+	private float nextRoomSizeScreenRefreshTime;
+
+	private const float RoomSizeScreenRefreshInterval = 0.5f;
 
 	public void Start()
 	{
@@ -118,6 +142,24 @@ public class VirtualStumpOptionsTerminal : MonoBehaviour, IWssAuthPrompter
 		RefreshButtonState();
 		UpdateOptionListForCurrentState();
 		UpdateScreen();
+	}
+
+	private void Update()
+	{
+		RefreshRoomSizeScreenIfStale();
+	}
+
+	private void RefreshRoomSizeScreenIfStale()
+	{
+		if (currentState == ETerminalState.ROOM_SIZE && cachedError.IsNullOrEmpty() && !(Time.time < nextRoomSizeScreenRefreshTime))
+		{
+			nextRoomSizeScreenRefreshTime = Time.time + 0.5f;
+			string text = UpdateScreen_RoomSize();
+			if (mainScreenText != null && mainScreenText.text != text)
+			{
+				mainScreenText.text = text;
+			}
+		}
 	}
 
 	private void OnKeyPressed(CustomMapKeyboardBinding pressedButton)
@@ -174,6 +216,7 @@ public class VirtualStumpOptionsTerminal : MonoBehaviour, IWssAuthPrompter
 		if (newState != currentState)
 		{
 			currentState = newState;
+			roomSizeStatusString = "";
 			RefreshButtonState();
 		}
 	}
@@ -431,14 +474,58 @@ public class VirtualStumpOptionsTerminal : MonoBehaviour, IWssAuthPrompter
 
 	private void DecrementRoomSize()
 	{
-		RoomSystem.OverrideRoomSize((byte)(RoomSystem.GetOverridenRoomSize() - 1));
+		byte vStumpCreateCap = RoomSystem.GetVStumpCreateCap();
+		byte overridenRoomSize = RoomSystem.GetOverridenRoomSize();
+		RoomSystem.OverrideRoomSize((overridenRoomSize > vStumpCreateCap) ? vStumpCreateCap : ((byte)(overridenRoomSize - 1)));
+		ApplyRoomSizeToCurrentRoom();
 		UpdateScreen();
 	}
 
 	private void IncrementRoomSize()
 	{
-		RoomSystem.OverrideRoomSize((byte)(RoomSystem.GetOverridenRoomSize() + 1));
+		byte vStumpCreateCap = RoomSystem.GetVStumpCreateCap();
+		byte overridenRoomSize = RoomSystem.GetOverridenRoomSize();
+		if (overridenRoomSize >= vStumpCreateCap)
+		{
+			RoomSystem.ClearOverridenRoomSize();
+			ApplyRoomSizeToCurrentRoom();
+			if (!RoomSystem.CanLocalPlayerHaveLargeVStumpRoom(out var disallowedReason))
+			{
+				roomSizeStatusString = largeRoomsLabelString + disallowedReason;
+			}
+		}
+		else
+		{
+			RoomSystem.OverrideRoomSize((byte)(overridenRoomSize + 1));
+			ApplyRoomSizeToCurrentRoom();
+		}
 		UpdateScreen();
+	}
+
+	private static bool IsInPrivateStumpRoom()
+	{
+		if (NetworkSystem.Instance != null && NetworkSystem.Instance.InRoom && NetworkSystem.Instance.SessionIsPrivate)
+		{
+			return RoomSystem.IsVStumpRoom;
+		}
+		return false;
+	}
+
+	private void ApplyRoomSizeToCurrentRoom()
+	{
+		roomSizeStatusString = "";
+		if (IsInPrivateStumpRoom() && RoomSystem.IsLocalPlayerVStumpRoomHost())
+		{
+			byte overridenRoomSize = RoomSystem.GetOverridenRoomSize();
+			if (!RoomSystem.CanSetVStumpRoomSize(overridenRoomSize, out var disallowedReason))
+			{
+				roomSizeStatusString = disallowedReason;
+			}
+			else if (!RoomSystem.TrySetVStumpRoomSize(overridenRoomSize))
+			{
+				roomSizeStatusString = roomSizeApplyFailedString;
+			}
+		}
 	}
 
 	private string UpdateScreen_RoomSize()
@@ -446,6 +533,16 @@ public class VirtualStumpOptionsTerminal : MonoBehaviour, IWssAuthPrompter
 		StringBuilder stringBuilder = new StringBuilder();
 		stringBuilder.Append(roomSizeDescriptionString + "\n\n");
 		stringBuilder.Append(roomSizeLabelString + RoomSystem.GetOverridenRoomSize());
+		stringBuilder.Append("\n" + largeRoomsLabelString + (RoomSystem.CanLocalPlayerHaveLargeVStumpRoom(out var disallowedReason) ? largeRoomsAvailableString : disallowedReason));
+		if (IsInPrivateStumpRoom() && NetworkSystem.Instance.CurrentRoom != null)
+		{
+			stringBuilder.Append("\n" + currentRoomSizeLabelString + NetworkSystem.Instance.CurrentRoom.MaxPlayers);
+			stringBuilder.Append("\n" + (RoomSystem.IsLocalPlayerVStumpRoomHost() ? roomSizeHostString : roomSizeNotHostString));
+		}
+		if (!roomSizeStatusString.IsNullOrEmpty())
+		{
+			stringBuilder.Append("\n-" + roomSizeStatusString + "-");
+		}
 		return stringBuilder.ToString();
 	}
 }

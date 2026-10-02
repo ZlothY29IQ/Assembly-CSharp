@@ -26,6 +26,10 @@ public abstract class NetPlayer : ObjectPoolEvents
 
 	public abstract string UserId { get; }
 
+	public abstract string MothershipId { get; protected set; }
+
+	public abstract string Platform { get; protected set; }
+
 	public abstract bool IsMasterClient { get; }
 
 	public abstract bool IsLocal { get; }
@@ -45,6 +49,15 @@ public abstract class NetPlayer : ObjectPoolEvents
 	public virtual float LeftTime { get; private set; }
 
 	public abstract bool Equals(NetPlayer myPlayer, NetPlayer other);
+
+	internal void SetLocalPlayerMothershipAndPlatform(string platform, string mothershipId)
+	{
+		if (IsLocal)
+		{
+			Platform = platform;
+			MothershipId = mothershipId;
+		}
+	}
 
 	public virtual void OnReturned()
 	{

@@ -267,7 +267,7 @@ public class PlayFabTitleDataCache : MonoBehaviour
 		{
 			e = new PlayFabError
 			{
-				ErrorMessage = "PlayFabError was null. Maybe an exception was encountered."
+				ErrorMessage = "PlayFabError was null. Maybe an exception was encountered or the key was not found."
 			};
 		}
 		foreach (DataRequest request in requests)

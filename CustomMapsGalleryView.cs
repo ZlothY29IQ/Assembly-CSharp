@@ -11,6 +11,12 @@ public class CustomMapsGalleryView : MonoBehaviour
 	{
 		public int LatestRequest { get; private set; } = -1;
 
+		public void Invalidate()
+		{
+			int latestRequest = LatestRequest + 1;
+			LatestRequest = latestRequest;
+		}
+
 		public void SendRequest(IDictionary<Mod, Action<string>> modsAndCallbacks, Action<PlayFabError> errorCallback = null)
 		{
 			int latestRequest = LatestRequest + 1;
@@ -64,6 +70,8 @@ public class CustomMapsGalleryView : MonoBehaviour
 
 	private readonly RequestSynchronizer _synchronizer = new RequestSynchronizer();
 
+	public int TileCount => modTiles.Count;
+
 	public void ResetGallery()
 	{
 		for (int i = 0; i < modTiles.Count; i++)
@@ -72,7 +80,7 @@ public class CustomMapsGalleryView : MonoBehaviour
 		}
 	}
 
-	public bool DisplayGallery(List<Mod> mods, bool useMapName, out string error)
+	public bool DisplayGallery(List<Mod> mods, bool useMapName, out string error, IReadOnlyDictionary<string, ulong> knownPlayerCounts = null)
 	{
 		if (mods.Count > modTiles.Count)
 		{
@@ -80,11 +88,25 @@ public class CustomMapsGalleryView : MonoBehaviour
 			error = "Displayed Mod list is longer than the number of mod tiles in the gallery";
 			return false;
 		}
-		Dictionary<Mod, Action<string>> dictionary = new Dictionary<Mod, Action<string>>();
-		for (int i = 0; i < mods.Count; i++)
+		if (knownPlayerCounts != null)
 		{
-			modTiles[i].SetMod(mods[i], useMapName);
-			int idx = i;
+			_synchronizer.Invalidate();
+			for (int i = 0; i < mods.Count; i++)
+			{
+				modTiles[i].SetMod(mods[i], useMapName);
+				if (knownPlayerCounts.TryGetValue(mods[i].Id.ToString(), out var value))
+				{
+					modTiles[i].PlayerCountText = PlayerCountHelper.FormatPlayerCount(value);
+				}
+			}
+			error = string.Empty;
+			return true;
+		}
+		Dictionary<Mod, Action<string>> dictionary = new Dictionary<Mod, Action<string>>();
+		for (int j = 0; j < mods.Count; j++)
+		{
+			modTiles[j].SetMod(mods[j], useMapName);
+			int idx = j;
 			dictionary[mods[idx]] = delegate(string count)
 			{
 				modTiles[idx].PlayerCountText = count;
@@ -113,7 +135,7 @@ public class CustomMapsGalleryView : MonoBehaviour
 
 	public void HighlightTileAtIndex(int tileIndex)
 	{
-		if (tileIndex <= modTiles.Count)
+		if (tileIndex >= 0 && tileIndex < modTiles.Count)
 		{
 			modTiles[tileIndex].HighlightTile();
 		}

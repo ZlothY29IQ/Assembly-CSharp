@@ -5,6 +5,7 @@ using GorillaExtensions;
 using GorillaNetworking;
 using GorillaTagScripts.VirtualStumpCustomMaps.UI;
 using Modio;
+using Modio.API;
 using Modio.Errors;
 using Modio.Mods;
 using Modio.Users;
@@ -59,6 +60,9 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 
 	[SerializeField]
 	private CustomMapsScreenButton searchButton;
+
+	[SerializeField]
+	private CustomMapsScreenButton featuredButton;
 
 	[SerializeField]
 	private CustomMapsScreenButton pageUpButton;
@@ -118,6 +122,9 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 	[SerializeField]
 	private string featuredModsPlayFabKey = "VStumpFeaturedMaps";
 
+	[SerializeField]
+	private string mostPlayersSortString = "MOST PLAYERS";
+
 	private bool loadingFeaturedMods;
 
 	private bool displayFeaturedMods = true;
@@ -129,6 +136,8 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 	private List<Mod> featuredMods = new List<Mod>();
 
 	private int currentAvailableModsRequestPage;
+
+	private int availableModsRequestId;
 
 	private bool loadingAvailableMods;
 
@@ -180,7 +189,11 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 
 	private SortModsBy sortType = SortModsBy.Popular;
 
-	private const int MAX_SORT_TYPES = 6;
+	private const int MAX_SORT_TYPES = 7;
+
+	private bool sortByPlayerCount;
+
+	private PlayerCountSort.Ranking playerCountRanking;
 
 	private List<string> searchTags = new List<string>();
 
@@ -286,6 +299,10 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 		{
 			RetrieveAvailableMods();
 		}
+		else if (sortByPlayerCount && currentState == ListScreenState.AvailableMods && playerCountRanking != null && playerCountRanking.IsStale)
+		{
+			RefreshModSearch();
+		}
 		RetrieveInstalledMods();
 		RetrieveFavoriteMods();
 		RetrieveSubscribedMods();
@@ -366,6 +383,13 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 		case CustomMapKeyboardBinding.option4:
 			CustomMapsTerminal.ShowSearchScreen();
 			break;
+		case CustomMapKeyboardBinding.featured:
+			if (!featuredButton.IsNull())
+			{
+				featuredButton.SetButtonActive(active: false);
+			}
+			CustomMapsTerminal.ShowFeaturedScreen();
+			break;
 		case CustomMapKeyboardBinding.up:
 			currentModPage--;
 			RefreshScreenState();
@@ -376,26 +400,26 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 			break;
 		case CustomMapKeyboardBinding.all:
 		{
-			bool flag = communityMapsOnly;
+			bool flag2 = communityMapsOnly;
 			communityMapsOnly = false;
-			displayFeaturedMods = sortType == SortModsBy.Popular;
-			if (flag)
-			{
-				RefreshModSearch();
-			}
-			SwapListDisplay(ListScreenState.AvailableMods, flag);
-			break;
-		}
-		case CustomMapKeyboardBinding.mustplay:
-		{
-			bool flag2 = !communityMapsOnly;
-			communityMapsOnly = true;
-			displayFeaturedMods = false;
+			displayFeaturedMods = sortType == SortModsBy.Popular && !sortByPlayerCount;
 			if (flag2)
 			{
 				RefreshModSearch();
 			}
 			SwapListDisplay(ListScreenState.AvailableMods, flag2);
+			break;
+		}
+		case CustomMapKeyboardBinding.mustplay:
+		{
+			bool flag = !communityMapsOnly;
+			communityMapsOnly = true;
+			displayFeaturedMods = false;
+			if (flag)
+			{
+				RefreshModSearch();
+			}
+			SwapListDisplay(ListScreenState.AvailableMods, flag);
 			break;
 		}
 		case CustomMapKeyboardBinding.sub:
@@ -412,22 +436,41 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 			RefreshModSearch();
 			break;
 		default:
-			if (CustomMapKeyboardBinding.one <= buttonPressed && buttonPressed <= CustomMapKeyboardBinding.nine && !customMapsGalleryView.IsNull())
+		{
+			if (TryGetTileIndex(buttonPressed, out var tileIndex) && !customMapsGalleryView.IsNull())
 			{
-				customMapsGalleryView.ShowDetailsForEntry((int)(buttonPressed - 1));
+				customMapsGalleryView.ShowDetailsForEntry(tileIndex);
 			}
 			break;
 		}
+		}
+	}
+
+	public static bool TryGetTileIndex(CustomMapKeyboardBinding binding, out int tileIndex)
+	{
+		if (CustomMapKeyboardBinding.one <= binding && binding <= CustomMapKeyboardBinding.nine)
+		{
+			tileIndex = (int)(binding - 1);
+			return true;
+		}
+		if (binding >= CustomMapKeyboardBinding.tile10 && binding <= CustomMapKeyboardBinding.tile12)
+		{
+			tileIndex = (int)(9 + (binding - 71));
+			return true;
+		}
+		tileIndex = -1;
+		return false;
 	}
 
 	private void SetSortType()
 	{
 		currentAvailableModsRequestPage = 0;
 		sortTypeIndex++;
-		if (sortTypeIndex >= 6)
+		if (sortTypeIndex >= 7)
 		{
 			sortTypeIndex = 0;
 		}
+		sortByPlayerCount = false;
 		switch (sortTypeIndex)
 		{
 		case 0:
@@ -436,26 +479,32 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 			displayFeaturedMods = !communityMapsOnly;
 			break;
 		case 1:
-			SortType = SortModsBy.DateSubmitted;
+			SortType = SortModsBy.Popular;
+			sortByPlayerCount = true;
 			useMapName = true;
 			displayFeaturedMods = false;
 			break;
 		case 2:
+			SortType = SortModsBy.DateSubmitted;
+			useMapName = true;
+			displayFeaturedMods = false;
+			break;
+		case 3:
 			SortType = SortModsBy.Rating;
 			useMapName = false;
 			displayFeaturedMods = false;
 			break;
-		case 3:
+		case 4:
 			SortType = SortModsBy.Downloads;
 			useMapName = true;
 			displayFeaturedMods = false;
 			break;
-		case 4:
+		case 5:
 			SortType = SortModsBy.Subscribers;
 			useMapName = true;
 			displayFeaturedMods = false;
 			break;
-		case 5:
+		case 6:
 			SortType = SortModsBy.Name;
 			useMapName = true;
 			displayFeaturedMods = false;
@@ -475,6 +524,10 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 		{
 			currentState = newState;
 			currentModPage = 0;
+			if (!featuredButton.IsNull())
+			{
+				featuredButton.SetButtonActive(active: false);
+			}
 			switch (currentState)
 			{
 			case ListScreenState.AvailableMods:
@@ -516,15 +569,18 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 
 	public void RefreshModSearch()
 	{
-		if (!loadingAvailableMods && !loadingFavoriteMods && !loadingInstalledMods && !loadingSubscribedMods)
+		availableModsRequestId++;
+		loadingAvailableMods = false;
+		currentModPage = 0;
+		availableMods.Clear();
+		filteredAvailableMods.Clear();
+		currentAvailableModsRequestPage = 0;
+		errorLoadingAvailableMods = false;
+		totalAvailableMods = 0;
+		RetrieveAvailableMods();
+		if (currentState == ListScreenState.AvailableMods)
 		{
-			currentModPage = 0;
-			availableMods.Clear();
-			filteredAvailableMods.Clear();
-			currentAvailableModsRequestPage = 0;
-			errorLoadingAvailableMods = false;
-			totalAvailableMods = 0;
-			RetrieveAvailableMods();
+			RefreshScreenState();
 		}
 	}
 
@@ -543,7 +599,7 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 				errorLoadingAvailableMods = false;
 				totalAvailableMods = 0;
 				RetrieveFeaturedMods();
-				RetrieveAvailableMods();
+				RetrieveAvailableMods(forceRefresh: true);
 				break;
 			case ListScreenState.InstalledMods:
 				RetrieveInstalledMods(forceRefresh: true);
@@ -617,23 +673,34 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 		}
 	}
 
-	private async void RetrieveAvailableMods()
+	private async void RetrieveAvailableMods(bool forceRefresh = false)
 	{
-		if (!loadingAvailableMods)
+		if (loadingAvailableMods)
 		{
-			loadingAvailableMods = true;
-			ModSearchFilter modSearchFilter = new ModSearchFilter(currentAvailableModsRequestPage++, numModsPerRequest);
-			modSearchFilter.SortBy = sortType;
-			if (communityMapsOnly)
-			{
-				modSearchFilter.AddTag(communityMapsTag);
-			}
-			if (UGCPermissionManager.FeaturedMapsOnly)
-			{
-				modSearchFilter.AddTag("Featured");
-			}
-			modSearchFilter.IsSortAscending = isAscendingOrder;
-			var (error, modioPage) = await ModIOManager.GetMods(modSearchFilter.GetModsFilter());
+			return;
+		}
+		if (sortByPlayerCount)
+		{
+			RetrieveAvailableModsByPlayerCount(forceRefresh);
+			return;
+		}
+		loadingAvailableMods = true;
+		ModSearchFilter modSearchFilter = new ModSearchFilter(currentAvailableModsRequestPage++, numModsPerRequest);
+		modSearchFilter.SortBy = sortType;
+		if (communityMapsOnly)
+		{
+			modSearchFilter.AddTag(communityMapsTag);
+		}
+		if (UGCPermissionManager.FeaturedMapsOnly)
+		{
+			modSearchFilter.AddTag("Featured");
+		}
+		modSearchFilter.IsSortAscending = isAscendingOrder;
+		ModioAPI.Mods.GetModsFilter modsFilter = modSearchFilter.GetModsFilter();
+		int requestId = availableModsRequestId;
+		var (error, modioPage) = await ModIOManager.GetMods(modsFilter);
+		if (requestId == availableModsRequestId)
+		{
 			if ((bool)error)
 			{
 				errorLoadingAvailableMods = true;
@@ -654,6 +721,34 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 		}
 	}
 
+	private async void RetrieveAvailableModsByPlayerCount(bool forceRefresh)
+	{
+		loadingAvailableMods = true;
+		int requestId = availableModsRequestId;
+		var (flag, ranking) = await PlayerCountSort.GetModsByPlayerCount(communityMapsOnly ? communityMapsTag : null, forceRefresh);
+		if (requestId == availableModsRequestId)
+		{
+			availableMods.Clear();
+			if (!flag)
+			{
+				errorLoadingAvailableMods = true;
+				GTDev.LogError("[CustomMapsListScreen::RetrieveAvailableModsByPlayerCount] Failed to rank mods by player count.");
+			}
+			else
+			{
+				playerCountRanking = ranking;
+				availableMods.AddRange(ranking.Mods);
+				totalAvailableMods = availableMods.Count;
+				FilterAvailableMods();
+			}
+			loadingAvailableMods = false;
+			if (currentState == ListScreenState.AvailableMods)
+			{
+				RefreshScreenState();
+			}
+		}
+	}
+
 	private void FilterAvailableMods()
 	{
 		filteredAvailableMods.Clear();
@@ -661,7 +756,10 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 		{
 			return;
 		}
-		totalAvailableMods = Mathf.Max(0, totalAvailableMods - 1);
+		if (!sortByPlayerCount)
+		{
+			totalAvailableMods = Mathf.Max(0, totalAvailableMods - 1);
+		}
 		foreach (Mod availableMod in availableMods)
 		{
 			ModIOManager.TryGetNewMapsModId(out var newMapsModId);
@@ -891,7 +989,7 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 
 	private void RefreshScreenForAvailableMods()
 	{
-		string text = ((sortType == SortModsBy.DateSubmitted) ? "NEWEST" : sortType.ToString().ToUpper());
+		string text = (sortByPlayerCount ? mostPlayersSortString : ((sortType == SortModsBy.DateSubmitted) ? "NEWEST" : sortType.ToString().ToUpper()));
 		sortByButton.SetActive(value: true);
 		sortTypeText.gameObject.SetActive(value: true);
 		sortTypeText.text = text;
@@ -938,7 +1036,8 @@ public class CustomMapsListScreen : CustomMapsTerminalScreen
 		{
 			displayedModProfiles.Add(filteredAvailableMods[i]);
 		}
-		if (!customMapsGalleryView.DisplayGallery(displayedModProfiles, useMapName, out var error))
+		IReadOnlyDictionary<string, ulong> knownPlayerCounts = ((!sortByPlayerCount) ? null : playerCountRanking?.PlayerCounts);
+		if (!customMapsGalleryView.DisplayGallery(displayedModProfiles, useMapName, out var error, knownPlayerCounts))
 		{
 			errorText.text = error;
 			loadingText.gameObject.SetActive(value: false);

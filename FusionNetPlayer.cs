@@ -27,6 +27,10 @@ public class FusionNetPlayer : NetPlayer
 
 	public override string UserId => NetworkSystem.Instance.GetUserID(PlayerRef.PlayerId);
 
+	public override string MothershipId { get; protected set; } = string.Empty;
+
+	public override string Platform { get; protected set; } = string.Empty;
+
 	public override bool IsMasterClient
 	{
 		get

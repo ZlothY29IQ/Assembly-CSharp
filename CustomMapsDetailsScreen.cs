@@ -119,9 +119,6 @@ public class CustomMapsDetailsScreen : CustomMapsTerminalScreen
 	[SerializeField]
 	private string mapLoadingErrorInvalidModFile = "INSTALL FAILED DUE TO INVALID MAP FILE";
 
-	[SerializeField]
-	private VirtualStumpSerializer networkObject;
-
 	public static Dictionary<ModFileState, string> modStatusStrings = new Dictionary<ModFileState, string>
 	{
 		{
@@ -792,19 +789,10 @@ public class CustomMapsDetailsScreen : CustomMapsTerminalScreen
 	private bool CanChangeMapState(bool load, out string disallowedReason)
 	{
 		disallowedReason = "";
-		if (NetworkSystem.Instance.InRoom && NetworkSystem.Instance.SessionIsPrivate)
+		if (NetworkSystem.Instance.InRoom)
 		{
-			if (!CustomMapManager.AreAllPlayersInVirtualStump())
-			{
-				disallowedReason = "ALL PLAYERS IN THE ROOM MUST BE INSIDE THE VIRTUAL STUMP BEFORE " + (load ? "" : "UN") + "LOADING A MAP.";
-				return false;
-			}
+			_ = NetworkSystem.Instance.SessionIsPrivate;
 			return true;
-		}
-		if (!CustomMapManager.IsLocalPlayerInVirtualStump())
-		{
-			disallowedReason = "YOU MUST BE INSIDE THE VIRTUAL STUMP TO " + (load ? "" : "UN") + "LOAD A MAP.";
-			return false;
 		}
 		return true;
 	}
@@ -823,12 +811,12 @@ public class CustomMapsDetailsScreen : CustomMapsTerminalScreen
 		deleteButton.gameObject.SetActive(value: false);
 		subscriptionToggleButton.gameObject.SetActive(value: false);
 		GTMapLoadSource loadSource = ((CustomMapsTerminal.PreviousScreen == CustomMapsTerminal.ScreenType.SearchMods) ? GTMapLoadSource.terminal_search : GTMapLoadSource.terminal_browse);
-		networkObject.LoadMapSynced(GetModId(), loadSource);
+		VirtualStumpSerializer.Instance.LoadMapSynced(GetModId(), loadSource);
 	}
 
 	private void UnloadMap()
 	{
-		networkObject.UnloadMapSynced();
+		VirtualStumpSerializer.Instance.UnloadMapSynced();
 	}
 
 	public void OnMapLoadComplete(bool success)

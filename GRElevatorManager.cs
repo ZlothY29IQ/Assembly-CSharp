@@ -292,8 +292,8 @@ public class GRElevatorManager : NetworkComponent, ITickSystemTick
 
 	public static void SetupFriendGroup(GorillaFriendCollider sourceFriendCollider, GorillaFriendCollider destinationFriendCollider)
 	{
-		PhotonNetworkController.Instance.FriendIDList = new List<string>(sourceFriendCollider.playerIDsCurrentlyTouching);
-		PhotonNetworkController.Instance.FriendIDList.AddRange(destinationFriendCollider.playerIDsCurrentlyTouching);
+		PhotonNetworkController.Instance.SetFriendIDList(sourceFriendCollider.playerIDsCurrentlyTouching);
+		PhotonNetworkController.Instance.AddFriendIDs(destinationFriendCollider.playerIDsCurrentlyTouching);
 		PhotonNetworkController.Instance.shuffler = UnityEngine.Random.Range(0, 99).ToString().PadLeft(2, '0') + UnityEngine.Random.Range(0, 99999999).ToString().PadLeft(8, '0');
 		PhotonNetworkController.Instance.keyStr = UnityEngine.Random.Range(0, 99999999).ToString().PadLeft(8, '0');
 	}

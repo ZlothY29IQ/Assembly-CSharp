@@ -21,7 +21,6 @@ public class RigDeduplicationZoneEntrance : MonoBehaviour
 		if (!(component == null) && component.isLocal)
 		{
 			component.portalShenanigansBit = portalShenanigansBit;
-			Debug.Log($"## DeduplicationEntranceZone {this} TriggerEnter {other}");
 			OnEnter?.Invoke();
 		}
 	}
@@ -29,15 +28,9 @@ public class RigDeduplicationZoneEntrance : MonoBehaviour
 	private void OnTriggerExit(Collider other)
 	{
 		VRRig component = other.GetComponent<VRRig>();
-		if (!(component == null) && component.isLocal)
+		if (!(component == null) && component.isLocal && !component.IsInDisplacementZone)
 		{
-			if (component.IsInDisplacementZone)
-			{
-				Debug.Log($"## DeduplicationEntranceZone {this} TriggerExit {other} quietly");
-				return;
-			}
 			component.portalShenanigansBit = false;
-			Debug.Log($"## DeduplicationEntranceZone {this} TriggerExit {other}");
 			OnLeavingZone?.Invoke();
 		}
 	}

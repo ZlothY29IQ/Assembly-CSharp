@@ -539,15 +539,18 @@ public class VODPlayer : MonoBehaviour, IGorillaSliceableSimple
 	{
 		float num = float.MaxValue;
 		VODTarget vODTarget = null;
-		for (int i = 0; i < targets.Count; i++)
+		if (!MusicManager.Instance.Locked)
 		{
-			if ((!playerPrefMuted || targets[i].Unmutable) && targets[i].AudioSettings.volume > 0f && targets[i].VerifyChannel(playerChannel))
+			for (int i = 0; i < targets.Count; i++)
 			{
-				float sqrMagnitude = (VRRig.LocalRig.transform.position - targets[i].transform.position).sqrMagnitude;
-				if (sqrMagnitude < num)
+				if ((!playerPrefMuted || targets[i].Unmutable) && targets[i].AudioSettings.volume > 0f && targets[i].VerifyChannel(playerChannel))
 				{
-					vODTarget = targets[i];
-					num = sqrMagnitude;
+					float sqrMagnitude = (VRRig.LocalRig.transform.position - targets[i].transform.position).sqrMagnitude;
+					if (sqrMagnitude < num)
+					{
+						vODTarget = targets[i];
+						num = sqrMagnitude;
+					}
 				}
 			}
 		}

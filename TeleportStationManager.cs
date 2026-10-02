@@ -145,8 +145,8 @@ public class TeleportStationManager : MonoBehaviour
 		{
 			if (refreshFriendList)
 			{
-				PhotonNetworkController.Instance.FriendIDList = new List<string>(source.playerIDsCurrentlyTouching);
-				PhotonNetworkController.Instance.FriendIDList.AddRange(destination.playerIDsCurrentlyTouching);
+				PhotonNetworkController.Instance.SetFriendIDList(source.playerIDsCurrentlyTouching);
+				PhotonNetworkController.Instance.AddFriendIDs(destination.playerIDsCurrentlyTouching);
 			}
 			PhotonNetworkController.Instance.shuffler = Random.Range(0, 99).ToString().PadLeft(2, '0') + Random.Range(0, 99999999).ToString().PadLeft(8, '0');
 			PhotonNetworkController.Instance.keyStr = Random.Range(0, 99999999).ToString().PadLeft(8, '0');

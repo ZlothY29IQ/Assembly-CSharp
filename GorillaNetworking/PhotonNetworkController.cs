@@ -333,7 +333,7 @@ public class PhotonNetworkController : MonoBehaviour
 		{
 			roomConfig.SetFriendIDs(FriendshipGroupDetection.Instance.PartyMemberIDs.ToList());
 		}
-		bool flag = filterSubscribed && SubscriptionManager.IsLocalSubscribed();
+		bool flag = (roomConfig.FanClub = filterSubscribed && SubscriptionManager.IsLocalSubscribed());
 		ExitGames.Client.Photon.Hashtable hashtable = new ExitGames.Client.Photon.Hashtable
 		{
 			{ "gameMode", desiredGameMode },
@@ -763,5 +763,19 @@ public class PhotonNetworkController : MonoBehaviour
 			}
 		}
 		return GTZone.none;
+	}
+
+	public void SetFriendIDList(List<GorillaFriendCollider.TouchingPlayerInfo> sourceList)
+	{
+		friendIDList.Clear();
+		AddFriendIDs(sourceList);
+	}
+
+	public void AddFriendIDs(List<GorillaFriendCollider.TouchingPlayerInfo> sourceList)
+	{
+		foreach (GorillaFriendCollider.TouchingPlayerInfo source in sourceList)
+		{
+			friendIDList.Add(source.UserID);
+		}
 	}
 }

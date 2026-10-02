@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using GorillaNetworking;
 using Modio;
 using Modio.Mods;
@@ -33,6 +34,9 @@ public static class CuratedDestinationsManager
 	[OnEnterPlay_Clear]
 	private static readonly List<Mod> curatedMods = new List<Mod>();
 
+	[OnEnterPlay_SetNull]
+	private static TaskCompletionSource<bool> retrievalCompletion;
+
 	public static bool IsLoading => loadingCuratedMaps;
 
 	public static bool HasRetrievedCuratedMaps => curatedMapsRetrieved;
@@ -54,6 +58,21 @@ public static class CuratedDestinationsManager
 		});
 	}
 
+	public static Task<bool> RetrieveCuratedMapsAsync(bool forceRefresh = false)
+	{
+		if (curatedMapsRetrieved && !forceRefresh)
+		{
+			return Task.FromResult(result: true);
+		}
+		if (retrievalCompletion == null)
+		{
+			retrievalCompletion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+		}
+		Task<bool> task = retrievalCompletion.Task;
+		RetrieveCuratedMaps(forceRefresh);
+		return task;
+	}
+
 	private static async void OnGetCuratedMapsTitleData(string data)
 	{
 		bool succeeded = true;
@@ -68,6 +87,13 @@ public static class CuratedDestinationsManager
 			if (data.Length >= 2 && data[0] == '"' && data[data.Length - 1] == '"')
 			{
 				data = data.Substring(1, data.Length - 2);
+			}
+			Error error = await ModIOManager.Initialize();
+			if ((bool)error)
+			{
+				GTDev.Log("[CuratedDestinationsManager::OnGetCuratedMapsTitleData] mod.io not available yet, skipping curated map resolution: " + error.GetMessage());
+				succeeded = false;
+				return;
 			}
 			string[] array = data.Split(',');
 			string[] array2 = array;
@@ -123,6 +149,10 @@ public static class CuratedDestinationsManager
 		loadingCuratedMaps = false;
 		GTDev.Log($"[CuratedDestinationsManager::FinishRetrieval] succeeded {succeeded} curatedSlotCount {curatedModIds.Count}");
 		OnCuratedMapsUpdated?.Invoke();
+		TaskCompletionSource<bool> taskCompletionSource = retrievalCompletion;
+		retrievalCompletion = null;
+		taskCompletionSource?.TrySetResult(succeeded);
+		CustomMapManager.PrefetchCuratedMaps(curatedMods);
 	}
 
 	public static bool TryGetCuratedModId(CuratedDoorway doorway, out ModId modId)
