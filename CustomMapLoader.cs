@@ -1221,124 +1221,24 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		GameObject gameObject = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
 		gameObject.transform.position = instance.virtualStumpMesh.transform.position + vector;
 		gameObject.transform.localScale = localScale;
+		Collider[] array = Physics.OverlapSphere(gameObject.transform.position, radius);
+		if (array == null || array.Length == 0)
+		{
+			UnityEngine.Object.Destroy(gameObject);
+			return;
+		}
 		MeshCollider meshCollider = gameObject.AddComponent<MeshCollider>();
 		meshCollider.convex = true;
-		Bounds bounds = gameObject.GetComponent<Renderer>().bounds;
-		HashSet<GameObject> hashSet = new HashSet<GameObject>();
-		Collider[] array = Physics.OverlapSphere(gameObject.transform.position, radius);
-		foreach (Collider collider in array)
+		Collider[] array2 = array;
+		foreach (Collider collider in array2)
 		{
-			if (!(collider == null) && !(collider.gameObject == gameObject) && !(collider.gameObject.scene.name != sceneName) && !collider.isTrigger && Physics.ComputePenetration(meshCollider, gameObject.transform.position, gameObject.transform.rotation, collider, collider.transform.position, collider.transform.rotation, out var _, out var _))
+			if (!(collider == null) && !(collider.gameObject == gameObject) && !(collider.gameObject.scene.name != sceneName) && Physics.ComputePenetration(meshCollider, gameObject.transform.position, gameObject.transform.rotation, collider, collider.transform.position, collider.transform.rotation, out var _, out var _) && !collider.isTrigger)
 			{
-				hashSet.Add(collider.gameObject);
-			}
-		}
-		Scene sceneByName = SceneManager.GetSceneByName(sceneName);
-		if (sceneByName.IsValid())
-		{
-			GameObject[] rootGameObjects = sceneByName.GetRootGameObjects();
-			for (int i = 0; i < rootGameObjects.Length; i++)
-			{
-				Renderer[] componentsInChildren = rootGameObjects[i].GetComponentsInChildren<Renderer>(includeInactive: true);
-				foreach (Renderer renderer in componentsInChildren)
-				{
-					if (!(renderer == null) && !hashSet.Contains(renderer.gameObject) && RendererOverlapsVirtualStump(renderer, meshCollider, bounds))
-					{
-						hashSet.Add(renderer.gameObject);
-					}
-				}
-			}
-		}
-		foreach (GameObject item in hashSet)
-		{
-			if (IsInteractiveMapObject(item, bounds))
-			{
-				continue;
-			}
-			Debug.Log("[CustomMapLoader::ResolveVirtualStumpColliderOverlaps] Gameobject " + item.name + " is overlapping with the virtual stump. Its colliders and renderers will be removed");
-			array = item.GetComponents<Collider>();
-			foreach (Collider collider2 in array)
-			{
-				if (!collider2.isTrigger)
-				{
-					UnityEngine.Object.Destroy(collider2);
-				}
-			}
-			Renderer[] componentsInChildren = item.GetComponents<Renderer>();
-			for (int i = 0; i < componentsInChildren.Length; i++)
-			{
-				UnityEngine.Object.Destroy(componentsInChildren[i]);
+				Debug.Log("[CustomMapLoader::ResolveVirtualStumpColliderOverlaps] Gameobject " + collider.name + " has a collider overlapping with the virtual stump. Collider will be removed");
+				UnityEngine.Object.Destroy(collider);
 			}
 		}
 		UnityEngine.Object.Destroy(gameObject);
-	}
-
-	private static bool IsInteractiveMapObject(GameObject gameObject, Bounds stumpBounds)
-	{
-		int num = UnityLayer.GorillaTrigger.ToLayerIndex();
-		int num2 = UnityLayer.GorillaInteractable.ToLayerIndex();
-		for (Transform parent = gameObject.transform; parent != null; parent = parent.parent)
-		{
-			Collider[] components = parent.GetComponents<Collider>();
-			Collider[] array;
-			if (parent != gameObject.transform)
-			{
-				bool flag = false;
-				array = components;
-				foreach (Collider collider in array)
-				{
-					if (collider != null && collider.bounds.Intersects(stumpBounds))
-					{
-						flag = true;
-						break;
-					}
-				}
-				if (!flag)
-				{
-					continue;
-				}
-			}
-			if (parent.gameObject.layer == num || parent.gameObject.layer == num2)
-			{
-				return true;
-			}
-			if (parent.GetComponent<CMSTrigger>().IsNotNull() || parent.GetComponent<CMSLoadingZone>().IsNotNull())
-			{
-				return true;
-			}
-			array = components;
-			foreach (Collider collider2 in array)
-			{
-				if (collider2 != null && collider2.isTrigger)
-				{
-					return true;
-				}
-			}
-		}
-		return false;
-	}
-
-	private static bool RendererOverlapsVirtualStump(Renderer renderer, MeshCollider stumpCollider, Bounds stumpBounds)
-	{
-		Bounds bounds = renderer.bounds;
-		if (!bounds.Intersects(stumpBounds))
-		{
-			return false;
-		}
-		if (renderer is MeshRenderer && renderer.TryGetComponent<MeshFilter>(out var component) && component.sharedMesh != null && component.sharedMesh.isReadable)
-		{
-			GameObject gameObject = new GameObject("VirtualStumpOverlapProbe");
-			gameObject.transform.SetPositionAndRotation(renderer.transform.position, renderer.transform.rotation);
-			gameObject.transform.localScale = renderer.transform.lossyScale;
-			MeshCollider meshCollider = gameObject.AddComponent<MeshCollider>();
-			meshCollider.sharedMesh = component.sharedMesh;
-			Vector3 direction;
-			float distance;
-			bool result = Physics.ComputePenetration(stumpCollider, stumpCollider.transform.position, stumpCollider.transform.rotation, meshCollider, gameObject.transform.position, gameObject.transform.rotation, out direction, out distance);
-			UnityEngine.Object.DestroyImmediate(gameObject);
-			return result;
-		}
-		return !bounds.Contains(stumpBounds.min) || !bounds.Contains(stumpBounds.max);
 	}
 
 	private static IEnumerator FinalizeSceneLoad(MapDescriptor sceneDescriptor, bool useProgressCallback = false, int startingProgress = 50, int endingProgress = 90)

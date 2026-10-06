@@ -144,22 +144,26 @@ public static class RoomControls
 		{
 			return;
 		}
-		if (propertiesThatChanged.TryGetValue("roomControlsEnabled", out var value))
+		if (propertiesThatChanged.TryGetValue("roomControlsEligible", out var value))
 		{
-			bool data = value is bool && (bool)value;
+			roomControlsEligible = value is bool && (bool)value;
+		}
+		if (propertiesThatChanged.TryGetValue("roomControlsEnabled", out var value2))
+		{
+			bool data = value2 is bool && (bool)value2;
 			if (data != roomControlsEnabled)
 			{
 				roomControlsEnabled = data;
 				OnRoomControlsEnabledChanged.InvokeSafe(in data);
 			}
 		}
-		if (propertiesThatChanged.TryGetValue("blockedUsers", out var value2))
+		if (propertiesThatChanged.TryGetValue("blockedUsers", out var value3))
 		{
-			ReconcileRoomProperty(value2 as ExitGames.Client.Photon.Hashtable, blockedPlayers, OnPlayerBlockChanged);
+			ReconcileRoomProperty(value3 as ExitGames.Client.Photon.Hashtable, blockedPlayers, OnPlayerBlockChanged);
 		}
-		if (propertiesThatChanged.TryGetValue("mutedUsers", out var value3))
+		if (propertiesThatChanged.TryGetValue("mutedUsers", out var value4))
 		{
-			ReconcileRoomProperty(value3 as ExitGames.Client.Photon.Hashtable, mutedPlayers, OnPlayerMuteChanged);
+			ReconcileRoomProperty(value4 as ExitGames.Client.Photon.Hashtable, mutedPlayers, OnPlayerMuteChanged);
 		}
 	}
 
