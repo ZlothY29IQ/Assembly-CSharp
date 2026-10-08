@@ -2914,6 +2914,11 @@ public class CustomMapLoader : MonoBehaviour, IBuildValidation
 		return isLoading;
 	}
 
+	public static bool IsAwaitingPlayerEntry()
+	{
+		return awaitingPlayerEntry;
+	}
+
 	public static long GetLoadingMapModId()
 	{
 		return attemptedLoadID;

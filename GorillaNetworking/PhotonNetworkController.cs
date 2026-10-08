@@ -448,12 +448,12 @@ public class PhotonNetworkController : MonoBehaviour
 		AttemptToJoinSpecificRoomAsync(roomID, roomJoinType, null);
 	}
 
-	public void AttemptToJoinSpecificRoomWithCallback(string roomID, JoinType roomJoinType, Action<NetJoinResult> callback)
+	public void AttemptToJoinSpecificRoomWithCallback(string roomID, JoinType roomJoinType, Action<NetJoinResult> callback, int createRegionIndex = -1)
 	{
-		AttemptToJoinSpecificRoomAsync(roomID, roomJoinType, callback);
+		AttemptToJoinSpecificRoomAsync(roomID, roomJoinType, callback, createRegionIndex);
 	}
 
-	public async Task AttemptToJoinSpecificRoomAsync(string roomID, JoinType roomJoinType, Action<NetJoinResult> callback)
+	public async Task AttemptToJoinSpecificRoomAsync(string roomID, JoinType roomJoinType, Action<NetJoinResult> callback, int createRegionIndex = -1)
 	{
 		if (await KIDManager.UseKID() && !KIDManager.HasPermissionToUseFeature(EKIDFeatures.Multiplayer))
 		{
@@ -488,6 +488,7 @@ public class PhotonNetworkController : MonoBehaviour
 			};
 			RoomConfig roomConfig = new RoomConfig();
 			roomConfig.createIfMissing = true;
+			roomConfig.createRegionIndex = createRegionIndex;
 			roomConfig.isJoinable = true;
 			roomConfig.isPublic = false;
 			if (roomJoinType == JoinType.FriendStationPublic)

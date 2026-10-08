@@ -53,7 +53,10 @@ public class FlameThrowerParticleCollisionHandler : MonoBehaviour
 				base.enabled = false;
 				return;
 			}
-			_pool = ObjectPools.instance.GetPoolByObjectType(_prefabToSpawn);
+			if (ObjectPools.instance.initialized)
+			{
+				_pool = ObjectPools.instance.GetPoolByObjectType(_prefabToSpawn);
+			}
 		}
 		_hasPrefabToSpawn = _prefabToSpawn != null && _isPrefabInPool;
 		if (_particleSystem == null)
@@ -78,18 +81,26 @@ public class FlameThrowerParticleCollisionHandler : MonoBehaviour
 			return;
 		}
 		double num = GTTime.TimeAsDouble();
-		if (!((float)(num - _lastCollisionTime) < 1f / _maxParticleHitReactionRate) && _particleSystem.GetCollisionEvents(other, _collisionEvents) > 0)
+		if ((float)(num - _lastCollisionTime) < 1f / _maxParticleHitReactionRate || _particleSystem.GetCollisionEvents(other, _collisionEvents) <= 0)
 		{
-			if (_hasPrefabToSpawn && _isPrefabInPool && _pool.GetInactiveCount() > 0)
+			return;
+		}
+		if (_hasPrefabToSpawn && _isPrefabInPool)
+		{
+			if (_pool == null && ObjectPools.instance.initialized)
+			{
+				_pool = ObjectPools.instance.GetPoolByObjectType(_prefabToSpawn);
+			}
+			if (_pool != null && _pool.GetInactiveCount() > 0)
 			{
 				ParticleCollisionEvent particleCollisionEvent = _collisionEvents[0];
 				FireManager.SpawnFire(_pool, particleCollisionEvent.intersection, particleCollisionEvent.normal, base.transform.lossyScale.x);
 			}
-			if (_extinguishAmount > 0f)
-			{
-				FireManager.Extinguish(other, _extinguishAmount);
-			}
-			_lastCollisionTime = num;
 		}
+		if (_extinguishAmount > 0f)
+		{
+			FireManager.Extinguish(other, _extinguishAmount);
+		}
+		_lastCollisionTime = num;
 	}
 }

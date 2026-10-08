@@ -3656,7 +3656,11 @@ public class GTPlayer : MonoBehaviour
 		}
 		else if (climbable.TryGetComponent<PhotonViewXSceneRef>(out component5))
 		{
-			VRRig.AttachLocalPlayerToPhotonView(component5.photonView, hand.xrNode, climbHelperTargetPos, averagedVelocity);
+			PhotonView photonView = component5.photonView;
+			if ((object)photonView != null)
+			{
+				VRRig.AttachLocalPlayerToPhotonView(photonView, hand.xrNode, climbHelperTargetPos, averagedVelocity);
+			}
 		}
 		GorillaTagger.Instance.StartVibration(currentClimber.xrNode == XRNode.LeftHand, 0.6f, 0.06f);
 		if ((bool)climbable.clip)
@@ -3813,15 +3817,16 @@ public class GTPlayer : MonoBehaviour
 			bufferCount = Physics.OverlapSphereNonAlloc(checkPosition, overlapRadiusTest, overlapColliders, locomotionEnabledLayers.value, QueryTriggerInteraction.Ignore);
 			if (ignoreOneWay)
 			{
-				int num2 = 0;
+				bool flag = true;
 				for (int i = 0; i < bufferCount; i++)
 				{
-					if (overlapColliders[i].CompareTag("NoCrazyCheck"))
+					if (!overlapColliders[i].CompareTag("NoCrazyCheck"))
 					{
-						num2++;
+						flag = false;
+						break;
 					}
 				}
-				if (num2 == bufferCount)
+				if (flag)
 				{
 					return true;
 				}

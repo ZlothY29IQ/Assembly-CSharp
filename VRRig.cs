@@ -2389,7 +2389,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 
 	public static void AttachLocalPlayerToPhotonView(PhotonView view, XRNode xrNode, Vector3 offset, Vector3 velocity)
 	{
-		if (GorillaTagger.hasInstance && (bool)GorillaTagger.Instance.offlineVRRig)
+		if (GorillaTagger.hasInstance && (bool)GorillaTagger.Instance.offlineVRRig && view != null)
 		{
 			GorillaTagger.Instance.offlineVRRig.grabbedRopeIndex = view.ViewID;
 			GorillaTagger.Instance.offlineVRRig.grabbedRopeIsLeft = xrNode == XRNode.LeftHand;

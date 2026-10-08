@@ -156,7 +156,7 @@ internal class VirtualStumpSerializer : GorillaSerializer
 		MonkeAgent.IncrementRPCCall(info, "SetRoomMap_RPC");
 		if (modId > 0 && (info.Sender.ActorNumber == photonView.OwnerActorNr || info.Sender.ActorNumber == CustomMapsTerminal.GetDriverID()))
 		{
-			CustomMapManager.SetRoomMap(modId);
+			CustomMapManager.ApplyRoomMapFromRemote(modId);
 		}
 	}
 

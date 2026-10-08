@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Fusion;
-using Fusion.CodeGen;
 using GorillaExtensions;
 using Photon.Pun;
 using Photon.Realtime;
@@ -27,10 +26,7 @@ public class LurkerGhost : NetworkComponent
 	private struct LurkerGhostData : INetworkStruct
 	{
 		[FieldOffset(12)]
-		[FixedBufferProperty(typeof(Vector3), typeof(UnityValueSurrogate_0040ElementReaderWriterVector3), 0, order = -2147483647)]
-		[WeaverGenerated]
-		[SerializeField]
-		private FixedStorage_00403 _TargetPos;
+		public Vector3 TargetPos;
 
 		[field: FieldOffset(0)]
 		public ghostState CurrentState { get; set; }
@@ -40,20 +36,6 @@ public class LurkerGhost : NetworkComponent
 
 		[field: FieldOffset(8)]
 		public int TargetActor { get; set; }
-
-		[Networked]
-		[NetworkedWeaved(3, 3)]
-		public unsafe Vector3 TargetPos
-		{
-			readonly get
-			{
-				return *(Vector3*)Native.ReferenceToPointer(ref _TargetPos);
-			}
-			set
-			{
-				*(Vector3*)Native.ReferenceToPointer(ref _TargetPos) = value;
-			}
-		}
 
 		public LurkerGhostData(ghostState state, int index, int actor, Vector3 pos)
 		{

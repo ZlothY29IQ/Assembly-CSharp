@@ -26,6 +26,8 @@ public class RoomConfig
 
 	public bool createIfMissing;
 
+	public int createRegionIndex = -1;
+
 	public string[] joinFriendIDs;
 
 	public ExitGames.Client.Photon.Hashtable EffectiveSearchFilter => SearchFilter ?? CustomProps;

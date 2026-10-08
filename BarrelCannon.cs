@@ -1,7 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
 using Fusion;
-using Fusion.CodeGen;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
@@ -33,49 +32,15 @@ public class BarrelCannon : NetworkComponent
 	private struct BarrelCannonSyncedStateData : INetworkStruct
 	{
 		[FieldOffset(0)]
-		[FixedBufferProperty(typeof(BarrelCannonState), typeof(UnityValueSurrogate_0040ReaderWriter_0040BarrelCannon__BarrelCannonState), 0, order = -2147483647)]
-		[WeaverGenerated]
-		[SerializeField]
-		private FixedStorage_00401 _CurrentState;
+		public BarrelCannonState CurrentState;
 
 		[FieldOffset(4)]
-		[FixedBufferProperty(typeof(NetworkBool), typeof(UnityValueSurrogate_0040ElementReaderWriterNetworkBool), 0, order = -2147483647)]
-		[WeaverGenerated]
-		[SerializeField]
-		private FixedStorage_00401 _HasAuthorityPassenger;
-
-		[Networked]
-		[NetworkedWeaved(0, 1)]
-		public unsafe BarrelCannonState CurrentState
-		{
-			readonly get
-			{
-				return *(BarrelCannonState*)Native.ReferenceToPointer(ref _CurrentState);
-			}
-			set
-			{
-				*(BarrelCannonState*)Native.ReferenceToPointer(ref _CurrentState) = value;
-			}
-		}
-
-		[Networked]
-		[NetworkedWeaved(1, 1)]
-		public unsafe NetworkBool HasAuthorityPassenger
-		{
-			readonly get
-			{
-				return *(NetworkBool*)Native.ReferenceToPointer(ref _HasAuthorityPassenger);
-			}
-			set
-			{
-				*(NetworkBool*)Native.ReferenceToPointer(ref _HasAuthorityPassenger) = value;
-			}
-		}
+		public NetworkBool HasAuthorityPassenger;
 
 		[field: FieldOffset(8)]
 		public float FiringPositionLerpValue { get; set; }
 
-		public BarrelCannonSyncedStateData(BarrelCannonState state, bool hasAuthPassenger, float firingPosLerpVal)
+		private BarrelCannonSyncedStateData(BarrelCannonState state, bool hasAuthPassenger, float firingPosLerpVal)
 		{
 			CurrentState = state;
 			HasAuthorityPassenger = hasAuthPassenger;

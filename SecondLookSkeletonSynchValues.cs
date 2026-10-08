@@ -71,8 +71,12 @@ public class SecondLookSkeletonSynchValues : NetworkComponent
 	public override void ReadDataFusion()
 	{
 		currentState = (SecondLookSkeleton.GhostState)NetData.CurrentState;
-		position.SetValueSafe(NetData.Position);
-		rotation.SetValueSafe(NetData.Rotation);
+		ref Vector3 v = ref position;
+		SkeletonNetData netData = NetData;
+		v.SetValueSafe(in netData.Position);
+		ref Quaternion q = ref rotation;
+		netData = NetData;
+		q.SetValueSafe(in netData.Rotation);
 		currentNode = NetData.CurrentNode;
 		nextNode = NetData.NextNode;
 		angerPoint = NetData.AngerPoint;

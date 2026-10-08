@@ -12,30 +12,13 @@ public class FusionPlayerProperties : NetworkBehaviour
 	public struct PlayerInfo : INetworkStruct
 	{
 		[FieldOffset(0)]
-		[FixedBufferProperty(typeof(NetworkString<_32>), typeof(UnityValueSurrogate_0040ReaderWriter_0040Fusion_NetworkString_00601_003CFusion__32_003E), 0, order = -2147483647)]
-		[WeaverGenerated]
-		[SerializeField]
-		private FixedStorage_004033 _NickName;
+		public NetworkString<_32> NickName;
 
 		[FieldOffset(132)]
 		[FixedBufferProperty(typeof(NetworkDictionary<NetworkString<_32>, NetworkString<_32>>), typeof(UnityDictionarySurrogate_0040ReaderWriter_0040Fusion_NetworkString_00601_003CFusion__32_003E_0040ReaderWriter_0040Fusion_NetworkString_00601_003CFusion__32_003E), 3, order = -2147483647)]
 		[WeaverGenerated]
 		[SerializeField]
 		private FixedStorage_0040207 _properties;
-
-		[Networked]
-		[NetworkedWeaved(0, 33)]
-		public unsafe NetworkString<_32> NickName
-		{
-			readonly get
-			{
-				return *(NetworkString<_32>*)Native.ReferenceToPointer(ref _NickName);
-			}
-			set
-			{
-				*(NetworkString<_32>*)Native.ReferenceToPointer(ref _NickName) = value;
-			}
-		}
 
 		[Networked]
 		[NetworkedWeavedDictionary(3, 33, 33, typeof(ReaderWriter_0040Fusion_NetworkString_00601_003CFusion__32_003E), typeof(ReaderWriter_0040Fusion_NetworkString_00601_003CFusion__32_003E))]
@@ -106,7 +89,8 @@ public class FusionPlayerProperties : NetworkBehaviour
 		if (netPlayerAttributes.ContainsKey(source))
 		{
 			Debug.Log("Current nickname is " + netPlayerAttributes[source].NickName.ToString());
-			Debug.Log("Sent nickname is " + newInfo.NickName.ToString());
+			NetworkString<_32> nickName = newInfo.NickName;
+			Debug.Log("Sent nickname is " + nickName.ToString());
 			if (netPlayerAttributes[source].Equals(newInfo))
 			{
 				Debug.Log("Info is already correct for this user. Shouldnt have received an RPC in this case.");

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Fusion;
-using Fusion.CodeGen;
 using GorillaExtensions;
 using Photon.Pun;
 using Photon.Realtime;
@@ -35,27 +34,10 @@ public class HalloweenGhostChaser : NetworkComponent
 		public int SpawnIndex;
 
 		[FieldOffset(12)]
-		[FixedBufferProperty(typeof(float), typeof(UnityValueSurrogate_0040ElementReaderWriterSingle), 0, order = -2147483647)]
-		[WeaverGenerated]
-		[SerializeField]
-		private FixedStorage_00401 _CurrentSpeed;
+		public float CurrentSpeed;
 
 		[FieldOffset(16)]
 		public NetworkBool IsSummoned;
-
-		[Networked]
-		[NetworkedWeaved(3, 1)]
-		public unsafe float CurrentSpeed
-		{
-			readonly get
-			{
-				return *(float*)Native.ReferenceToPointer(ref _CurrentSpeed);
-			}
-			set
-			{
-				*(float*)Native.ReferenceToPointer(ref _CurrentSpeed) = value;
-			}
-		}
 	}
 
 	public float heightAboveNavmesh = 0.5f;

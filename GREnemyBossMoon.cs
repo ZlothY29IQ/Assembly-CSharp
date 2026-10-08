@@ -315,7 +315,7 @@ public class GREnemyBossMoon : MonoBehaviour, IGameEntityComponent, IGameEntityS
 		agent.onBodyStateChanged += OnNetworkBodyStateChange;
 		agent.onBehaviorStateChanged += OnNetworkBehaviorStateChange;
 		abilities = new GRAbilityBase[32];
-		adaptiveMusicController = UnityEngine.Object.FindObjectOfType<GRAdaptiveMusicController>();
+		adaptiveMusicController = UnityEngine.Object.FindAnyObjectByType<GRAdaptiveMusicController>();
 	}
 
 	public void OnEntityInit()

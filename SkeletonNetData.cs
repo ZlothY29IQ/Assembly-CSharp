@@ -1,6 +1,5 @@
 using System.Runtime.InteropServices;
 using Fusion;
-using Fusion.CodeGen;
 using UnityEngine;
 
 [StructLayout(LayoutKind.Explicit, Size = 44)]
@@ -8,47 +7,13 @@ using UnityEngine;
 public struct SkeletonNetData : INetworkStruct
 {
 	[FieldOffset(4)]
-	[FixedBufferProperty(typeof(Vector3), typeof(UnityValueSurrogate_0040ElementReaderWriterVector3), 0, order = -2147483647)]
-	[WeaverGenerated]
-	[SerializeField]
-	private FixedStorage_00403 _Position;
+	public Vector3 Position;
 
 	[FieldOffset(16)]
-	[FixedBufferProperty(typeof(Quaternion), typeof(UnityValueSurrogate_0040ReaderWriter_0040UnityEngine_Quaternion), 0, order = -2147483647)]
-	[WeaverGenerated]
-	[SerializeField]
-	private FixedStorage_00404 _Rotation;
+	public Quaternion Rotation;
 
 	[field: FieldOffset(0)]
 	public int CurrentState { get; set; }
-
-	[Networked]
-	[NetworkedWeaved(1, 3)]
-	public unsafe Vector3 Position
-	{
-		readonly get
-		{
-			return *(Vector3*)Native.ReferenceToPointer(ref _Position);
-		}
-		set
-		{
-			*(Vector3*)Native.ReferenceToPointer(ref _Position) = value;
-		}
-	}
-
-	[Networked]
-	[NetworkedWeaved(4, 4)]
-	public unsafe Quaternion Rotation
-	{
-		readonly get
-		{
-			return *(Quaternion*)Native.ReferenceToPointer(ref _Rotation);
-		}
-		set
-		{
-			*(Quaternion*)Native.ReferenceToPointer(ref _Rotation) = value;
-		}
-	}
 
 	[field: FieldOffset(32)]
 	public int CurrentNode { get; set; }

@@ -1,7 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
 using Fusion;
-using Fusion.CodeGen;
 using GorillaExtensions;
 using Photon.Pun;
 using UnityEngine;
@@ -27,70 +26,16 @@ public class MonkeyeAI_ReplState : NetworkComponent
 	public struct MonkeyeAI_RepStateData : INetworkStruct
 	{
 		[FieldOffset(0)]
-		[FixedBufferProperty(typeof(NetworkString<_32>), typeof(UnityValueSurrogate_0040ReaderWriter_0040Fusion_NetworkString_00601_003CFusion__32_003E), 0, order = -2147483647)]
-		[WeaverGenerated]
-		[SerializeField]
-		private FixedStorage_004033 _UserId;
+		public NetworkString<_32> UserId;
 
 		[FieldOffset(132)]
-		[FixedBufferProperty(typeof(Vector3), typeof(UnityValueSurrogate_0040ElementReaderWriterVector3), 0, order = -2147483647)]
-		[WeaverGenerated]
-		[SerializeField]
-		private FixedStorage_00403 _AttackPos;
+		public Vector3 AttackPos;
 
 		[FieldOffset(144)]
-		[FixedBufferProperty(typeof(float), typeof(UnityValueSurrogate_0040ElementReaderWriterSingle), 0, order = -2147483647)]
-		[WeaverGenerated]
-		[SerializeField]
-		private FixedStorage_00401 _Timer;
+		public float Timer;
 
 		[FieldOffset(160)]
-		[FixedBufferProperty(typeof(float), typeof(UnityValueSurrogate_0040ElementReaderWriterSingle), 0, order = -2147483647)]
-		[WeaverGenerated]
-		[SerializeField]
-		private FixedStorage_00401 _Alpha;
-
-		[Networked]
-		[NetworkedWeaved(0, 33)]
-		public unsafe NetworkString<_32> UserId
-		{
-			readonly get
-			{
-				return *(NetworkString<_32>*)Native.ReferenceToPointer(ref _UserId);
-			}
-			set
-			{
-				*(NetworkString<_32>*)Native.ReferenceToPointer(ref _UserId) = value;
-			}
-		}
-
-		[Networked]
-		[NetworkedWeaved(33, 3)]
-		public unsafe Vector3 AttackPos
-		{
-			readonly get
-			{
-				return *(Vector3*)Native.ReferenceToPointer(ref _AttackPos);
-			}
-			set
-			{
-				*(Vector3*)Native.ReferenceToPointer(ref _AttackPos) = value;
-			}
-		}
-
-		[Networked]
-		[NetworkedWeaved(36, 1)]
-		public unsafe float Timer
-		{
-			readonly get
-			{
-				return *(float*)Native.ReferenceToPointer(ref _Timer);
-			}
-			set
-			{
-				*(float*)Native.ReferenceToPointer(ref _Timer) = value;
-			}
-		}
+		public float Alpha;
 
 		[field: FieldOffset(148)]
 		public NetworkBool FloorEnabled { get; set; }
@@ -100,20 +45,6 @@ public class MonkeyeAI_ReplState : NetworkComponent
 
 		[field: FieldOffset(156)]
 		public NetworkBool FreezePlayer { get; set; }
-
-		[Networked]
-		[NetworkedWeaved(40, 1)]
-		public unsafe float Alpha
-		{
-			readonly get
-			{
-				return *(float*)Native.ReferenceToPointer(ref _Alpha);
-			}
-			set
-			{
-				*(float*)Native.ReferenceToPointer(ref _Alpha) = value;
-			}
-		}
 
 		[field: FieldOffset(164)]
 		public EStates State { get; set; }

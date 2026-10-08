@@ -38,10 +38,7 @@ public class WhackAMole : NetworkComponent
 	public struct WhackAMoleData : INetworkStruct
 	{
 		[FieldOffset(24)]
-		[FixedBufferProperty(typeof(NetworkString<_128>), typeof(UnityValueSurrogate_0040ReaderWriter_0040Fusion_NetworkString_00601_003CFusion__128_003E), 0, order = -2147483647)]
-		[WeaverGenerated]
-		[SerializeField]
-		private FixedStorage_0040129 _HighScorePlayerName;
+		public NetworkString<_128> HighScorePlayerName;
 
 		[FieldOffset(556)]
 		[FixedBufferProperty(typeof(NetworkDictionary<int, int>), typeof(UnityDictionarySurrogate_0040ElementReaderWriterInt32_0040ElementReaderWriterInt32), 17, order = -2147483647)]
@@ -66,20 +63,6 @@ public class WhackAMole : NetworkComponent
 
 		[field: FieldOffset(20)]
 		public int RightPlayerScore { get; set; }
-
-		[Networked]
-		[NetworkedWeaved(6, 129)]
-		public unsafe NetworkString<_128> HighScorePlayerName
-		{
-			readonly get
-			{
-				return *(NetworkString<_128>*)Native.ReferenceToPointer(ref _HighScorePlayerName);
-			}
-			set
-			{
-				*(NetworkString<_128>*)Native.ReferenceToPointer(ref _HighScorePlayerName) = value;
-			}
-		}
 
 		[field: FieldOffset(540)]
 		public float RemainingTime { get; set; }

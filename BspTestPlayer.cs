@@ -29,7 +29,7 @@ public class BspTestPlayer : MonoBehaviour
 	{
 		if (bspSystem == null)
 		{
-			bspSystem = Object.FindObjectOfType<ZoneGraphBSP>();
+			bspSystem = Object.FindAnyObjectByType<ZoneGraphBSP>();
 		}
 		if (zoneDisplayText == null)
 		{
@@ -174,7 +174,7 @@ public class BspTestPlayer : MonoBehaviour
 		{
 			return;
 		}
-		BoxCollider[] array = Object.FindObjectsOfType<BoxCollider>();
+		BoxCollider[] array = Object.FindObjectsByType<BoxCollider>(FindObjectsSortMode.None);
 		if (array.Length != 0)
 		{
 			Bounds bounds = new Bounds(array[0].bounds.center, array[0].bounds.size);

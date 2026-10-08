@@ -413,8 +413,9 @@ public class NetworkSystemPUN : NetworkSystem
 	{
 		Debug.Log("returning to best region to create room");
 		internalState = InternalState.ConnectingToMaster;
-		PhotonNetwork.PhotonServerSettings.AppSettings.FixedRegion = regionNames[lowestPingRegionIndex];
-		currentRegionIndex = lowestPingRegionIndex;
+		int num = ((opts.createRegionIndex >= 0 && opts.createRegionIndex < regionNames.Length) ? opts.createRegionIndex : lowestPingRegionIndex);
+		PhotonNetwork.PhotonServerSettings.AppSettings.FixedRegion = regionNames[num];
+		currentRegionIndex = num;
 		UpdateZoneInfo(opts.isPublic);
 		PhotonNetwork.ConnectUsingSettings();
 		if (!(await WaitForStateCheck(InternalState.ConnectedToMaster)))

@@ -143,6 +143,8 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 
 	private static string pendingNewPrivateRoomName = "";
 
+	private static int pendingPrivateRoomRegionIndex = -1;
+
 	private static Action<bool> currentTeleportCallback;
 
 	private static bool waitingForLoginDisconnect = false;
@@ -161,9 +163,13 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 
 	private static long pendingRoomMapAfterUnload;
 
+	private static bool pendingRoomMapAfterUnloadLoads;
+
 	private static bool currentRoomMapApproved = false;
 
 	private static ModId lastSelectedMapModId = ModId.Null;
+
+	private static bool lastSelectedMapApproved = false;
 
 	private static VirtualStumpTeleportingHUD teleportingHUD;
 
@@ -832,6 +838,10 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 	{
 		if (activateHasAutoLoadOverride)
 		{
+			if (!IsInFeaturedMode())
+			{
+				return lastSelectedMapModId;
+			}
 			return activateAutoLoadModIdOverride;
 		}
 		if (lastUsedTeleporter.IsNotNull())
@@ -848,6 +858,7 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 	public static void ClearLastSelectedMap()
 	{
 		lastSelectedMapModId = ModId.Null;
+		lastSelectedMapApproved = false;
 	}
 
 	public static void OnLeftTerminalRoom()
@@ -899,6 +910,7 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 			instance.ghostReactorManager.reactor.EnableGhostReactorForVirtualStump();
 			currentTeleportCallback = callback;
 			pendingNewPrivateRoomName = "";
+			pendingPrivateRoomRegionIndex = -1;
 			preTeleportInPrivateRoom = false;
 			if (NetworkSystem.Instance.InRoom)
 			{
@@ -907,6 +919,7 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 					preTeleportInPrivateRoom = true;
 					waitingForRoomJoin = true;
 					pendingNewPrivateRoomName = GetActivateRoomModePrefix() + GorillaComputer.instance.VStumpRoomPrepend + NetworkSystem.Instance.RoomName;
+					pendingPrivateRoomRegionIndex = NetworkSystem.Instance.currentRegionIndex;
 				}
 				GTDev.Log("[CustomMapManager::TeleportToVirtualStump] Returning to singleplayer...");
 				waitingForLoginDisconnect = true;
@@ -944,7 +957,7 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 			else
 			{
 				GTDev.Log("[CustomMapManager::OnAutoLoginComplete] joining @ version of private room: " + pendingNewPrivateRoomName);
-				PhotonNetworkController.Instance.AttemptToJoinSpecificRoomWithCallback(pendingNewPrivateRoomName, JoinType.Solo, OnJoinSpecificRoomResult);
+				PhotonNetworkController.Instance.AttemptToJoinSpecificRoomWithCallback(pendingNewPrivateRoomName, JoinType.Solo, OnJoinSpecificRoomResult, pendingPrivateRoomRegionIndex);
 			}
 		}
 		GTDev.Log($"[CustomMapManager::OnAutoLoginComplete] Waiting For D/C? {waitingForDisconnect}");
@@ -964,7 +977,7 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 			yield return null;
 		}
 		GTDev.Log("[CustomMapManager::DelayedJoinVStumpPrivateRoom] joining @ version of private room: " + pendingNewPrivateRoomName);
-		PhotonNetworkController.Instance.AttemptToJoinSpecificRoomWithCallback(pendingNewPrivateRoomName, JoinType.Solo, OnJoinSpecificRoomResult);
+		PhotonNetworkController.Instance.AttemptToJoinSpecificRoomWithCallback(pendingNewPrivateRoomName, JoinType.Solo, OnJoinSpecificRoomResult, pendingPrivateRoomRegionIndex);
 	}
 
 	public static void ExitVirtualStump(Action<bool> callback)
@@ -1075,7 +1088,7 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 		{
 			waitingForRoomJoin = true;
 			pendingNewPrivateRoomName = GorillaComputer.instance.StripVStumpRoomPrefix(pendingNewPrivateRoomName);
-			PhotonNetworkController.Instance.AttemptToJoinSpecificRoomWithCallback(pendingNewPrivateRoomName, JoinType.Solo, OnJoinSpecificRoomResult);
+			PhotonNetworkController.Instance.AttemptToJoinSpecificRoomWithCallback(pendingNewPrivateRoomName, JoinType.Solo, OnJoinSpecificRoomResult, pendingPrivateRoomRegionIndex);
 		}
 		else if (NetworkSystem.Instance.InRoom)
 		{
@@ -1083,7 +1096,8 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 			{
 				waitingForRoomJoin = true;
 				pendingNewPrivateRoomName = GorillaComputer.instance.StripVStumpRoomPrefix(NetworkSystem.Instance.RoomName);
-				PhotonNetworkController.Instance.AttemptToJoinSpecificRoomWithCallback(pendingNewPrivateRoomName, JoinType.Solo, OnJoinSpecificRoomResult);
+				pendingPrivateRoomRegionIndex = NetworkSystem.Instance.currentRegionIndex;
+				PhotonNetworkController.Instance.AttemptToJoinSpecificRoomWithCallback(pendingNewPrivateRoomName, JoinType.Solo, OnJoinSpecificRoomResult, pendingPrivateRoomRegionIndex);
 			}
 			else if (lastUsedTeleporter.GetExitVStumpJoinTrigger() != null)
 			{
@@ -1227,7 +1241,7 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 			{
 				shouldRetryJoin = false;
 				GTDev.Log("[CustomMapManager::OnDisconnected] Joining " + pendingNewPrivateRoomName + " failed previously, retrying once... ");
-				PhotonNetworkController.Instance.AttemptToJoinSpecificRoomWithCallback(pendingNewPrivateRoomName, JoinType.Solo, OnJoinSpecificRoomResultFailureAllowed);
+				PhotonNetworkController.Instance.AttemptToJoinSpecificRoomWithCallback(pendingNewPrivateRoomName, JoinType.Solo, OnJoinSpecificRoomResultFailureAllowed, pendingPrivateRoomRegionIndex);
 			}
 			else
 			{
@@ -1295,32 +1309,34 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 	private static void TryAutoLoadMap()
 	{
 		ModId effectiveAutoLoadModId = GetEffectiveAutoLoadModId();
-		if (!(effectiveAutoLoadModId == ModId.Null))
+		if (effectiveAutoLoadModId == ModId.Null)
 		{
-			bool flag = false;
-			if (waitingForRoomJoin)
-			{
-				GTDev.Log("[CustomMapManager::TryAutoLoadMap] Still waiting for room join, delaying auto-load...");
-				flag = true;
-			}
-			else if (NetworkSystem.Instance.InRoom && !NetworkSystem.Instance.IsMasterClient && VirtualStumpSerializer.IsWaitingForRoomInit())
-			{
-				GTDev.Log("[CustomMapManager::TryAutoLoadMap] Still waiting for room init, delaying auto-load...");
-				flag = true;
-			}
-			if (flag)
-			{
-				delayedTryAutoLoadCoroutine = instance.StartCoroutine(DelayedTryAutoLoad());
-				return;
-			}
-			GTDev.Log("[CustomMapManager::TryAutoLoadMap] Attempting auto-load...");
-			RunAutoLoad(effectiveAutoLoadModId);
+			GTDev.Log("[CustomMapManager::TryAutoLoadMap] No map selected, nothing to auto-load.");
+			return;
 		}
+		bool flag = false;
+		if (waitingForRoomJoin)
+		{
+			GTDev.Log("[CustomMapManager::TryAutoLoadMap] Still waiting for room join, delaying auto-load...");
+			flag = true;
+		}
+		else if (NetworkSystem.Instance.InRoom && !NetworkSystem.Instance.IsMasterClient && VirtualStumpSerializer.IsWaitingForRoomInit())
+		{
+			GTDev.Log("[CustomMapManager::TryAutoLoadMap] Still waiting for room init, delaying auto-load...");
+			flag = true;
+		}
+		if (flag)
+		{
+			delayedTryAutoLoadCoroutine = instance.StartCoroutine(DelayedTryAutoLoad());
+			return;
+		}
+		GTDev.Log("[CustomMapManager::TryAutoLoadMap] Attempting auto-load...");
+		RunAutoLoad(effectiveAutoLoadModId);
 	}
 
 	private static GTMapLoadSource GetAutoLoadSource()
 	{
-		if (!activateHasAutoLoadOverride)
+		if (!activateHasAutoLoadOverride || !IsInFeaturedMode())
 		{
 			return GTMapLoadSource.teleporter;
 		}
@@ -1348,6 +1364,15 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 	{
 		if (autoLoadModId == ModId.Null)
 		{
+			return;
+		}
+		if (!IsInFeaturedMode() && !lastSelectedMapApproved && autoLoadModId == lastSelectedMapModId)
+		{
+			GTDev.Log($"[CustomMapManager::RunAutoLoad] {autoLoadModId} was selected by another player, " + "setting it as the room map without loading.");
+			if (!NetworkSystem.Instance.InRoom || NetworkSystem.Instance.IsMasterClient)
+			{
+				SetRoomMap(autoLoadModId);
+			}
 			return;
 		}
 		GTMapLoadSource autoLoadSource = GetAutoLoadSource();
@@ -1467,11 +1492,20 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 		OnRoomMapChanged.Invoke(ModId.Null);
 		if (pendingRoomMapAfterUnload > 0)
 		{
-			long andLoadRoomMap = pendingRoomMapAfterUnload;
+			long num = pendingRoomMapAfterUnload;
+			bool flag = pendingRoomMapAfterUnloadLoads;
 			pendingRoomMapAfterUnload = 0L;
+			pendingRoomMapAfterUnloadLoads = false;
 			if (NetworkSystem.Instance.InRoom)
 			{
-				SetAndLoadRoomMap(andLoadRoomMap);
+				if (flag)
+				{
+					SetAndLoadRoomMap(num);
+				}
+				else
+				{
+					SetRoomMap(num);
+				}
 			}
 		}
 		if (exitVirtualStumpPending)
@@ -1491,9 +1525,11 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 		{
 			GTDev.Log($"[CustomMapManager::ApplyRoomMapOnJoin] Local map {localMapId} is not the room map " + $"({roomMapId}), unloading it...");
 			pendingRoomMapAfterUnload = roomMapId;
+			pendingRoomMapAfterUnloadLoads = true;
 			if (!UnloadMap(returnToSinglePlayerIfInPublic: false))
 			{
 				pendingRoomMapAfterUnload = 0L;
+				pendingRoomMapAfterUnloadLoads = false;
 				if (roomMapId > 0)
 				{
 					SetAndLoadRoomMap(roomMapId);
@@ -1504,6 +1540,33 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 		{
 			SetRoomMap(roomMapId);
 		}
+	}
+
+	public static void ApplyRoomMapFromRemote(long roomMapId)
+	{
+		if (!hasInstance || roomMapId <= 0)
+		{
+			return;
+		}
+		if (unloadInProgress)
+		{
+			pendingRoomMapAfterUnload = roomMapId;
+			pendingRoomMapAfterUnloadLoads = false;
+			return;
+		}
+		ModId localMapId = GetLocalMapId();
+		if (localMapId.IsValid() && (long)localMapId != roomMapId && !IsFeaturedMapLocked())
+		{
+			GTDev.Log($"[CustomMapManager::ApplyRoomMapFromRemote] Local map {localMapId} is not the new room " + $"map ({roomMapId}), unloading it...");
+			pendingRoomMapAfterUnload = roomMapId;
+			pendingRoomMapAfterUnloadLoads = false;
+			if (UnloadMap(returnToSinglePlayerIfInPublic: false))
+			{
+				return;
+			}
+			pendingRoomMapAfterUnload = 0L;
+		}
+		SetRoomMap(roomMapId);
 	}
 
 	private static void SetAndLoadRoomMap(long roomMapId)
@@ -1553,6 +1616,7 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 		loadingMapId = modId;
 		pendingMapLoadSource = loadSource;
 		lastSelectedMapModId = modId;
+		lastSelectedMapApproved = true;
 		waitingForModDownload = false;
 		waitingForModInstall = false;
 		waitingForModInstallId = ModId.Null;
@@ -1791,17 +1855,23 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 
 	public static void SetRoomMap(long modId)
 	{
-		if (hasInstance && modId != currentRoomMapModId._id)
+		if (!hasInstance || modId == currentRoomMapModId._id)
 		{
-			if (IsFeaturedMapLocked() && modId != FeaturedLockedMapId._id)
-			{
-				GTDev.LogWarning($"[CustomMapManager::SetRoomMap] Blocked room-map change to {modId} - Featured " + $"lobby is locked to {FeaturedLockedMapId}.");
-				return;
-			}
-			currentRoomMapModId = new ModId(modId);
-			currentRoomMapApproved = false;
-			OnRoomMapChanged.Invoke(currentRoomMapModId);
+			return;
 		}
+		if (IsFeaturedMapLocked() && modId != FeaturedLockedMapId._id)
+		{
+			GTDev.LogWarning($"[CustomMapManager::SetRoomMap] Blocked room-map change to {modId} - Featured " + $"lobby is locked to {FeaturedLockedMapId}.");
+			return;
+		}
+		currentRoomMapModId = new ModId(modId);
+		currentRoomMapApproved = false;
+		if (currentRoomMapModId != lastSelectedMapModId)
+		{
+			lastSelectedMapModId = currentRoomMapModId;
+			lastSelectedMapApproved = false;
+		}
+		OnRoomMapChanged.Invoke(currentRoomMapModId);
 	}
 
 	public static void ClearRoomMap()
