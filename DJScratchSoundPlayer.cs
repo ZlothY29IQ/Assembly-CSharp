@@ -4,7 +4,7 @@ using GorillaTag;
 using GorillaTag.CosmeticSystem;
 using UnityEngine;
 
-public class DJScratchSoundPlayer : MonoBehaviour, ISpawnable
+public class DJScratchSoundPlayer : MonoBehaviour, ISpawnable, PrefabNameSerialized
 {
 	[SerializeField]
 	private SoundBankPlayer scratchForward;
@@ -28,9 +28,24 @@ public class DJScratchSoundPlayer : MonoBehaviour, ISpawnable
 
 	private VRRig myRig;
 
+	[SerializeField]
+	private string m_prefabName;
+
 	public bool IsSpawned { get; set; }
 
 	public ECosmeticSelectSide CosmeticSelectedSide { get; set; }
+
+	public string PrefabName
+	{
+		get
+		{
+			return m_prefabName;
+		}
+		set
+		{
+			m_prefabName = value;
+		}
+	}
 
 	public void OnDespawn()
 	{
@@ -44,7 +59,7 @@ public class DJScratchSoundPlayer : MonoBehaviour, ISpawnable
 			NetPlayer netPlayer = ((!(myRig != null)) ? null : ((myRig.creator != null) ? myRig.creator : NetworkSystem.Instance.LocalPlayer));
 			if (netPlayer != null)
 			{
-				_events.Init(netPlayer);
+				_events.Init(netPlayer, m_prefabName);
 			}
 		}
 		_events.Activate += new Action<int, int, object[], PhotonMessageInfoWrapped>(OnPlayEvent);

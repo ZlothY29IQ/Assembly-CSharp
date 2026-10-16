@@ -14,8 +14,9 @@ public abstract class SIGadgetGrenade : SIGadget
 
 	protected GameEntity parentEntity;
 
-	protected new virtual void OnEnable()
+	protected override void OnEnable()
 	{
+		base.OnEnable();
 		rb = GetComponent<Rigidbody>();
 		activatedLocally = false;
 		thrownGadget.OnActivated += HandleActivated;
@@ -23,11 +24,12 @@ public abstract class SIGadgetGrenade : SIGadget
 		thrownGadget.OnHitSurface += HandleHitSurface;
 	}
 
-	protected new virtual void OnDisable()
+	protected override void OnDisable()
 	{
 		thrownGadget.OnActivated -= HandleActivated;
 		thrownGadget.OnThrown -= HandleThrown;
 		thrownGadget.OnHitSurface -= HandleHitSurface;
+		base.OnDisable();
 	}
 
 	protected abstract void HandleActivated();

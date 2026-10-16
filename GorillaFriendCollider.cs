@@ -145,7 +145,7 @@ public class GorillaFriendCollider : MonoBehaviour, IGorillaSliceableSimple
 		for (int i = 0; i < playerRigs.Count; i++)
 		{
 			VRRig vRRig = playerRigs[i];
-			string userid = vRRig.creator.UserId;
+			string userId = vRRig.creator.UserId;
 			float y = vRRig.bodyTransform.transform.position.y;
 			if ((!applyCapsuleYLimits || (y >= capsuleColliderYLimits.x && y <= capsuleColliderYLimits.y)) && ((flag && WithinBounds.PointWithinBoxColliderBounds(vRRig.rigContainer.SpeakerHead.position, thisBox)) || (!flag && flag2 && WithinBounds.PointWithinCapsuleColliderBounds(vRRig.rigContainer.SpeakerHead.position, thisCapsule))))
 			{
@@ -153,8 +153,8 @@ public class GorillaFriendCollider : MonoBehaviour, IGorillaSliceableSimple
 				{
 					num = playerIDsCurrentlyTouching.Count;
 				}
-				int num2 = m_prevPlayerIDsCurrentlyTouching.FindIndex((TouchingPlayerInfo info) => info.UserID == userid);
-				playerIDsCurrentlyTouching.Add((num2 > -1) ? m_prevPlayerIDsCurrentlyTouching[num2] : new TouchingPlayerInfo(userid, Time.time));
+				int num2 = FindPrevTouchingIndex(userId);
+				playerIDsCurrentlyTouching.Add((num2 > -1) ? m_prevPlayerIDsCurrentlyTouching[num2] : new TouchingPlayerInfo(userId, Time.time));
 			}
 		}
 		if (NetworkSystem.Instance.InRoom)
@@ -170,5 +170,17 @@ public class GorillaFriendCollider : MonoBehaviour, IGorillaSliceableSimple
 				ui.TriggerUpdateUI();
 			}
 		}
+	}
+
+	private int FindPrevTouchingIndex(string userid)
+	{
+		for (int i = 0; i < m_prevPlayerIDsCurrentlyTouching.Count; i++)
+		{
+			if (m_prevPlayerIDsCurrentlyTouching[i].UserID == userid)
+			{
+				return i;
+			}
+		}
+		return -1;
 	}
 }

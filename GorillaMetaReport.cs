@@ -41,21 +41,21 @@ public class GorillaMetaReport : MonoBehaviour
 	[SerializeField]
 	private GorillaScoreBoard currentScoreboard;
 
-	private int savedCullingLayers;
+	private int _savedCullingLayers;
 
-	private bool hasSavedCullingMask;
+	private bool _hasSavedCullingMask;
 
-	public bool testPress;
+	public bool TestPress;
 
-	public bool isMoving;
+	public bool IsMoving;
 
-	private float movementTime;
+	private float _movementTime;
 
-	private GTPlayer localPlayer => GTPlayer.Instance;
+	private GTPlayer _localPlayer => GTPlayer.Instance;
 
 	private void Start()
 	{
-		localPlayer.inOverlay = false;
+		_localPlayer.inOverlay = false;
 		MothershipClientApiUnity.OnMessageNotificationSocket += new Action<NotificationsMessageResponse, IntPtr>(OnNotification);
 		base.gameObject.SetActive(value: false);
 	}
@@ -64,7 +64,7 @@ public class GorillaMetaReport : MonoBehaviour
 	{
 		if (!ApplicationQuittingState.IsQuitting)
 		{
-			localPlayer.inOverlay = false;
+			_localPlayer.inOverlay = false;
 			StopAllCoroutines();
 		}
 	}
@@ -197,17 +197,17 @@ public class GorillaMetaReport : MonoBehaviour
 		Camera component = GorillaTagger.Instance.mainCamera.GetComponent<Camera>();
 		if (state)
 		{
-			if (hasSavedCullingMask)
+			if (_hasSavedCullingMask)
 			{
-				component.cullingMask = savedCullingLayers;
-				hasSavedCullingMask = false;
+				component.cullingMask = _savedCullingLayers;
+				_hasSavedCullingMask = false;
 			}
 			return;
 		}
-		if (!hasSavedCullingMask)
+		if (!_hasSavedCullingMask)
 		{
-			savedCullingLayers = component.cullingMask;
-			hasSavedCullingMask = true;
+			_savedCullingLayers = component.cullingMask;
+			_hasSavedCullingMask = true;
 		}
 		component.cullingMask = visibleLayers;
 	}
@@ -216,12 +216,15 @@ public class GorillaMetaReport : MonoBehaviour
 	{
 		ReportText.GetComponent<Text>().text = "NOT CURRENTLY CONNECTED TO A ROOM";
 		ReportText.SetActive(value: false);
-		localPlayer.inOverlay = false;
-		localPlayer.disableMovement = false;
+		_localPlayer.inOverlay = false;
+		_localPlayer.disableMovement = false;
 		closeButton.selected = false;
 		closeButton.isOn = false;
 		closeButton.UpdateColor();
-		localPlayer.InReportMenu = false;
+		_localPlayer.InReportMenu = false;
+		_localPlayer.ResetHands();
+		_localPlayer.SetPlayerVelocity(Vector3.zero);
+		_localPlayer.SetVelocity(Vector3.zero);
 		ToggleLevelVisibility(state: true);
 		base.gameObject.SetActive(value: false);
 		foreach (GorillaPlayerScoreboardLine line in currentScoreboard.lines)
@@ -253,13 +256,13 @@ public class GorillaMetaReport : MonoBehaviour
 	{
 		GameObject mainCamera = GorillaTagger.Instance.mainCamera;
 		rotation = Quaternion.Euler(0f, mainCamera.transform.eulerAngles.y, 0f);
-		scale = localPlayer.turnParent.transform.localScale;
+		scale = _localPlayer.turnParent.transform.localScale;
 		position = mainCamera.transform.position + rotation * playerLocalScreenPosition * scale.x;
 	}
 
 	private void StartOverlay(bool isSanction = false)
 	{
-		if (localPlayer.InReportMenu)
+		if (_localPlayer.InReportMenu)
 		{
 			return;
 		}
@@ -271,9 +274,9 @@ public class GorillaMetaReport : MonoBehaviour
 		occluder.transform.localScale = scale;
 		if (PhotonNetwork.InRoom)
 		{
-			localPlayer.InReportMenu = true;
-			localPlayer.disableMovement = true;
-			localPlayer.inOverlay = true;
+			_localPlayer.InReportMenu = true;
+			_localPlayer.disableMovement = true;
+			_localPlayer.inOverlay = true;
 			base.gameObject.SetActive(value: true);
 			if (PhotonNetwork.InRoom && !isSanction)
 			{
@@ -303,24 +306,24 @@ public class GorillaMetaReport : MonoBehaviour
 		GetIdealScreenPositionRotation(out var position, out var rotation, out var _);
 		float num = Vector3.Distance(reportScoreboard.transform.position, position);
 		float num2 = 1f;
-		if (num > num2 && !isMoving)
+		if (num > num2 && !IsMoving)
 		{
-			isMoving = true;
-			movementTime = 0f;
+			IsMoving = true;
+			_movementTime = 0f;
 		}
-		if (isMoving)
+		if (IsMoving)
 		{
-			movementTime += Time.deltaTime;
-			float num3 = movementTime;
-			reportScoreboard.transform.SetPositionAndRotation(Vector3.Lerp(reportScoreboard.transform.position, position, num3), Quaternion.Lerp(reportScoreboard.transform.rotation, rotation, num3));
+			_movementTime += Time.deltaTime;
+			float movementTime = _movementTime;
+			reportScoreboard.transform.SetPositionAndRotation(Vector3.Lerp(reportScoreboard.transform.position, position, movementTime), Quaternion.Lerp(reportScoreboard.transform.rotation, rotation, movementTime));
 			if (currentScoreboard != null)
 			{
-				currentScoreboard.transform.SetPositionAndRotation(Vector3.Lerp(currentScoreboard.transform.position, position, num3), Quaternion.Lerp(currentScoreboard.transform.rotation, rotation, num3));
+				currentScoreboard.transform.SetPositionAndRotation(Vector3.Lerp(currentScoreboard.transform.position, position, movementTime), Quaternion.Lerp(currentScoreboard.transform.rotation, rotation, movementTime));
 			}
-			if (num3 >= 1f)
+			if (movementTime >= 1f)
 			{
-				isMoving = false;
-				movementTime = 0f;
+				IsMoving = false;
+				_movementTime = 0f;
 			}
 		}
 	}
@@ -329,14 +332,14 @@ public class GorillaMetaReport : MonoBehaviour
 	{
 		if (!(blockButtonsUntilTimestamp > Time.time))
 		{
-			if (SteamVR_Actions.gorillaTag_System.GetState(SteamVR_Input_Sources.LeftHand) && localPlayer.InReportMenu)
+			if (SteamVR_Actions.gorillaTag_System.GetState(SteamVR_Input_Sources.LeftHand) && _localPlayer.InReportMenu)
 			{
 				Teardown();
 				blockButtonsUntilTimestamp = Time.time + 0.75f;
 			}
-			if (localPlayer.InReportMenu)
+			if (_localPlayer.InReportMenu)
 			{
-				localPlayer.inOverlay = true;
+				_localPlayer.inOverlay = true;
 				occluder.transform.position = GorillaTagger.Instance.mainCamera.transform.position;
 				UpdateHandPosRot();
 				CheckDistance();
@@ -346,9 +349,9 @@ public class GorillaMetaReport : MonoBehaviour
 			{
 				Teardown();
 			}
-			if (testPress)
+			if (TestPress)
 			{
-				testPress = false;
+				TestPress = false;
 				StartOverlay();
 			}
 		}
@@ -356,8 +359,8 @@ public class GorillaMetaReport : MonoBehaviour
 
 	private void UpdateHandPosRot()
 	{
-		Transform controllerTransform = localPlayer.GetControllerTransform(isLeftHand: true);
-		Transform controllerTransform2 = localPlayer.GetControllerTransform(isLeftHand: false);
+		Transform controllerTransform = _localPlayer.GetControllerTransform(isLeftHand: true);
+		Transform controllerTransform2 = _localPlayer.GetControllerTransform(isLeftHand: false);
 		rightHandObject.transform.SetPositionAndRotation(controllerTransform2.position, controllerTransform2.rotation * handRotOffset);
 		leftHandObject.transform.SetPositionAndRotation(controllerTransform.position, controllerTransform.rotation * handRotOffset);
 	}

@@ -82,10 +82,9 @@ public class GameHitter : MonoBehaviour, IGameEntityComponent
 		if (gameEntity.IsHeldByLocalPlayer())
 		{
 			PlayVibration(GorillaTagger.Instance.tapHapticStrength, 0.2f);
-			GamePlayer gamePlayer = GamePlayer.GetGamePlayer(gameEntity.heldByActorNumber);
-			if (gamePlayer != null)
+			if (GamePlayer.TryGetGamePlayer(gameEntity.heldByActorNumber, out var out_gamePlayer))
 			{
-				int num = gamePlayer.FindHandIndex(gameEntity.id);
+				int num = out_gamePlayer.FindHandIndex(gameEntity.id);
 				if (num != -1)
 				{
 					GTPlayer.Instance.TempFreezeHand(GamePlayer.IsLeftHand(num), 0.15f);
@@ -113,14 +112,9 @@ public class GameHitter : MonoBehaviour, IGameEntityComponent
 
 	private void PlayVibration(float strength, float duration)
 	{
-		if (!gameEntity.IsHeldByLocalPlayer())
+		if (gameEntity.IsHeldByLocalPlayer() && GamePlayer.TryGetGamePlayer(gameEntity.heldByActorNumber, out var out_gamePlayer))
 		{
-			return;
-		}
-		GamePlayer gamePlayer = GamePlayer.GetGamePlayer(gameEntity.heldByActorNumber);
-		if (!(gamePlayer == null))
-		{
-			int num = gamePlayer.FindHandIndex(gameEntity.id);
+			int num = out_gamePlayer.FindHandIndex(gameEntity.id);
 			if (num != -1)
 			{
 				GorillaTagger.Instance.StartVibration(GamePlayer.IsLeftHand(num), strength, duration);
@@ -180,10 +174,10 @@ public class GameHitter : MonoBehaviour, IGameEntityComponent
 			return;
 		}
 		bool flag = false;
-		GamePlayer gamePlayer = GamePlayer.GetGamePlayer(gameEntity.heldByActorNumber);
-		if (gamePlayer != null)
+		GamePlayer.TryGetGamePlayer(gameEntity.heldByActorNumber, out var out_gamePlayer);
+		if (out_gamePlayer != null)
 		{
-			float handSpeed = GamePlayerLocal.instance.GetHandSpeed(gamePlayer.FindHandIndex(gameEntity.id));
+			float handSpeed = GamePlayerLocal.instance.GetHandSpeed(out_gamePlayer.FindHandIndex(gameEntity.id));
 			num = handSpeed * handSpeed;
 		}
 		if (num < minSwingSpeed * minSwingSpeed)
@@ -201,9 +195,9 @@ public class GameHitter : MonoBehaviour, IGameEntityComponent
 		{
 			Vector3 vector = parentEnemy.transform.position - base.transform.position;
 			vector.Normalize();
-			if (!flag && gamePlayer != null)
+			if (!flag && out_gamePlayer != null)
 			{
-				vector = GamePlayerLocal.instance.GetHandVelocity(gamePlayer.FindHandIndex(gameEntity.id)).normalized;
+				vector = GamePlayerLocal.instance.GetHandVelocity(out_gamePlayer.FindHandIndex(gameEntity.id)).normalized;
 			}
 			float a = Mathf.Sqrt(num);
 			a = Mathf.Min(a, maxImpulseSpeed);

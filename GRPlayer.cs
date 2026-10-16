@@ -476,6 +476,7 @@ public class GRPlayer : MonoBehaviourTick
 
 	private new void OnDisable()
 	{
+		base.OnDisable();
 		Reset();
 	}
 

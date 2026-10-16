@@ -153,6 +153,7 @@ public class CosmeticsProximityReactorManager : MonoBehaviour, IGorillaSliceable
 				}
 				bool flag = false;
 				Vector3 contact = default(Vector3);
+				VRRig sourceRig = null;
 				for (int k = 0; k < gorillaBodyPart.Count; k++)
 				{
 					CosmeticsProximityReactor cosmeticsProximityReactor2 = gorillaBodyPart[k];
@@ -162,15 +163,17 @@ public class CosmeticsProximityReactorManager : MonoBehaviour, IGorillaSliceable
 						float sourceThresholdFor = cosmeticsProximityReactor.GetSourceThresholdFor(cosmeticsProximityReactor2, out any);
 						if (any && AreCollidersWithinThreshold(cosmeticsProximityReactor2, cosmeticsProximityReactor, sourceThresholdFor, out var contactPoint))
 						{
-							cosmeticsProximityReactor.OnSourceBelow(contactPoint, cosmeticsProximityReactor2.gorillaBodyParts, cosmeticsProximityReactor2.GetComponentInParent<VRRig>());
+							VRRig componentInParent = cosmeticsProximityReactor2.GetComponentInParent<VRRig>();
+							cosmeticsProximityReactor.OnSourceBelow(contactPoint, cosmeticsProximityReactor2.gorillaBodyParts, componentInParent);
 							contact = contactPoint;
+							sourceRig = componentInParent;
 							flag = true;
 						}
 					}
 				}
 				if (flag)
 				{
-					cosmeticsProximityReactor.WhileSourceBelow(contact, CosmeticsProximityReactor.GorillaBodyPart.HandLeft | CosmeticsProximityReactor.GorillaBodyPart.HandRight | CosmeticsProximityReactor.GorillaBodyPart.Mouth, (gorillaBodyPart[0] != null) ? gorillaBodyPart[0].GetComponentInParent<VRRig>() : null);
+					cosmeticsProximityReactor.WhileSourceBelow(contact, CosmeticsProximityReactor.GorillaBodyPart.HandLeft | CosmeticsProximityReactor.GorillaBodyPart.HandRight | CosmeticsProximityReactor.GorillaBodyPart.Mouth, sourceRig);
 				}
 				else
 				{

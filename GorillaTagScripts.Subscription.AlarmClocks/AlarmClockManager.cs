@@ -64,6 +64,9 @@ public sealed class AlarmClockManager : MonoBehaviour
 
 	public string ActiveKey { get; private set; } = "";
 
+	[field: OnEnterPlay_SetNull]
+	public static event Action<string> OnActiveKeyChanged;
+
 	private void Start()
 	{
 		if (Instance != null)
@@ -230,6 +233,7 @@ public sealed class AlarmClockManager : MonoBehaviour
 		}
 		PlayerPrefs.SetString("AlarmClock", ActiveKey);
 		PlayerPrefs.Save();
+		AlarmClockManager.OnActiveKeyChanged?.Invoke(ActiveKey);
 	}
 
 	private void OnDestroy()

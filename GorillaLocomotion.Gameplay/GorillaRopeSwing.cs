@@ -252,7 +252,7 @@ public class GorillaRopeSwing : MonoBehaviour, IBuilderPieceComponent
 
 	public Transform GetBone(int index)
 	{
-		if (index >= nodes.Length)
+		if (index < 0 || index >= nodes.Length)
 		{
 			return nodes.Last();
 		}

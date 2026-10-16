@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 
 namespace Voxels;
 
@@ -54,9 +55,29 @@ public class TextureArrayUtil : MonoBehaviour
 		Texture2DArray texture2DArray = new Texture2DArray(width, height, num, textures[0].format, mipChain);
 		for (int i = 0; i < num; i++)
 		{
-			Graphics.CopyTexture(textures[i], 0, texture2DArray, i);
+			CopyToArraySlice(textures[i], texture2DArray, i);
 		}
 		texture2DArray.Apply(updateMipmaps: false, makeNoLongerReadable: true);
 		return texture2DArray;
+	}
+
+	private static void CopyToArraySlice(Texture2D src, Texture2DArray dst, int slice)
+	{
+		if (SystemInfo.IsFormatSupported(src.graphicsFormat, GraphicsFormatUsage.Sample))
+		{
+			Graphics.CopyTexture(src, 0, dst, slice);
+		}
+		else if (src.isReadable)
+		{
+			int num = Mathf.Min(src.mipmapCount, dst.mipmapCount);
+			for (int i = 0; i < num; i++)
+			{
+				dst.SetPixelData(src.GetPixelData<byte>(i), i, slice);
+			}
+		}
+		else
+		{
+			Debug.LogError($"Cannot copy texture \"{src.name}\" into texture array: format {src.format} is not supported by the GPU and the texture is not readable.");
+		}
 	}
 }

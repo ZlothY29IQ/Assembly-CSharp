@@ -37,7 +37,7 @@ public class DecorativeItem : TransferrableObject
 
 	public GameObject shatterVFX;
 
-	private new DecorativeItemState previousItemState = DecorativeItemState.dropped;
+	private DecorativeItemState previousDecorativeItemState = DecorativeItemState.dropped;
 
 	public override bool ShouldBeKinematic()
 	{
@@ -82,11 +82,11 @@ public class DecorativeItem : TransferrableObject
 			itemState = ItemStates.State0;
 		}
 		DecorativeItemState decorativeItemState = (DecorativeItemState)itemState;
-		if (decorativeItemState != previousItemState)
+		if (decorativeItemState != previousDecorativeItemState)
 		{
 			OnStateChanged();
 		}
-		previousItemState = decorativeItemState;
+		previousDecorativeItemState = decorativeItemState;
 	}
 
 	protected override void LateUpdateLocal()
@@ -146,7 +146,7 @@ public class DecorativeItem : TransferrableObject
 		ObjectPools.instance.Instantiate(vfx, base.transform.position);
 	}
 
-	private bool Reparent(Transform _transform)
+	private bool Reparent(Transform parentTransform)
 	{
 		if (!allowReparenting)
 		{
@@ -154,7 +154,7 @@ public class DecorativeItem : TransferrableObject
 		}
 		if ((bool)parent)
 		{
-			parent.SetParent(_transform);
+			parent.SetParent(parentTransform);
 			base.transform.SetParent(parent);
 			return true;
 		}
@@ -211,7 +211,7 @@ public class DecorativeItem : TransferrableObject
 
 	private bool ShouldPlayFX()
 	{
-		if (previousItemState == DecorativeItemState.isHeld || previousItemState == DecorativeItemState.dropped)
+		if (previousDecorativeItemState == DecorativeItemState.isHeld || previousDecorativeItemState == DecorativeItemState.dropped)
 		{
 			return true;
 		}

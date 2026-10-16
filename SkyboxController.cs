@@ -57,7 +57,10 @@ public class SkyboxController : MonoBehaviour
 
 	private void OnValidate()
 	{
-		UpdateSky();
+		if (!Application.isPlaying && base.gameObject.scene.IsValid())
+		{
+			UpdateSky();
+		}
 	}
 
 	private void UpdateTime()

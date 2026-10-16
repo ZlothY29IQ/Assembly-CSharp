@@ -34,8 +34,6 @@ public class PlayFabAuthenticator : MonoBehaviour
 
 		public string PlayFabId;
 
-		public string TitleId;
-
 		public string MothershipEnvId;
 
 		public string MothershipDeploymentId;
@@ -48,8 +46,6 @@ public class PlayFabAuthenticator : MonoBehaviour
 	[Serializable]
 	public class PlayfabAuthRequestData
 	{
-		public string AppId;
-
 		public string Nonce;
 
 		public string OculusId;
@@ -388,7 +384,6 @@ public class PlayFabAuthenticator : MonoBehaviour
 			Platform = platform.ToString(),
 			SessionTicket = _sessionTicket,
 			PlayFabId = _playFabPlayerIdCache,
-			TitleId = PlayFabSettings.TitleId,
 			MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
 			MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
 			MothershipToken = MothershipClientContext.Token,
@@ -433,10 +428,6 @@ public class PlayFabAuthenticator : MonoBehaviour
 	{
 		photonAuthenticator.SetCustomAuthenticationParameters(new Dictionary<string, object>
 		{
-			{
-				"AppId",
-				PlayFabSettings.TitleId
-			},
 			{
 				"AppVersion",
 				NetworkSystemConfig.AppVersion ?? "-1"
@@ -784,7 +775,6 @@ public class PlayFabAuthenticator : MonoBehaviour
 					Platform = platform.ToString(),
 					SessionTicket = _sessionTicket,
 					PlayFabId = _playFabPlayerIdCache,
-					TitleId = PlayFabSettings.TitleId,
 					MothershipEnvId = MothershipClientApiUnity.EnvironmentId,
 					MothershipDeploymentId = MothershipClientApiUnity.DeploymentId,
 					MothershipToken = MothershipClientContext.Token,

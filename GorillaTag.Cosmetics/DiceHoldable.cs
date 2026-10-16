@@ -6,12 +6,27 @@ using UnityEngine;
 
 namespace GorillaTag.Cosmetics;
 
-public class DiceHoldable : TransferrableObject
+public class DiceHoldable : TransferrableObject, PrefabNameSerialized
 {
 	[SerializeField]
 	private DicePhysics dicePhysics;
 
 	private RubberDuckEvents _events;
+
+	[SerializeField]
+	private string m_prefabName;
+
+	public string PrefabName
+	{
+		get
+		{
+			return m_prefabName;
+		}
+		set
+		{
+			m_prefabName = value;
+		}
+	}
 
 	internal override void OnEnable()
 	{
@@ -22,7 +37,7 @@ public class DiceHoldable : TransferrableObject
 			NetPlayer netPlayer = ((base.myOnlineRig != null) ? base.myOnlineRig.creator : ((!(base.myRig != null)) ? null : ((base.myRig.creator != null) ? base.myRig.creator : NetworkSystem.Instance.LocalPlayer)));
 			if (netPlayer != null)
 			{
-				_events.Init(netPlayer);
+				_events.Init(netPlayer, m_prefabName);
 			}
 			else
 			{

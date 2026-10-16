@@ -61,12 +61,12 @@ public class GRGameEntityInteractionPoint : MonoBehaviour
 			Vector3 position2 = base.transform.position;
 			if (Vector3.Magnitude(position - position2) > autoReleaseDistance)
 			{
-				GamePlayer gamePlayer = GamePlayer.GetGamePlayer(gameEntity.heldByActorNumber);
-				if (gamePlayer != null)
+				GamePlayer.TryGetGamePlayer(gameEntity.heldByActorNumber, out var out_gamePlayer);
+				if (out_gamePlayer != null)
 				{
-					gamePlayer.ClearGrabbedIfHeld(gameEntity.id, gameEntity.manager);
+					out_gamePlayer.ClearGrabbedIfHeld(gameEntity.id, gameEntity.manager);
 				}
-				if (gamePlayer != null && GamePlayerLocal.instance.gamePlayer == gamePlayer)
+				if (out_gamePlayer != null && GamePlayerLocal.instance.gamePlayer == out_gamePlayer)
 				{
 					GamePlayerLocal.instance.ClearGrabbedIfHeld(gameEntity.id, gameEntity.manager);
 				}

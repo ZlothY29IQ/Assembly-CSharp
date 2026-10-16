@@ -100,7 +100,7 @@ public class GRKiosk : MonoBehaviour
 		instance.OnGetCurrency = (Action)Delegate.Combine(instance.OnGetCurrency, new Action(OnGetCurrency));
 		LeftPurchaseButton.onPressed += OnLeftPurchaseButtonPressed;
 		RightPurchaseButton.onPressed += OnRightPurchaseButtonPressed;
-		_cosmeticForPurchase = CosmeticsController.instance.allCosmetics.Find(MatchesCosmeticForPurchase);
+		_cosmeticForPurchase = CosmeticsController.instance.FindCosmeticByAnyName(CosmeticNameForPurchase);
 		_purchaseState = (PlayerOwnsItem() ? PurchaseState.AlreadyOwned : PurchaseState.AvailableForPurchase);
 		ProcessPurchaseItemState(null);
 	}

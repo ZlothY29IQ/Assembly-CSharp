@@ -19,7 +19,7 @@ public class CosmeticStand : GorillaPressableButton
 
 	public void InitializeCosmetic()
 	{
-		thisCosmeticItem = CosmeticsController.instance.allCosmetics.Find((CosmeticsController.CosmeticItem x) => thisCosmeticName == x.displayName || thisCosmeticName == x.overrideDisplayName || thisCosmeticName == x.itemName);
+		thisCosmeticItem = CosmeticsController.instance.FindCosmeticByAnyName(thisCosmeticName);
 		if (slotPriceText != null)
 		{
 			slotPriceText.text = thisCosmeticItem.itemCategory.ToString().ToUpper() + " " + thisCosmeticItem.cost;

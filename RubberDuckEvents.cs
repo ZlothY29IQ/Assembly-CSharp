@@ -11,7 +11,7 @@ public class RubberDuckEvents : MonoBehaviour
 
 	public PhotonEvent Deactivate;
 
-	public void Init(NetPlayer player)
+	public void Init(NetPlayer player, string modifier = "")
 	{
 		string text = player.UserId;
 		if (string.IsNullOrEmpty(text))
@@ -20,7 +20,7 @@ public class RubberDuckEvents : MonoBehaviour
 			PlayFabAuthenticator instance = PlayFabAuthenticator.instance;
 			text = ((!isLocal || !(instance != null)) ? player.NickName : instance.GetPlayFabPlayerId());
 		}
-		PlayerIdString = text + "." + base.gameObject.name;
+		PlayerIdString = text + "." + base.gameObject.name + "." + modifier;
 		PlayerId = PlayerIdString.GetStaticHash();
 		Dispose();
 		Activate = new PhotonEvent(string.Format("{0}.{1}", PlayerId, "Activate"));

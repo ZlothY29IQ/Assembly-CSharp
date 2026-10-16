@@ -281,12 +281,12 @@ public class GRToolDirectionalShield : MonoBehaviour, IGameHitter
 		{
 			return false;
 		}
-		GamePlayer gamePlayer = GamePlayer.GetGamePlayer(gameEntity.heldByActorNumber);
-		if (gamePlayer == null)
+		GamePlayer.TryGetGamePlayer(gameEntity.heldByActorNumber, out var out_gamePlayer);
+		if (out_gamePlayer == null)
 		{
 			return false;
 		}
-		int num = gamePlayer.FindHandIndex(gameEntity.id);
+		int num = out_gamePlayer.FindHandIndex(gameEntity.id);
 		if (num == -1)
 		{
 			return false;

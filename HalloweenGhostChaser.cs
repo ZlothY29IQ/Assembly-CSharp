@@ -9,7 +9,7 @@ using UnityEngine;
 using UnityEngine.AI;
 
 [NetworkBehaviourWeaved(5)]
-public class HalloweenGhostChaser : NetworkComponent
+public class HalloweenGhostChaser : AnnoyingNetworkComponent
 {
 	public enum ChaseState
 	{
@@ -181,6 +181,8 @@ public class HalloweenGhostChaser : NetworkComponent
 
 	private float nextPathTimestamp;
 
+	private bool allowedToRun = true;
+
 	[WeaverGenerated]
 	[SerializeField]
 	[DefaultForProperty("Data", 0, 5)]
@@ -328,6 +330,10 @@ public class HalloweenGhostChaser : NetworkComponent
 				}
 				break;
 			}
+		}
+		if (!allowedToRun)
+		{
+			currentState = ChaseState.Dormant;
 		}
 		if (lastState != currentState)
 		{
@@ -583,7 +589,11 @@ public class HalloweenGhostChaser : NetworkComponent
 		}
 		if (Time.time < grabTime + grabDuration)
 		{
-			GorillaTagger.Instance.rigidbody.linearVelocity = Vector3.up * grabSpeed;
+			Rigidbody rigidbody = GorillaTagger.Instance.rigidbody;
+			if (!rigidbody.isKinematic)
+			{
+				rigidbody.linearVelocity = Vector3.up * grabSpeed;
+			}
 			EquipmentInteractor.instance.ForceStopClimbing();
 		}
 	}
@@ -755,6 +765,11 @@ public class HalloweenGhostChaser : NetworkComponent
 		{
 			nextTimeToChasePlayer = Time.time + UnityEngine.Random.Range(minGrabCooldown, maxNextTimeToChasePlayer);
 		}
+	}
+
+	public override void Allowed(bool v)
+	{
+		allowedToRun = v;
 	}
 
 	[WeaverGenerated]

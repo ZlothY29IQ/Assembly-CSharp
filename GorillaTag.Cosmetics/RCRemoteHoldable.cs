@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using GorillaExtensions;
 using GorillaNetworking;
 using Photon.Pun;
+using Unity.Collections;
 using UnityEngine;
 using UnityEngine.XR;
 using UnityEngine.XR.Interaction.Toolkit;
 
 namespace GorillaTag.Cosmetics;
 
-public class RCRemoteHoldable : TransferrableObject, ISnapTurnOverride
+public class RCRemoteHoldable : TransferrableObject, ISnapTurnOverride, PrefabNameSerialized
 {
 	public struct RCInput
 	{
@@ -60,9 +61,25 @@ public class RCRemoteHoldable : TransferrableObject, ISnapTurnOverride
 
 	private object[] emptyArgs = new object[0];
 
+	[SerializeField]
+	[ReadOnly]
+	private string m_prefabName;
+
 	public XRNode XRNode => xrNode;
 
 	public RCVehicle Vehicle => targetVehicle;
+
+	public string PrefabName
+	{
+		get
+		{
+			return m_prefabName;
+		}
+		set
+		{
+			m_prefabName = value;
+		}
+	}
 
 	public bool TurnOverrideActive()
 	{

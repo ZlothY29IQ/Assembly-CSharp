@@ -1,9 +1,10 @@
 using System;
 using GorillaExtensions;
+using GorillaTag;
 using Photon.Pun;
 using UnityEngine;
 
-public class ElfLauncher : MonoBehaviour
+public class ElfLauncher : MonoBehaviour, PrefabNameSerialized
 {
 	[SerializeField]
 	protected TransferrableObject parentHoldable;
@@ -46,7 +47,22 @@ public class ElfLauncher : MonoBehaviour
 
 	private float currentClickCrankAmount;
 
+	[SerializeField]
+	private string m_prefabName;
+
 	private NetPlayer m_player;
+
+	public string PrefabName
+	{
+		get
+		{
+			return m_prefabName;
+		}
+		set
+		{
+			m_prefabName = value;
+		}
+	}
 
 	private void OnEnable()
 	{
@@ -57,7 +73,7 @@ public class ElfLauncher : MonoBehaviour
 			if (netPlayer != null)
 			{
 				m_player = netPlayer;
-				_events.Init(netPlayer);
+				_events.Init(netPlayer, m_prefabName);
 			}
 			else
 			{

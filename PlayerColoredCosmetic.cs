@@ -12,7 +12,7 @@ public class PlayerColoredCosmetic : MonoBehaviour
 		[SerializeField]
 		private string shaderColorProperty;
 
-		private int hashId;
+		private int _hashId;
 
 		[SerializeField]
 		private Renderer meshRenderer;
@@ -20,16 +20,20 @@ public class PlayerColoredCosmetic : MonoBehaviour
 		[SerializeField]
 		private int materialIndex;
 
-		private Material instancedMaterial;
+		private Material _instancedMaterial;
 
-		private Material defaultMaterial;
+		private Material _defaultMaterial;
 
-		public void Init(bool dontCreateMaterialInstance)
+		private bool _isValid;
+
+		public void Init(bool dontCreateMaterialInstance, Component owner)
 		{
-			hashId = Shader.PropertyToID(shaderColorProperty);
+			_isValid = false;
+			_hashId = Shader.PropertyToID(shaderColorProperty);
 			if (meshRenderer == null)
 			{
-				Debug.LogError("ERROR!!!  ColoringRule.Init: Default meshRenderer cannot be null! Path=" + meshRenderer.transform.GetPathQ());
+				Debug.LogError("ERROR!!!  ColoringRule.Init: Default meshRenderer cannot be null! Path=" + owner.transform.GetPathQ(), owner);
+				return;
 			}
 			List<Material> value;
 			using (CollectionPool<List<Material>, Material>.Get(out value))
@@ -38,25 +42,34 @@ public class PlayerColoredCosmetic : MonoBehaviour
 				if (materialIndex < 0 || materialIndex >= value.Count)
 				{
 					Debug.LogError("ERROR!!!  " + $"ColoringRule.Init: Material index {materialIndex} is out of range! Path=" + meshRenderer.transform.GetPathQ(), meshRenderer);
+					return;
 				}
-				defaultMaterial = value[materialIndex];
-				if (defaultMaterial == null)
+				_defaultMaterial = value[materialIndex];
+				if (_defaultMaterial == null)
 				{
 					Debug.LogError("ERROR!!!  ColoringRule.Init: Default material cannot be null! Path=" + meshRenderer.transform.GetPathQ(), meshRenderer);
+					return;
 				}
 				if (dontCreateMaterialInstance)
 				{
-					instancedMaterial = value[materialIndex];
-					return;
+					_instancedMaterial = value[materialIndex];
 				}
-				instancedMaterial = new Material(value[materialIndex]);
-				value[materialIndex] = instancedMaterial;
-				meshRenderer.SetSharedMaterials(value);
+				else
+				{
+					_instancedMaterial = new Material(value[materialIndex]);
+					value[materialIndex] = _instancedMaterial;
+					meshRenderer.SetSharedMaterials(value);
+				}
+				_isValid = true;
 			}
 		}
 
 		public void Apply(Color color, bool dontCreateMaterialInstance)
 		{
+			if (!_isValid)
+			{
+				return;
+			}
 			List<Material> value;
 			if (dontCreateMaterialInstance)
 			{
@@ -65,22 +78,20 @@ public class PlayerColoredCosmetic : MonoBehaviour
 					meshRenderer.GetSharedMaterials(value);
 					if (materialIndex >= 0 && materialIndex < value.Count && value[materialIndex] != null)
 					{
-						value[materialIndex].SetColor(hashId, color);
+						value[materialIndex].SetColor(_hashId, color);
 					}
 					return;
 				}
 			}
-			instancedMaterial.SetColor(hashId, color);
+			_instancedMaterial.SetColor(_hashId, color);
 		}
 	}
 
-	private const string preLog = "[GT/PlayerColoredCosmetic]  ";
-
 	private const string preErr = "ERROR!!!  ";
 
-	private bool didInit;
+	private bool _didInit;
 
-	private VRRig rig;
+	private VRRig _rig;
 
 	[SerializeField]
 	private Color lerpToColor = Color.white;
@@ -98,30 +109,30 @@ public class PlayerColoredCosmetic : MonoBehaviour
 	[SerializeField]
 	private ParticleSystem[] particleSystems;
 
-	private ParticleSystem.MainModule[] particleMains;
+	private ParticleSystem.MainModule[] _particleMains;
 
 	public void Awake()
 	{
 		for (int i = 0; i < coloringRules.Length; i++)
 		{
-			coloringRules[i].Init(dontCreateMaterialInstance);
+			coloringRules[i].Init(dontCreateMaterialInstance, this);
 		}
 	}
 
 	private void InitIfNeeded()
 	{
-		if (!didInit)
+		if (!_didInit)
 		{
-			didInit = true;
-			rig = GetComponentInParent<VRRig>();
-			if (rig == null && GorillaTagger.Instance != null)
+			_didInit = true;
+			_rig = GetComponentInParent<VRRig>();
+			if (_rig == null && GorillaTagger.Instance != null)
 			{
-				rig = GorillaTagger.Instance.offlineVRRig;
+				_rig = GorillaTagger.Instance.offlineVRRig;
 			}
-			particleMains = new ParticleSystem.MainModule[particleSystems.Length];
+			_particleMains = new ParticleSystem.MainModule[particleSystems.Length];
 			for (int i = 0; i < particleSystems.Length; i++)
 			{
-				particleMains[i] = particleSystems[i].main;
+				_particleMains[i] = particleSystems[i].main;
 			}
 		}
 	}
@@ -129,18 +140,18 @@ public class PlayerColoredCosmetic : MonoBehaviour
 	private void OnEnable()
 	{
 		InitIfNeeded();
-		if (rig != null)
+		if (_rig != null)
 		{
-			rig.OnColorChanged += UpdateColor;
-			UpdateColor(rig.playerColor);
+			_rig.OnColorChanged += UpdateColor;
+			UpdateColor(_rig.playerColor);
 		}
 	}
 
 	private void OnDisable()
 	{
-		if (rig != null)
+		if (_rig != null)
 		{
-			rig.OnColorChanged -= UpdateColor;
+			_rig.OnColorChanged -= UpdateColor;
 		}
 	}
 
@@ -154,7 +165,7 @@ public class PlayerColoredCosmetic : MonoBehaviour
 		}
 		for (int j = 0; j < particleSystems.Length; j++)
 		{
-			particleMains[j].startColor = color2;
+			_particleMains[j].startColor = color2;
 		}
 	}
 }

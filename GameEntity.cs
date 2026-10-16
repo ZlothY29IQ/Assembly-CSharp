@@ -7,6 +7,7 @@ using Unity.Collections;
 using UnityEngine;
 using UnityEngine.XR;
 
+[SelectionBase]
 public class GameEntity : MonoBehaviour
 {
 	public class RendererSet
@@ -77,6 +78,9 @@ public class GameEntity : MonoBehaviour
 
 	[NonSerialized]
 	internal float scenePlacedHomeScale;
+
+	[NonSerialized]
+	internal GTZone scenePlacedZone = GTZone.none;
 
 	public Action OnGrabbed;
 
@@ -231,20 +235,16 @@ public class GameEntity : MonoBehaviour
 	{
 		id = GameEntityId.Invalid;
 		rigidBody = GetComponent<Rigidbody>();
-		if (gravityController == null)
+		if ((bool)rigidBody)
 		{
-			if (TryGetComponent<MonkeGravityController>(out gravityController))
-			{
-				if (rigidBody != null)
-				{
-					gravityController.GlobalGravityIntent = rigidBody.useGravity;
-					rigidBody.useGravity = false;
-				}
-			}
-			else
+			if (!gravityController && !TryGetComponent<MonkeGravityController>(out gravityController) && (rigidBody.useGravity || !rigidBody.isKinematic))
 			{
 				gravityController = base.gameObject.AddComponent<MonkeGravityController>();
 			}
+		}
+		else
+		{
+			pickupable = false;
 		}
 		heldByActorNumber = -1;
 		heldByHandIndex = -1;

@@ -226,7 +226,7 @@ public class KIDUIButton : Button, IPointerEnterHandler, IEventSystemHandler, IP
 			XRRayInteractor xRRayInteractor = InputModule.GetInteractor(eventData.pointerId) as XRRayInteractor;
 			if ((bool)xRRayInteractor)
 			{
-				xRRayInteractor.xrController.SendHapticImpulse(_highlightedVibrationStrength, _highlightedVibrationDuration);
+				xRRayInteractor.SendHapticImpulse(_highlightedVibrationStrength, _highlightedVibrationDuration);
 			}
 		}
 	}
@@ -241,7 +241,7 @@ public class KIDUIButton : Button, IPointerEnterHandler, IEventSystemHandler, IP
 			XRRayInteractor xRRayInteractor = InputModule.GetInteractor(eventData.pointerId) as XRRayInteractor;
 			if ((bool)xRRayInteractor)
 			{
-				xRRayInteractor.xrController.SendHapticImpulse(_pressedVibrationStrength, _pressedVibrationDuration);
+				xRRayInteractor.SendHapticImpulse(_pressedVibrationStrength, _pressedVibrationDuration);
 			}
 		}
 	}

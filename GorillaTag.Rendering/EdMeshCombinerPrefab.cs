@@ -404,20 +404,26 @@ public class EdMeshCombinerPrefab : MonoBehaviour
 			}
 			int num3 = 0;
 			int num4 = 0;
+			string text = string.Empty;
+			Material[] sharedMaterials = item4.sharedMaterials;
 			for (int j = 0; j < num2; j++)
 			{
 				num3 += ((sharedMesh.GetSubMesh(j).topology != MeshTopology.Triangles) ? 1 : 0);
-				num4 += ((item4.sharedMaterials[j] == null) ? 1 : 0);
+				if (sharedMaterials[j] == null)
+				{
+					num4++;
+					text = ((!string.IsNullOrEmpty(text)) ? (text + $", {j}") : j.ToString());
+				}
 			}
 			if (num3 > 0)
 			{
-				string text = "?????";
-				Debug.LogError($"Cannot combine mesh \"{sharedMesh.name}\" because it has {num3} submeshes with " + "a non-triangle topology. Verify FBX import settings does not have \"Keep Quads\" on.\n  - Asset path=\"" + text + "\"\n  - Path in scene=" + item4.transform.GetPathQ(), sharedMesh);
+				string text2 = "?????";
+				Debug.LogError($"Cannot combine mesh \"{sharedMesh.name}\" because it has {num3} submeshes with " + "a non-triangle topology. Verify FBX import settings does not have \"Keep Quads\" on.\n  - Asset path=\"" + text2 + "\"\n  - Path in scene=" + item4.transform.GetPathQ(), sharedMesh);
 				continue;
 			}
 			if (num4 > 0)
 			{
-				Debug.LogError("EdMeshCombinerPrefab: Cannot combine Renderer \"" + combiner.name + "\" because it does not have " + $"{num4} materials assigned. Path in scene={combiner.transform.GetPathQ()}", combiner);
+				Debug.LogError("EdMeshCombinerPrefab: Cannot combine Renderer \"" + item4.name + "\" because " + $"{num4} of its {num2} material slots are null " + "(slot indices: " + text + ").\n  - Path in scene=" + item4.transform.GetPathQ() + "\n  - Combiner path in scene=" + combiner.transform.GetPathQ(), item4);
 				continue;
 			}
 			for (int k = 0; k < num2; k++)

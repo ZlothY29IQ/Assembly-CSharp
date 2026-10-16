@@ -1,5 +1,4 @@
 using System;
-using BoingKit;
 using FastSurfaceNets;
 using GorillaLocomotion.Gameplay;
 using GorillaTag.Rendering;
@@ -49,8 +48,6 @@ internal class __JobReflectionRegistrationOutput__1221673671587648887
 			IJobParallelForExtensions.EarlyJobInit<MeshUtilities.VertexNormalJob>();
 			IJobExtensions.EarlyJobInit<SurfaceNetsJob>();
 			IJobExtensions.EarlyJobInit<AssembleVertexDataJob>();
-			IJobParallelForExtensions.EarlyJobInit<BoingWorkAsynchronous.BehaviorJob>();
-			IJobParallelForExtensions.EarlyJobInit<BoingWorkAsynchronous.ReactorJob>();
 		}
 		catch (Exception ex)
 		{

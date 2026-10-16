@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
 using GorillaExtensions;
+using GorillaTag;
 using Photon.Pun;
 using UnityEngine;
 
 namespace Cosmetics;
 
 [RequireComponent(typeof(TransferrableObject))]
-public class CosmeticParticleSurfaceEffect : MonoBehaviour, ITickSystemTick
+public class CosmeticParticleSurfaceEffect : MonoBehaviour, ITickSystemTick, PrefabNameSerialized
 {
 	[Tooltip("autoStop particle system this many seconds after starting")]
 	[SerializeField]
@@ -82,6 +83,21 @@ public class CosmeticParticleSurfaceEffect : MonoBehaviour, ITickSystemTick
 
 	private List<SeedPacketTriggerHandler> surfaceEffects = new List<SeedPacketTriggerHandler>(10);
 
+	[SerializeField]
+	private string m_prefabName;
+
+	public string PrefabName
+	{
+		get
+		{
+			return m_prefabName;
+		}
+		set
+		{
+			m_prefabName = value;
+		}
+	}
+
 	public bool TickRunning { get; set; }
 
 	private void Awake()
@@ -101,7 +117,7 @@ public class CosmeticParticleSurfaceEffect : MonoBehaviour, ITickSystemTick
 			owner = ((transferrableObject.myOnlineRig != null) ? transferrableObject.myOnlineRig.creator : ((transferrableObject.myRig != null) ? (transferrableObject.myRig.creator ?? NetworkSystem.Instance.LocalPlayer) : null));
 			if (owner != null)
 			{
-				_events.Init(owner);
+				_events.Init(owner, m_prefabName);
 				isLocal = owner.IsLocal;
 			}
 		}

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using GorillaNetworking;
 using GorillaTagScripts.VirtualStumpCustomMaps;
 using GorillaTagScripts.VirtualStumpCustomMaps.UI;
 using Modio;
@@ -252,9 +253,12 @@ public class CustomMapsDetailsScreen : CustomMapsTerminalScreen
 
 	private void OnModUpdated()
 	{
-		ModRating currentUserRating = currentMapMod.CurrentUserRating;
-		rateUpButton.SetButtonActive(currentUserRating == ModRating.Positive);
-		rateDownButton.SetButtonActive(currentUserRating == ModRating.Negative);
+		if (currentMapMod != null)
+		{
+			ModRating currentUserRating = currentMapMod.CurrentUserRating;
+			rateUpButton.SetButtonActive(currentUserRating == ModRating.Positive);
+			rateDownButton.SetButtonActive(currentUserRating == ModRating.Negative);
+		}
 	}
 
 	private void OnModIOLoggedIn()
@@ -331,6 +335,11 @@ public class CustomMapsDetailsScreen : CustomMapsTerminalScreen
 		if (mod.Id != ModId.Null)
 		{
 			pendingModId = 0L;
+			if (currentMapMod != null)
+			{
+				currentMapMod.OnModUpdated -= OnModUpdated;
+			}
+			mod.OnModUpdated -= OnModUpdated;
 			currentMapMod = mod;
 			hasModProfile = true;
 			currentMapMod.OnModUpdated += OnModUpdated;
@@ -788,11 +797,6 @@ public class CustomMapsDetailsScreen : CustomMapsTerminalScreen
 	private bool CanChangeMapState(bool load, out string disallowedReason)
 	{
 		disallowedReason = "";
-		if (NetworkSystem.Instance.InRoom)
-		{
-			_ = NetworkSystem.Instance.SessionIsPrivate;
-			return true;
-		}
 		return true;
 	}
 
@@ -809,6 +813,7 @@ public class CustomMapsDetailsScreen : CustomMapsTerminalScreen
 		}
 		deleteButton.gameObject.SetActive(value: false);
 		subscriptionToggleButton.gameObject.SetActive(value: false);
+		CustomMapNetworkJoinTrigger.SuppressJoins = false;
 		GTMapLoadSource loadSource = ((CustomMapsTerminal.PreviousScreen == CustomMapsTerminal.ScreenType.SearchMods) ? GTMapLoadSource.terminal_search : GTMapLoadSource.terminal_browse);
 		VirtualStumpSerializer.Instance.LoadMapSynced(GetModId(), loadSource);
 	}

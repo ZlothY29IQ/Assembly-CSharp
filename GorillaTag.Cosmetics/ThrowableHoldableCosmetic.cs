@@ -9,7 +9,7 @@ using UnityEngine.Serialization;
 
 namespace GorillaTag.Cosmetics;
 
-public class ThrowableHoldableCosmetic : TransferrableObject
+public class ThrowableHoldableCosmetic : TransferrableObject, PrefabNameSerialized
 {
 	[Tooltip("Projectile prefab from the global object pool that gets spawned when this object is thrown")]
 	[FormerlySerializedAs("firecrackerProjectilePrefab")]
@@ -43,6 +43,21 @@ public class ThrowableHoldableCosmetic : TransferrableObject
 
 	private RubberDuckEvents _events;
 
+	[SerializeField]
+	private string m_prefabName;
+
+	public string PrefabName
+	{
+		get
+		{
+			return m_prefabName;
+		}
+		set
+		{
+			m_prefabName = value;
+		}
+	}
+
 	internal override void OnEnable()
 	{
 		base.OnEnable();
@@ -52,7 +67,7 @@ public class ThrowableHoldableCosmetic : TransferrableObject
 			NetPlayer netPlayer = ((base.myOnlineRig != null) ? base.myOnlineRig.creator : ((!(base.myRig != null)) ? null : ((base.myRig.creator != null) ? base.myRig.creator : NetworkSystem.Instance.LocalPlayer)));
 			if (netPlayer != null)
 			{
-				_events.Init(netPlayer);
+				_events.Init(netPlayer, m_prefabName);
 			}
 		}
 		if (_events != null)

@@ -140,7 +140,7 @@ public class PropHuntHandFollower : MonoBehaviour, ICallBack
 		int num = GorillaPropHuntGameManager.instance.GetSeed();
 		if (NetworkSystem.Instance.InRoom)
 		{
-			num += attachedToRig.OwningNetPlayer.ActorNumber;
+			num += attachedToRig.Creator.ActorNumber;
 		}
 		SRand sRand = new SRand(num);
 		string cosmeticId = GorillaPropHuntGameManager.instance.GetCosmeticId(sRand.NextUInt());

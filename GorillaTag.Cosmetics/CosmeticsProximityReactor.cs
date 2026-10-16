@@ -68,15 +68,33 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 
 		public UnityEvent<Vector3> onBelowLocal;
 
+		[Tooltip("Same as OnBelow Local, but invoked with the rig that owns the Gorilla body part in range.")]
+		public UnityEvent<VRRig> onBelowRigLocal;
+
 		public UnityEvent<Vector3> onBelowShared;
+
+		[Tooltip("Same as OnBelow Shared, but invoked with the rig that owns the Gorilla body part in range.")]
+		public UnityEvent<VRRig> onBelowRigShared;
 
 		public UnityEvent<Vector3> whileBelowLocal;
 
+		[Tooltip("Same as WhileBelow Local, but invoked with the rig that owns the Gorilla body part in range.")]
+		public UnityEvent<VRRig> whileBelowRigLocal;
+
 		public UnityEvent<Vector3> whileBelowShared;
+
+		[Tooltip("Same as WhileBelow Shared, but invoked with the rig that owns the Gorilla body part in range.")]
+		public UnityEvent<VRRig> whileBelowRigShared;
 
 		public UnityEvent onAboveLocal;
 
+		[Tooltip("Same as OnAbove Local, but invoked with the last rig that was in range.")]
+		public UnityEvent<VRRig> onAboveRigLocal;
+
 		public UnityEvent onAboveShared;
+
+		[Tooltip("Same as OnAbove Shared, but invoked with the last rig that was in range.")]
+		public UnityEvent<VRRig> onAboveRigShared;
 
 		[NonSerialized]
 		public bool wasBelow;
@@ -86,6 +104,9 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 
 		[NonSerialized]
 		public float lastEffectTime = -9999f;
+
+		[NonSerialized]
+		public VRRig lastBelowRig;
 
 		public bool IsCosmeticToCosmetic()
 		{
@@ -153,41 +174,70 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 			return now - lastEffectTime >= cooldownTime;
 		}
 
-		public void FireBelow(VRRig rig, Vector3 contact, float now)
+		public void FireBelow(VRRig rig, Vector3 contact, float now, VRRig sourceRig = null)
 		{
-			if (!wasBelow && CanPlay(now))
+			if (wasBelow || !CanPlay(now))
 			{
+				return;
+			}
+			if (rig != null && rig.isLocal)
+			{
+				onBelowLocal?.Invoke(contact);
+			}
+			onBelowShared?.Invoke(contact);
+			if (sourceRig != null)
+			{
+				lastBelowRig = sourceRig;
 				if (rig != null && rig.isLocal)
 				{
-					onBelowLocal?.Invoke(contact);
+					onBelowRigLocal?.Invoke(sourceRig);
 				}
-				onBelowShared?.Invoke(contact);
-				wasBelow = true;
-				lastEffectTime = now;
+				onBelowRigShared?.Invoke(sourceRig);
 			}
+			wasBelow = true;
+			lastEffectTime = now;
 		}
 
-		public void FireWhile(VRRig rig, Vector3 contact)
+		public void FireWhile(VRRig rig, Vector3 contact, VRRig sourceRig = null)
 		{
 			if (rig != null && rig.isLocal)
 			{
 				whileBelowLocal?.Invoke(contact);
 			}
 			whileBelowShared?.Invoke(contact);
+			if (sourceRig != null)
+			{
+				lastBelowRig = sourceRig;
+				if (rig != null && rig.isLocal)
+				{
+					whileBelowRigLocal?.Invoke(sourceRig);
+				}
+				whileBelowRigShared?.Invoke(sourceRig);
+			}
 		}
 
 		public void FireAbove(VRRig rig)
 		{
-			if (wasBelow)
+			if (!wasBelow)
+			{
+				return;
+			}
+			if (rig != null && rig.isLocal)
+			{
+				onAboveLocal?.Invoke();
+			}
+			onAboveShared?.Invoke();
+			if (lastBelowRig != null)
 			{
 				if (rig != null && rig.isLocal)
 				{
-					onAboveLocal?.Invoke();
+					onAboveRigLocal?.Invoke(lastBelowRig);
 				}
-				onAboveShared?.Invoke();
-				wasBelow = false;
-				isMatched = false;
+				onAboveRigShared?.Invoke(lastBelowRig);
 			}
+			lastBelowRig = null;
+			wasBelow = false;
+			isMatched = false;
 		}
 
 		public bool AllowsRig(VRRig myRig, VRRig otherRig)
@@ -484,7 +534,7 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 		{
 			if (block.mode == InteractionMode.GorillaBodyToCosmetic && block.AcceptsGorillaBodyPart(kind) && block.AllowsRig(MyRig, sourceRig))
 			{
-				block.FireBelow(MyRig, contact, time);
+				block.FireBelow(MyRig, contact, time, sourceRig);
 				if (block.wasBelow)
 				{
 					block.isMatched = true;
@@ -504,7 +554,7 @@ public class CosmeticsProximityReactor : MonoBehaviour, ISpawnable
 		{
 			if (block.mode == InteractionMode.GorillaBodyToCosmetic && block.AcceptsGorillaBodyPart(kind) && block.isMatched && block.AllowsRig(MyRig, sourceRig))
 			{
-				block.FireWhile(MyRig, contact);
+				block.FireWhile(MyRig, contact, sourceRig);
 			}
 		}
 	}

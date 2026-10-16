@@ -58,7 +58,7 @@ public class BuilderItem : TransferrableObject
 
 	public GameObject placeVFX;
 
-	private new BuilderItemState previousItemState = BuilderItemState.dropped;
+	private BuilderItemState previousBuilderItemState = BuilderItemState.dropped;
 
 	public override bool ShouldBeKinematic()
 	{
@@ -153,11 +153,11 @@ public class BuilderItem : TransferrableObject
 			itemState = ItemStates.State0;
 		}
 		BuilderItemState builderItemState = (BuilderItemState)itemState;
-		if (builderItemState != previousItemState)
+		if (builderItemState != previousBuilderItemState)
 		{
 			OnStateChanged();
 		}
-		previousItemState = builderItemState;
+		previousBuilderItemState = builderItemState;
 		if (enableCollidersWhenReady)
 		{
 			bool flag = IsOverlapping(EquipmentInteractor.instance.overlapInteractionPointsRight) || IsOverlapping(EquipmentInteractor.instance.overlapInteractionPointsLeft);
@@ -247,7 +247,7 @@ public class BuilderItem : TransferrableObject
 		ObjectPools.instance.Instantiate(vfx, base.transform.position);
 	}
 
-	private bool Reparent(Transform _transform)
+	private bool Reparent(Transform parentTransform)
 	{
 		if (!allowReparenting)
 		{
@@ -255,7 +255,7 @@ public class BuilderItem : TransferrableObject
 		}
 		if ((bool)parent)
 		{
-			parent.SetParent(_transform);
+			parent.SetParent(parentTransform);
 			base.transform.SetParent(parent);
 			return true;
 		}
@@ -264,7 +264,7 @@ public class BuilderItem : TransferrableObject
 
 	private bool ShouldPlayFX()
 	{
-		if (previousItemState == BuilderItemState.isHeld || previousItemState == BuilderItemState.dropped)
+		if (previousBuilderItemState == BuilderItemState.isHeld || previousBuilderItemState == BuilderItemState.dropped)
 		{
 			return true;
 		}

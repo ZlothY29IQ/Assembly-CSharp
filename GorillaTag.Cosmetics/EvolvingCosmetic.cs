@@ -7,7 +7,7 @@ using UnityEngine.Events;
 namespace GorillaTag.Cosmetics;
 
 [Obsolete]
-public class EvolvingCosmetic : MonoBehaviour, ITickSystemTick
+public class EvolvingCosmetic : MonoBehaviour, ITickSystemTick, PrefabNameSerialized
 {
 	[Serializable]
 	private class EvolutionStage
@@ -149,7 +149,22 @@ public class EvolvingCosmetic : MonoBehaviour, ITickSystemTick
 
 	private Coroutine sendProgressDelayCoroutine;
 
+	[SerializeField]
+	private string m_prefabName;
+
 	private int LoopMaxValue => stages.Length;
+
+	public string PrefabName
+	{
+		get
+		{
+			return m_prefabName;
+		}
+		set
+		{
+			m_prefabName = value;
+		}
+	}
 
 	public bool TickRunning { get; set; }
 
@@ -181,7 +196,7 @@ public class EvolvingCosmetic : MonoBehaviour, ITickSystemTick
 			NetPlayer netPlayer = myRig.creator ?? NetworkSystem.Instance.LocalPlayer;
 			if (netPlayer != null)
 			{
-				networkEvents.Init(netPlayer);
+				networkEvents.Init(netPlayer, m_prefabName);
 				TickSystem<object>.AddTickCallback(this);
 				NetworkSystem.Instance.OnPlayerJoined += new Action<NetPlayer>(SendElapsedTime);
 				networkEvents.Activate += new Action<int, int, object[], PhotonMessageInfoWrapped>(ReceiveElapsedTime);

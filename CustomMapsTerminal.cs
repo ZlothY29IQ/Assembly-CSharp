@@ -567,6 +567,32 @@ public class CustomMapsTerminal : MonoBehaviour
 		}
 	}
 
+	public static void ReleaseLocalTerminalControl()
+	{
+		if (!hasInstance || localDriverID == -2 || !IsDriver)
+		{
+			return;
+		}
+		if (!IsLocalOnly)
+		{
+			if (!(VirtualStumpSerializer.Instance == null))
+			{
+				if (VirtualStumpSerializer.Instance.HasAuthority)
+				{
+					HandleTerminalControlStatusChangeRequest(lockedStatus: false, LocalPlayerID);
+				}
+				else
+				{
+					VirtualStumpSerializer.Instance.RequestTerminalControlStatusChange(lockedStatus: false);
+				}
+			}
+		}
+		else
+		{
+			SetTerminalControlStatus(isLocked: false, LocalPlayerID);
+		}
+	}
+
 	private static void ShowTerminalControlScreen()
 	{
 		if (hasInstance)

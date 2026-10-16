@@ -7,7 +7,7 @@ using UnityEngine.Events;
 
 namespace GorillaTag.Cosmetics;
 
-public class ChickenSword : MonoBehaviour
+public class ChickenSword : MonoBehaviour, PrefabNameSerialized
 {
 	private enum SwordState
 	{
@@ -56,6 +56,21 @@ public class ChickenSword : MonoBehaviour
 
 	private CallLimiter callLimiter = new CallLimiter(10, 2f);
 
+	[SerializeField]
+	private string m_prefabName;
+
+	public string PrefabName
+	{
+		get
+		{
+			return m_prefabName;
+		}
+		set
+		{
+			m_prefabName = value;
+		}
+	}
+
 	private void Awake()
 	{
 		lastHitTime = float.PositiveInfinity;
@@ -70,7 +85,7 @@ public class ChickenSword : MonoBehaviour
 			NetPlayer netPlayer = ((transferrableObject.myOnlineRig != null) ? transferrableObject.myOnlineRig.creator : ((!(transferrableObject.myRig != null)) ? null : ((transferrableObject.myRig.creator != null) ? transferrableObject.myRig.creator : NetworkSystem.Instance.LocalPlayer)));
 			if (netPlayer != null)
 			{
-				_events.Init(netPlayer);
+				_events.Init(netPlayer, m_prefabName);
 			}
 			else
 			{

@@ -158,7 +158,7 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 
 	public List<GameEntity> tempFactoryItems;
 
-	private Dictionary<int, GameObject> itemPrefabFactory;
+	private static readonly Dictionary<int, GameObject> itemPrefabFactory = new Dictionary<int, GameObject>(1024);
 
 	private Dictionary<int, int> priceLookupByEntityId;
 
@@ -219,8 +219,6 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 
 	private int nextNetId = 1;
 
-	private string cachedZoneSceneName = string.Empty;
-
 	public CallLimitersList<CallLimiter, RPC> m_RpcSpamChecks = new CallLimitersList<CallLimiter, RPC>();
 
 	private bool scenePlacedEntitiesRegistered;
@@ -244,7 +242,7 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 	private byte[] tempSerializeGameState = new byte[15360];
 
 	[OnEnterPlay_Clear]
-	private static readonly Dictionary<string, List<GameEntity>> s_scenePlacedEntities = new Dictionary<string, List<GameEntity>>();
+	private static readonly Dictionary<GTZone, List<GameEntity>> s_scenePlacedEntities = new Dictionary<GTZone, List<GameEntity>>();
 
 	[OnEnterPlay_Clear]
 	private static readonly Dictionary<int, string> s_scenePlacedHomeScenes = new Dictionary<int, string>();
@@ -320,8 +318,7 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 			return;
 		}
 		scenePlacedEntitiesRegistered = true;
-		string zoneSceneName = GetZoneSceneName();
-		s_scenePlacedEntities.TryGetValue(zoneSceneName, out var value);
+		s_scenePlacedEntities.TryGetValue(zone, out var value);
 		if (value != null)
 		{
 			for (int i = 0; i < value.Count; i++)
@@ -1046,7 +1043,6 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 				}
 			}
 		}
-		itemPrefabFactory = new Dictionary<int, GameObject>(1024);
 		priceLookupByEntityId = new Dictionary<int, int>();
 		for (int i = 0; i < tempFactoryItems.Count; i++)
 		{
@@ -1060,7 +1056,7 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 			{
 				priceLookupByEntityId.Add(staticHash, 50);
 			}
-			itemPrefabFactory.Add(staticHash, gameObject);
+			AddToFactory(gameObject);
 			utf16ValueStringBuilder.AppendFormat("    - name=\"{0}\", typeId={1}\n", gameObject.name, staticHash);
 			if (utf16ValueStringBuilder.Length > 5000)
 			{
@@ -1075,16 +1071,41 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 		}
 	}
 
-	public void AddToFactory(IEnumerable<GameEntity> items)
+	public static void AddToFactory(IEnumerable<GameEntity> items)
 	{
 		foreach (GameEntity item in items)
 		{
-			GameObject gameObject = item.gameObject;
-			int staticHash = gameObject.name.GetStaticHash();
-			if (!itemPrefabFactory.ContainsKey(staticHash))
+			if ((bool)item)
 			{
-				itemPrefabFactory.Add(staticHash, gameObject);
+				AddToFactory(item.gameObject);
 			}
+		}
+	}
+
+	public static void AddToFactory(IEnumerable<SpawnableEntity> items)
+	{
+		foreach (SpawnableEntity item in items)
+		{
+			if ((bool)item)
+			{
+				AddToFactory(item.gameObject);
+			}
+		}
+	}
+
+	private static void AddToFactory(GameObject go)
+	{
+		int staticHash = go.name.GetStaticHash();
+		if (itemPrefabFactory.TryGetValue(staticHash, out var value))
+		{
+			if (value != go)
+			{
+				Debug.LogError(string.Format("{0}{1}: \"{2}\" (typeId={3}) is already registered to a different prefab; keeping the first one.", "[GT/GameEntityManager]  ERROR!!!  ", "AddToFactory", go.name, staticHash), go);
+			}
+		}
+		else
+		{
+			itemPrefabFactory.Add(staticHash, go);
 		}
 	}
 
@@ -3421,7 +3442,7 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 			return;
 		}
 		bool inRoom = PhotonNetwork.InRoom;
-		bool flag2 = HasAnyScenePlacedInScene(GetZoneSceneName());
+		bool flag2 = HasAnyScenePlacedInZone(zone);
 		bool flag3 = scenePlacedEntitiesRegistered;
 		int num = (int)((uint)zoneStateData.state | (uint)((flag ? 1 : 0) << 4) | (uint)((inRoom ? 1 : 0) << 5) | (uint)((flag2 ? 1 : 0) << 6) | (uint)((flag3 ? 1 : 0) << 7) | (uint)(entities.Count << 8)) | (zoneComponents.Count << 20);
 		if (num != _lastUpdateZoneStateAuthLogSig)
@@ -3665,7 +3686,6 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 
 	private void OnNetworkJoinedRoom()
 	{
-		GetZoneSceneName();
 		zoneClearReason = ZoneClearReason.JoinZone;
 		SetZoneState(ZoneState.WaitingToEnterZone);
 	}
@@ -3818,37 +3838,27 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 
 	private static void OnZoneSceneUnloaded(Scene scene)
 	{
-		if (!s_scenePlacedEntities.TryGetValue(scene.name, out var value))
+		foreach (List<GameEntity> value2 in s_scenePlacedEntities.Values)
 		{
-			return;
-		}
-		for (int num = value.Count - 1; num >= 0; num--)
-		{
-			GameEntity gameEntity = value[num];
-			if (!(gameEntity == null))
+			for (int num = value2.Count - 1; num >= 0; num--)
 			{
-				UnityEngine.Object.Destroy(gameEntity.gameObject);
+				GameEntity gameEntity = value2[num];
+				string value;
+				if (gameEntity == null)
+				{
+					value2.RemoveAt(num);
+				}
+				else if (gameEntity.manager != null && s_scenePlacedHomeScenes.TryGetValue(gameEntity.GetNetId(), out value) && value == scene.name)
+				{
+					UnityEngine.Object.Destroy(gameEntity.gameObject);
+				}
 			}
 		}
-		s_scenePlacedEntities.Remove(scene.name);
 	}
 
-	internal string GetZoneSceneName()
+	internal static bool HasAnyScenePlacedInZone(GTZone zone)
 	{
-		if (string.IsNullOrEmpty(cachedZoneSceneName))
-		{
-			cachedZoneSceneName = ((ZoneManagement.instance != null) ? ZoneManagement.instance.GetSceneNameForZone(zone) : null);
-			if (string.IsNullOrEmpty(cachedZoneSceneName))
-			{
-				cachedZoneSceneName = base.gameObject.scene.name;
-			}
-		}
-		return cachedZoneSceneName;
-	}
-
-	internal static bool HasAnyScenePlacedInScene(string sceneName)
-	{
-		if (s_scenePlacedEntities.TryGetValue(sceneName, out var value))
+		if (s_scenePlacedEntities.TryGetValue(zone, out var value))
 		{
 			return value.Count > 0;
 		}
@@ -3857,50 +3867,48 @@ public class GameEntityManager : NetworkComponent, IRequestableOwnershipGuardCal
 
 	internal static void RegisterScenePlacedEntity(GameEntity entity)
 	{
-		string text = entity.gameObject.scene.name;
-		if (!s_scenePlacedEntities.TryGetValue(text, out var value))
+		entity.scenePlacedZone = FindScenePlacedZone(entity);
+		if (entity.scenePlacedZone == GTZone.none)
+		{
+			Debug.LogWarning("[GT/GameEntityManager]  ERROR!!!  RegisterScenePlacedEntity" + $": Scene-placed entity '{entity.name}' at {entity.transform.position} is outside every zone," + " so no manager will adopt it.", entity);
+		}
+		if (!s_scenePlacedEntities.TryGetValue(entity.scenePlacedZone, out var value))
 		{
 			value = new List<GameEntity>(8);
-			s_scenePlacedEntities[text] = value;
+			s_scenePlacedEntities[entity.scenePlacedZone] = value;
 		}
 		if (!value.Contains(entity))
 		{
 			value.Add(entity);
-			NotifyManagersOfLateScenePlacedEntity(entity, text);
-		}
-	}
-
-	private static void NotifyManagersOfLateScenePlacedEntity(GameEntity entity, string sceneName)
-	{
-		foreach (KeyValuePair<int, GameEntityManager> item in managersByZone)
-		{
-			GameEntityManager value = item.Value;
-			if (!(value == null) && value.scenePlacedEntitiesRegistered && !(value.GetZoneSceneName() != sceneName))
+			if (managersByZone.TryGetValue((int)entity.scenePlacedZone, out var value2) && value2 != null && value2.scenePlacedEntitiesRegistered)
 			{
-				value.RegisterSingleScenePlacedEntity(entity);
+				value2.RegisterSingleScenePlacedEntity(entity);
 			}
 		}
 	}
 
+	private static GTZone FindScenePlacedZone(GameEntity entity)
+	{
+		ZoneGraphBSP instance = ZoneGraphBSP.Instance;
+		if (instance == null)
+		{
+			return GTZone.forest;
+		}
+		return instance.FindZoneAtPoint(entity.transform.position)?.zoneId ?? GTZone.none;
+	}
+
 	internal static void UnregisterScenePlacedEntity(GameEntity entity)
 	{
-		int num = ((entity.manager != null) ? entity.GetNetId() : 0);
-		string key;
-		if (num != 0 && s_scenePlacedHomeScenes.TryGetValue(num, out var value))
+		if (entity.manager != null)
 		{
-			key = value;
-			s_scenePlacedHomeScenes.Remove(num);
+			s_scenePlacedHomeScenes.Remove(entity.GetNetId());
 		}
-		else
+		if (s_scenePlacedEntities.TryGetValue(entity.scenePlacedZone, out var value))
 		{
-			key = entity.gameObject.scene.name;
-		}
-		if (s_scenePlacedEntities.TryGetValue(key, out var value2))
-		{
-			value2.Remove(entity);
-			if (value2.Count == 0)
+			value.Remove(entity);
+			if (value.Count == 0)
 			{
-				s_scenePlacedEntities.Remove(key);
+				s_scenePlacedEntities.Remove(entity.scenePlacedZone);
 			}
 		}
 	}

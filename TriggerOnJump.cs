@@ -1,11 +1,12 @@
 using System;
 using GorillaExtensions;
 using GorillaLocomotion;
+using GorillaTag;
 using Photon.Pun;
 using UnityEngine;
 using UnityEngine.Events;
 
-public class TriggerOnJump : MonoBehaviour, ITickSystemTick
+public class TriggerOnJump : MonoBehaviour, ITickSystemTick, PrefabNameSerialized
 {
 	[SerializeField]
 	private float minJumpStrength = 1f;
@@ -31,7 +32,22 @@ public class TriggerOnJump : MonoBehaviour, ITickSystemTick
 
 	private float lastActivationTime;
 
+	[SerializeField]
+	private string m_prefabName;
+
 	private VRRig myRig;
+
+	public string PrefabName
+	{
+		get
+		{
+			return m_prefabName;
+		}
+		set
+		{
+			m_prefabName = value;
+		}
+	}
 
 	public bool TickRunning { get; set; }
 
@@ -44,7 +60,7 @@ public class TriggerOnJump : MonoBehaviour, ITickSystemTick
 		if (_events == null && myRig != null && myRig.Creator != null)
 		{
 			_events = base.gameObject.GetOrAddComponent<RubberDuckEvents>();
-			_events.Init(myRig.creator);
+			_events.Init(myRig.creator, m_prefabName);
 		}
 		if (_events != null)
 		{

@@ -4,25 +4,16 @@ namespace GorillaTagScripts;
 
 public class BuilderOptionButton : GorillaPressableButton
 {
-	private new Action<BuilderOptionButton, bool> onPressed;
-
-	public override void Start()
-	{
-		base.Start();
-	}
-
-	private void OnDestroy()
-	{
-	}
+	private Action<BuilderOptionButton, bool> onOptionPressed;
 
 	public void Setup(Action<BuilderOptionButton, bool> onPressed)
 	{
-		this.onPressed = onPressed;
+		onOptionPressed = onPressed;
 	}
 
 	public override void ButtonActivationWithHand(bool isLeftHand)
 	{
-		onPressed?.Invoke(this, isLeftHand);
+		onOptionPressed?.Invoke(this, isLeftHand);
 	}
 
 	public void SetPressed(bool pressed)

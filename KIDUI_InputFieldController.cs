@@ -91,7 +91,7 @@ public class KIDUI_InputFieldController : MonoBehaviour, IPointerEnterHandler, I
 			XRRayInteractor xRRayInteractor = InputModule.GetInteractor(eventData.pointerId) as XRRayInteractor;
 			if ((bool)xRRayInteractor)
 			{
-				xRRayInteractor.xrController.SendHapticImpulse(_highlightedVibrationStrength, _highlightedVibrationDuration);
+				xRRayInteractor.SendHapticImpulse(_highlightedVibrationStrength, _highlightedVibrationDuration);
 			}
 		}
 	}

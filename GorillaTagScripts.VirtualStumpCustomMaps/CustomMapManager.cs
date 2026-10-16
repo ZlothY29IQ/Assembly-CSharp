@@ -155,8 +155,6 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 
 	private static bool shouldRetryJoin = false;
 
-	private static short pendingTeleportVFXIdx = -1;
-
 	private static bool exitVirtualStumpPending = false;
 
 	private static ModId currentRoomMapModId = ModId.Null;
@@ -170,6 +168,8 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 	private static ModId lastSelectedMapModId = ModId.Null;
 
 	private static bool lastSelectedMapApproved = false;
+
+	private static bool lastSelectedMapIsDev = false;
 
 	private static VirtualStumpTeleportingHUD teleportingHUD;
 
@@ -737,6 +737,7 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 	{
 		if (hasInstance)
 		{
+			CustomMapsTerminal.ReleaseLocalTerminalControl();
 			inVStumpOrVHallway = false;
 			activateIsActive = false;
 			ClearPendingActivateMode();
@@ -859,6 +860,7 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 	{
 		lastSelectedMapModId = ModId.Null;
 		lastSelectedMapApproved = false;
+		lastSelectedMapIsDev = false;
 	}
 
 	public static void OnLeftTerminalRoom()
@@ -985,6 +987,10 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 		if (!hasInstance)
 		{
 			return;
+		}
+		if (lastSelectedMapIsDev)
+		{
+			ClearLastSelectedMap();
 		}
 		if (lastUsedTeleporter.IsNull())
 		{
@@ -1617,6 +1623,17 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 		pendingMapLoadSource = loadSource;
 		lastSelectedMapModId = modId;
 		lastSelectedMapApproved = true;
+		switch (loadSource)
+		{
+		case GTMapLoadSource.dev_terminal:
+			lastSelectedMapIsDev = true;
+			break;
+		default:
+			lastSelectedMapIsDev = false;
+			break;
+		case GTMapLoadSource.room_reload:
+			break;
+		}
 		waitingForModDownload = false;
 		waitingForModInstall = false;
 		waitingForModInstallId = ModId.Null;
@@ -1676,6 +1693,7 @@ public class CustomMapManager : MonoBehaviour, IBuildValidation
 			case ModFileState.Downloading:
 			case ModFileState.Updating:
 				waitingForModDownload = true;
+				waitingForModInstall = true;
 				waitingForModInstallId = modId;
 				BroadcastModFileState(mod);
 				break;

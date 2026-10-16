@@ -667,9 +667,10 @@ public class SIPlayer : MonoBehaviour, ITickSystemTick
 
 	public void ClearGadgetsOnLeaveZone()
 	{
-		if (SuperInfectionManager.activeSuperInfectionManager.gameEntityManager.IsAuthority())
+		SuperInfectionManager activeSuperInfectionManager = SuperInfectionManager.activeSuperInfectionManager;
+		if (!(activeSuperInfectionManager == null) && !(activeSuperInfectionManager.gameEntityManager == null) && activeSuperInfectionManager.gameEntityManager.IsAuthority())
 		{
-			SuperInfectionManager.activeSuperInfectionManager.ClearPlayerGadgets(this);
+			activeSuperInfectionManager.ClearPlayerGadgets(this);
 		}
 	}
 

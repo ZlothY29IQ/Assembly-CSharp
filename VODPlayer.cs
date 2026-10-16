@@ -788,20 +788,26 @@ public class VODPlayer : MonoBehaviour, IGorillaSliceableSimple
 			Debug.LogError("Crash(\"No schedule data\")");
 			return;
 		}
-		VODStreamSchedule subSchedule = default(VODStreamSchedule);
+		VODStreamSchedule vODStreamSchedule = default(VODStreamSchedule);
 		try
 		{
-			subSchedule = JsonConvert.DeserializeObject<VODStreamSchedule>(s);
+			vODStreamSchedule = JsonConvert.DeserializeObject<VODStreamSchedule>(s);
 		}
 		catch (Exception ex)
 		{
 			Debug.LogError("Crash(\"Malformed schedule data\") :: " + ex.Message + " :: " + s);
+			return;
 		}
-		for (int i = 0; i < subSchedule.hourly.Length; i++)
+		if (vODStreamSchedule.hourly == null)
 		{
-			subSchedule.hourly[i].ValidateDate();
+			Debug.LogError("Crash(\"Schedule data has no hourly entries\") :: " + s);
+			return;
 		}
-		schedule.Merge(subSchedule);
+		for (int i = 0; i < vODStreamSchedule.hourly.Length; i++)
+		{
+			vODStreamSchedule.hourly[i].ValidateDate();
+		}
+		schedule.Merge(vODStreamSchedule);
 	}
 
 	private void onTDError(PlayFabError error)

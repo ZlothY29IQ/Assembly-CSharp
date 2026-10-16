@@ -4,6 +4,7 @@ using UnityEngine;
 namespace Voxels;
 
 [RequireComponent(typeof(GameEntity))]
+[RequireComponent(typeof(XSceneRefTarget))]
 public class VoxelSpawnHandler : MonoBehaviour, IGameEntityComponent
 {
 	[Serializable]
@@ -52,28 +53,15 @@ public class VoxelSpawnHandler : MonoBehaviour, IGameEntityComponent
 
 	private void RegisterSpawnables()
 	{
-		if (_spawnablesRegistered)
+		if (!_spawnablesRegistered)
 		{
-			return;
-		}
-		GameEntityManager gameEntityManager = entity.manager;
-		if (!gameEntityManager)
-		{
-			foreach (GameEntityManager value in GameEntityManager.managersByZone.Values)
+			SpawnableSet[] array = spawnables;
+			for (int i = 0; i < array.Length; i++)
 			{
-				if (value.GetZoneSceneName() == base.gameObject.scene.name)
-				{
-					gameEntityManager = value;
-					break;
-				}
+				GameEntityManager.AddToFactory(array[i].prefabs);
 			}
+			_spawnablesRegistered = true;
 		}
-		SpawnableSet[] array = spawnables;
-		foreach (SpawnableSet spawnableSet in array)
-		{
-			gameEntityManager.AddToFactory(spawnableSet.prefabs);
-		}
-		_spawnablesRegistered = true;
 	}
 
 	public void OnEntityInit()

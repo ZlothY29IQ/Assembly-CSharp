@@ -34,6 +34,8 @@ public class HitTargetNetworkState : NetworkComponent
 
 	private Coroutine resetCoroutine;
 
+	private static readonly WaitForSeconds TestPressCheckWait = new WaitForSeconds(1f);
+
 	[WeaverGenerated]
 	[SerializeField]
 	[DefaultForProperty("Data", 0, 1)]
@@ -116,7 +118,7 @@ public class HitTargetNetworkState : NetworkComponent
 				testPress = false;
 				TargetHit(Vector3.zero, Vector3.one);
 			}
-			yield return new WaitForSeconds(1f);
+			yield return TestPressCheckWait;
 		}
 	}
 

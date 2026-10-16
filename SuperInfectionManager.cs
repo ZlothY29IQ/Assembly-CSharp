@@ -133,7 +133,7 @@ public class SuperInfectionManager : MonoBehaviour, IGameEntityZoneComponent, IF
 			{
 				list.Add(sIResourceRegion.resourcePrefab.GetComponent<GameEntity>());
 			}
-			gameEntityManager.AddToFactory(list);
+			GameEntityManager.AddToFactory(list);
 		}
 		hasInitialized = true;
 	}

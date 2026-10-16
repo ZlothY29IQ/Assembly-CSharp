@@ -21,11 +21,9 @@ public class SinglePool : IGorillaSimpleBackgroundWorker
 
 	public void SimpleWork()
 	{
-		int count = inactivePool.Count;
-		if (count < initAmountToPool)
+		if (inactivePool.Count < initAmountToPool)
 		{
 			GameObject gameObject = UnityEngine.Object.Instantiate(objectToPool, this.gameObject.transform, worldPositionStays: true);
-			gameObject.name = objectToPool.name + "(PoolIndex=" + count + ")";
 			gameObject.SetActive(value: false);
 			inactivePool.Push(gameObject);
 			amountAllocatedToPool++;

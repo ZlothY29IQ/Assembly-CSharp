@@ -1417,6 +1417,27 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 		return result;
 	}
 
+	public CosmeticItem FindCosmeticByAnyName(string cosmeticName)
+	{
+		if (string.IsNullOrEmpty(cosmeticName))
+		{
+			return nullItem;
+		}
+		if (allCosmeticsDict_isInitialized && allCosmeticsItemIDsfromDisplayNamesDict_isInitialized)
+		{
+			if (_allCosmeticsDict.TryGetValue(cosmeticName, out var value))
+			{
+				return value;
+			}
+			if (_allCosmeticsItemIDsfromDisplayNamesDict.TryGetValue(cosmeticName, out var value2) && _allCosmeticsDict.TryGetValue(value2, out var value3))
+			{
+				return value3;
+			}
+			return default(CosmeticItem);
+		}
+		return allCosmetics.Find((CosmeticItem x) => cosmeticName == x.displayName || cosmeticName == x.overrideDisplayName || cosmeticName == x.itemName);
+	}
+
 	public void AddWardrobeInstance(WardrobeInstance instance)
 	{
 		wardrobes.Add(instance);
@@ -1837,6 +1858,11 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 
 	private void ApplyCosmeticToSet(CosmeticSet set, CosmeticItem newItem, int slotIdx, CosmeticSlots slot, bool applyToPlayerPrefs, List<CosmeticSlots> appliedSlots)
 	{
+		if (set?.items == null || slotIdx < 0 || slotIdx >= set.items.Length)
+		{
+			Debug.LogError(string.Format("[{0}] slotIdx {1} ({2}) out of range for set of ", "ApplyCosmeticToSet", slotIdx, slot) + $"{set?.items?.Length ?? (-1)} items. item='{newItem.itemName}' category={newItem.itemCategory}");
+			return;
+		}
 		CosmeticItem cosmeticItem = ((set.items[slotIdx].itemName == newItem.itemName) ? nullItem : newItem);
 		set.items[slotIdx] = cosmeticItem;
 		if (applyToPlayerPrefs)
@@ -1892,9 +1918,13 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 			{
 				foreach (BodyDockPositions.DropPositions item2 in dockingResult.dockedPosition)
 				{
-					if (item2 != BodyDockPositions.DropPositions.None)
+					if (item2 == BodyDockPositions.DropPositions.None)
 					{
-						CosmeticSlots cosmeticSlots2 = DropPositionToCosmeticSlot(item2);
+						continue;
+					}
+					CosmeticSlots cosmeticSlots2 = DropPositionToCosmeticSlot(item2);
+					if (cosmeticSlots2 != CosmeticSlots.Count)
+					{
 						int num2 = (int)cosmeticSlots2;
 						set.items[num2] = newItem;
 						if (applyToPlayerPrefs)
@@ -3219,6 +3249,15 @@ public class CosmeticsController : MonoBehaviour, IGorillaSliceableSimple, IBuil
 			{
 				Debug.Log("ReconcileBundleRewards granted: " + string.Join(", ", response.grantedBundles));
 				GetCosmeticsPlayFabCatalogData();
+				UpdateMyCosmetics();
+				StartCoroutine(CheckIfMyCosmeticsUpdated(response.grantedBundles[0]));
+				if (GorillaTagger.Instance != null && GorillaTagger.Instance.offlineVRRig != null)
+				{
+					GorillaTagger.Instance.offlineVRRig.GetCosmeticsPlayFabCatalogData(delegate
+					{
+						UpdateWornCosmetics(sync: true);
+					});
+				}
 			}
 		}, delegate(string error)
 		{

@@ -257,9 +257,9 @@ public class ScavengerManager : MonoBehaviour
 		}
 	}
 
-	public static Action<string, bool> OnHuntCompleted;
+	public static Action<string, bool>? OnHuntCompleted;
 
-	public static Action<string, string, bool> OnTargetCollected;
+	public static Action<string, string, bool>? OnTargetCollected;
 
 	public const string MothershipKey = "ScavengerHunt";
 

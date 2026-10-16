@@ -1459,11 +1459,22 @@ public class GTPlayer : MonoBehaviour
 	public void TeleportCleanup()
 	{
 		ClearHandHolds();
-		leftHand.OnTeleport();
-		rightHand.OnTeleport();
 		lastHeadPosition = headCollider.transform.position;
 		lastOpenHeadPosition = lastHeadPosition;
 		lastPosition = base.transform.position;
+		ResetHands();
+		Physics.SyncTransforms();
+		GorillaTagger.Instance.offlineVRRig.transform.position = lastPosition;
+		GorillaTagger.Instance.offlineVRRig.leftHandLink.BreakLink();
+		GorillaTagger.Instance.offlineVRRig.rightHandLink.BreakLink();
+		GorillaTagger.Instance.offlineVRRig.FlagJustTeleported();
+		ForceRigidBodySync();
+	}
+
+	public void ResetHands()
+	{
+		leftHand.OnTeleport();
+		rightHand.OnTeleport();
 		for (int i = 0; i < 12; i++)
 		{
 			if (stiltStates[i].isActive)
@@ -1471,12 +1482,6 @@ public class GTPlayer : MonoBehaviour
 				stiltStates[i].OnTeleport();
 			}
 		}
-		Physics.SyncTransforms();
-		GorillaTagger.Instance.offlineVRRig.transform.position = lastPosition;
-		GorillaTagger.Instance.offlineVRRig.leftHandLink.BreakLink();
-		GorillaTagger.Instance.offlineVRRig.rightHandLink.BreakLink();
-		GorillaTagger.Instance.offlineVRRig.FlagJustTeleported();
-		ForceRigidBodySync();
 	}
 
 	public void TeleportTo(Vector3 position, Quaternion rotation, bool keepVelocity = false, bool center = false)
@@ -3434,9 +3439,8 @@ public class GTPlayer : MonoBehaviour
 		{
 			return FreezeTagSlidePercentage();
 		}
-		currentOverride = raycastHit.collider.gameObject.GetComponent<GorillaSurfaceOverride>();
-		BasePlatform component = raycastHit.collider.gameObject.GetComponent<BasePlatform>();
-		if (component != null)
+		raycastHit.collider.TryGetComponent<GorillaSurfaceOverride>(out currentOverride);
+		if (raycastHit.collider.TryGetComponent<BasePlatform>(out var component))
 		{
 			currentPlatform = component;
 		}

@@ -1,12 +1,13 @@
 using System;
 using GorillaExtensions;
+using GorillaTag;
 using Photon.Pun;
 using UnityEngine;
 using UnityEngine.Events;
 
 namespace Cosmetics;
 
-public class GenericNetworkedEventsProvider : MonoBehaviour
+public class GenericNetworkedEventsProvider : MonoBehaviour, PrefabNameSerialized
 {
 	private enum EventType : byte
 	{
@@ -42,6 +43,21 @@ public class GenericNetworkedEventsProvider : MonoBehaviour
 
 	public UnityEvent<Quaternion> sharedEvent_quaternion;
 
+	[SerializeField]
+	private string m_prefabName;
+
+	public string PrefabName
+	{
+		get
+		{
+			return m_prefabName;
+		}
+		set
+		{
+			m_prefabName = value;
+		}
+	}
+
 	private void OnEnable()
 	{
 		if (myRig == null)
@@ -55,7 +71,7 @@ public class GenericNetworkedEventsProvider : MonoBehaviour
 		NetPlayer netPlayer = ((myRig != null) ? (myRig.creator ?? NetworkSystem.Instance.LocalPlayer) : NetworkSystem.Instance.LocalPlayer);
 		if (netPlayer != null)
 		{
-			_events.Init(netPlayer);
+			_events.Init(netPlayer, m_prefabName);
 		}
 		if (_events != null)
 		{

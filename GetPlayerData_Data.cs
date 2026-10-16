@@ -6,7 +6,7 @@ public class GetPlayerData_Data
 
 	public readonly SessionStatus? status;
 
-	public readonly TMPSession session;
+	public readonly TMPSession? session;
 
 	public readonly string[]? OptInPermissions;
 

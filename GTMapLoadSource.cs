@@ -6,5 +6,6 @@ public enum GTMapLoadSource
 	terminal_browse,
 	terminal_search,
 	room_sync,
-	room_reload
+	room_reload,
+	dev_terminal
 }

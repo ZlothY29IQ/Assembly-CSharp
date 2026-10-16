@@ -17,10 +17,6 @@ public class ControllerBehaviour : MonoBehaviour, IBuildValidation
 	[SerializeField]
 	private float actionRepeatDelayReduction = 0.5f;
 
-	[Tooltip("Should the triggers modify the x axis like the sticks do?")]
-	[SerializeField]
-	private bool useTriggersAsSticks;
-
 	private ControllerInputPoller poller;
 
 	private bool wasLeftStick;

@@ -61,14 +61,17 @@ public class HeadModel : MonoBehaviour, IDelayedExecListener
 	{
 		if (!CosmeticsController.instance.TryGetCosmeticInfoV2(playFabId, out var cosmeticInfo))
 		{
-			switch (playFabId)
+			if (!string.IsNullOrEmpty(playFabId))
 			{
-			case "NOTHING":
-				return;
-			case "Slingshot":
-				return;
+				switch (playFabId)
+				{
+				case "NOTHING":
+					return;
+				case "Slingshot":
+					return;
+				}
+				Debug.LogError(ZString.Concat("HeadModel._AddPreviewCosmetic: Cosmetic id \"", playFabId, "\" not found in `CosmeticsController`."), this);
 			}
-			Debug.LogError(ZString.Concat("HeadModel._AddPreviewCosmetic: Cosmetic id \"", playFabId, "\" not found in `CosmeticsController`."), this);
 			return;
 		}
 		if (cosmeticInfo.hideWardrobeMannequin)

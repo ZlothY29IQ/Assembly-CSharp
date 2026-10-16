@@ -8,7 +8,7 @@ public class GorillaSimpleBackgroundWorkerManager : MonoBehaviour
 
 	private static bool hasInstance = false;
 
-	private static long MINIMUM_TICKS_OF_WORK = 10000L;
+	private static long MINIMUM_TICKS_OF_WORK = 5000L;
 
 	public Queue<IGorillaSimpleBackgroundWorker> workerSignups = new Queue<IGorillaSimpleBackgroundWorker>();
 
@@ -36,7 +36,7 @@ public class GorillaSimpleBackgroundWorkerManager : MonoBehaviour
 		}
 	}
 
-	public static void CreateManager()
+	private static void CreateManager()
 	{
 		GameObject obj = new GameObject("GorillaSimpleBackgroundWorkerManager");
 		GorillaSimpleBackgroundWorkerManager instance = obj.AddComponent<GorillaSimpleBackgroundWorkerManager>();

@@ -18,8 +18,6 @@ public class GorillaText
 
 	private bool modified;
 
-	private bool failedState;
-
 	private Material[] originalMaterials;
 
 	private Material failureMaterial;
@@ -57,7 +55,6 @@ public class GorillaText
 
 	public void EnableFailedState(string failText)
 	{
-		failedState = true;
 		failureText = failText;
 		updateTextCallback?.Invoke(failText);
 		originalText = currentText;
@@ -69,7 +66,6 @@ public class GorillaText
 
 	public void DisableFailedState()
 	{
-		failedState = false;
 		updateTextCallback?.Invoke(originalText);
 		failureText = "";
 		currentText = originalText;

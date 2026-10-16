@@ -5,6 +5,17 @@ namespace GorillaNetworking;
 
 public class CustomMapNetworkJoinTrigger : GorillaNetworkJoinTrigger
 {
+	[OnEnterPlay_Set(false)]
+	public static bool SuppressJoins;
+
+	public override void OnBoxTriggered()
+	{
+		if (!SuppressJoins)
+		{
+			base.OnBoxTriggered();
+		}
+	}
+
 	public override string GetFullDesiredGameModeString()
 	{
 		return new GameModeString

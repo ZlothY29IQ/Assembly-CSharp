@@ -129,6 +129,7 @@ public class MonkeGravityController : MonoBehaviour, ICallbackUnique, ICallBack
 		{
 			m_register = true;
 			m_globalGravityIntent = m_targetRigidBody.useGravity;
+			m_targetRigidBody.useGravity = false;
 		}
 	}
 

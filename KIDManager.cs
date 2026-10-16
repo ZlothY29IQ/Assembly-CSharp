@@ -615,7 +615,7 @@ public class KIDManager : MonoBehaviour
 							}
 							else
 							{
-								TMPSession session = newSessionData.session;
+								TMPSession? session = newSessionData.session;
 								int num3;
 								if (session == null)
 								{

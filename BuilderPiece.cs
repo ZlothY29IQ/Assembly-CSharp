@@ -205,6 +205,8 @@ public class BuilderPiece : MonoBehaviour
 
 	private int potentialGrabChildCount;
 
+	private static List<Collider> tempColliders = new List<Collider>(16);
+
 	internal bool forcedFrozen;
 
 	private HashSet<int> collidersEntered = new HashSet<int>(128);
@@ -230,29 +232,27 @@ public class BuilderPiece : MonoBehaviour
 		parentAttachIndex = -1;
 		parentHeld = null;
 		heldByPlayerActorNumber = -1;
-		placedOnlyColliders = new List<Collider>(4);
-		List<Collider> list = new List<Collider>(4);
+		placedOnlyColliders = ResetList(placedOnlyColliders, 4);
 		foreach (GameObject item in onlyWhenPlaced)
 		{
-			list.Clear();
-			item.GetComponentsInChildren(list);
-			for (int i = 0; i < list.Count; i++)
+			tempColliders.Clear();
+			item.GetComponentsInChildren(tempColliders);
+			for (int i = 0; i < tempColliders.Count; i++)
 			{
-				if (!list[i].isTrigger)
+				if (!tempColliders[i].isTrigger)
 				{
-					BuilderPieceCollider builderPieceCollider = list[i].GetComponent<BuilderPieceCollider>();
-					if (builderPieceCollider == null)
+					if (!tempColliders[i].TryGetComponent<BuilderPieceCollider>(out var component))
 					{
-						builderPieceCollider = list[i].AddComponent<BuilderPieceCollider>();
+						component = tempColliders[i].AddComponent<BuilderPieceCollider>();
 					}
-					builderPieceCollider.piece = this;
-					placedOnlyColliders.Add(list[i]);
+					component.piece = this;
+					placedOnlyColliders.Add(tempColliders[i]);
 				}
 			}
 		}
 		SetActive(onlyWhenPlaced, active: false);
 		SetActive(onlyWhenNotPlaced, active: true);
-		colliders = new List<Collider>(4);
+		colliders = ResetList(colliders, 4);
 		GetComponentsInChildren(colliders);
 		for (int num = colliders.Count - 1; num >= 0; num--)
 		{
@@ -262,15 +262,14 @@ public class BuilderPiece : MonoBehaviour
 			}
 			else
 			{
-				BuilderPieceCollider builderPieceCollider2 = colliders[num].GetComponent<BuilderPieceCollider>();
-				if (builderPieceCollider2 == null)
+				if (!colliders[num].TryGetComponent<BuilderPieceCollider>(out var component2))
 				{
-					builderPieceCollider2 = colliders[num].AddComponent<BuilderPieceCollider>();
+					component2 = colliders[num].AddComponent<BuilderPieceCollider>();
 				}
-				builderPieceCollider2.piece = this;
+				component2.piece = this;
 			}
 		}
-		gridPlanes = new List<BuilderAttachGridPlane>(8);
+		gridPlanes = ResetList(gridPlanes, 8);
 		GetComponentsInChildren(gridPlanes);
 		pieceComponents = new List<IBuilderPieceComponent>(1);
 		GetComponentsInChildren(includeInactive: true, pieceComponents);
@@ -280,8 +279,8 @@ public class BuilderPiece : MonoBehaviour
 		SetBehavioursEnabled(onlyWhenPlacedBehaviours, enabled: false);
 		preventSnapUntilMoved = 0;
 		preventSnapUntilMovedFromPos = Vector3.zero;
-		renderingIndirect = new List<MeshRenderer>(4);
-		renderingDirect = new List<MeshRenderer>(4);
+		renderingIndirect = ResetList(renderingIndirect, 4);
+		renderingDirect = ResetList(renderingDirect, 4);
 		FindActiveRenderers();
 		paintingCount = 0;
 		potentialGrabCount = 0;
@@ -289,6 +288,16 @@ public class BuilderPiece : MonoBehaviour
 		isPrivatePlot = plotComponent != null;
 		privatePlotIndex = -1;
 		ClearCollisionHistory();
+	}
+
+	private static List<T> ResetList<T>(List<T> list, int capacity)
+	{
+		if (list == null)
+		{
+			return new List<T>(capacity);
+		}
+		list.Clear();
+		return list;
 	}
 
 	public void SetTable(BuilderTable table)

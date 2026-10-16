@@ -209,21 +209,11 @@ public class GREnemyRanged : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 
 	private GameObject rangedProjectileInstance;
 
-	private bool projectileHasImpacted;
-
-	private double projectileImpactTime;
-
-	private Rigidbody rigidBody;
-
 	private List<Collider> colliders;
 
 	private LayerMask visibilityLayerMask;
 
 	private Color defaultColor;
-
-	private float lastHitPlayerTime;
-
-	private float minTimeBetweenHits = 0.5f;
 
 	private static List<VRRig> tempRigs = new List<VRRig>(16);
 
@@ -310,7 +300,6 @@ public class GREnemyRanged : MonoBehaviour, IGameEntityComponent, IGameEntitySer
 
 	private void Awake()
 	{
-		rigidBody = GetComponent<Rigidbody>();
 		colliders = new List<Collider>(4);
 		GetComponentsInChildren(colliders);
 		visibilityLayerMask = LayerMask.GetMask("Default");

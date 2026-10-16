@@ -9,7 +9,7 @@ using UnityEngine.Serialization;
 
 namespace GorillaTag.Cosmetics;
 
-public class ShakeReactorCosmetic : MonoBehaviour, ISpawnable
+public class ShakeReactorCosmetic : MonoBehaviour, ISpawnable, PrefabNameSerialized
 {
 	[Header("Speed Source")]
 	[Tooltip("Speed component provider")]
@@ -114,6 +114,21 @@ public class ShakeReactorCosmetic : MonoBehaviour, ISpawnable
 
 	private bool subscribed;
 
+	[SerializeField]
+	private string m_prefabName;
+
+	public string PrefabName
+	{
+		get
+		{
+			return m_prefabName;
+		}
+		set
+		{
+			m_prefabName = value;
+		}
+	}
+
 	public bool IsSpawned { get; set; }
 
 	public ECosmeticSelectSide CosmeticSelectedSide { get; set; }
@@ -141,7 +156,7 @@ public class ShakeReactorCosmetic : MonoBehaviour, ISpawnable
 		NetPlayer netPlayer = ((myRig != null) ? (myRig.creator ?? NetworkSystem.Instance.LocalPlayer) : NetworkSystem.Instance.LocalPlayer);
 		if (netPlayer != null)
 		{
-			_events.Init(netPlayer);
+			_events.Init(netPlayer, m_prefabName);
 		}
 		if (!subscribed && _events.Activate != null)
 		{

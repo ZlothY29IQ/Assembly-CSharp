@@ -13,10 +13,10 @@ public class AbilityHaptic
 		{
 			return;
 		}
-		GamePlayer gamePlayer = GamePlayer.GetGamePlayer(gameEntity.heldByActorNumber);
-		if (!(gamePlayer == null))
+		GamePlayer.TryGetGamePlayer(gameEntity.heldByActorNumber, out var out_gamePlayer);
+		if (!(out_gamePlayer == null))
 		{
-			int num = gamePlayer.FindHandIndex(gameEntity.id);
+			int num = out_gamePlayer.FindHandIndex(gameEntity.id);
 			if (num != -1)
 			{
 				GorillaTagger.Instance.StartVibration(GamePlayer.IsLeftHand(num), strength, duration);
@@ -43,10 +43,10 @@ public class AbilityHaptic
 		{
 			GorillaTagger.Instance.StartVibration(forLeftController: false, strength, duration);
 		}
-		GamePlayer gamePlayer = GamePlayer.GetGamePlayer(gameEntity.heldByActorNumber);
-		if (!(gamePlayer == null))
+		GamePlayer.TryGetGamePlayer(gameEntity.heldByActorNumber, out var out_gamePlayer);
+		if (!(out_gamePlayer == null))
 		{
-			int num = gamePlayer.FindHandIndex(gameEntity.id);
+			int num = out_gamePlayer.FindHandIndex(gameEntity.id);
 			if (num != -1)
 			{
 				GorillaTagger.Instance.StartVibration(GamePlayer.IsLeftHand(num), strength, duration);

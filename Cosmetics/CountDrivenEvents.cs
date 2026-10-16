@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
 using GorillaExtensions;
+using GorillaTag;
 using Photon.Pun;
 using UnityEngine;
 using UnityEngine.Events;
 
 namespace Cosmetics;
 
-public class CountDrivenEvents : MonoBehaviour
+public class CountDrivenEvents : MonoBehaviour, PrefabNameSerialized
 {
 	[Serializable]
 	public class CountTrigger
@@ -75,6 +76,9 @@ public class CountDrivenEvents : MonoBehaviour
 
 	private RubberDuckEvents _events;
 
+	[SerializeField]
+	private string m_prefabName;
+
 	private VRRig myRig;
 
 	private CallLimiter callLimiter = new CallLimiter(10, 1f);
@@ -83,6 +87,18 @@ public class CountDrivenEvents : MonoBehaviour
 	private float lastEventTime = float.NegativeInfinity;
 
 	public int CurrentCount => currentCount;
+
+	string PrefabNameSerialized.PrefabName
+	{
+		get
+		{
+			return m_prefabName;
+		}
+		set
+		{
+			m_prefabName = value;
+		}
+	}
 
 	private bool IsOnCooldown()
 	{
@@ -106,7 +122,7 @@ public class CountDrivenEvents : MonoBehaviour
 		NetPlayer netPlayer = ((myRig != null) ? (myRig.creator ?? NetworkSystem.Instance.LocalPlayer) : NetworkSystem.Instance.LocalPlayer);
 		if (netPlayer != null)
 		{
-			_events.Init(netPlayer);
+			_events.Init(netPlayer, m_prefabName);
 		}
 		if (_events != null)
 		{

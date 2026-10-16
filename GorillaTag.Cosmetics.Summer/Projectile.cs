@@ -43,11 +43,11 @@ public class Projectile : MonoBehaviour, IProjectile
 
 	private bool impactEffectSpawned;
 
-	private Rigidbody rigidbody;
+	private Rigidbody projectileRigidbody;
 
 	protected void Awake()
 	{
-		rigidbody = GetComponent<Rigidbody>();
+		projectileRigidbody = GetComponent<Rigidbody>();
 		impactEffectSpawned = false;
 		forceComponent = GetComponent<ConstantForce>();
 	}
@@ -61,12 +61,12 @@ public class Projectile : MonoBehaviour, IProjectile
 		Transform obj = base.transform;
 		obj.SetPositionAndRotation(startPosition, startRotation);
 		obj.localScale = Vector3.one * ownerRig.scaleFactor;
-		if (rigidbody != null)
+		if (projectileRigidbody != null)
 		{
-			rigidbody.isKinematic = false;
-			rigidbody.position = startPosition;
-			rigidbody.rotation = startRotation;
-			rigidbody.linearVelocity = velocity;
+			projectileRigidbody.isKinematic = false;
+			projectileRigidbody.position = startPosition;
+			projectileRigidbody.rotation = startRotation;
+			projectileRigidbody.linearVelocity = velocity;
 		}
 		if ((bool)audioSource && (bool)launchAudio)
 		{
@@ -111,7 +111,7 @@ public class Projectile : MonoBehaviour, IProjectile
 
 	private void GetColliderHitInfo(Collider other, out Vector3 position, out Vector3 normal)
 	{
-		Vector3 vector = Time.fixedDeltaTime * 2f * rigidbody.linearVelocity;
+		Vector3 vector = Time.fixedDeltaTime * 2f * projectileRigidbody.linearVelocity;
 		Vector3 origin = base.transform.position - vector;
 		float magnitude = vector.magnitude;
 		Vector3 direction = ((magnitude > 0f) ? (vector / magnitude) : Vector3.zero);

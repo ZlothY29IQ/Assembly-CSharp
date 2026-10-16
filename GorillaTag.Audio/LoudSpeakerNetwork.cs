@@ -85,7 +85,7 @@ public class LoudSpeakerNetwork : MonoBehaviour
 
 	public void StartBroadcastSpeakerOutput(VRRig player)
 	{
-		GorillaTagger.Instance.rigSerializer.BroadcastLoudSpeakerNetwork(toggleBroadcast: true, player.OwningNetPlayer.ActorNumber);
+		GorillaTagger.Instance.rigSerializer.BroadcastLoudSpeakerNetwork(toggleBroadcast: true, player.Creator.ActorNumber);
 	}
 
 	public void BroadcastLoudSpeakerNetwork(int actorNumber, bool isLocal = false)
@@ -128,7 +128,7 @@ public class LoudSpeakerNetwork : MonoBehaviour
 
 	public void StopBroadcastSpeakerOutput(VRRig player)
 	{
-		GorillaTagger.Instance.rigSerializer.BroadcastLoudSpeakerNetwork(toggleBroadcast: false, player.OwningNetPlayer.ActorNumber);
+		GorillaTagger.Instance.rigSerializer.BroadcastLoudSpeakerNetwork(toggleBroadcast: false, player.Creator.ActorNumber);
 	}
 
 	public void StopBroadcastLoudSpeakerNetwork(int actorNumber, bool isLocal = false)

@@ -2266,22 +2266,25 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 			if (grabbedRopeIsPhotonView)
 			{
 				PhotonView photonView = PhotonView.Find(grabbedRopeIndex);
-				HandHoldXSceneRef component2;
-				VRRigSerializer component3;
-				if (photonView.TryGetComponent<GorillaClimbable>(out var _))
+				if (photonView.IsNotNull())
 				{
-					currentHoldParent = photonView.transform;
-				}
-				else if (photonView.TryGetComponent<HandHoldXSceneRef>(out component2))
-				{
-					currentHoldParent = component2.targetObject?.transform;
-				}
-				else if ((bool)photonView && photonView.TryGetComponent<VRRigSerializer>(out component3))
-				{
-					currentHoldParent = ((grabbedRopeBoneIndex == 1) ? component3.VRRig.leftHandHoldsPlayer.transform : component3.VRRig.rightHandHoldsPlayer.transform);
+					HandHoldXSceneRef component2;
+					VRRigSerializer component3;
+					if (photonView.TryGetComponent<GorillaClimbable>(out var _))
+					{
+						currentHoldParent = photonView.transform;
+					}
+					else if (photonView.TryGetComponent<HandHoldXSceneRef>(out component2))
+					{
+						currentHoldParent = component2.targetObject?.transform;
+					}
+					else if ((bool)photonView && photonView.TryGetComponent<VRRigSerializer>(out component3))
+					{
+						currentHoldParent = ((grabbedRopeBoneIndex == 1) ? component3.VRRig.leftHandHoldsPlayer.transform : component3.VRRig.rightHandHoldsPlayer.transform);
+					}
 				}
 			}
-			else if (RopeSwingManager.instance.TryGetRope(grabbedRopeIndex, out result) && result != null)
+			else if (RopeSwingManager.instance.TryGetRope(grabbedRopeIndex, out result) && result.IsNotNull())
 			{
 				if (currentRopeSwingTarget == null || currentRopeSwingTarget.gameObject == null)
 				{
@@ -3266,7 +3269,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 		mergedSet.ActivateCosmetics(mergedSet, this, myBodyDockPositions, cosmeticsObjectRegistry);
 	}
 
-	public void GetCosmeticsPlayFabCatalogData()
+	public void GetCosmeticsPlayFabCatalogData(Action onInventoryLoaded = null)
 	{
 		if (CosmeticsController.instance != null)
 		{
@@ -3287,6 +3290,7 @@ public class VRRig : MonoBehaviour, IWrappedSerializable, INetworkStruct, IPreDi
 						}
 					}
 				}
+				onInventoryLoaded?.Invoke();
 			}, delegate
 			{
 				initializedCosmetics = true;

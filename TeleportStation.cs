@@ -1,3 +1,4 @@
+using GorillaExtensions;
 using GorillaNetworking;
 using GorillaTagScripts;
 using UnityEngine;
@@ -41,16 +42,21 @@ public class TeleportStation : MonoBehaviour
 	{
 		if (!sourceFriendColliderRef.TryResolve(out sourceFriendCollider))
 		{
-			Debug.LogError($"Unable to resolve source friend collider: {sourceFriendColliderRef}!");
+			LogUnresolvedRef("sourceFriendColliderRef", sourceFriendColliderRef);
 		}
 		if (!destinationFriendColliderRef.TryResolve(out destinationFriendCollider))
 		{
-			Debug.LogError($"Unable to resolve source friend collider: {destinationFriendCollider}!");
+			LogUnresolvedRef("destinationFriendColliderRef", destinationFriendColliderRef);
 		}
 		if (!destinationJoinTriggerRef.TryResolve(out destinationJoinTrigger))
 		{
-			Debug.LogError($"Unable to resolve source friend collider: {destinationJoinTriggerRef}!");
+			LogUnresolvedRef("destinationJoinTriggerRef", destinationJoinTriggerRef);
 		}
+	}
+
+	private void LogUnresolvedRef(string refName, XSceneRef xSceneRef)
+	{
+		Debug.LogError("TeleportStation: Unable to resolve XSceneRef `" + refName + "` " + $"(TargetScene={xSceneRef.TargetScene}, TargetID={xSceneRef.TargetID}). " + "The target scene may not be loaded or the target GameObject may be inactive. Path=" + base.transform.GetPathQ(), this);
 	}
 
 	public void Attempt1PTeleport(PhotonMessageInfoWrapped info)

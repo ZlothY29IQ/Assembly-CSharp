@@ -11,7 +11,7 @@ using UnityEngine.Events;
 namespace GorillaTagScripts;
 
 [NetworkBehaviourWeaved(6)]
-public class LurkerGhost : NetworkComponent
+public class LurkerGhost : AnnoyingNetworkComponent
 {
 	private enum ghostState
 	{
@@ -167,6 +167,8 @@ public class LurkerGhost : NetworkComponent
 
 	[SerializeField]
 	private bool hauntNeighbors = true;
+
+	private bool lockedInPatrol;
 
 	[WeaverGenerated]
 	[DefaultForProperty("Data", 0, 6)]
@@ -385,6 +387,10 @@ public class LurkerGhost : NetworkComponent
 	private void ChangeState(ghostState newState)
 	{
 		currentState = newState;
+		if (lockedInPatrol)
+		{
+			currentState = ghostState.patrol;
+		}
 		VRRig vRRig = null;
 		switch (currentState)
 		{
@@ -579,6 +585,15 @@ public class LurkerGhost : NetworkComponent
 		if (newOwner == PhotonNetwork.LocalPlayer)
 		{
 			ChangeState(currentState);
+		}
+	}
+
+	public override void Allowed(bool v)
+	{
+		lockedInPatrol = v;
+		if (lockedInPatrol && currentState != ghostState.patrol)
+		{
+			ChangeState(ghostState.patrol);
 		}
 	}
 

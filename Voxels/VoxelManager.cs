@@ -227,6 +227,10 @@ public class VoxelManager : NetworkComponent
 
 	private static float _nextLocalOpTime;
 
+	private const float LOW_MEMORY_COLLECT_COOLDOWN = 60f;
+
+	private static float _nextLowMemoryCollectTime;
+
 	private static VoxelMineOperation[] _mineOpArray;
 
 	private static Dictionary<int, CallLimiter[]> _spamChecks = new Dictionary<int, CallLimiter[]>();
@@ -322,12 +326,16 @@ public class VoxelManager : NetworkComponent
 
 	private void OnLowMemory()
 	{
-		long num = 1048576L;
-		long num2 = Profiler.GetMonoUsedSizeLong() / num;
-		GC.Collect();
-		GC.WaitForPendingFinalizers();
-		long num3 = Profiler.GetMonoUsedSizeLong() / num;
-		PersistLog.Log($"Performing Memory Cleanup.  Used Memory: {num2}M->{num3}M ({num3 - num2}M)");
+		float realtimeSinceStartup = Time.realtimeSinceStartup;
+		if (!(realtimeSinceStartup < _nextLowMemoryCollectTime))
+		{
+			_nextLowMemoryCollectTime = realtimeSinceStartup + 60f;
+			long num = 1048576L;
+			long num2 = Profiler.GetMonoUsedSizeLong() / num;
+			GC.Collect();
+			long num3 = Profiler.GetMonoUsedSizeLong() / num;
+			PersistLog.Log($"Performing Memory Cleanup.  Used Memory: {num2}M->{num3}M ({num3 - num2}M)");
+		}
 	}
 
 	private static void UpdateTransferLog()

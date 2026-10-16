@@ -103,7 +103,7 @@ public class BuilderPool : MonoBehaviour, IGorillaSimpleBackgroundWorker
 								{
 									GorillaSimpleBackgroundWorkerManager.WorkerSignup(this);
 								}
-								num2 += 2;
+								num2++;
 								piecesToAdd.Enqueue(staticHash);
 							}
 						}
@@ -116,10 +116,9 @@ public class BuilderPool : MonoBehaviour, IGorillaSimpleBackgroundWorker
 
 	public void SimpleWork()
 	{
-		int count = 2;
 		if (piecesToAdd.Count > 0)
 		{
-			AddToPool(piecesToAdd.Dequeue(), count);
+			AddToPool(piecesToAdd.Dequeue(), 1);
 		}
 		if (piecesToAdd.Count > 0)
 		{
@@ -275,6 +274,10 @@ public class BuilderPool : MonoBehaviour, IGorillaSimpleBackgroundWorker
 
 	private void OnDestroy()
 	{
+		if (!isSetup)
+		{
+			return;
+		}
 		for (int i = 0; i < piecePools.Count; i++)
 		{
 			if (piecePools[i] == null)
@@ -285,7 +288,7 @@ public class BuilderPool : MonoBehaviour, IGorillaSimpleBackgroundWorker
 			{
 				if (item != null)
 				{
-					Object.Destroy(item);
+					Object.Destroy(item.gameObject);
 				}
 			}
 			piecePools[i].Clear();
@@ -293,7 +296,10 @@ public class BuilderPool : MonoBehaviour, IGorillaSimpleBackgroundWorker
 		piecePoolLookup.Clear();
 		foreach (BuilderBumpGlow item2 in bumpGlowPool)
 		{
-			Object.Destroy(item2);
+			if (item2 != null)
+			{
+				Object.Destroy(item2.gameObject);
+			}
 		}
 		bumpGlowPool.Clear();
 	}

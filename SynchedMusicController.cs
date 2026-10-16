@@ -107,16 +107,17 @@ public class SynchedMusicController : MonoBehaviour, IGorillaSliceableSimple, IB
 
 	private void Awake()
 	{
-		if (!audioSource.TryGetComponent<MusicSource>(out musicSource))
+		if (audioSource != null && !audioSource.TryGetComponent<MusicSource>(out musicSource))
 		{
-			UnityEngine.Object.Destroy(base.gameObject);
+			DestroyForInvalidSetup("`audioSource` (\"" + audioSource.name + "\") has no MusicSource.");
+			return;
 		}
 		musicSourceArray = new MusicSource[audioSourceArray.Length];
 		for (int i = 0; i < audioSourceArray.Length; i++)
 		{
 			if (!audioSourceArray[i].TryGetComponent<MusicSource>(out musicSourceArray[i]))
 			{
-				UnityEngine.Object.Destroy(base.gameObject);
+				DestroyForInvalidSetup(string.Format("`{0}[{1}]` (\"{2}\") has no {3}.", "audioSourceArray", i, audioSourceArray[i].name, "MusicSource"));
 				return;
 			}
 		}
@@ -129,12 +130,18 @@ public class SynchedMusicController : MonoBehaviour, IGorillaSliceableSimple, IB
 				{
 					if (!syncedSongs[j].songLayers[k].audioSources[l].TryGetComponent<MusicSource>(out syncedSongs[j].songLayers[k].musicSources[l]))
 					{
-						UnityEngine.Object.Destroy(base.gameObject);
+						DestroyForInvalidSetup(string.Format("`{0}[{1}].{2}[{3}]", "syncedSongs", j, "songLayers", k) + string.Format(".{0}[{1}]` ", "audioSources", l) + "(\"" + syncedSongs[j].songLayers[k].audioSources[l].name + "\") has no MusicSource.");
 						return;
 					}
 				}
 			}
 		}
+	}
+
+	private void DestroyForInvalidSetup(string reason)
+	{
+		Debug.LogError("Destroying GameObject \"" + base.name + "\" because its SynchedMusicController has an invalid setup: " + reason + " Path: " + base.transform.GetPathQ(), this);
+		UnityEngine.Object.Destroy(base.gameObject);
 	}
 
 	private void Start()
@@ -424,9 +431,16 @@ public class SynchedMusicController : MonoBehaviour, IGorillaSliceableSimple, IB
 
 	private void StopAllAudioSources()
 	{
+		if (musicSourceArray == null)
+		{
+			return;
+		}
 		for (int i = 0; i < musicSourceArray.Length; i++)
 		{
-			musicSourceArray[i].Stop();
+			if (!(musicSourceArray[i] == null))
+			{
+				musicSourceArray[i].Stop();
+			}
 		}
 	}
 

@@ -51,12 +51,6 @@ public class SIGadgetAirJuke : SIGadget
 	private float m_slipperySurfacesTime = 0.25f;
 
 	[SerializeField]
-	private float m_maxInfluenceAngleDefault = 10f;
-
-	[SerializeField]
-	private float m_maxInfluenceAngleUpgrade = 15f;
-
-	[SerializeField]
 	private int m_maxRegularUses = 1;
 
 	[SerializeField]

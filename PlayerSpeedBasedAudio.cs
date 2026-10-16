@@ -34,14 +34,17 @@ public class PlayerSpeedBasedAudio : MonoBehaviour
 
 	private void Update()
 	{
-		currentFadeLevel = Mathf.MoveTowards(currentFadeLevel, Mathf.InverseLerp(minVolumeSpeed, fullVolumeSpeed, velocityEstimator.linearVelocity.magnitude), fadeRate * Time.deltaTime);
-		if (baseVolume == 0f || currentFadeLevel == 0f)
+		if (!(velocityEstimator == null) || localPlayerVelocityEstimator.TryResolve(out velocityEstimator))
 		{
-			audioSource.volume = 0.0001f;
-		}
-		else
-		{
-			audioSource.volume = baseVolume * currentFadeLevel;
+			currentFadeLevel = Mathf.MoveTowards(currentFadeLevel, Mathf.InverseLerp(minVolumeSpeed, fullVolumeSpeed, velocityEstimator.linearVelocity.magnitude), fadeRate * Time.deltaTime);
+			if (baseVolume == 0f || currentFadeLevel == 0f)
+			{
+				audioSource.volume = 0.0001f;
+			}
+			else
+			{
+				audioSource.volume = baseVolume * currentFadeLevel;
+			}
 		}
 	}
 }

@@ -98,6 +98,15 @@ public class ModIOManager : MonoBehaviour, ISteamCredentialProvider, IOculusCred
 
 	private static Dictionary<ModId, Mod> favoriteMods = new Dictionary<ModId, Mod>();
 
+	[OnEnterPlay_Clear]
+	private static readonly List<Mod> currentUserMaps = new List<Mod>();
+
+	[OnEnterPlay_Set(false)]
+	private static bool currentUserMapsLoaded;
+
+	[OnEnterPlay_Set(0L)]
+	private static long currentUserMapsUserId;
+
 	private static Dictionary<ModId, int> outdatedModCMSVersions = new Dictionary<ModId, int>();
 
 	private static byte[] ticketBlob = new byte[1024];
@@ -561,6 +570,21 @@ public class ModIOManager : MonoBehaviour, ISteamCredentialProvider, IOculusCred
 			ModioLog.Error?.Log("[ModIOManager::IsModOutdated] Mod File for " + mod.Name + " is null.");
 		}
 		return (false, -1);
+	}
+
+	public static async Task<bool> HasNewerModfileAvailable(ModId modId)
+	{
+		if (!hasInstance)
+		{
+			return false;
+		}
+		var (error, mod) = await GetMod(modId, forceUpdate: true);
+		if ((bool)error || mod?.File == null)
+		{
+			return false;
+		}
+		long installedModfileId = ModInstallationManagement.GetInstalledModfileId(mod);
+		return installedModfileId > 0 && mod.File.Id > 0 && mod.File.Id != installedModfileId;
 	}
 
 	public static void SaveFavoriteMods()
@@ -1514,5 +1538,39 @@ public class ModIOManager : MonoBehaviour, ISteamCredentialProvider, IOculusCred
 				callback(null);
 			}
 		}
+	}
+
+	public static async Task<(Error error, List<Mod> maps)> GetCurrentUserMaps(bool forceRefresh = false)
+	{
+		if (!hasInstance || !IsLoggedIn())
+		{
+			return (error: new Error(ErrorCode.USER_NOT_AUTHENTICATED), maps: new List<Mod>());
+		}
+		long userId = User.Current.Profile?.UserId ?? 0;
+		if (!forceRefresh && currentUserMapsLoaded && currentUserMapsUserId == userId)
+		{
+			return (error: Error.None, maps: new List<Mod>(currentUserMaps));
+		}
+		var (error, readOnlyList) = await User.Current.GetUserCreations(filterForGame: true);
+		if ((bool)error)
+		{
+			ModioLog.Error?.Log("[ModIOManager::GetCurrentUserMaps] Failed to get the user's maps: " + error.GetMessage());
+			return (error: error, maps: new List<Mod>());
+		}
+		if (!IsLoggedIn() || (User.Current.Profile?.UserId ?? 0) != userId)
+		{
+			return (error: new Error(ErrorCode.USER_NOT_AUTHENTICATED), maps: new List<Mod>());
+		}
+		currentUserMaps.Clear();
+		foreach (Mod item in readOnlyList)
+		{
+			if (item?.File != null && item.File.Id > 0)
+			{
+				currentUserMaps.Add(item);
+			}
+		}
+		currentUserMapsUserId = userId;
+		currentUserMapsLoaded = true;
+		return (error: Error.None, maps: new List<Mod>(currentUserMaps));
 	}
 }

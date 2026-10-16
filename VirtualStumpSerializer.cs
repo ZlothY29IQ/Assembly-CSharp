@@ -15,10 +15,6 @@ internal class VirtualStumpSerializer : GorillaSerializer
 
 	private bool forceNewSearch;
 
-	private bool waitToSendStatus;
-
-	private bool sendNewStatus;
-
 	private const float STATUS_UPDATE_INTERVAL = 0.5f;
 
 	private Coroutine statusUpdateCoroutine;
@@ -185,7 +181,7 @@ internal class VirtualStumpSerializer : GorillaSerializer
 		if (NetworkSystem.Instance.IsMasterClient && !CustomMapsTerminal.IsLocalOnly)
 		{
 			NetPlayer player = NetworkSystem.Instance.GetPlayer(info.Sender);
-			if (VRRigCache.Instance.TryGetVrrig(player, out var playerRig) && playerRig.Rig.fxSettings.callSettings[19].CallLimitSettings.CheckCallTime(Time.unscaledTime) && !player.IsNull && CustomMapManager.IsRemotePlayerInVirtualStumpOrHallway(info.Sender.UserId))
+			if (VRRigCache.Instance.TryGetVrrig(player, out var playerRig) && playerRig.Rig.fxSettings.callSettings[19].CallLimitSettings.CheckCallTime(Time.unscaledTime) && !player.IsNull && (!lockedStatus || CustomMapManager.IsRemotePlayerInVirtualStumpOrHallway(info.Sender.UserId)))
 			{
 				CustomMapsTerminal.HandleTerminalControlStatusChangeRequest(lockedStatus, info.Sender.ActorNumber);
 			}

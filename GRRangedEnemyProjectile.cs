@@ -12,7 +12,7 @@ public class GRRangedEnemyProjectile : MonoBehaviour, IGameEntityComponent, IGam
 
 	public Rigidbody projectileRigidbody;
 
-	private ParticleSystem particleSystem;
+	private ParticleSystem projectileParticleSystem;
 
 	private AudioSource audioSource;
 
@@ -42,7 +42,7 @@ public class GRRangedEnemyProjectile : MonoBehaviour, IGameEntityComponent, IGam
 
 	private void Awake()
 	{
-		particleSystem = GetComponentInChildren<ParticleSystem>();
+		projectileParticleSystem = GetComponentInChildren<ParticleSystem>();
 		audioSource = GetComponentInChildren<AudioSource>();
 		meshRenderer = GetComponentInChildren<MeshRenderer>();
 		hittable = GetComponentInChildren<GameHittable>();
@@ -202,9 +202,9 @@ public class GRRangedEnemyProjectile : MonoBehaviour, IGameEntityComponent, IGam
 
 	private void PlayImpactFX()
 	{
-		if (particleSystem != null)
+		if (projectileParticleSystem != null)
 		{
-			particleSystem.Play();
+			projectileParticleSystem.Play();
 		}
 		if (meshRenderer != null)
 		{

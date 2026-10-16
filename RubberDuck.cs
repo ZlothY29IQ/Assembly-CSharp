@@ -5,7 +5,7 @@ using Photon.Pun;
 using UnityEngine;
 using UnityEngine.Serialization;
 
-public class RubberDuck : TransferrableObject
+public class RubberDuck : TransferrableObject, PrefabNameSerialized
 {
 	[DebugOption]
 	public bool disableActivation;
@@ -72,6 +72,9 @@ public class RubberDuck : TransferrableObject
 	[SerializeField]
 	private bool _fxActive;
 
+	[SerializeField]
+	private string m_prefabName;
+
 	public bool fxActive
 	{
 		get
@@ -124,6 +127,18 @@ public class RubberDuck : TransferrableObject
 		}
 	}
 
+	public string PrefabName
+	{
+		get
+		{
+			return m_prefabName;
+		}
+		set
+		{
+			m_prefabName = value;
+		}
+	}
+
 	public override void OnSpawn(VRRig rig)
 	{
 		base.OnSpawn(rig);
@@ -152,7 +167,7 @@ public class RubberDuck : TransferrableObject
 			NetPlayer netPlayer = ((base.myOnlineRig != null) ? base.myOnlineRig.creator : ((!(base.myRig != null)) ? null : ((base.myRig.creator != null) ? base.myRig.creator : NetworkSystem.Instance.LocalPlayer)));
 			if (netPlayer != null)
 			{
-				_events.Init(netPlayer);
+				_events.Init(netPlayer, m_prefabName);
 			}
 			else
 			{

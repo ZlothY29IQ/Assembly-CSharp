@@ -2354,7 +2354,10 @@ public class TransferrableObject : HoldableObject, ISelfValidator, IRequestableO
 			SetTargetRig(null);
 			return;
 		}
-		rigidbodyInstance.useGravity = shouldUseGravity && object.Equals(toPlayer, NetworkSystem.Instance.LocalPlayer);
+		if (rigidbodyInstance != null)
+		{
+			rigidbodyInstance.useGravity = shouldUseGravity && object.Equals(toPlayer, NetworkSystem.Instance.LocalPlayer);
+		}
 		if (!shareable && !isSceneObject)
 		{
 			return;

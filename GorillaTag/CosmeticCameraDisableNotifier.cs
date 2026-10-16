@@ -11,6 +11,12 @@ public class CosmeticCameraDisableNotifier : MonoBehaviour
 	[SerializeField]
 	private Camera _cosmeticCamera;
 
+	[Tooltip("Surface showing the camera's render texture. When set, the camera only renders while this is visible.")]
+	[SerializeField]
+	private Renderer _displayRenderer;
+
+	private bool _localPlayerInside;
+
 	private void Awake()
 	{
 		if (!TryGetComponent<VRRigCollection>(out _vrrigCollection))
@@ -23,11 +29,20 @@ public class CosmeticCameraDisableNotifier : MonoBehaviour
 		vrrigCollection2.playerLeftCollection = (Action<RigContainer>)Delegate.Combine(vrrigCollection2.playerLeftCollection, new Action<RigContainer>(PlayerLeftTryOnSpace));
 	}
 
+	private void LateUpdate()
+	{
+		bool flag = !_localPlayerInside && (_displayRenderer == null || _displayRenderer.isVisible);
+		if (_cosmeticCamera.enabled != flag)
+		{
+			_cosmeticCamera.enabled = flag;
+		}
+	}
+
 	private void PlayerEnteredTryOnSpace(RigContainer playerRig)
 	{
 		if (playerRig.Rig.isLocal)
 		{
-			_cosmeticCamera.enabled = false;
+			_localPlayerInside = true;
 		}
 	}
 
@@ -35,7 +50,7 @@ public class CosmeticCameraDisableNotifier : MonoBehaviour
 	{
 		if (playerRig.Rig.isLocal)
 		{
-			_cosmeticCamera.enabled = true;
+			_localPlayerInside = false;
 		}
 	}
 }

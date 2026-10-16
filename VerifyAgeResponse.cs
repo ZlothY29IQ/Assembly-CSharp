@@ -6,5 +6,5 @@ public class VerifyAgeResponse
 
 	public Session? Session { get; set; }
 
-	public KIDDefaultSession DefaultSession { get; set; }
+	public KIDDefaultSession? DefaultSession { get; set; }
 }

@@ -248,6 +248,11 @@ public class BuilderRenderer : MonoBehaviourPostTick
 	public void BuildRenderer(List<BuilderPiece> piecePrefabs)
 	{
 		InitIfNeeded();
+		if (!SystemInfo.supportsComputeShaders)
+		{
+			Debug.LogWarning("BuilderRenderer: Compute shaders are not supported on this platform " + $"(graphicsDeviceType={SystemInfo.graphicsDeviceType}). Builder table indirect rendering is disabled.", this);
+			return;
+		}
 		for (int i = 0; i < piecePrefabs.Count; i++)
 		{
 			if (piecePrefabs[i] != null)
@@ -265,7 +270,10 @@ public class BuilderRenderer : MonoBehaviourPostTick
 
 	public void LogDraws()
 	{
-		Debug.LogFormat("Builder Renderer Counts {0} {1} {2} {3}", renderData.subMeshes.Length, renderData.textures.Count, renderData.dynamicBatch.totalInstances, renderData.staticBatch.totalInstances);
+		if (built)
+		{
+			Debug.LogFormat("Builder Renderer Counts {0} {1} {2} {3}", renderData.subMeshes.Length, renderData.textures.Count, renderData.dynamicBatch.totalInstances, renderData.staticBatch.totalInstances);
+		}
 	}
 
 	public override void PostTick()
@@ -614,36 +622,80 @@ public class BuilderRenderer : MonoBehaviourPostTick
 
 	private void OnDestroy()
 	{
-		DestroyBuffer();
-		renderData.subMeshes.Dispose();
+		if (renderData != null)
+		{
+			DestroyBuffer();
+			if (renderData.subMeshes.IsCreated)
+			{
+				renderData.subMeshes.Dispose();
+			}
+		}
 	}
 
 	public void DestroyBuffer()
 	{
 		DestroyBatch(renderData.staticBatch);
 		DestroyBatch(renderData.dynamicBatch);
+		renderData.staticBatch = null;
+		renderData.dynamicBatch = null;
 	}
 
 	public static void DestroyBatch(BuilderTableDataRenderIndirectBatch indirectBatch)
 	{
-		indirectBatch.commandBuf.Dispose();
-		indirectBatch.commandData.Dispose();
-		indirectBatch.matrixBuf.Dispose();
-		indirectBatch.texIndexBuf.Dispose();
-		indirectBatch.tintBuf.Dispose();
-		indirectBatch.instanceTransform.Dispose();
-		indirectBatch.instanceTransformIndexToDataIndex.Dispose();
-		indirectBatch.instanceObjectToWorld.Dispose();
-		indirectBatch.instanceTexIndex.Dispose();
-		indirectBatch.instanceTint.Dispose();
+		if (indirectBatch == null)
+		{
+			return;
+		}
+		indirectBatch.commandBuf?.Dispose();
+		if (indirectBatch.commandData.IsCreated)
+		{
+			indirectBatch.commandData.Dispose();
+		}
+		indirectBatch.matrixBuf?.Dispose();
+		indirectBatch.texIndexBuf?.Dispose();
+		indirectBatch.tintBuf?.Dispose();
+		if (indirectBatch.instanceTransform.isCreated)
+		{
+			indirectBatch.instanceTransform.Dispose();
+		}
+		if (indirectBatch.instanceTransformIndexToDataIndex.IsCreated)
+		{
+			indirectBatch.instanceTransformIndexToDataIndex.Dispose();
+		}
+		if (indirectBatch.instanceObjectToWorld.IsCreated)
+		{
+			indirectBatch.instanceObjectToWorld.Dispose();
+		}
+		if (indirectBatch.instanceTexIndex.IsCreated)
+		{
+			indirectBatch.instanceTexIndex.Dispose();
+		}
+		if (indirectBatch.instanceTint.IsCreated)
+		{
+			indirectBatch.instanceTint.Dispose();
+		}
+		if (!indirectBatch.renderMeshes.IsCreated)
+		{
+			return;
+		}
 		foreach (BuilderTableMeshInstances renderMesh in indirectBatch.renderMeshes)
 		{
 			TransformAccessArray transforms = renderMesh.transforms;
-			transforms.Dispose();
-			NativeList<int> texIndex = renderMesh.texIndex;
-			texIndex.Dispose();
-			NativeList<float> tint = renderMesh.tint;
-			tint.Dispose();
+			if (transforms.isCreated)
+			{
+				transforms = renderMesh.transforms;
+				transforms.Dispose();
+			}
+			if (renderMesh.texIndex.IsCreated)
+			{
+				NativeList<int> texIndex = renderMesh.texIndex;
+				texIndex.Dispose();
+			}
+			if (renderMesh.tint.IsCreated)
+			{
+				NativeList<float> tint = renderMesh.tint;
+				tint.Dispose();
+			}
 		}
 		indirectBatch.renderMeshes.Dispose();
 	}
@@ -701,6 +753,10 @@ public class BuilderRenderer : MonoBehaviourPostTick
 
 	public void AddPiece(BuilderPiece piece)
 	{
+		if (!built)
+		{
+			return;
+		}
 		bool isStatic = piece.isStatic;
 		meshRenderers.Clear();
 		piece.GetComponentsInChildren(includeInactive: false, meshRenderers);

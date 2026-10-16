@@ -8,7 +8,7 @@ using UnityEngine.Serialization;
 
 namespace GorillaTag.Cosmetics;
 
-public class ThrowablePickupableCosmetic : TransferrableObject
+public class ThrowablePickupableCosmetic : TransferrableObject, PrefabNameSerialized
 {
 	[Tooltip("Child object with the PickupableCosmetic script")]
 	[SerializeField]
@@ -39,6 +39,21 @@ public class ThrowablePickupableCosmetic : TransferrableObject
 
 	private CallLimiter callLimiterReturn = new CallLimiter(10, 2f);
 
+	[SerializeField]
+	private string m_prefabName;
+
+	public string PrefabName
+	{
+		get
+		{
+			return m_prefabName;
+		}
+		set
+		{
+			m_prefabName = value;
+		}
+	}
+
 	private new void Awake()
 	{
 		transferrableObject = GetComponent<TransferrableObject>();
@@ -53,7 +68,7 @@ public class ThrowablePickupableCosmetic : TransferrableObject
 			owner = ((transferrableObject.myOnlineRig != null) ? transferrableObject.myOnlineRig.creator : ((transferrableObject.myRig != null) ? (transferrableObject.myRig.creator ?? NetworkSystem.Instance.LocalPlayer) : null));
 			if (owner != null)
 			{
-				_events.Init(owner);
+				_events.Init(owner, m_prefabName);
 				isLocal = owner.IsLocal;
 			}
 		}

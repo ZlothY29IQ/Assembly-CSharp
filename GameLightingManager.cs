@@ -62,7 +62,6 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 
 	public int maxUseTestLights = 1;
 
-	[ReadOnly]
 	[SerializeField]
 	private List<GameLight> gameLights;
 
@@ -157,34 +156,41 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 	private void Awake()
 	{
 		InitData();
+		StartCoroutine(Preheat());
 	}
 
-	private void InitData()
+	public void InitData()
 	{
 		instance = this;
 		gameLights = new List<GameLight>(512);
 		sortKeys = new float[512];
 		sortValues = new GameLight[512];
-		lightDataBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 100, UnsafeUtility.SizeOf<LightDataPacked>());
 		lightData = new NativeArray<LightDataPacked>(100, Allocator.Persistent);
-		lightDataBufferLegacy = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 100, UnsafeUtility.SizeOf<LightDataLegacy>());
 		lightDataLegacy = new NativeArray<LightDataLegacy>(100, Allocator.Persistent);
 		int num = 4096;
 		gridCounts = new uint[num];
 		gridIndices = new uint[num * 10];
 		gridDistancesSqr = new float[num * 10];
-		gridCountsBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, num, 4);
-		gridIndicesBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, num * 10, 4);
-		Shader.SetGlobalBuffer(_shaderPropId_LightGridCounts, gridCountsBuffer);
-		Shader.SetGlobalBuffer(_shaderPropId_LightGridIndices, gridIndicesBuffer);
-		Shader.SetGlobalInteger(_shaderPropId_LightGrid_CellCapacity, 10);
+		if (SystemInfo.supportsComputeShaders)
+		{
+			lightDataBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 100, UnsafeUtility.SizeOf<LightDataPacked>());
+			lightDataBufferLegacy = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 100, UnsafeUtility.SizeOf<LightDataLegacy>());
+			gridCountsBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, num, 4);
+			gridIndicesBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, num * 10, 4);
+			Shader.SetGlobalBuffer(_shaderPropId_LightGridCounts, gridCountsBuffer);
+			Shader.SetGlobalBuffer(_shaderPropId_LightGridIndices, gridIndicesBuffer);
+			Shader.SetGlobalInteger(_shaderPropId_LightGrid_CellCapacity, 10);
+		}
+		else
+		{
+			Debug.LogWarning("GameLightingManager: Compute shaders are not supported on this platform " + $"(graphicsDeviceType={SystemInfo.graphicsDeviceType}). Dynamic game lights will not be rendered.", this);
+		}
 		nextLightUpdate = 0;
 		ClearGameLights();
 		SetDesaturateAndTintEnabled(enable: false, Color.black);
 		SetAmbientLightDynamic(Color.black);
 		SetCustomDynamicLightingEnabled(enable: false);
 		SetMaxLights(50);
-		StartCoroutine(Preheat());
 	}
 
 	private IEnumerator Preheat()
@@ -196,6 +202,11 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 	}
 
 	private void OnDestroy()
+	{
+		Destroy();
+	}
+
+	public void Destroy()
 	{
 		ClearGameLights();
 		SetDesaturateAndTintEnabled(enable: false, Color.black);
@@ -618,9 +629,9 @@ public class GameLightingManager : MonoBehaviourTick, IGorillaSliceableSimple
 		return gameLights.Count - 1;
 	}
 
-	public void RemoveGameLight(GameLight light)
+	public void RemoveGameLight(GameLight light, bool ignoreUnityLightDisable = false)
 	{
-		if (light != null && light.light != null)
+		if (!ignoreUnityLightDisable && light != null && light.light != null)
 		{
 			light.light.enabled = true;
 		}

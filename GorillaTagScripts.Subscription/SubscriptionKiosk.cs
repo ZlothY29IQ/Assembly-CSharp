@@ -643,15 +643,15 @@ public class SubscriptionKiosk : MonoBehaviour, ITouchScreenStation, IGorillaSli
 		}
 		Vector3 vector = VRRig.LocalRig.transform.position - base.transform.position;
 		float sqrMagnitude = vector.sqrMagnitude;
-		float num = Vector3.Dot(base.transform.forward, vector.normalized);
+		bool flag = Vector3.Dot(base.transform.forward, vector.normalized) > 0f && sqrMagnitude < videoViewableDist * videoViewableDist;
 		if (subsVideoPlayer.enabled)
 		{
-			if (num < 0f && sqrMagnitude >= videoViewableDist * videoViewableDist)
+			if (!flag)
 			{
 				subsVideoPlayer.enabled = false;
 			}
 		}
-		else if (num > 0f && sqrMagnitude < videoViewableDist * videoViewableDist)
+		else if (flag)
 		{
 			subsVideoPlayer.enabled = true;
 			subsVideoPlayer.Play();

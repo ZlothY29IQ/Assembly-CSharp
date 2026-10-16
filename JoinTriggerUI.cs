@@ -31,7 +31,7 @@ public class JoinTriggerUI : MonoBehaviour
 	[SerializeField]
 	private JoinTriggerUITemplate template;
 
-	private new bool didStart;
+	private bool hasStarted;
 
 	public bool HasFriendCollider => friendColliderResolved;
 
@@ -45,13 +45,13 @@ public class JoinTriggerUI : MonoBehaviour
 
 	private void Start()
 	{
-		didStart = true;
+		hasStarted = true;
 		OnEnable();
 	}
 
 	private void OnEnable()
 	{
-		if (didStart && IsValid())
+		if (hasStarted && IsValid())
 		{
 			joinTrigger.RegisterUI(this);
 			if (friendColliderResolved)

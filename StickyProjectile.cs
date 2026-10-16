@@ -77,7 +77,7 @@ public class StickyProjectile : MonoBehaviour, IProjectile, ITickSystemTick
 
 	private RigidbodyWaterInteraction rbwi;
 
-	private Collider collider;
+	private Collider projectileCollider;
 
 	private PlayerColoredCosmetic pcc;
 
@@ -93,7 +93,7 @@ public class StickyProjectile : MonoBehaviour, IProjectile, ITickSystemTick
 		headZoneInverseLocalPosition = INVERSE_HEAD_ROTATION * localHeadZonePosition;
 		rb = GetComponent<Rigidbody>();
 		rbwi = GetComponent<RigidbodyWaterInteraction>();
-		collider = GetComponent<Collider>();
+		projectileCollider = GetComponent<Collider>();
 		pcc = GetComponent<PlayerColoredCosmetic>();
 		triggerLayer = LayerMask.NameToLayer("Gorilla Tag Collider");
 		OnReset?.Invoke();
@@ -121,7 +121,7 @@ public class StickyProjectile : MonoBehaviour, IProjectile, ITickSystemTick
 			rb.angularVelocity = UnityEngine.Random.onUnitSphere * UnityEngine.Random.Range(launchRandomSpinSpeedMinMax.x, launchRandomSpinSpeedMinMax.y);
 		}
 		rbwi.enabled = true;
-		collider.enabled = true;
+		projectileCollider.enabled = true;
 		if (pcc != null)
 		{
 			pcc.UpdateColor(ownerRig.playerColor);
@@ -134,7 +134,7 @@ public class StickyProjectile : MonoBehaviour, IProjectile, ITickSystemTick
 		stickyPart.SetPositionAndRotation(position + rotation * stickyPartLocalPosition, rotation * stickyPartLocalRotation);
 		rb.isKinematic = true;
 		rbwi.enabled = false;
-		collider.enabled = false;
+		projectileCollider.enabled = false;
 	}
 
 	private void OnCollisionEnter(Collision collision)

@@ -7,9 +7,6 @@ public class KIDUI_AnimatedEllipsis : MonoBehaviour
 {
 	[Header("Ellipsis Spawning")]
 	[SerializeField]
-	private bool _animateOnStart = true;
-
-	[SerializeField]
 	private int _ellipsisCount = 3;
 
 	[SerializeField]
@@ -35,9 +32,6 @@ public class KIDUI_AnimatedEllipsis : MonoBehaviour
 	private float _startingScale = 0.33f;
 
 	[SerializeField]
-	private float _intermediaryScale = 0.66f;
-
-	[SerializeField]
 	private float _endScale = 1f;
 
 	[SerializeField]
@@ -46,12 +40,7 @@ public class KIDUI_AnimatedEllipsis : MonoBehaviour
 	[SerializeField]
 	private float _pauseBetweenScale = 0.25f;
 
-	[SerializeField]
-	private float _pauseBetweenCycles = 0.5f;
-
 	private bool _runAnimation;
-
-	private float _nextChange;
 
 	private (GameObject ellipsis, float startingScale, float currentScale, float lerpT)[] _ellipsisObjects;
 
@@ -63,10 +52,6 @@ public class KIDUI_AnimatedEllipsis : MonoBehaviour
 		{
 			SetupEllipsis();
 		}
-	}
-
-	private void Start()
-	{
 	}
 
 	private void OnDisable()

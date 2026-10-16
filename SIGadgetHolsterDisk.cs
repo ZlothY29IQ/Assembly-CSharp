@@ -55,13 +55,14 @@ public class SIGadgetHolsterDisk : SIGadget, I_SIDisruptable
 		GadgetRespawn();
 	}
 
-	private new void OnDisable()
+	protected override void OnDisable()
 	{
 		if (grenadeGadget != null)
 		{
 			SIGadgetGrenade sIGadgetGrenade = grenadeGadget;
 			sIGadgetGrenade.GrenadeFinished = (Action)Delegate.Remove(sIGadgetGrenade.GrenadeFinished, new Action(GadgetRespawn));
 		}
+		base.OnDisable();
 	}
 
 	protected override void OnUpdateAuthority(float dt)

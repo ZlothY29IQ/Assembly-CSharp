@@ -232,7 +232,7 @@ public class DynamicCosmeticStand : MonoBehaviour, iFlagForBaking
 
 	private void AssignCosmeticItem()
 	{
-		thisCosmeticItem = CosmeticsController.instance.allCosmetics.Find((CosmeticsController.CosmeticItem x) => thisCosmeticName == x.displayName || thisCosmeticName == x.overrideDisplayName || thisCosmeticName == x.itemName);
+		thisCosmeticItem = CosmeticsController.instance.FindCosmeticByAnyName(thisCosmeticName);
 	}
 
 	private void SetSlotPriceText()

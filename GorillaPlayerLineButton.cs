@@ -47,6 +47,8 @@ public class GorillaPlayerLineButton : MonoBehaviour, IClickable
 
 	public bool testPress;
 
+	private static readonly WaitForSeconds TestPressCheckWait = new WaitForSeconds(1f);
+
 	private void OnEnable()
 	{
 	}
@@ -68,7 +70,7 @@ public class GorillaPlayerLineButton : MonoBehaviour, IClickable
 				}
 				parentLine.PressButton(isOn, buttonType);
 			}
-			yield return new WaitForSeconds(1f);
+			yield return TestPressCheckWait;
 		}
 	}
 
