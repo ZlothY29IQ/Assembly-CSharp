@@ -55,7 +55,7 @@ public class CodeRedemption : MonoBehaviour
 
 	public void HandleCodeRedemption(string code)
 	{
-		string text = JsonConvert.SerializeObject(new CodeRedemptionRequest
+		string data = JsonConvert.SerializeObject(new CodeRedemptionRequest
 		{
 			itemGUID = code,
 			playFabID = PlayFabAuthenticator.instance.GetPlayFabPlayerId(),
@@ -64,8 +64,8 @@ public class CodeRedemption : MonoBehaviour
 			mothershipToken = MothershipClientContext.Token,
 			mothershipEnvId = MothershipClientApiUnity.EnvironmentId
 		});
-		Debug.Log("[CodeRedemption] Web Request body: \n" + text);
-		StartCoroutine(ProcessWebRequest(PlayFabAuthenticatorSettings.HpPromoApiBaseUrl + "/api/ConsumeCodeItem", text, "application/json", OnCodeRedemptionResponse));
+		Debug.Log("[CodeRedemption] Sending redemption request for code: " + code);
+		StartCoroutine(ProcessWebRequest(PlayFabAuthenticatorSettings.HpPromoApiBaseUrl + "/api/ConsumeCodeItem", data, "application/json", OnCodeRedemptionResponse));
 	}
 
 	private void OnCodeRedemptionResponse(UnityWebRequest completedRequest)

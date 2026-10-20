@@ -98,7 +98,7 @@ public class DeepLinkHandler : MonoBehaviour
 		if (cachedLaunchDetails.LaunchSource.Contains("7221491444554579"))
 		{
 			GTDev.Log("[DeepLinkHandler::HandleDeepLink] DeepLink received from Witchblood, processing...");
-			string text = JsonUtility.ToJson(new CollabRequest
+			string data = JsonUtility.ToJson(new CollabRequest
 			{
 				itemGUID = cachedLaunchDetails.DeeplinkMessage,
 				launchSource = cachedLaunchDetails.LaunchSource,
@@ -109,13 +109,13 @@ public class DeepLinkHandler : MonoBehaviour
 				mothershipToken = MothershipClientContext.Token,
 				mothershipEnvId = MothershipClientApiUnity.EnvironmentId
 			});
-			GTDev.Log("[DeepLinkHandler::HandleDeepLink] Web Request body: \n" + text);
-			StartCoroutine(ProcessWebRequest(PlayFabAuthenticatorSettings.HpPromoApiBaseUrl + "/api/ConsumeItem", text, "application/json", OnWitchbloodCollabResponse));
+			GTDev.Log("[DeepLinkHandler::HandleDeepLink] Sending Witchblood collab request for item: " + cachedLaunchDetails.DeeplinkMessage);
+			StartCoroutine(ProcessWebRequest(PlayFabAuthenticatorSettings.HpPromoApiBaseUrl + "/api/ConsumeItem", data, "application/json", OnWitchbloodCollabResponse));
 		}
 		else if (cachedLaunchDetails.LaunchSource.Contains("1903584373052985"))
 		{
 			GTDev.Log("[DeepLinkHandler::HandleDeepLink] DeepLink received from Racoon Lagoon, processing...");
-			string text2 = JsonUtility.ToJson(new CollabRequest
+			string data2 = JsonUtility.ToJson(new CollabRequest
 			{
 				itemGUID = cachedLaunchDetails.DeeplinkMessage,
 				launchSource = cachedLaunchDetails.LaunchSource,
@@ -126,8 +126,8 @@ public class DeepLinkHandler : MonoBehaviour
 				mothershipToken = MothershipClientContext.Token,
 				mothershipEnvId = MothershipClientApiUnity.EnvironmentId
 			});
-			GTDev.Log("[DeepLinkHandler::HandleDeepLink] Web Request body: \n" + text2);
-			StartCoroutine(ProcessWebRequest(PlayFabAuthenticatorSettings.HpPromoApiBaseUrl + "/api/ConsumeItem", text2, "application/json", OnRaccoonLagoonCollabResponse));
+			GTDev.Log("[DeepLinkHandler::HandleDeepLink] Sending Raccoon Lagoon collab request for item: " + cachedLaunchDetails.DeeplinkMessage);
+			StartCoroutine(ProcessWebRequest(PlayFabAuthenticatorSettings.HpPromoApiBaseUrl + "/api/ConsumeItem", data2, "application/json", OnRaccoonLagoonCollabResponse));
 		}
 		else
 		{

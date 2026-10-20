@@ -1240,7 +1240,6 @@ public class KIDManager : MonoBehaviour
 	private static async Task<bool> Server_SetOptInPermissions(SetOptInPermissionsRequest request, Action failureCallback)
 	{
 		bool success = false;
-		Debug.Log("[KID::SERVER_ROUTER::OptInRefactor] Setting opt-in permissions with request: " + JsonConvert.SerializeObject(request));
 		long num = await KIDServerWebRequestNoResponse("SetOptInPermissions", "POST", request);
 		if (num >= 200 && num < 300)
 		{
